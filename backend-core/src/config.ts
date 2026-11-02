@@ -32,6 +32,8 @@ const schema = z.object({
   // secret the mail server uses to hand incoming mail to the business API.
   MAIL_HOST: z.string().default("mail.sheetalproperty.com"),
   MAIL_INBOUND_SECRET: z.string().min(24).optional(),
+  // Where requests for Sheetal's team go (plan upgrades, reports).
+  SUPPORT_EMAIL: z.email().default("support@sheetalproperty.com"),
   // Requests per minute per IP for the whole API; sensitive routes set lower limits.
   RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(300),
 });

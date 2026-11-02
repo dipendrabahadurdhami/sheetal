@@ -467,3 +467,79 @@ model MailDelivery {
   @@index([messageId])
   @@map("mail_deliveries")
 }
+
+// ───────────── Website: favourites, enquiries, reviews, upgrades ─────────────
+
+/// A listing someone saved.
+model Favourite {
+  userId    String   @map("user_id")
+  listingId Int      @map("listing_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@id([userId, listingId])
+  @@index([listingId])
+  @@map("favourites")
+}
+
+/// An enquiry from the website: contact the agency or owner, a site visit, a buyer requirement, a service request.
+/// It goes to the business that owns the listing (or to Sheetal when there is none) and shows in its Inbox.
+model Lead {
+  id        String   @id @default(cuid())
+  /// The business it is for; null = Sheetal itself.
+  tenantId  String?  @map("tenant_id")
+  listingId Int?     @map("listing_id")
+  userId    String?  @map("user_id")
+  /// contact_agent, contact_owner, site_visit, requirement, service
+  kind      String
+  name      String
+  email     String?
+  phone     String?
+  message   String   @default("")
+  /// Everything else the form sent (reasons, budget, preferred time…).
+  details   Json     @default("{}")
+  /// new, contacted, closed
+  status    String   @default("new")
+  ip        String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, status, createdAt])
+  @@index([listingId])
+  @@map("leads")
+}
+
+/// A star rating with a comment, for a listing or for a business. One per person per listing or business.
+model Review {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  listingId Int?     @map("listing_id")
+  tenantId  String?  @map("tenant_id")
+  rating    Int
+  comment   String   @default("")
+  /// published or hidden (by the business or Sheetal)
+  status    String   @default("published")
+  /// The business's public answer.
+  reply     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, listingId])
+  @@unique([userId, tenantId])
+  @@index([listingId, status])
+  @@index([tenantId, status])
+  @@map("reviews")
+}
+
+/// A business asking to move to a paid plan; Sheetal's team follows up and takes payment.
+model UpgradeRequest {
+  id        String   @id @default(cuid())
+  tenantId  String   @map("tenant_id")
+  userId    String   @map("user_id")
+  planId    String   @map("plan_id")
+  months    Int
+  /// pending, done, declined
+  status    String   @default("pending")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([status, createdAt])
+  @@map("upgrade_requests")
+}

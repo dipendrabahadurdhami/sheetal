@@ -1,3 +1,4 @@
+import { planFeatureList } from "@sheetal/shared/core/plans";
 export const fmtPrice = (v) => {
   const n = Number(String(v ?? "").replace(/[^0-9.]/g, ""));
   if (!n) return "Price on request";
@@ -74,6 +75,8 @@ export const stripHtml = (h = "") => String(h).replace(/<[^>]*>/g, " ").replace(
 export function planFeatures(pl = {}) {
   // Plans that already list every feature as [included, text] (shared/src/core/plans.js planFeatureList).
   if (Array.isArray(pl.features) && pl.features.length && Array.isArray(pl.features[0])) return pl.features;
+  // Plans from the API carry their limits and on/off switches; the same list is built from them here.
+  if (pl.limits && pl.features && !Array.isArray(pl.features)) return planFeatureList(pl, pl.type);
   const lim = (v) => (Number(v) === -1 ? "Unlimited" : Number(v));
   const out = [];
   const L = pl.max_listings_per_month ?? pl.listings;
