@@ -1,4 +1,5 @@
 import { SetupPanel } from "./Setup";
+import { isLive, liveTeam } from "../live";
 import React from "react";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore, uid } from "@sheetal/shared/core/store";
@@ -7,7 +8,7 @@ import { fdate, inDays, TODAY } from "@sheetal/shared/core/format";
 import { can, permsForTypes } from "@sheetal/shared/core/rbac";
 import { typesFor } from "@sheetal/shared/core/plans";
 import { checkupsOf, todaysList } from "@sheetal/shared/data/checkups";
-import { Badge, Button, PageHead, Panel, Stat, Tabs } from "@sheetal/shared/core/ui";
+import { Badge, Button, PageHead, Panel, Stat, Tabs, useToast } from "@sheetal/shared/core/ui";
 import { People } from "./Workspace";
 import { useBranch } from "@sheetal/shared/core/branch";
 import { Structure } from "./Structure";
@@ -100,6 +101,8 @@ export function TeamHub({ tenant, role, start = "members" }) {
 
 export function BusinessTeam({ tenant, role, embedded }) {
   const { db, update } = useStore();
+  const toast = useToast();
+  const live = isLive(tenant.id) ? liveTeam(toast) : null;
   const plan = db.plans.find((p) => p.id === tenant.planId);
   const tid = tenant.id;
   const { branch } = useBranch();
@@ -116,13 +119,16 @@ export function BusinessTeam({ tenant, role, embedded }) {
         onRestoreMember={(m, at) => update((d) => { const l = d.members[tid] = d.members[tid] || []; if (!l.some((x) => x.id === m.id)) l.splice(at >= 0 ? at : l.length, 0, m); log(d, `restored ${m.name}`); })}
         dataKind="team"
         onResend={(id) => update((d) => { Object.assign(d.invites[tid].find((i) => i.id === id), { status: "pending", sent: TODAY, expires: `${inDays(7)}T10:00` }); })}
-        onRevoke={(id) => update((d) => { d.invites[tid].find((i) => i.id === id).status = "revoked"; })} />
+        onRevoke={(id) => update((d) => { d.invites[tid].find((i) => i.id === id).status = "revoked"; })}
+        {...(live ? { onInvite: live.onInvite, onUpdateMember: live.onUpdateMember, onRemoveMember: live.onRemoveMember, onRestoreMember: live.onRestoreMember, onResend: live.onResend, onRevoke: live.onRevoke } : {})} />
     </>
   );
 }
 
 export function BusinessRoles({ tenant, role, embedded }) {
   const { db, update } = useStore();
+  const toast = useToast();
+  const live = isLive(tenant.id) ? liveTeam(toast) : null;
   const tid = tenant.id;
   const plan = db.plans.find((p) => p.id === tenant.planId);
   const counts = {};
@@ -133,7 +139,8 @@ export function BusinessRoles({ tenant, role, embedded }) {
       <RoleEditor roles={db.tenantRoles[tid]} groups={permsForTypes(typesFor(tenant, plan))} counts={counts} canManage={can(role, "roles.manage")} customAllowed={plan.features.custom_roles}
         onCreate={(r) => { const id = uid(`${tid}-role`); update((d) => { d.tenantRoles[tid].push({ id, key: id, system: false, ...r }); }); return id; }}
         onSave={(r) => update((d) => { d.tenantRoles[tid][d.tenantRoles[tid].findIndex((x) => x.id === r.id)] = r; })}
-        onDelete={(id) => update((d) => { d.tenantRoles[tid] = d.tenantRoles[tid].filter((x) => x.id !== id); })} />
+        onDelete={(id) => update((d) => { d.tenantRoles[tid] = d.tenantRoles[tid].filter((x) => x.id !== id); })}
+        {...(live ? { onCreate: live.onCreateRole, onSave: live.onSaveRole, onDelete: live.onDeleteRole } : {})} />
     </>
   );
 }

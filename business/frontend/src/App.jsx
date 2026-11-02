@@ -6,6 +6,7 @@ import { ToastProvider } from "@sheetal/shared/core/ui";
 import { config } from "@sheetal/shared/core/config";
 import BusinessApp from "./pages/BusinessApp";
 import { PublicForm } from "./pages/Forms";
+import { AcceptInvite } from "./pages/AcceptInvite";
 import "@sheetal/shared/styles/platform.css";
 
 import { themeAttr, useSharedTheme } from "@sheetal/shared/core/theme";
@@ -38,9 +39,12 @@ function Frame() {
   );
 }
 
-// Public forms (/business/f/:slug) open on their own, without the workspace shell or Sheetal branding.
+// Public forms (/business/f/:slug) and team invitations (/business/accept-invite) open on their own,
+// without the workspace shell (the invited person may not be in any business yet).
 function Gate() {
   const { path } = useRouter();
   const m = match("/business/f/:slug", path);
-  return m ? <PublicForm slug={m.slug} /> : <BusinessApp />;
+  if (m) return <PublicForm slug={m.slug} />;
+  if (path === "/business/accept-invite") return <AcceptInvite />;
+  return <BusinessApp />;
 }

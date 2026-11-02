@@ -81,3 +81,6 @@ export const PLATFORM_ROLES: Record<string, string[]> = {
 };
 
 export const hasPerm = (perms: readonly string[], perm: string) => perms.includes("*") || perms.includes(perm);
+
+/** Every permission id a business of these types can give out (Pro plans see every type's). */
+export const businessPermsFor = (types: readonly BusinessType[]) => allOf(permsForTypes(types));

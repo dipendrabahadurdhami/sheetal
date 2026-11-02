@@ -1,0 +1,229 @@
+import type { FastifyInstance } from "fastify";
+import { z } from "zod";
+import { dbOf } from "@sheetal/backend-core/lib/db";
+import { AppError, badRequest, conflict, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
+import { newToken, sha256 } from "@sheetal/backend-core/lib/secrets";
+import { requireUser } from "@sheetal/backend-core/modules/auth/sessions";
+import { BUSINESS_TYPES, businessPermsFor, type BusinessType } from "@sheetal/backend-core/domain/permissions";
+import { workspaceOf, type Workspace } from "../access.js";
+
+// The signed-in person's businesses, and each business's team: members, invitations, roles, activity.
+// - Anyone in the business sees the team; "team.manage" invites, changes and removes people;
+//   "roles.manage" edits roles (own roles need a plan with custom roles).
+// - The owner role can't be edited, and a business always keeps at least one active owner.
+// - People count against the plan's seats, pending invitations included.
+
+const INVITE_DAYS = 7;
+const email = z.email("Enter a valid email address.").transform((s) => s.trim().toLowerCase());
+const scopes = z.union([z.literal("all"), z.array(z.string().trim().min(1).max(60)).max(50)]).default("all");
+
+const isAllAccess = (features: unknown) => !!(features as Record<string, boolean> | null)?.all_kinds;
+const typesOf = (ws: Workspace): BusinessType[] => (isAllAccess(ws.member.tenant.plan.features) ? [...BUSINESS_TYPES] : [ws.member.tenant.type as BusinessType]);
+const seatLimit = (ws: Workspace) => (ws.member.tenant.plan.limits as Record<string, number>).seats ?? 1;
+
+export async function teamRoutes(app: FastifyInstance) {
+  const audit = (ws: Workspace, ip: string, action: string, target?: string, meta?: object) =>
+    dbOf(app).auditLog.create({ data: { tenantId: ws.tenantId, actorId: ws.user.id, action, target, ip, meta: meta as object | undefined } });
+
+  // ───── Me and my businesses ─────
+  app.get("/workspaces", async (request) => {
+    const user = requireUser(request);
+    return {
+      data: {
+        user: { id: user.id, name: user.userName, email: user.email, phone: user.phone, emailVerified: !!user.emailVerifiedAt, platformRole: user.platformRole },
+        workspaces: user.memberships.map((m) => ({
+          id: m.tenant.id, name: m.tenant.name, type: m.tenant.type, city: m.tenant.city, email: m.tenant.email, phone: m.tenant.phone, logoUrl: m.tenant.logoUrl,
+          status: m.tenant.status, period: m.tenant.period, renewsAt: m.tenant.renewsAt, autoRenew: m.tenant.autoRenew, createdAt: m.tenant.createdAt,
+          plan: { id: m.tenant.plan.id, name: m.tenant.plan.name, price: m.tenant.plan.price, limits: m.tenant.plan.limits, features: m.tenant.plan.features },
+          role: { id: m.role.id, key: m.role.key, name: m.role.name, perms: m.role.perms }, scopes: m.scopes,
+        })),
+      },
+    };
+  });
+
+  // ───── Team ─────
+  app.get("/team", async (request) => {
+    const ws = workspaceOf(request);
+    const db = dbOf(app);
+    const [members, invites, roles, activity] = await Promise.all([
+      db.membership.findMany({ where: { tenantId: ws.tenantId, status: { in: ["active", "paused"] } }, include: { user: true }, orderBy: { createdAt: "asc" } }),
+      ws.can("team.manage") ? db.invite.findMany({ where: { tenantId: ws.tenantId, status: "pending" }, orderBy: { createdAt: "desc" } }) : Promise.resolve([]),
+      db.role.findMany({ where: { tenantId: ws.tenantId }, orderBy: [{ system: "desc" }, { key: "asc" }] }),
+      db.auditLog.findMany({ where: { tenantId: ws.tenantId }, orderBy: { createdAt: "desc" }, take: 50 }),
+    ]);
+    const names = new Map(members.map((m) => [m.userId, m.user.userName]));
+    const seatsUsed = members.filter((m) => m.status === "active").length + invites.length;
+    return {
+      data: {
+        members: members.map((m) => ({ id: m.userId, name: m.user.userName, email: m.user.email, phone: m.user.phone, roleId: m.roleId, status: m.status, scopes: m.scopes, lastActive: m.user.lastLoginAt, joinedAt: m.createdAt })),
+        invites: invites.map((i) => ({ id: i.id, email: i.email, roleId: i.roleId, scopes: i.scopes, status: i.expiresAt < new Date() ? "expired" : i.status, sent: i.sentAt, expires: i.expiresAt, by: names.get(i.invitedBy ?? "") ?? null })),
+        roles: roles.map((r) => ({ id: r.id, key: r.key, name: r.name, perms: r.perms, system: r.system })),
+        permissions: businessPermsFor(typesOf(ws)),
+        seats: { used: seatsUsed, limit: seatLimit(ws) },
+        activity: activity.map((a) => ({ id: a.id, who: names.get(a.actorId ?? "") ?? "Someone", what: a.action, target: a.target, at: a.createdAt })),
+      },
+    };
+  });
+
+  async function roleOf(ws: Workspace, roleId: string) {
+    const r = await dbOf(app).role.findFirst({ where: { id: roleId, tenantId: ws.tenantId } });
+    if (!r) throw badRequest("Choose a role from this business.");
+    if (r.key === "owner" && ws.member.role.key !== "owner") throw forbidden("Only an owner can make someone an owner.");
+    return r;
+  }
+
+  const manage = (ws: Workspace) => { if (!ws.can("team.manage")) throw forbidden("Only people who manage the team can do this."); };
+
+  // ───── Invitations ─────
+  app.post("/team/invites", { config: { rateLimit: { max: 20, timeWindow: "1 hour" } } }, async (request) => {
+    const ws = workspaceOf(request); manage(ws);
+    const b = z.object({ invites: z.array(z.object({ email, roleId: z.string(), scopes })).min(1).max(20) }).parse(request.body);
+    const db = dbOf(app);
+    const pending = await db.invite.count({ where: { tenantId: ws.tenantId, status: "pending", expiresAt: { gt: new Date() } } });
+    const active = await db.membership.count({ where: { tenantId: ws.tenantId, status: "active" } });
+    const limit = seatLimit(ws);
+    if (limit !== -1 && active + pending + b.invites.length > limit) {
+      throw new AppError(402, "seat_limit", limit === 1 ? "The Starter plan is just you. Upgrade to add your team." : `Your plan has ${limit} seats and ${active + pending} are taken.`);
+    }
+    const sent: string[] = [];
+    for (const inv of b.invites) {
+      const role = await roleOf(ws, inv.roleId);
+      if (await db.membership.findFirst({ where: { tenantId: ws.tenantId, user: { email: inv.email } } })) throw conflict(`${inv.email} is already in the team.`);
+      await db.invite.updateMany({ where: { tenantId: ws.tenantId, email: inv.email, status: "pending" }, data: { status: "revoked" } });
+      const token = newToken();
+      await db.invite.create({ data: { tenantId: ws.tenantId, email: inv.email, roleId: role.id, scopes: inv.scopes, tokenHash: sha256(token), invitedBy: ws.user.id, expiresAt: new Date(Date.now() + INVITE_DAYS * 864e5) } });
+      await sendInvite(inv.email, token, ws, role.name ?? role.key);
+      await audit(ws, request.ip, "team.invited", inv.email, { role: role.key });
+      sent.push(inv.email);
+    }
+    return { status: 200, message: sent.length === 1 ? `Invitation sent to ${sent[0]}.` : `${sent.length} invitations sent.`, data: { sent } };
+  });
+
+  async function sendInvite(to: string, token: string, ws: Workspace, roleName: string) {
+    const link = `${app.config.SITE_URL.replace(/\/$/, "")}/business/accept-invite?token=${token}`;
+    await app.mailer.send({
+      to, subject: `${ws.user.userName} invited you to ${ws.member.tenant.name} on Sheetal Property`,
+      text: `${ws.user.userName} invited you to join ${ws.member.tenant.name} as ${roleName.replace(/_/g, " ")}.\n\nAccept within ${INVITE_DAYS} days:\n${link}\n\nSign in (or create an account) with ${to} to accept. If you didn't expect this, ignore it.`,
+    });
+  }
+
+  app.post<{ Params: { id: string } }>("/team/invites/:id/resend", { config: { rateLimit: { max: 10, timeWindow: "1 hour" } } }, async (request) => {
+    const ws = workspaceOf(request); manage(ws);
+    const inv = await dbOf(app).invite.findFirst({ where: { id: request.params.id, tenantId: ws.tenantId, status: "pending" } });
+    if (!inv) throw notFound("Invitation not found.");
+    const token = newToken();
+    await dbOf(app).invite.update({ where: { id: inv.id }, data: { tokenHash: sha256(token), sentAt: new Date(), expiresAt: new Date(Date.now() + INVITE_DAYS * 864e5) } });
+    const role = await dbOf(app).role.findUniqueOrThrow({ where: { id: inv.roleId } });
+    await sendInvite(inv.email, token, ws, role.name ?? role.key);
+    return { status: 200, message: `Invitation sent again to ${inv.email}.` };
+  });
+
+  app.post<{ Params: { id: string } }>("/team/invites/:id/revoke", async (request) => {
+    const ws = workspaceOf(request); manage(ws);
+    const n = await dbOf(app).invite.updateMany({ where: { id: request.params.id, tenantId: ws.tenantId, status: "pending" }, data: { status: "revoked" } });
+    if (!n.count) throw notFound("Invitation not found.");
+    await audit(ws, request.ip, "team.invite_revoked", request.params.id);
+    return { status: 200, message: "Invitation cancelled." };
+  });
+
+  // Anyone with the link can see what it is for (to show the right page), never the token itself.
+  app.get("/invites/preview", async (request) => {
+    const { token } = z.object({ token: z.string().min(20).max(100) }).parse(request.query);
+    const inv = await dbOf(app).invite.findUnique({ where: { tokenHash: sha256(token) }, include: { tenant: { select: { name: true, type: true } } } });
+    if (!inv || inv.status !== "pending" || inv.expiresAt < new Date()) throw new AppError(410, "invite_invalid", "This invitation has expired or was already used. Ask for a new one.");
+    const role = await dbOf(app).role.findUnique({ where: { id: inv.roleId }, select: { key: true, name: true } });
+    return { data: { business: inv.tenant.name, type: inv.tenant.type, role: role?.name ?? role?.key, email: inv.email } };
+  });
+
+  app.post("/invites/accept", { config: { rateLimit: { max: 10, timeWindow: "1 minute" } } }, async (request) => {
+    const user = requireUser(request);
+    const { token } = z.object({ token: z.string().min(20).max(100) }).parse(request.body);
+    const db = dbOf(app);
+    const inv = await db.invite.findUnique({ where: { tokenHash: sha256(token) }, include: { tenant: true } });
+    if (!inv || inv.status !== "pending" || inv.expiresAt < new Date()) throw new AppError(410, "invite_invalid", "This invitation has expired or was already used. Ask for a new one.");
+    if (inv.email !== user.email) throw forbidden(`This invitation is for ${inv.email}. Sign in with that email to accept it.`);
+    await db.$transaction([
+      db.membership.upsert({ where: { userId_tenantId: { userId: user.id, tenantId: inv.tenantId } }, create: { userId: user.id, tenantId: inv.tenantId, roleId: inv.roleId, scopes: inv.scopes as object }, update: { roleId: inv.roleId, scopes: inv.scopes as object, status: "active" } }),
+      db.invite.update({ where: { id: inv.id }, data: { status: "accepted" } }),
+      db.auditLog.create({ data: { tenantId: inv.tenantId, actorId: user.id, action: "team.joined", target: user.email, ip: request.ip } }),
+    ]);
+    return { status: 200, message: `Welcome to ${inv.tenant.name}.`, data: { tenantId: inv.tenantId } };
+  });
+
+  // ───── Members ─────
+  async function memberFor(ws: Workspace, userId: string) {
+    const m = await dbOf(app).membership.findFirst({ where: { tenantId: ws.tenantId, userId }, include: { role: true, user: { select: { userName: true, email: true } } } });
+    if (!m) throw notFound("Team member not found.");
+    return m;
+  }
+  const otherOwners = (ws: Workspace, userId: string) =>
+    dbOf(app).membership.count({ where: { tenantId: ws.tenantId, status: "active", role: { key: "owner" }, userId: { not: userId } } });
+
+  app.patch<{ Params: { userId: string } }>("/team/members/:userId", async (request) => {
+    const ws = workspaceOf(request); manage(ws);
+    const b = z.object({ roleId: z.string().optional(), status: z.enum(["active", "paused"]).optional(), scopes: scopes.optional() }).parse(request.body);
+    const m = await memberFor(ws, request.params.userId);
+    if (m.role.key === "owner" && ws.member.role.key !== "owner") throw forbidden("Only an owner can change an owner.");
+    const role = b.roleId ? await roleOf(ws, b.roleId) : null;
+    const losingOwner = m.role.key === "owner" && ((role && role.key !== "owner") || b.status === "paused");
+    if (losingOwner && !(await otherOwners(ws, m.userId))) throw badRequest("A business needs at least one active owner. Make someone else an owner first.");
+    await dbOf(app).membership.update({ where: { id: m.id }, data: { roleId: role?.id, status: b.status, scopes: b.scopes as object | undefined } });
+    await audit(ws, request.ip, "team.updated", m.user.email, { role: role?.key, status: b.status });
+    return { status: 200, message: `${m.user.userName} updated.` };
+  });
+
+  app.delete<{ Params: { userId: string } }>("/team/members/:userId", async (request) => {
+    const ws = workspaceOf(request);
+    const leaving = request.params.userId === ws.user.id;
+    if (!leaving) manage(ws);
+    const m = await memberFor(ws, request.params.userId);
+    if (m.role.key === "owner" && !leaving && ws.member.role.key !== "owner") throw forbidden("Only an owner can remove an owner.");
+    if (m.role.key === "owner" && !(await otherOwners(ws, m.userId))) throw badRequest("A business needs at least one active owner.");
+    await dbOf(app).membership.delete({ where: { id: m.id } });
+    // Their mailboxes stay with the business; they just can't open them any more.
+    await audit(ws, request.ip, leaving ? "team.left" : "team.removed", m.user.email);
+    return { status: 200, message: leaving ? "You left the business." : `${m.user.userName} was removed.` };
+  });
+
+  // ───── Roles ─────
+  const roleBody = z.object({ name: z.string().trim().min(2).max(60), perms: z.array(z.string()).max(200) });
+  const checkPerms = (ws: Workspace, perms: string[]) => {
+    const allowed = new Set(businessPermsFor(typesOf(ws)));
+    const bad = perms.filter((p) => !allowed.has(p));
+    if (bad.length) throw badRequest(`Unknown permissions: ${bad.join(", ")}`);
+    return [...new Set(perms)];
+  };
+  const rolesAdmin = (ws: Workspace) => { if (!ws.can("roles.manage")) throw forbidden("Only people who manage roles can do this."); };
+
+  app.post("/team/roles", async (request) => {
+    const ws = workspaceOf(request); rolesAdmin(ws);
+    if (!(ws.member.tenant.plan.features as Record<string, boolean>).custom_roles) throw new AppError(402, "upgrade_needed", "Your own roles are part of the Business and Pro plans.");
+    const b = roleBody.parse(request.body);
+    const key = `custom_${b.name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 30)}_${Math.random().toString(36).slice(2, 6)}`;
+    const r = await dbOf(app).role.create({ data: { tenantId: ws.tenantId, key, name: b.name, perms: checkPerms(ws, b.perms), system: false } });
+    await audit(ws, request.ip, "role.created", b.name);
+    return { status: 200, message: `Role "${b.name}" created.`, data: { id: r.id } };
+  });
+
+  app.patch<{ Params: { id: string } }>("/team/roles/:id", async (request) => {
+    const ws = workspaceOf(request); rolesAdmin(ws);
+    const b = roleBody.partial().parse(request.body);
+    const r = await dbOf(app).role.findFirst({ where: { id: request.params.id, tenantId: ws.tenantId } });
+    if (!r) throw notFound("Role not found.");
+    if (r.key === "owner") throw badRequest("The owner role always has every permission.");
+    await dbOf(app).role.update({ where: { id: r.id }, data: { name: b.name, perms: b.perms ? checkPerms(ws, b.perms) : undefined } });
+    await audit(ws, request.ip, "role.updated", b.name ?? r.name ?? r.key);
+    return { status: 200, message: "Role saved." };
+  });
+
+  app.delete<{ Params: { id: string } }>("/team/roles/:id", async (request) => {
+    const ws = workspaceOf(request); rolesAdmin(ws);
+    const r = await dbOf(app).role.findFirst({ where: { id: request.params.id, tenantId: ws.tenantId }, include: { _count: { select: { memberships: true } } } });
+    if (!r) throw notFound("Role not found.");
+    if (r.system) throw badRequest("Built-in roles can't be deleted.");
+    if (r._count.memberships) throw badRequest("Move the people in this role to another role first.");
+    await dbOf(app).role.delete({ where: { id: r.id } });
+    await audit(ws, request.ip, "role.deleted", r.name ?? r.key);
+    return { status: 200, message: "Role deleted." };
+  });
+}

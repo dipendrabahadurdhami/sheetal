@@ -21,6 +21,7 @@ import { Help, Tour } from "./Help";
 import { MyProfile, NotificationsPage, businessSeed, useNotifs } from "@sheetal/shared/components/Me";
 import { Domains } from "./Domains";
 import { Mail } from "./Mail";
+import { useLiveWorkspace } from "../live";
 import { POS, Bookings } from "./POS";
 import { Inbox } from "./Inbox";
 import { Forms } from "./Forms";
@@ -45,6 +46,7 @@ export default function BusinessApp() {
   const t = useT();
   const { db, update, reset } = useStore();
   const { navigate } = useRouter();
+  useLiveWorkspace(); // real businesses, role and team when signed in (../live.js)
   const s = db.session;
   // Sheetal staff support sessions end on their own after 30 minutes.
   React.useEffect(() => {
@@ -59,7 +61,8 @@ export default function BusinessApp() {
   const tenant = db.tenants.find((x) => x.id === s.tenantId) || db.tenants.find((x) => x.id === ids[0]);
   const roles = db.tenantRoles[tenant.id];
   const owner = roles.find((r) => r.perms.includes("*"));
-  const role = roles.find((r) => r.id === s.previewRoleId) || owner;
+  // Previewing a role (owners checking what someone sees) wins; then the person's own role in this business.
+  const role = roles.find((r) => r.id === s.previewRoleId) || roles.find((r) => r.id === s.liveRoles?.[tenant.id]) || owner || roles[0];
   const ts = db.tenantSettings[tenant.id] || defaultTenantSettings(tenant);
   const openBranches = branchesOf(db, tenant).filter((b) => b.status === "open").map((b) => b.name);
   const sample = (db.members[tenant.id] || []).find((m) => m.roleId === role.id);

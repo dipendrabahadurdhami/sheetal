@@ -7,6 +7,10 @@ export const bizApiReady = () => !!BASE;
 const token = () => { try { return localStorage.getItem("sheetal_token"); } catch { return null; } };
 export const signedIn = () => !!token();
 
+// The business the panel has open; sent with every call so the API acts in that business.
+let activeTenant = null;
+export const setActiveTenant = (id) => { activeTenant = id || null; };
+
 export class ApiError extends Error {
   constructor(status, message, errors) { super(message); this.status = status; this.errors = errors; }
 }
@@ -16,6 +20,7 @@ export async function bizApi(method, path, body) {
   const headers = { Accept: "application/json" };
   const t = token();
   if (t) headers.Authorization = `Bearer ${t}`;
+  if (activeTenant) headers["x-tenant-id"] = activeTenant;
   if (body !== undefined) headers["Content-Type"] = "application/json";
   let res;
   try {
