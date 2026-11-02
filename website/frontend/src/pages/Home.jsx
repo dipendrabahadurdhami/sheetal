@@ -79,9 +79,9 @@ export default function Home() {
       <section className="container">
         <SectionHead kicker="Our partners" title="Agencies" action={<Link to="/partners?type=agency" className="link">View all</Link>} />
         <div className="agents-grid">
-          {(agencies.data?.items || []).slice(0, 6).map((a) => <AgencyCard key={a.id} a={a} />)}
-          {agencies.loading && Array.from({ length: 6 }, (_, i) => <div key={i} className="sk" style={{ height: 200, borderRadius: "var(--r-xl)" }} />)}
-          {!agencies.loading && (agencies.data?.items || []).length < 6 && <JoinPanel span={6 - (agencies.data?.items || []).length} />}
+          {(agencies.data?.items || []).slice(0, 4).map((a) => <AgencyCard key={a.id} a={a} />)}
+          {agencies.loading && Array.from({ length: 4 }, (_, i) => <div key={i} className="sk" style={{ height: 200, borderRadius: "var(--r-xl)" }} />)}
+          {!agencies.loading && (agencies.data?.items || []).length < 4 && <JoinPanel span={4 - (agencies.data?.items || []).length} />}
         </div>
       </section>
 
