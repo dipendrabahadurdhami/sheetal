@@ -20,6 +20,7 @@ import { BusinessBilling, BusinessData } from "./BusinessBilling";
 import { Help, Tour } from "./Help";
 import { MyProfile, NotificationsPage, businessSeed, useNotifs } from "@sheetal/shared/components/Me";
 import { Domains } from "./Domains";
+import { Mail } from "./Mail";
 import { POS, Bookings } from "./POS";
 import { Inbox } from "./Inbox";
 import { Forms } from "./Forms";
@@ -91,6 +92,7 @@ export default function BusinessApp() {
     ] },
     { group: "group.leads", items: [
       { to: "/business/inbox", icon: "messages-square", key: "nav.inbox", permAny: ["messages.reply", "leads.view"] },
+      { to: "/business/mail", icon: "mail", key: "nav.mail" },
       { to: "/business/voice", paid: true, icon: "phone-call", key: "nav.bizVoice", permAny: ["messages.reply", "leads.view", "settings.business"] },
       { to: "/business/forms", icon: "file-text", key: "nav.forms", permAny: ["messages.reply", "leads.view", "settings.business"] },
       { to: "/business/agreements", paid: true, icon: "file-pen-line", key: "nav.agreements", permAny: ["customers.view", "listings.manage", "reservations.manage", "investments.manage", "overview.view"], count: pendingAg, countTone: "action" },
@@ -211,6 +213,7 @@ export default function BusinessApp() {
         { path: "/business/analytics", render: () => guard(can(role, "overview.view"), <Analytics tenant={tenant} />) },
         { path: "/business/people", render: () => <TeamHub key={tenant.id + "a"} tenant={tenant} role={role} start="attendance" /> },
         { path: "/business/developers", render: () => guard(can(role, "settings.business"), <SettingsShell role={role}><Developers tenant={tenant} /></SettingsShell>) },
+        { path: "/business/mail", render: () => <Mail key={tenant.id} /> },
         { path: "/business/domains", render: () => guard(can(role, "settings.business"), <SettingsShell role={role}><Domains key={tenant.id} tenant={tenant} /></SettingsShell>) },
         { path: "/business/channels", render: () => guard(can(role, "settings.business"), <SettingsShell role={role}><Channels key={tenant.id} tenant={tenant} /></SettingsShell>) },
         { path: "/business/ai-accounts", render: () => guard(can(role, "settings.business"), <SettingsShell role={role}><AiAccounts key={tenant.id} tenant={tenant} /></SettingsShell>) },

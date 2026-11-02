@@ -26,6 +26,12 @@ const schema = z.object({
   MEDIA_DIR: z.string().optional(),
   // Public address of the photos; defaults to this API's /media.
   MEDIA_URL: z.url().optional(),
+  // Key that encrypts secrets stored in the database (src/lib/vault.ts). Required in production.
+  SECRETS_KEY: z.string().min(32).optional(),
+  // Mail: the host name of Sheetal's mail server (the MX every business domain points to), and the shared
+  // secret the mail server uses to hand incoming mail to the business API.
+  MAIL_HOST: z.string().default("mail.sheetalproperty.com"),
+  MAIL_INBOUND_SECRET: z.string().min(24).optional(),
   // Requests per minute per IP for the whole API; sensitive routes set lower limits.
   RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(300),
 });
@@ -44,6 +50,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, service: Servic
   }
   const config = parsed.data;
   if (config.NODE_ENV === "production" && !config.DATABASE_URL) throw new Error("Invalid configuration: DATABASE_URL is required in production");
+  if (config.NODE_ENV === "production" && !config.SECRETS_KEY) throw new Error("Invalid configuration: SECRETS_KEY is required in production");
   return config;
 }
 

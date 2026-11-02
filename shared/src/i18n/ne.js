@@ -29,7 +29,7 @@ export default {
   "a11y.mainNav": "मुख्य मेनु", "a11y.openMenu": "मेनु खोल्नुहोस्", "a11y.language": "भाषा", "a11y.notifications": "सूचनाहरू", "a11y.account": "खाता",
   "theme.light": "उज्यालो थिम", "theme.dark": "अँध्यारो थिम", "theme.red": "रातो थिम",
   "group.customers": "ग्राहक", "group.marketplace": "बजार", "group.system": "प्रणाली", "group.operate": "सञ्चालन", "group.sell": "बिक्री", "group.money": "पैसा", "group.admin": "व्यवस्थापन",
-  "nav.dashboard": "ड्यासबोर्ड", "nav.tenants": "व्यवसायहरू", "nav.plans": "योजनाहरू", "nav.billing": "बिलिङ", "nav.catalog": "सूची सेटअप", "nav.content": "साइट सामग्री", "nav.moderation": "जाँच", "nav.inbox": "इनबक्स र लिड",
+  "nav.mail": "इमेल", "nav.dashboard": "ड्यासबोर्ड", "nav.tenants": "व्यवसायहरू", "nav.plans": "योजनाहरू", "nav.billing": "बिलिङ", "nav.catalog": "सूची सेटअप", "nav.content": "साइट सामग्री", "nav.moderation": "जाँच", "nav.inbox": "इनबक्स र लिड",
   "nav.staff": "कर्मचारी र भूमिका", "nav.settings": "सेटिङ", "nav.audit": "गतिविधि लग", "nav.overview": "सारांश", "nav.pos": "बिक्री काउन्टर (POS)", "nav.bookings": "बुकिङ", "nav.calendar": "पात्रो",
   "nav.projects": "परियोजना", "nav.collections": "रकम संकलन", "nav.investors": "लगानीकर्ता", "nav.listings": "सूचीहरू", "nav.agreements": "सम्झौता", "nav.invoices": "बिल", "nav.payouts": "भुक्तानी प्राप्ति",
   "nav.team": "टोली", "nav.roles": "भूमिका", "nav.plan": "योजना र बिलिङ", "nav.data": "आयात र निर्यात", "nav.domains": "डोमेन र इमेल", "nav.help": "सहायता",

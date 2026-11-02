@@ -326,3 +326,119 @@ model ListingPhoto {
   @@index([listingId, sort])
   @@map("listing_photos")
 }
+
+// ───────────── Business email (own domains, own mail server) ─────────────
+// A business connects its domain, proves it with DNS records, then gives each team member a mailbox.
+// Paid plans only; storage is counted per business (all mailboxes together).
+
+/// A business's own domain for email. Mailboxes can be created only once it is verified.
+model MailDomain {
+  id             String    @id @default(cuid())
+  tenantId       String    @map("tenant_id")
+  /// Always lower-case, e.g. "everestinn.com".
+  name           String    @unique
+  verified       Boolean   @default(false)
+  /// Proof the business owns the domain (a TXT record).
+  verifyToken    String    @map("verify_token")
+  dkimSelector   String    @default("sheetal") @map("dkim_selector")
+  dkimPublicKey  String    @map("dkim_public_key")
+  /// Encrypted with SECRETS_KEY (backend-core/src/lib/vault.ts).
+  dkimPrivateKey String    @map("dkim_private_key")
+  /// Last DNS check: record id → "ok" | "missing" | "wrong".
+  checks         Json      @default("{}")
+  checkedAt      DateTime? @map("checked_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  mailboxes      Mailbox[]
+
+  @@index([tenantId])
+  @@map("mail_domains")
+}
+
+/// An address on a business domain: one person's mailbox, or a shared one (info@, sales@) several people answer.
+model Mailbox {
+  id        String          @id @default(cuid())
+  tenantId  String          @map("tenant_id")
+  domainId  String          @map("domain_id")
+  /// Full address, lower-case: "ram@everestinn.com".
+  address   String          @unique
+  name      String
+  /// "person" or "shared".
+  kind      String          @default("person")
+  /// The team member a personal mailbox belongs to.
+  userId    String?         @map("user_id")
+  active    Boolean         @default(true)
+  createdAt DateTime        @default(now()) @map("created_at")
+  domain    MailDomain      @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  access    MailboxAccess[]
+  messages  MailMessage[]
+
+  @@index([tenantId])
+  @@index([userId])
+  @@map("mailboxes")
+}
+
+/// Who else may use a mailbox (the people who answer a shared address).
+model MailboxAccess {
+  mailboxId String  @map("mailbox_id")
+  userId    String  @map("user_id")
+  mailbox   Mailbox @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+
+  @@id([mailboxId, userId])
+  @@index([userId])
+  @@map("mailbox_access")
+}
+
+/// One email in one mailbox. A message sent to a teammate is stored twice: in the sender's Sent and the teammate's Inbox.
+model MailMessage {
+  id          String           @id @default(cuid())
+  mailboxId   String           @map("mailbox_id")
+  tenantId    String           @map("tenant_id")
+  /// inbox, sent, drafts, archive, spam, trash
+  folder      String
+  /// Replies share the thread of the message they answer.
+  threadId    String           @map("thread_id")
+  /// The internet Message-ID header, for replies across servers.
+  messageId   String           @map("message_id")
+  inReplyTo   String?          @map("in_reply_to")
+  fromAddress String           @map("from_address")
+  fromName    String?          @map("from_name")
+  to          String[]         @default([])
+  cc          String[]         @default([])
+  bcc         String[]         @default([])
+  subject     String           @default("")
+  text        String           @default("")
+  /// Sanitised HTML, when the mail has it.
+  html        String?
+  snippet     String           @default("")
+  /// Bytes counted against the business's storage (body plus attachments).
+  size        Int              @default(0)
+  seen        Boolean          @default(false)
+  starred     Boolean          @default(false)
+  /// received, draft, delivered (to a teammate), queued (for the mail server), sent, failed
+  status      String
+  error       String?
+  sentAt      DateTime?        @map("sent_at")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  mailbox     Mailbox          @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+  attachments MailAttachment[]
+
+  @@index([mailboxId, folder, createdAt])
+  @@index([tenantId])
+  @@index([threadId])
+  @@index([status])
+  @@map("mail_messages")
+}
+
+model MailAttachment {
+  id          String      @id @default(cuid())
+  messageId   String      @map("message_id")
+  filename    String
+  contentType String      @map("content_type")
+  size        Int
+  /// Kept in the database for now; moves to object storage with photos later.
+  data        Bytes
+  message     MailMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@map("mail_attachments")
+}

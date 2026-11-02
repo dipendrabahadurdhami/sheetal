@@ -1437,3 +1437,42 @@ select.pform-in { cursor: pointer; }
 
 .cu-skip { border: 0; background: none; padding: 4px 2px; color: var(--accent-ink); font: inherit; font-size: 13px; cursor: pointer; }
 .cu-skip:hover { text-decoration: underline; }
+
+/* ───────── Email (business): folders · list · reader ───────── */
+.mail-shell { display: grid; grid-template-columns: 240px minmax(280px, 380px) minmax(0, 1fr); min-height: 640px; overflow: hidden; padding: 0 !important; }
+.mail-side { display: flex; flex-direction: column; gap: 14px; padding: 16px; border-right: 1px solid var(--line); background: var(--surface); }
+.mail-folders { display: flex; flex-direction: column; gap: 2px; }
+.mail-folders button { display: flex; align-items: center; gap: 10px; min-height: 38px; padding: 0 10px; border: 0; border-radius: var(--r); background: none; color: var(--text); font: inherit; font-size: 14px; cursor: pointer; text-align: left; }
+.mail-folders button span { flex: 1; }
+.mail-folders button b { font-size: 12px; font-weight: 600; color: var(--accent); }
+.mail-folders button:hover { background: var(--card); }
+.mail-folders button.on { background: var(--accent-soft); color: var(--accent-ink); font-weight: 500; }
+.mail-quota { margin-top: auto; display: flex; flex-direction: column; gap: 6px; }
+.mail-list { display: flex; flex-direction: column; border-right: 1px solid var(--line); min-width: 0; }
+.mail-list ul { list-style: none; margin: 0; padding: 0; overflow-y: auto; max-height: 720px; }
+.mail-search { position: relative; padding: 12px; border-bottom: 1px solid var(--line); }
+.mail-search svg { position: absolute; left: 24px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+.mail-search .input { padding-left: 36px; }
+.mail-row { display: flex; flex-direction: column; gap: 3px; width: 100%; padding: 12px 14px; border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.mail-row:hover { background: var(--surface); }
+.mail-row.on { background: var(--accent-soft); }
+.mail-row.unread b, .mail-row.unread .mail-row-subject { font-weight: 600; color: var(--text-strong); }
+.mail-row-top { display: flex; justify-content: space-between; gap: 8px; }
+.mail-row-top b { font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mail-row-top small { color: var(--muted); flex: none; }
+.mail-row-subject { display: flex; align-items: center; gap: 6px; font-size: 14px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.mail-row-subject svg { flex: none; color: var(--accent); }
+.mail-row-snippet { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.mail-read { min-width: 0; overflow-y: auto; max-height: 780px; }
+.mail-empty { display: flex; align-items: center; justify-content: center; min-height: 260px; padding: 24px; }
+.mail-message { display: flex; flex-direction: column; gap: 14px; padding: 18px 22px 24px; }
+.mail-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.mail-actions .grow, .pf-drawer .grow { flex: 1; }
+.mail-subject { margin: 0; font-size: 20px; font-weight: 600; color: var(--text-strong); }
+.mail-meta { display: flex; flex-direction: column; gap: 2px; }
+.mail-body { margin: 0; white-space: pre-wrap; word-wrap: break-word; font: inherit; font-size: 14px; line-height: 1.6; }
+.mail-body-frame { width: 100%; min-height: 360px; border: 0; background: #fff; border-radius: var(--r); }
+.mail-thread { display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 1px solid var(--line); }
+.mail-dns-value { max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle; }
+@media (max-width: 1100px) { .mail-shell { grid-template-columns: 220px minmax(0, 1fr); } .mail-read { grid-column: 1 / -1; border-top: 1px solid var(--line); max-height: none; } }
+@media (max-width: 700px) { .mail-shell { grid-template-columns: 1fr; } .mail-side { border-right: 0; border-bottom: 1px solid var(--line); } .mail-quota { margin-top: 0; } }

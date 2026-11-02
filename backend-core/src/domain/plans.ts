@@ -33,3 +33,7 @@ export const priceFor = (monthly: number, months = 1) => {
 };
 
 export const starterPlanId = (type: BusinessType) => `${type}-starter`;
+
+/** Email storage per business: paid plans (Business, Pro) get 1 GB shared by all mailboxes; Starter has no team email. */
+export const MAIL_QUOTA_BYTES = 1024 ** 3;
+export const mailQuotaBytes = (plan: { price: number }) => (plan.price > 0 ? MAIL_QUOTA_BYTES : 0);
