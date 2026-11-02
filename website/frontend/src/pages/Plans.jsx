@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { LogIn } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { api } from "../api/endpoints";
 import { toList } from "../api/client";
@@ -46,12 +45,6 @@ export default function Plans() {
           </div>
           <PeriodPicker value={months} onChange={setMonths} />
         </div>
-        {!user && (
-          <div className="plans-note">
-            <LogIn size={16} />
-            <span>You can compare plans now. You will be asked to sign in when you choose one.</span>
-          </div>
-        )}
         {loading ? <div className="plans-grid plans-3">{Array.from({ length: 3 }, (_, i) => <div key={i} className="sk" style={{ height: 320, borderRadius: "var(--r)" }} />)}</div>
           : <PlanCards plans={plans} months={months} current={current} busy={busy} onChoose={choose} chooseLabel={user ? "Request this plan" : "Sign in to choose"} />}
         <p className="small muted" style={{ textAlign: "center", marginTop: 24 }}>Already a business? Manage your plan in <Link to="/my-profile?tab=plan" className="link">My account</Link> or your <a href="/business/billing" className="link">business workspace</a>.</p>
