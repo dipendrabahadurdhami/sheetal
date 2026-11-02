@@ -15,6 +15,10 @@ import { agencyJson, listingCard, listingDetail, mediaBase, type AgencyRow, type
 
 /** Listings visitors can see. Sold and rented ones stay visible with their label. */
 const LIVE: Prisma.ListingWhereInput = { status: { in: ["published", "sold", "rented"] } };
+/** Buy and rent pages show properties; stays, projects and investments have their own pages. */
+const PROPERTIES: Prisma.ListingWhereInput = { AND: [LIVE, { kind: { in: ["sell", "rentout"] } }] };
+/** Kinds with their own page on the website, by path. */
+const KIND_PAGES = { stays: ["stay_hotel", "stay_unit"], projects: ["project"], investments: ["invest"] } as const;
 const withPhotos = { photos: { orderBy: { sort: "asc" } } } as const;
 const LIST_TTL = 60; // seconds; cleared when a listing changes (cache prefix "catalog:")
 
@@ -42,7 +46,7 @@ const ci = (v: string) => ({ equals: v, mode: "insensitive" as const });
 const has = (v: string) => ({ contains: v, mode: "insensitive" as const });
 
 function whereFor(q: Partial<Search>): Prisma.ListingWhereInput {
-  const and: Prisma.ListingWhereInput[] = [LIVE];
+  const and: Prisma.ListingWhereInput[] = [PROPERTIES];
   const kw = q.keyword?.replace(/^#/, "");
   if (kw) and.push({ OR: [{ title: has(kw) }, { area: has(kw) }, { city: has(kw) }, { district: has(kw) }, { code: has(kw) }, { propertyType: has(kw) }] });
   if (!all(q.advertisement_purpose)) and.push({ purpose: q.advertisement_purpose!.startsWith("rent") ? "rent" : "sale" });
@@ -99,13 +103,21 @@ export async function catalogRoutes(app: FastifyInstance) {
 
   app.get("/all-properties", async (request) => {
     const q = paging.parse(request.query);
-    return cached(app.cache, cacheKey("all", q), LIST_TTL, () => page(LIVE, q));
+    return cached(app.cache, cacheKey("all", q), LIST_TTL, () => page(PROPERTIES, q));
   });
 
   for (const purpose of ["sale", "rent"] as const) {
     app.get(`/${purpose}`, async (request) => {
       const q = paging.parse(request.query);
-      return cached(app.cache, cacheKey(purpose, q), LIST_TTL, () => page({ AND: [LIVE, { purpose }] }, q));
+      return cached(app.cache, cacheKey(purpose, q), LIST_TTL, () => page({ AND: [PROPERTIES, { purpose }] }, q));
+    });
+  }
+
+  // Stays, projects and investments, each with its own page on the website.
+  for (const [path, kinds] of Object.entries(KIND_PAGES)) {
+    app.get(`/${path}`, async (request) => {
+      const q = paging.extend({ per_page: z.coerce.number().int().min(1).max(100).default(24) }).parse(request.query);
+      return cached(app.cache, cacheKey(path, q), LIST_TTL, () => page({ AND: [LIVE, { kind: { in: [...kinds] } }] }, q));
     });
   }
 
@@ -142,7 +154,7 @@ export async function catalogRoutes(app: FastifyInstance) {
         status: 200,
         data: rows.map((l) => {
           const c = listingCard(l, base);
-          return { id: c.id, url: c.url, name: c.name, property_type: c.property_type, category: c.category, purpose: c.purpose, district: c.district, property_location: c.property_location, total_price: c.total_price, bedroom: c.bedroom, property_area: c.property_area, property_status: c.property_status, lat: c.lat, lng: c.lng, feature_image: c.thumbnail, location_approximate: true };
+          return { id: c.id, url: c.url, name: c.name, kind: c.kind, property_type: c.property_type, category: c.category, purpose: c.purpose, district: c.district, property_location: c.property_location, total_price: c.total_price, bedroom: c.bedroom, property_area: c.property_area, property_status: c.property_status, lat: c.lat, lng: c.lng, feature_image: c.thumbnail, location_approximate: true };
         }),
       };
     }));

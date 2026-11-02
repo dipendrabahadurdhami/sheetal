@@ -27,7 +27,9 @@ export function PropertyCard({ p, layout = "grid" }) {
       onMouseLeave={() => setI(0)}>
       <div className="pcard-media">
         {imgs.length > 0 && !broken
-          ? <img src={imgs[i]} alt={titleOf(p)} loading="lazy" onError={() => setBroken(true)} />
+          ? <img src={imgs[i]} alt={titleOf(p)} loading="lazy" onError={() => setBroken(true)}
+              // Cover photo: the small 400 px copy on normal screens, the full one on sharp (retina) screens.
+              {...(i === 0 && p.thumbnail ? { srcSet: `${p.thumbnail} 400w, ${imgs[0]} 940w`, sizes: "(max-width: 600px) 100vw, 400px" } : {})} />
           : <div className="sk" style={{ width: "100%", height: "100%", animation: "none" }} />}
         {sold && <div className="pcard-sold"><span>{isRent ? "RENTED" : "SOLD"}</span></div>}
         <div className="pcard-top">

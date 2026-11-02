@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { api } from "../api/endpoints";
+import { isLivePath, toList } from "../api/client";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
 import { Link, useRouter } from "@sheetal/shared/core/router";
@@ -22,19 +24,45 @@ export const STAYS = [];
 export const PROJECTS = [];
 export const INVESTS = [];
 // Live catalogue: every published stay, project and investment from business workspaces.
+// Stays, projects and investments from the website API: loaded once per visit, shared by every page that asks.
+// They are listings (often a sale or rent), so their cards open the full property page and show the real price.
+let fromApi = null;
+const apiListeners = new Set();
+function loadFromApi() {
+  if (fromApi || !isLivePath("stays")) return;
+  fromApi = { stays: [], projects: [], invests: [] };
+  const base = (p) => ({ id: `L${p.id}`, href: p.link, tid: p.agent_id, name: p.name, city: p.district, area: p.property_location, img: p.thumbnail || p.feature_image, deal: p.purpose === "Rent" ? "rent" : "sale", price: p.total_price, lat: p.lat, lng: p.lng, live: true });
+  Promise.all(["stays", "projects", "investments"].map((k) => api.kindList(k).then(toList).then((r) => r.items).catch(() => [])))
+    .then(([stays, projects, invests]) => {
+      fromApi = {
+        stays: stays.map((p) => ({ ...base(p), kind: "hotel", stars: 0, rating: 0, reviews: 0, perks: [], rooms: [], policy: "moderate" })),
+        projects: projects.map((p) => ({ ...base(p), type: p.category, status: p.purpose === "Rent" ? "For rent" : "For sale", from: p.total_price, banks: [] })),
+        invests: invests.map((p) => ({ ...base(p), type: p.category, target: p.total_price || 0, raised: 0, investors: 0 })),
+      };
+      apiListeners.forEach((fn) => fn(fromApi));
+    });
+}
+function useFromApi() {
+  const [v, setV] = useState(fromApi);
+  useEffect(() => { apiListeners.add(setV); loadFromApi(); if (fromApi !== v) setV(fromApi); return () => apiListeners.delete(setV); }, []);
+  return v || { stays: [], projects: [], invests: [] };
+}
+const dealPrice = (x) => <span className="pb-price tnum">{rsShort(x.price)}{x.deal === "rent" ? <small> / month</small> : <small> · for sale</small>}</span>;
+
 export function useCatalog() {
   const { db } = useStore();
+  const live = useFromApi();
   const ten = (id) => db.tenants.find((x) => x.id === id) || {};
   const extra = db.listings.filter((l) => l.status === "published");
   const stays = [...STAYS, ...extra.filter((l) => l.kind === "stay_hotel" || l.kind === "stay_unit").map((l) => ({ id: l.id, tid: l.tenantId, kind: l.kind === "stay_hotel" ? "hotel" : "villa", name: l.title, city: ten(l.tenantId).city, area: ten(l.tenantId).city, stars: 0, rating: 5, reviews: 0, price: l.price, perks: ["New on Sheetal", "Free Wi-Fi"], rooms: [["Standard", l.price, 2]], policy: "moderate", lat: l.values?.pin?.lat, lng: l.values?.pin?.lng }))];
   const projects = [...PROJECTS, ...extra.filter((l) => l.kind === "project").map((l) => ({ id: l.id, tid: l.tenantId, name: l.title, type: "Project", city: ten(l.tenantId).city, area: ten(l.tenantId).city, status: "Under construction", possession: "2028", units: 40, left: 40, towers: 1, floors: 8, from: l.price, progress: 10, banks: [] }))];
   const invests = [...INVESTS, ...extra.filter((l) => l.kind === "invest").map((l) => ({ id: l.id, tid: l.tenantId, name: l.title, type: "Project", city: ten(l.tenantId).city, target: l.price || 10000000, raised: 0, investors: 0, min: 10000, ret: "10–12%", term: "3 years", payout: "Every year", closes: l.values?.closes || null, risk: "medium" }))];
-  return { stays, projects, invests };
+  return { stays: [...stays, ...live.stays], projects: [...projects, ...live.projects], invests: [...invests, ...live.invests] };
 }
 const PHOTOS = [1, 2, 3, 4, 5, 6, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
 const photoFor = (seed) => { const s = String(seed); let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return `/demo/${PHOTOS[h % PHOTOS.length]}.jpg`; };
-const IMG = ({ big, label, seed }) => seed != null
-  ? <div className={`pb-ph pb-photo ${big ? "big" : ""}`}><img src={photoFor(seed)} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.display = "none"; }} />{label && <span>{label}</span>}</div>
+const IMG = ({ big, label, seed, src }) => src || seed != null
+  ? <div className={`pb-ph pb-photo ${big ? "big" : ""}`}><img src={src || photoFor(seed)} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.display = "none"; }} />{label && <span>{label}</span>}</div>
   : <div className={`pb-ph ${big ? "big" : ""}`}><Icon name="image" size={big ? 30 : 18} />{label && <span>{label}</span>}</div>;
 const useSaved = () => {
   const { db, update } = useStore();
@@ -101,9 +129,9 @@ export function Home() {
   );
 }
 const Row = ({ title, to, children }) => <section className="pb-inner pf-stack" style={{ padding: "32px 24px 0" }}><div className="pf-plan-top"><h2 className="pb-h2">{title}</h2><Link to={to} className="link small">See all</Link></div><div className="pb-grid">{children}</div></section>;
-export const StayCard = ({ s }) => <Link to={`/stays/${s.id}`} className="card pb-card"><div className="pb-cimg"><IMG seed={s.id} /><TypeTag>{s.kind === "hotel" || s.kind === "resort" ? "Hotel" : "Villa"}</TypeTag><Heart type="stay" id={s.id} /></div><div className="pb-cbody"><b>{s.name}</b><span className="small muted">{s.area}, {s.city} · ★ {s.rating}</span><span className="pb-price tnum">{rs(s.price)}<small> / night</small></span></div></Link>;
-export const ProjectCard = ({ p }) => <Link to={`/project/${p.id}`} className="card pb-card"><div className="pb-cimg"><IMG seed={p.id} /><TypeTag>Project</TypeTag><Heart type="project" id={p.id} /></div><div className="pb-cbody"><b>{p.name}</b><span className="small muted">{p.area}, {p.city} · {p.status}</span><span className="pb-price tnum"><small>Starting from </small>{rsShort(p.from)}</span></div></Link>;
-export const InvestCard = ({ v }) => <Link to={`/investment/${v.id}`} className="card pb-card"><div className="pb-cimg"><IMG seed={v.id} /><TypeTag>Invest</TypeTag><Heart type="invest" id={v.id} /></div><div className="pb-cbody"><b>{v.name}</b><span className="small muted">{v.type} · {v.city}</span><div className="bar" style={{ height: 6, marginTop: 6 }}><i style={{ width: `${(v.raised / v.target) * 100}%` }} /></div><span className="small tnum">{rsShort(v.raised)} of {rsShort(v.target)} · {v.ret} expected, not guaranteed</span></div></Link>;
+export const StayCard = ({ s }) => <Link to={s.href || `/stays/${s.id}`} className="card pb-card"><div className="pb-cimg"><IMG seed={s.id} src={s.img} /><TypeTag>{s.kind === "hotel" || s.kind === "resort" ? "Hotel" : "Villa"}</TypeTag><Heart type="stay" id={s.id} /></div><div className="pb-cbody"><b>{s.name}</b><span className="small muted">{s.area}, {s.city}{s.rating ? ` · ★ ${s.rating}` : ""}</span>{s.deal ? dealPrice(s) : <span className="pb-price tnum">{rs(s.price)}<small> / night</small></span>}</div></Link>;
+export const ProjectCard = ({ p }) => <Link to={p.href || `/project/${p.id}`} className="card pb-card"><div className="pb-cimg"><IMG seed={p.id} src={p.img} /><TypeTag>Project</TypeTag><Heart type="project" id={p.id} /></div><div className="pb-cbody"><b>{p.name}</b><span className="small muted">{p.area}, {p.city} · {p.status}</span>{p.deal ? dealPrice(p) : <span className="pb-price tnum"><small>Starting from </small>{rsShort(p.from)}</span>}</div></Link>;
+export const InvestCard = ({ v }) => <Link to={v.href || `/investment/${v.id}`} className="card pb-card"><div className="pb-cimg"><IMG seed={v.id} src={v.img} /><TypeTag>Invest</TypeTag><Heart type="invest" id={v.id} /></div><div className="pb-cbody"><b>{v.name}</b><span className="small muted">{v.type} · {v.city}</span>{v.deal ? dealPrice(v) : <><div className="bar" style={{ height: 6, marginTop: 6 }}><i style={{ width: `${(v.raised / v.target) * 100}%` }} /></div><span className="small tnum">{rsShort(v.raised)} of {rsShort(v.target)} · {v.ret} expected, not guaranteed</span></>}</div></Link>;
 
 /* Stays list + detail (§7.3, §7.4, §23.1) */
 export function Stays() {

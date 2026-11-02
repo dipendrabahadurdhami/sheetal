@@ -15,14 +15,18 @@ export default function AgencyProfile() {
   const { id } = useParams();
   const { data: a, loading, error } = useAsync(() => api.agent(id).then(toItem), [id]);
   useSEO(a ? agencyName(a) : "Agency", a ? `Listings and contact details for ${agencyName(a)}.` : undefined);
-  const props = useAsync(() => api.agentProperties(id).then(toList), [id]);
   const PER = 12;
   const [pg, setPg] = useState(1);
+  // One page at a time from the API (an agency can have thousands of listings).
+  const props = useAsync(() => api.agentProperties(id, pg, PER).then(toList), [id, pg]);
   const listTop = useRef(null);
-  const allItems = props.data?.items || [];
-  const last = Math.max(1, Math.ceil(allItems.length / PER));
+  const all = props.data?.items || [];
+  // The demo data returns everything at once; the API returns one page and the total.
+  const paged = all.length <= PER;
+  const total = props.data?.total ?? all.length;
+  const last = paged ? Math.max(1, props.data?.last || 1) : Math.max(1, Math.ceil(all.length / PER));
   const page = Math.min(pg, last);
-  const pageItems = allItems.slice((page - 1) * PER, page * PER);
+  const pageItems = paged ? all : all.slice((page - 1) * PER, page * PER);
   const goPage = (n) => { setPg(n); const el = listTop.current; if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 90, behavior: "smooth" }); };
   if (loading) return <div className="container section"><div className="sk" style={{ height: 220, borderRadius: "var(--r-md)" }} /></div>;
   if (error || !a) return <div className="container"><Empty title="Agency not found"><Link to="/partners?type=agency">See all agencies</Link></Empty></div>;
@@ -51,7 +55,7 @@ export default function AgencyProfile() {
           <div className="stack" style={{ gap: 10 }}>
             <span className="tier">{agencyTier(a.tier) ? `${agencyTier(a.tier)} agency` : "Agency"}</span>
             <h1 style={{ fontSize: "clamp(28px, 3.6vw, 42px)" }} className="row">{name}</h1>
-            <span className="muted">{a.designation}{a.company_name ? ` · ${a.company_name}` : ""}</span>
+            <span className="muted">{[a.designation, a.company_name !== name ? a.company_name : null].filter(Boolean).join(" · ")}</span>
             <div className="row-wrap" style={{ gap: 18 }}>
               {a.avg_rating && <span className="row" style={{ gap: 8 }}><Stars value={a.avg_rating} /><span className="tnum">{a.avg_rating} ({a.review_count || 0})</span></span>}
               {a.address && <span className="row muted small" style={{ gap: 6 }}><MapPin size={14} />{a.address}</span>}
@@ -79,10 +83,10 @@ export default function AgencyProfile() {
           <section ref={listTop}>
             <div className="row between" style={{ marginBottom: 20, alignItems: "baseline" }}>
               <h3>Listings by {a.first_name || name}</h3>
-              {allItems.length > 0 && <span className="small muted">{allItems.length} {allItems.length === 1 ? "property" : "properties"}</span>}
+              {total > 0 && <span className="small muted">{total.toLocaleString("en-IN")} {total === 1 ? "property" : "properties"}</span>}
             </div>
             <style>{`@media (min-width: 1100px) { .agent-grid > div { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 14px !important; } }`}</style>
-            {!props.loading && !allItems.length ? <p className="muted">No active listings right now.</p> : <div className="agent-grid"><PropertyGrid loading={props.loading} items={pageItems} count={4} /></div>}
+            {!props.loading && !all.length ? <p className="muted">No active listings right now.</p> : <div className="agent-grid"><PropertyGrid loading={props.loading} items={pageItems} count={4} /></div>}
             <Pagination page={page} last={last} onChange={goPage} />
           </section>
         </div>

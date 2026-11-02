@@ -40,7 +40,14 @@ const EXTRA = {
     { k: "payout", label: "Returns paid", multi: ["Every year", "Every 6 months", "At exit"], test: (x, v) => v.split("|").includes(x.payout) },
   ],
 };
-const norm = (kind, x) => ({ raw: x, ...normInner(kind, x) });
+const norm = (kind, x) => ({ raw: x, ...(x.live ? normListing(kind, x) : normInner(kind, x)) });
+// A listing from the website API filed under this kind (for example a hotel for sale): its own photo,
+// its real sale or rent price, and the full property page.
+const normListing = (kind, x) => {
+  const deal = x.deal === "rent" ? "For rent" : "For sale";
+  return { id: x.id, to: x.href, img: x.img, name: x.name, type: x.type || (kind === "stay" ? "Hotel" : kind === "project" ? "Colony" : "Land"), city: x.city, area: x.area,
+    price: x.price || 0, tag: deal, status: deal, facts: [], sub: x.deal === "rent" ? "/ month" : "" };
+};
 const normInner = (kind, x) => kind === "stay"
   ? { id: x.id, to: `/stays/${x.id}`, name: x.name, type: x.kind[0].toUpperCase() + x.kind.slice(1), city: x.city, area: x.area, price: x.price, tag: "Stay", rating: x.rating, reviews: x.reviews, facts: x.perks.slice(0, 2), sub: "/ night" }
   : kind === "project"
@@ -54,13 +61,13 @@ function Card({ it: it0, layout, trip = "" }) {
   return (
     <article className={`pcard fade-in ${layout === "list" ? "list" : ""}`} onClick={() => nav(it.to)}>
       <div className="pcard-media">
-        {!broken ? <img src={photoFor(it.id)} alt={it.name} loading="lazy" onError={() => setBroken(true)} /> : <div className="sk" style={{ width: "100%", height: "100%", animation: "none" }} />}
+        {!broken ? <img src={it.img || photoFor(it.id)} alt={it.name} loading="lazy" onError={() => setBroken(true)} /> : <div className="sk" style={{ width: "100%", height: "100%", animation: "none" }} />}
         <div className="pcard-top"><span className={it.tag === "Funded" || it.tag === "Ready to move" ? "tag tag-white" : "tag tag-red"}>{it.tag}</span></div>
         <span className="tag tag-white pcard-code">{it.type}</span>
       </div>
       <div className="pcard-body">
         <Link to={it.to} className="pcard-title" onClick={(e) => e.stopPropagation()}>{it.name}</Link>
-        <span className="pcard-loc"><MapPin size={13} />{[it.area, it.city].filter((v, i, a) => v && a.indexOf(v) === i).join(", ")}</span>
+        <span className="pcard-loc"><MapPin size={13} />{[...new Set([it.area, it.city].filter(Boolean).join(", ").split(/,\s*/).filter(Boolean))].join(", ")}</span>
         {it.pct != null && <div className="bar" style={{ height: 6, margin: "4px 0" }}><i style={{ width: `${it.pct}%` }} /></div>}
         <div className="pcard-specs">{it.rating ? <span><Star size={14} />{it.rating} ({it.reviews})</span> : null}{it.facts.map((f) => <span key={f}>{f}</span>)}</div>
         <div className="row between" style={{ alignItems: "baseline", marginTop: 4 }}>

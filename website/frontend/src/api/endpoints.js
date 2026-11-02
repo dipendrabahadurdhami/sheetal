@@ -16,14 +16,16 @@ export const api = {
   allProperties: (page = 1, per = 60) => get("all-properties", { page, per_page: per }),
   byPurpose: (purpose, page = 1, per = 12) => get(purpose === "rent" ? "rent" : "sale", { page, per_page: per }),
   search: (params) => get("search", params),
-  mapPins: () => get("map-pins"), // optional fast endpoint for the map (see backend-fix/MapPins.md)
+  mapPins: () => get("map-pins"),
+  // Stays, projects and investments posted as listings (the website's own pages for these kinds).
+  kindList: (path, page = 1, per = 100) => get(path, { page, per_page: per }), // optional fast endpoint for the map (see backend-fix/MapPins.md)
   property: (id) => get(/^\d+$/.test(String(id)) ? `property-detail/${id}` : `property-by-slug/${id}`),
   byCode: (code) => get(`property-by-code/${code}`),
 
   // agents
   agents: () => get("agent-list"),
   agent: (id) => get(`agent-detail/${id}`),
-  agentProperties: (id) => get(`agent-properties/${id}`),
+  agentProperties: (id, page = 1, per = 60) => get(`agent-properties/${id}`, { page, per_page: per }),
 
   // reviews
   reviews: (type, id) => get("reviews-public", type === "agent" ? { type, agent_id: id } : { type, property_id: id }),

@@ -31,6 +31,8 @@ export function listingCard(l: ListingRow, base: string) {
     link: `/property/${l.slug}`,
     name: l.title,
     title: l.title,
+    // sell, rentout, stay_hotel, stay_unit, project or invest (shared/src/data/catalog.js).
+    kind: l.kind,
     purpose,
     advertisement_purpose: purpose,
     property_type: l.propertyType ?? l.category,

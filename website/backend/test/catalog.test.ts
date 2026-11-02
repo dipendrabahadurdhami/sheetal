@@ -35,6 +35,7 @@ beforeAll(async () => {
   await db.listing.create({ data: { ...base, code: "SP-0002", slug: "flat-baneshwor-2", purpose: "rent", category: "Apartment", title: "Flat on rent in Baneshwor", price: 30_000n, district: "Kathmandu", area: "Baneshwor", bedrooms: 2, publishedAt: new Date("2026-02-01") } });
   await db.listing.create({ data: { ...base, code: "SP-0003", slug: "land-lalitpur-3", purpose: "sale", category: "Land", title: "Land in Lalitpur", price: 12_000_000n, district: "Lalitpur", status: "sold", publishedAt: new Date("2025-12-01") } });
   await db.listing.create({ data: { ...base, code: "SP-0004", slug: "draft-4", purpose: "sale", title: "Not finished yet", status: "draft" } });
+  await db.listing.create({ data: { ...base, code: "SP-0005", slug: "hotel-thamel-5", kind: "stay_hotel", purpose: "sale", title: "Hotel business for sale in Thamel", price: 90_000_000n, district: "Kathmandu", publishedAt: new Date("2025-11-01") } });
 });
 afterAll(async () => { await app.close(); });
 
@@ -62,6 +63,17 @@ describe("lists", () => {
     expect(await codes("bedrooms=3")).toEqual(["SP-0001"]);
     expect(await codes("advertisement_purpose=sale&price_order=low_to_high")).toEqual(["SP-0003", "SP-0001"]);
     expect(await codes("property_status=sold out")).toEqual(["SP-0003"]);
+  });
+
+  it("keeps stays, projects and investments out of buy and rent, on their own pages", async () => {
+    for (const url of ["/v1/all-properties", "/v1/sale", "/v1/search?keyword=thamel"]) {
+      expect((await get(url)).json().data.map((p: { property_code: string }) => p.property_code)).not.toContain("SP-0005");
+    }
+    const stays = (await get("/v1/stays")).json();
+    expect(stays.data.map((p: { property_code: string; kind: string }) => [p.property_code, p.kind])).toEqual([["SP-0005", "stay_hotel"]]);
+    expect((await get("/v1/projects")).json().meta.total).toBe(0);
+    expect((await get("/v1/investments")).json().meta.total).toBe(0);
+    expect((await get("/v1/property-by-code/SP-0005")).json().data.kind).toBe("stay_hotel");
   });
 
   it("rejects silly paging instead of loading everything", async () => {
@@ -129,9 +141,9 @@ describe("filters, suggestions and agencies", () => {
 
   it("lists agencies with their live listing count", async () => {
     const list = (await get("/v1/agent-list")).json().data;
-    expect(list).toEqual([expect.objectContaining({ id: agencyId, company_name: "Sheetal Property", listings_count: 3 })]);
-    expect((await get(`/v1/agent-detail/${agencyId}`)).json().data.listings_count).toBe(3);
-    expect((await get(`/v1/agent-properties/${agencyId}`)).json().meta.total).toBe(3);
+    expect(list).toEqual([expect.objectContaining({ id: agencyId, company_name: "Sheetal Property", listings_count: 4 })]);
+    expect((await get(`/v1/agent-detail/${agencyId}`)).json().data.listings_count).toBe(4);
+    expect((await get(`/v1/agent-properties/${agencyId}`)).json().meta.total).toBe(4);
     expect((await get("/v1/agent-detail/unknown")).statusCode).toBe(404);
   });
 });

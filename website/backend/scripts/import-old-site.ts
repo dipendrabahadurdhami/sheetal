@@ -101,10 +101,28 @@ function cleanHtml(v: unknown) {
     .replace(/<(script|style|iframe|object|embed|form|meta|link)[^>]*>/gi, "")
     .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
     .replace(/(href|src)\s*=\s*(["'])\s*javascript:[^"']*\2/gi, "$1=\"#\"")
+    // Tidy, without changing the owner's words: no empty paragraphs, runs of spaces or piles of line breaks.
+    .replace(/(&nbsp;| )+/g, " ")
+    .replace(/<p>(\s|<br\s*\/?>)*<\/p>/gi, "")
+    .replace(/(<br\s*\/?>\s*){3,}/gi, "<br><br>")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\r?\n\s*\r?\n(\s*\r?\n)+/g, "\n\n")
     .trim();
   return out.replace(/<[^>]*>|&nbsp;|\s/g, "") ? out : null;
 }
 const text = (html: string | null) => (html ?? "").replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ");
+
+/** What the listing offers, from what its title says it is (the old site only had sale and rent).
+ *  Only the thing being offered counts: "House for rent, ideal for a hostel" is still a house for rent. */
+function kindOf(title: string, purpose: "sale" | "rent", oldPurposeId: number): { kind: string; why?: string } {
+  // "…near CG Housing" describes the neighbourhood, not what is offered.
+  const t = title.replace(/[^\p{L}\p{N}\s/&-]/gu, " ").replace(/\s+/g, " ").replace(/\bnear\b.*$/i, "");
+  const subject = t.split(/\b(?:on|for|at|in|near)\b/i)[0] ?? t; // the words before "on sale", "for rent", "at …"
+  if (/\b(hotel|hostel|guest ?house|resort|lodge)\b/i.test(subject)) return { kind: "stay_hotel", why: "Title offers a hotel, hostel or guesthouse." };
+  if (/\binvest(ment|or)?s?\b/i.test(t) || oldPurposeId === 3) return { kind: "invest", why: "Title offers it as an investment." };
+  if (/\b(colony|housing|plotting|plots?)\b/i.test(t)) return { kind: "project", why: "Title offers a colony, housing or plot development." };
+  return { kind: purpose === "rent" ? "rentout" : "sell" };
+}
 
 // Nepali land units in square feet.
 const SQFT = { ropani: 5476, aana: 342.25, paisa: 85.5625, daam: 21.390625, bigha: 72900, katha: 3645, dhur: 182.25, sqm: 10.7639 };
@@ -226,6 +244,7 @@ for (const u of T.users!) {
 // Listings
 const usedSlugs = new Set((await db.listing.findMany({ select: { slug: true, legacyId: true } })).filter((l) => !l.legacyId).map((l) => l.slug));
 const today = new Date();
+const kinds = new Map<string, number>();
 let n = 0, photosLinked = 0, photosMissing = 0, filledFromText = 0, withPoint = 0;
 const total = T.properties!.length;
 for (const p of [...T.properties!].sort((a, b) => Number(a.id) - Number(b.id))) {
@@ -247,7 +266,15 @@ for (const p of [...T.properties!].sort((a, b) => Number(a.id) - Number(b.id))) 
   };
 
   const status: "sold" | "rented" | "published" = Number(p.sold) === 1 || Number(p.property_status) === 10 ? "sold" : Number(p.property_status) === 9 ? "rented" : "published";
-  const purpose: "rent" | "sale" = Number(p.purpose_id) === 1 ? "rent" : "sale";
+  // Sale or rent: the old purpose field is sometimes wrong ("House On Sale…" saved as rent at Rs. 4.75 crore a month).
+  // When the title says one thing only and the price agrees with it, the title wins; when they disagree, it's flagged.
+  let purpose: "rent" | "sale" = Number(p.purpose_id) === 1 ? "rent" : "sale";
+  const rawPrice = float(p.total_price) ?? float(p.rent_per_month) ?? float(p.selling_price);
+  const saysSale = /\b(on|for)\s*sale\b|\bsell(ing)?\b/i.test(title), saysRent = /\b(on|for)\s*rent\b|\bto[\s-]?let\b|\blease\b/i.test(title);
+  const RENT_MAX = 2_000_000; // above Rs. 20 lakh a month it is a sale price
+  if (purpose === "rent" && saysSale && !saysRent && (rawPrice ?? 0) > RENT_MAX) { purpose = "sale"; suggest.purpose = "sale (title and price)"; }
+  else if (purpose === "sale" && saysRent && !saysSale && rawPrice && rawPrice <= RENT_MAX) { purpose = "rent"; suggest.purpose = "rent (title and price)"; }
+  else if ((purpose === "rent" && (rawPrice ?? 0) > RENT_MAX) || (purpose === "sale" && saysRent && !saysSale)) suggest.check = "Sale or rent? The title, purpose and price don't agree.";
   const rent = float(p.rent_per_month);
   const priceNum = purpose === "rent" ? rent ?? float(p.total_price) : float(p.total_price) ?? float(p.selling_price);
   const lat = float(p.lat), lng = float(p.lng);
@@ -257,7 +284,12 @@ for (const p of [...T.properties!].sort((a, b) => Number(a.id) - Number(b.id))) 
   const created = date(p.created_at) ?? today;
   const perAnna = str(p.price_per_anna) ?? str(p.anna_price);
 
+  const sorted = kindOf(title, purpose, Number(p.purpose_id));
+  if (sorted.why) suggest.kind = `${sorted.kind}: ${sorted.why}`;
+  kinds.set(sorted.kind, (kinds.get(sorted.kind) ?? 0) + 1);
+
   const data = {
+    kind: sorted.kind,
     code: str(p.property_code)?.toUpperCase() ?? `SP-${String(id).padStart(4, "0")}`,
     slug, tenantId: sheetal.id, userId: userIdOf.get(Number(p.user_id)) ?? null,
     purpose, category, propertyType: titleCase(typeName.get(Number(p.propertytype_id)) ?? null),
@@ -305,6 +337,7 @@ const byStatus = await db.listing.groupBy({ by: ["status"], _count: true });
 console.log("\nImport finished");
 console.log(`  Users:    ${usersNew} new, ${T.users!.length - usersNew - usersSkipped} already here, ${usersSkipped} without an email`);
 console.log(`  Listings: ${n} (${byStatus.map((s) => `${s._count} ${s.status}`).join(", ")}), ${withPoint} with a map point`);
+console.log(`  Kinds:    ${[...kinds].map(([k, c]) => `${c} ${k}`).join(", ")}`);
 console.log(`  Filled from the description (see suggest): ${filledFromText} listings`);
 console.log(`  Photos:   ${photosLinked} linked, ${photosMissing} not found on disk`);
 await db.$disconnect();

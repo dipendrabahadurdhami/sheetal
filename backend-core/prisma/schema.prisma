@@ -242,6 +242,9 @@ model Listing {
   tenantId      String?        @map("tenant_id")
   /// The person who posted it (imported listings keep their old poster).
   userId        String?        @map("user_id")
+  /// What is offered, as in /business: sell, rentout, stay_hotel, stay_unit, project, invest
+  /// (shared/src/data/catalog.js listingKinds). `purpose` says whether the deal is a sale or a rent.
+  kind          String         @default("sell")
   purpose       ListingPurpose
   /// House, Land, Apartment, Office space… (see catalog in shared/src/data/catalog.js).
   category      String
@@ -300,6 +303,7 @@ model Listing {
   updatedAt     DateTime       @updatedAt @map("updated_at")
   photos        ListingPhoto[]
 
+  @@index([status, kind, publishedAt])
   @@index([status, purpose, publishedAt])
   @@index([status, featured, featuredOrder])
   @@index([district])
