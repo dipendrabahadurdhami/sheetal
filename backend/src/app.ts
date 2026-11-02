@@ -2,18 +2,23 @@ import Fastify, { type FastifyInstance } from "fastify";
 import helmet from "@fastify/helmet";
 import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
+import multipart from "@fastify/multipart";
 import { randomUUID } from "node:crypto";
 import type { Config } from "./config.js";
 import { createCache, type Cache } from "./lib/cache.js";
 import { createDb, type Db } from "./lib/db.js";
 import { errorHandler, notFoundHandler } from "./lib/errors.js";
 import { healthRoutes } from "./routes/health.js";
+import { Mailer } from "./lib/mailer.js";
+import { registerAuth } from "./modules/auth/sessions.js";
+import { authRoutes } from "./modules/auth/routes.js";
 
 declare module "fastify" {
   interface FastifyInstance {
     config: Config;
     db?: Db;
     cache: Cache;
+    mailer: Mailer;
   }
 }
 
@@ -36,6 +41,7 @@ export async function buildApp(config: Config, deps: AppDeps = {}): Promise<Fast
   app.decorate("config", config);
   app.decorate("db", deps.db ?? createDb(config.DATABASE_URL, config.LOG_LEVEL === "debug"));
   app.decorate("cache", deps.cache ?? createCache(config.REDIS_URL));
+  app.decorate("mailer", new Mailer(app.db, app.log, config.NODE_ENV !== "production"));
 
   app.addHook("onSend", async (request, reply) => { reply.header("x-request-id", request.id); });
   app.setErrorHandler(errorHandler);
@@ -44,9 +50,12 @@ export async function buildApp(config: Config, deps: AppDeps = {}): Promise<Fast
   await app.register(helmet, { contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: "cross-origin" } });
   await app.register(cors, { origin: config.CORS_ORIGINS, credentials: true, maxAge: 86400 });
   await app.register(rateLimit, { max: config.RATE_LIMIT_PER_MINUTE, timeWindow: "1 minute" });
+  // Website forms send FormData; text fields arrive as a plain object. Files are handled by the files module.
+  await app.register(multipart, { attachFieldsToBody: "keyValues", limits: { fileSize: 8 * 1024 * 1024, files: 20 } });
+  registerAuth(app);
 
   await app.register(healthRoutes);
-  // Feature modules register under /v1 as they are built: await app.register(authRoutes, { prefix: "/v1" }) …
+  await app.register(authRoutes, { prefix: "/v1" });
 
   app.addHook("onClose", async () => {
     await app.db?.$disconnect();

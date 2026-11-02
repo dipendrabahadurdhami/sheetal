@@ -8,6 +8,7 @@ One API serves the website, business workspace and admin panel. Plan: `../docs/b
 cp backend/.env.example backend/.env       # once
 npm run db:local                            # terminal 1: private PostgreSQL on port 5433 (keep open)
 npx -w @sheetal/api prisma migrate dev      # once, and after schema changes
+npm run db:seed -w @sheetal/api             # plans, super admin, Sheetal Property (safe to re-run)
 npm run dev:api                             # terminal 2: API on http://localhost:4000
 ```
 Check: `http://localhost:4000/health/ready` → `{"status":"ready", …}`.
@@ -26,9 +27,11 @@ src/
   lib/bots.ts      bot detection (from the old BotDetector)
   lib/status.ts    health of database and cache (System status page)
   routes/          /health, /health/ready; feature modules go under /v1
-prisma/            schema and migrations
+prisma/            schema, migrations and seed.ts
+src/domain/        plans and permissions (tests keep them equal to the screens' copies)
+src/modules/auth/  sign up, log in, sessions, email links, profile
 scripts/local-db.mjs  local PostgreSQL
-test/              Vitest tests (run without a database)
+test/              Vitest tests; each run starts its own throwaway PostgreSQL (test/setup-db.ts)
 ```
 
 ## Rules for every module

@@ -2,6 +2,11 @@ import { useState } from "react";
 import { Eye, EyeOff, Smartphone, Mail, MailCheck, Store } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { api } from "../api/endpoints";
+import { isLivePath } from "../api/client";
+
+// With the real API, Google and phone sign-in stay off until they are connected in Admin → Setup center.
+const LIVE_LOGIN = isLivePath("login");
+const NOT_YET = "This sign-in method isn't set up yet. Please use your email and password.";
 import { Modal } from "./ui";
 
 export function AuthModal() {
@@ -16,12 +21,14 @@ export function AuthModal() {
   const [sentTo, setSentTo] = useState("");
   // Google: signs in the demo user until the new backend is ready.
   const google = async () => {
+    if (LIVE_LOGIN) { setErr(NOT_YET); return; }
     setBusy(true); try { await login("demo@sheetal.test", "password"); toast("Signed in with Google"); setAuth(null); } catch (x) { setErr(x.message); } finally { setBusy(false); }
   };
   const phoneGo = async (e) => {
     e.preventDefault(); setErr("");
     if (!phone.sent) { if (!/^9\d{9}$/.test(phone.no.replace(/\D/g, ""))) return setErr("Enter a 10-digit mobile number starting with 9."); setPhone({ ...phone, sent: true }); toast("Code sent by SMS"); return; }
     if (!/^\d{6}$/.test(phone.code)) return setErr("Enter the 6-digit code.");
+    if (LIVE_LOGIN) { setErr(NOT_YET); return; }
     setBusy(true); try { await login("demo@sheetal.test", "password"); toast("Signed in"); setAuth(null); setPhone({ no: "", sent: false, code: "" }); } catch (x) { setErr(x.message); } finally { setBusy(false); }
   };
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
@@ -59,7 +66,7 @@ export function AuthModal() {
           <h2 style={{ fontSize: 26, marginTop: 10 }}>{title}</h2>
           <p className="muted small">{auth === "login" ? "Log in to save homes, post listings and contact agencies." : auth === "register" ? "Join thousands of buyers, owners and agencies." : "Enter your email and we will send a reset link."}</p>
         </div>
-        {auth === "login" && <p className="tag tag-soft" style={{ height: "auto", padding: "8px 12px", textTransform: "none", letterSpacing: 0, fontWeight: 500 }}>Demo data login: demo@sheetal.test / password</p>}
+        {auth === "login" && !LIVE_LOGIN && <p className="tag tag-soft" style={{ height: "auto", padding: "8px 12px", textTransform: "none", letterSpacing: 0, fontWeight: 500 }}>Demo data login: demo@sheetal.test / password</p>}
         {auth === "verify" ? (
           <div className="stack" style={{ gap: 14 }}>
             <MailCheck size={40} strokeWidth={1.5} color="var(--accent)" />

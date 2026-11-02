@@ -27,10 +27,16 @@ export function AppProvider({ children }) {
     try {
       const u = toItem(await api.me());
       setUser(u);
+    } catch {
+      setUser(null);
+      return;
+    }
+    // Saved listings load separately: if they fail, the person stays logged in.
+    try {
       const f = toList(await api.favourites());
       setFavs(new Set(f.items.map((x) => Number(x.property_id ?? x.property?.id ?? x.id))));
     } catch {
-      setUser(null);
+      setFavs(new Set());
     }
   }, []);
 
@@ -53,6 +59,7 @@ export function AppProvider({ children }) {
   }, [loadUser, toast]);
 
   const logout = useCallback(() => {
+    api.logout().catch(() => {}); // end the session on the server too
     localStorage.removeItem("sheetal_token");
     setUser(null);
     setFavs(new Set());

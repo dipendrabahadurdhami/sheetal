@@ -134,6 +134,7 @@ const routes = [
     db.users.push(u); save();
     return { status: 200, message: "Account created. You can log in now." };
   }],
+  ["post", /^\/logout$/, () => ({ status: 200, message: "You are logged out." })],
   ["post", /^\/forgot-password$/, () => ({ status: 200, message: "If the email exists, a reset link has been sent." })],
   ["get", /^\/user-info$/, () => ok(pub(needUser()))],
   ["post", /^\/update-profile$/, (q, m, b) => { const u = needUser(); Object.assign(u, b); save(); return { status: 200, message: "Profile updated", data: pub(u) }; }],

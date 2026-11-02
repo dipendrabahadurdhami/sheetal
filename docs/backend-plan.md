@@ -76,8 +76,10 @@ Phases 1–2 put the public site live early. Phase 3 is the base everything afte
 ## Progress
 | Phase | Status |
 |---|---|
-| 0 Foundation | ✅ Done 2026-11-02: `backend/` (Fastify 5, TypeScript strict, Prisma 6 + PostgreSQL 17 locally via embedded-postgres, cache with Redis/in-memory), validated config, request ids, one error format, security headers, CORS allow-list, rate limits, `/health` + `/health/ready`, bot detection, first migration, 18 tests, TypeScript linting, website mock/live switch per path. Not done: Git (not set up yet) and CI. |
-| 1 Auth + public catalog | Next |
+| 0 Foundation | ✅ Done 2026-11-02: `backend/` (Fastify 5, TypeScript strict, Prisma 6 + PostgreSQL 17 locally via embedded-postgres, cache with Redis/in-memory), validated config, request ids, one error format, security headers, CORS allow-list, rate limits, `/health` + `/health/ready`, bot detection, first migration, 18 tests, TypeScript linting, website mock/live switch per path. Git set up (`main`, first commit `ee76a44`). Not done: CI (needs a GitHub repository). |
+| 1a Accounts and login | ✅ Done 2026-11-02: users, sessions (hashed tokens, 30 days), businesses, plans, roles, email outbox, audit log; sign up (with a Starter workspace), log in (lockout after 5 wrong passwords, old-site users asked to set a new password), email verification, forgot/reset password, profile, change password, log out; seed for plans, super admin and Sheetal Property (Agency Pro, 1 year); 14 tests on a real database; website login switched to the API and tested end to end. |
+| 1b Public catalog | Next: listings, search, map, agencies |
+| 1c Old site import | After 1b: listings, photos, users, leads |
 
 ## 5. Requirements added on 2026-11-02
 

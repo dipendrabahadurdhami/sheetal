@@ -8,6 +8,8 @@ const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
 const LIVE = String(import.meta.env.VITE_API_LIVE || "").split(",").map((s) => s.trim().replace(/^\/+/, "")).filter(Boolean);
 const isLive = (url) => !!API_URL && (LIVE.includes("*") || LIVE.some((p) => url.slice(1) === p || url.slice(1).startsWith(`${p}/`)));
 
+/** True when this path is answered by the real API rather than demo data. */
+export const isLivePath = (path) => isLive("/" + String(path).replace(/^\/+/, ""));
 export const getMode = () => (!API_URL || !LIVE.length ? "mock" : LIVE.includes("*") ? "live" : "mixed");
 export const setMode = () => {};
 export const onSourceChange = (fn) => { fn(getMode() === "mock" ? "demo" : "api"); return () => {}; };

@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Loader2, Send, MessageSquare, Eye, EyeOff } from "lucide-react";
 import { api } from "../api/endpoints";
-import { mockRequest } from "../demo/api/router";
 import { useApp } from "../context/AppContext";
 import { Avatar, Empty } from "../components/ui";
 import { listThreads, addMessage } from "../utils/threads";
@@ -61,16 +60,19 @@ export function VerifyEmail() {
   const nav = useNavigate();
   const { loadUser, toast } = useApp();
   const [state, setState] = useState("Verifying your account…");
+  const started = useRef(false); // a link works once; don't send it twice
   useEffect(() => {
+    if (started.current) return;
+    started.current = true;
     const run = async () => {
-      const q = params.get("queryURL");
+      // New links use ?token=; old-site links used ?queryURL=.
+      const q = params.get("token") || params.get("queryURL");
       if (!q) { setState("This verification link is not valid."); return; }
       try {
-        let res;
-        res = await mockRequest("get", "/email/verify/demo");
+        const res = await api.verifyEmail(q);
         if (res?.token) { localStorage.setItem("sheetal_token", res.token); await loadUser(); toast("Email verified. You are logged in."); nav("/"); }
         else { setState(res?.message || "Email verified. You can log in now."); }
-      } catch (e) { setState(e.response?.data?.message || "Verification failed. The link may have expired."); }
+      } catch (e) { setState(e.message || "Verification failed. The link may have expired."); }
     };
     run();
   }, []);  

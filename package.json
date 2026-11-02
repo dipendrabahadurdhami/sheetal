@@ -18,7 +18,7 @@
     "build": "npm run sitemap && npm run build -w @sheetal/website && npm run build -w @sheetal/admin && npm run build -w @sheetal/business && node scripts/assemble.mjs",
     "preview": "npx vite preview --outDir dist --port 4173",
     "lint": "eslint .",
-    "test": "vitest run",
+    "test": "vitest run && npm run test -w @sheetal/api",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json && tsc -p backend/tsconfig.json",
     "check": "npm run lint && npm run typecheck && npm run test",
