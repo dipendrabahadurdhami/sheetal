@@ -1,0 +1,8 @@
+# Apache / cPanel: send every page to the right app (single-page apps)
+RewriteEngine On
+RewriteBase /
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+RewriteRule ^admin(/.*)?$ /admin/index.html [L]
+RewriteRule ^business(/.*)?$ /business/index.html [L]
+RewriteRule ^ /index.html [L]

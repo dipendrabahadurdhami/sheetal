@@ -1,0 +1,121 @@
+import React, { useEffect, useState } from "react";
+import { Icon } from "../core/icons";
+import { Link, useRouter } from "../core/router";
+import { LANGS, useLang, useT } from "../core/i18n";
+import { useStore } from "../core/store";
+import { Avatar, Menu } from "../core/ui";
+import { config } from "../core/config";
+import { CommandPalette, openPalette } from "./CommandPalette";
+import { THEMES } from "../core/theme";
+
+// Shared frame for /admin and /business. Each app passes its own nav and slots.
+export function Shell({ sub, nav, switcher, sideFooter, topLeft, topExtra, userMenu, banner, notifications = [], notifTo, onReadAll, brandSlot, style, quickCreate = [], records = [], children }) {
+  const { path } = useRouter();
+  const t = useT();
+  const lang = useLang();
+  const { db, update } = useStore();
+  const [open, setOpen] = useState(false);
+  useEffect(() => setOpen(false), [path]);
+  const under = (to) => path === to || path.startsWith(to + "/");
+  const isOn = (it) => (it.exact ? path === it.to : under(it.to) || (it.match || []).some(under));
+  const theme = db.session.theme;
+
+  return (
+    <div className="pf-shell" style={style}>
+      <aside className={`pf-side ${open ? "open" : ""}`} aria-label={t("a11y.mainNav")}>
+        {brandSlot || <Link to="/" className="brand pf-brand"><img src={config.logo} alt="" /><span className="brand-word"><b>SHEETAL</b><span>{sub}</span></span></Link>}
+        {switcher}
+        <nav className="pf-nav">
+          {nav.map((g, i) => (
+            <React.Fragment key={i}>
+              {g.group && <span className="pf-nav-group">{t(g.group)}</span>}
+              {g.items.map((it) => (
+                <Link key={it.to} to={it.to} className={isOn(it) ? "on" : undefined} aria-current={isOn(it) ? "page" : undefined}>
+                  <Icon name={it.icon} size={17} /><span>{t(it.key)}</span>
+                  {it.count ? <span className={`pf-count ${it.countTone || ""}`}>{it.count}</span> : null}
+                </Link>
+              ))}
+            </React.Fragment>
+          ))}
+        </nav>
+        {sideFooter}
+      </aside>
+      {open && <div className="pf-scrim pf-scrim-nav" onClick={() => setOpen(false)} />}
+
+      <div className="pf-body">
+        {banner}
+        <header className="pf-top">
+          <button className="btn btn-ghost btn-icon pf-burger" onClick={() => setOpen(true)} aria-label={t("a11y.openMenu")}><Icon name="menu" size={18} /></button>
+          {topLeft}
+          {topExtra}
+          <button className="pf-jump" onClick={openPalette}><Icon name="search" size={15} /><span>{t("cmd.jump")}</span><kbd>Ctrl K</kbd></button>
+          <div className="pf-top-right">
+            {quickCreate.length > 0 && <Menu trigger={({ toggle }) => <button className="btn btn-primary btn-sm pf-new" onClick={toggle}><Icon name="plus" size={15} />{t("cmd.new")}</button>}>
+              {quickCreate.map((q) => <MenuLink key={q.to + q.label} to={q.to} icon={q.icon}>{q.label}</MenuLink>)}
+            </Menu>}
+            <div className="seg pf-lang" role="radiogroup" aria-label={t("a11y.language")}>
+              {LANGS.map((l) => (
+                <button key={l.id} role="radio" aria-checked={lang === l.id} className={lang === l.id ? "on" : ""} title={l.label}
+                  onClick={() => update((d) => { d.session.lang = l.id; })}>{l.short}</button>
+              ))}
+            </div>
+            <Menu trigger={({ toggle, open: o }) => (
+              <button className="btn btn-ghost btn-icon" onClick={toggle} aria-haspopup="menu" aria-expanded={o} aria-label={t(`theme.${theme}`)} title={t(`theme.${theme}`)}><Icon name={(THEMES.find((x) => x.id === theme) || THEMES[0]).icon} size={18} /></button>
+            )}>
+              {THEMES.map((x) => (
+                <button key={x.id} type="button" data-close="" role="menuitemradio" aria-checked={theme === x.id} onClick={() => update((d) => { d.session.theme = x.id; })}>
+                  <Icon name={x.icon} size={16} />{t(`theme.${x.id}`)}{theme === x.id && <Icon name="check" size={15} className="menu-check" />}
+                </button>
+              ))}
+            </Menu>
+            <Menu trigger={({ toggle }) => (
+              <button className="btn btn-ghost btn-icon pf-bell" onClick={toggle} aria-label={t("a11y.notifications")}><Icon name="bell" size={18} />{notifications.some((n) => n.unread) && <i />}</button>
+            )}>
+              <div className="pf-menu-head"><b>{t("notif.title")}</b><span>{t("notif.unread", { n: notifications.filter((n) => n.unread).length })}</span></div>
+              <div className="pf-notif-list">
+                {notifications.length ? notifications.map((n) => (
+                  <Link key={n.id} to={n.to} data-close="" className={n.unread ? "unread" : undefined} onClick={() => n.onOpen?.()}><Icon name={n.icon} size={16} /><span><b>{n.title}</b><small>{n.when}</small></span></Link>
+                )) : <p className="small muted" style={{ padding: 12 }}>{t("notif.none")}</p>}
+              </div>
+              {notifTo && <div className="pf-notif-foot">{onReadAll && notifications.some((n) => n.unread) ? <button type="button" data-close="" onClick={onReadAll}>Mark all read</button> : <span />}<Link to={notifTo} data-close="">See all</Link></div>}
+            </Menu>
+            <Menu trigger={({ toggle }) => (
+              <button className="pf-user" onClick={toggle} aria-label={t("a11y.account")}><Avatar name={db.session.userName} size={36} /></button>
+            )}>
+              <div className="pf-menu-head"><b>{db.session.userName}</b><span>{db.session.userEmail}</span></div>
+              {userMenu}
+            </Menu>
+          </div>
+        </header>
+        <main className="pf-main" id="main">{children}</main>
+        <CommandPalette nav={nav} actions={quickCreate} records={records} />
+      </div>
+    </div>
+  );
+}
+
+export function MenuLink({ to, icon, children }) {
+  return <Link to={to} data-close=""><Icon name={icon} size={16} />{children}</Link>;
+}
+export function MenuButton({ icon, children, onClick }) {
+  return <button data-close="" onClick={onClick}><Icon name={icon} size={16} />{children}</button>;
+}
+export const MenuSep = () => <div className="pf-menu-sep" />;
+
+export function Pending({ part }) {
+  const t = useT();
+  return (
+    <div className="card pf-empty-card">
+      <div className="pf-empty"><Icon name="clock" size={40} strokeWidth={1.4} /><h3>{t("pending.title")}</h3><p>{t("pending.text", { part })}</p></div>
+    </div>
+  );
+}
+
+export function NoAccess() {
+  const t = useT();
+  return (
+    <div className="card pf-empty-card">
+      <div className="pf-empty"><Icon name="lock" size={40} strokeWidth={1.4} /><h3>{t("noaccess.title")}</h3><p>{t("noaccess.text")}</p></div>
+    </div>
+  );
+}

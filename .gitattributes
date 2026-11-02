@@ -1,0 +1,10 @@
+# Store text files with Unix line endings so diffs stay clean on every OS.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary

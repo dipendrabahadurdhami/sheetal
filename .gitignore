@@ -1,0 +1,15 @@
+node_modules
+dist
+*/frontend/dist
+.env
+.env.local
+*.log
+.DS_Store
+.vite
+coverage
+.pgdata
+# generated on every build (npm run sitemap)
+website/frontend/public/sitemap.xml
+
+# Local editor and tool settings
+.claude/

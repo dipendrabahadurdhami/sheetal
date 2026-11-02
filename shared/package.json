@@ -1,0 +1,14 @@
+{
+  "name": "@sheetal/shared",
+  "private": true,
+  "version": "1.0.0",
+  "description": "UI kit, store, router, translations and demo data used by website, admin and business",
+  "type": "module",
+  "exports": {
+    "./*": "./src/*"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "@sheetal/website",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Public website: shetal.com.np",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@sheetal/shared": "*",
+    "dompurify": "^3.4.17",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^0.460.0",
+    "nepali-geo-pro-max": "latest",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.3",
+    "vite": "^5.4.10"
+  }
+}

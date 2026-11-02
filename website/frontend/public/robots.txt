@@ -1,0 +1,19 @@
+# Sheetal Property — robots.txt
+
+User-agent: *
+Allow: /
+
+# Private and sign-in pages, and the staff and business apps
+Disallow: /my-profile
+Disallow: /verify-email
+Disallow: /reset-password
+Disallow: /admin
+Disallow: /business
+Disallow: /pay/
+Disallow: /book/
+Disallow: /reserve/
+
+# Tool pages are linked with pre-filled values (?amount=…); crawl only the clean URLs
+Disallow: /tools/*?*
+
+Sitemap: https://sheetalproperty.com/sitemap.xml
