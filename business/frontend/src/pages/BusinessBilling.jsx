@@ -5,8 +5,7 @@ import { useStore } from "@sheetal/shared/core/store";
 import { fdate, rs, limitText } from "@sheetal/shared/core/format";
 import { Badge, Button, Confirm, Empty, PageHead, Panel, Seg, StatusBadge, Table, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
-import { FEATURES } from "./planBits";
-import { PERIODS, priceFor, savingFor } from "@sheetal/shared/core/plans";
+import { PERIODS, planFeatureList, priceFor, savingFor } from "@sheetal/shared/core/plans";
 import { BusinessAddons } from "@sheetal/shared/components/Addons";
 
 export function BusinessBilling({ tenant, canManage }) {
@@ -57,9 +56,9 @@ export function BusinessBilling({ tenant, canManage }) {
                 <div className="pf-plan-top"><h3>{p.name}</h3>{isCur && <Badge tone="done">{t("billing.yourPlan")}</Badge>}</div>
                 <div className="pf-price-line"><b className="tnum">{p.price ? rs(priceFor(p, months)) : "Free"}</b><span>{p.price ? (months === 1 ? t("plans.perMonth") : `for ${months === 12 ? "1 year" : months + " months"}`) : "renews every month"}</span></div>
                 {p.price > 0 && savingFor(p, months) > 0 && <span className="small pf-tone-done tnum">{t("billing.save", { v: rs(savingFor(p, months)) })}</span>}
+                {/* Same full list as the website's plan cards, row for row (shared/src/core/plans.js). */}
                 <ul className="pf-plan-feats">
-                  {Object.entries(p.limits).map(([k, v]) => <li key={k}><Icon name="check" size={15} /><span className="tnum">{limitText(v)}</span> {t(`limit.${k}`)}</li>)}
-                  {FEATURES.map((f) => <li key={f} className={p.features[f] ? "" : "off"}><Icon name={p.features[f] ? "check" : "minus"} size={15} />{t(`feature.${f}`)}</li>)}
+                  {planFeatureList(p, tenant.type, db.aiConfig?.credits).map(([on, text]) => <li key={text} className={on ? "" : "off"}><Icon name={on ? "check" : "minus"} size={15} />{text}</li>)}
                 </ul>
                 <div className="pf-plan-foot">{!isCur && canManage && <Button variant={up ? "primary" : "outline"} block onClick={() => setPick(p)}>{up ? t("billing.upgrade") : t("billing.downgrade")}</Button>}</div>
               </div>

@@ -39,10 +39,13 @@ export default function Plans() {
     <>
       <div className="tools-hero plans-hero"><PageHead crumbs={[{ label: "Plans" }]} title="Plans for every business">Start free with one listing. Upgrade to Business or Pro when you need more.</PageHead></div>
       <div className="container section-sm">
-        <div className="seg plan-periods" role="tablist" aria-label="Business type">
-          {TYPES.map(([k, l]) => <button key={k} type="button" role="tab" aria-selected={type === k} className={type === k ? "on" : ""} onClick={() => setParams({ type: k })}>{l}</button>)}
+        {/* Business type on the left, billing period on the right: the row spans the same width as the cards. */}
+        <div className="plans-bar">
+          <div className="seg plan-periods" role="tablist" aria-label="Business type">
+            {TYPES.map(([k, l]) => <button key={k} type="button" role="tab" aria-selected={type === k} className={type === k ? "on" : ""} onClick={() => setParams({ type: k })}>{l}</button>)}
+          </div>
+          <PeriodPicker value={months} onChange={setMonths} />
         </div>
-        <PeriodPicker value={months} onChange={setMonths} />
         {!user && (
           <div className="plans-note">
             <LogIn size={16} />

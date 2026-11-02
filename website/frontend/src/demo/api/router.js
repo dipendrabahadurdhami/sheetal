@@ -1,20 +1,14 @@
 // Answers API calls from the demo database.
 import { db, save, LOCATIONS, PROPERTY_TYPES, CATEGORIES } from "./db";
 import { readDb } from "../../utils/platformDb";
-import { PERIODS, isAllAccess, priceFor, savingFor } from "@sheetal/shared/core/plans";
+import { PERIODS, planFeatureList, priceFor, savingFor } from "@sheetal/shared/core/plans";
 
 // Plans for one business type, from the same list Business and Admin use (Starter, Business, Pro).
-const count = (v, one, many) => (v === -1 ? `Unlimited ${many}` : `${v} ${v === 1 ? one : many}`);
 const sitePlans = (type = "agency") => (readDb().plans || []).filter((p) => p.type === type && p.active).map((p) => ({
   id: p.id, type: p.type, name: p.name, slug: p.name.toLowerCase(), price: p.price,
   periods: PERIODS.map((x) => ({ months: x.months, save: x.save, price: priceFor(p, x.months), saving: savingFor(p, x.months) })),
-  features: [
-    p.limits.listings != null ? count(p.limits.listings, "listing", "listings") : null,
-    isAllAccess(p) ? "Projects, hotels, stays and investments too" : p.price ? "All tools for your business type" : "Your own business workspace",
-    p.limits.featured ? count(p.limits.featured, "featured listing", "featured listings") : "No featured listings",
-    p.limits.seats > 1 ? `Team of ${p.limits.seats} with roles` : "Just you",
-    isAllAccess(p) ? "Every tool and add-on included" : null,
-  ].filter(Boolean),
+  // Every feature of this plan as [included, text], in the same order on every card (see shared/src/core/plans.js).
+  features: planFeatureList(p, type, readDb().aiConfig?.credits),
 }));
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));

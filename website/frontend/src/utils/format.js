@@ -72,6 +72,8 @@ export const stripHtml = (h = "") => String(h).replace(/<[^>]*>/g, " ").replace(
 
 // what a subscription plan includes — reads the live backend fields (max_listings_per_month, max_featured, homepage_banner, …)
 export function planFeatures(pl = {}) {
+  // Plans that already list every feature as [included, text] (shared/src/core/plans.js planFeatureList).
+  if (Array.isArray(pl.features) && pl.features.length && Array.isArray(pl.features[0])) return pl.features;
   const lim = (v) => (Number(v) === -1 ? "Unlimited" : Number(v));
   const out = [];
   const L = pl.max_listings_per_month ?? pl.listings;

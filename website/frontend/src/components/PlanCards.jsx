@@ -34,11 +34,13 @@ export function PlanCards({ plans, months, current, busy, onChoose, chooseLabel 
               {isCur && <span className="tag tag-soft">Current</span>}
             </div>
             <div className="plan-price tnum">{free ? "Free" : fmtFull(per.price)}<small>{free ? " · renews every month" : ` / ${periodLabel(per.months)}`}</small></div>
-            {!free && per.saving > 0 && <span className="small plan-save tnum">You save {fmtFull(per.saving)} ({fmtFull(Math.round(per.price / per.months))} a month)</span>}
-            <ul className="plan-feats">{planFeatures(pl).map(([on, t]) => <li key={t} className={on ? "" : "off"}>{on ? <Check size={15} /> : <X size={15} />}<span>{t}</span></li>)}</ul>
-            <button className={isCur ? "btn btn-outline btn-block" : "btn btn-primary btn-block"} disabled={isCur || busy === pl.id} onClick={() => onChoose(pl, per.months)}>
+            {/* Always one line here (empty when there is nothing to say), so the buttons and lists line up across cards. */}
+            <span className="small plan-save tnum">{free ? "Free, no card needed" : per.saving > 0 ? `You save ${fmtFull(per.saving)} (${fmtFull(Math.round(per.price / per.months))} a month)` : " "}</span>
+            <button className={isCur ? "btn btn-outline btn-block" : "btn btn-primary btn-block"} disabled={isCur || busy === pl.id} style={{ marginTop: 4 }} onClick={() => onChoose(pl, per.months)}>
               {isCur ? "Current plan" : busy === pl.id ? "Sending…" : curPrice != null && pl.price < curPrice ? "Switch to this plan" : chooseLabel}
             </button>
+            {/* Every row in the same order on each card, so the three cards line up. */}
+            <ul className="plan-feats">{planFeatures(pl).map(([on, t]) => <li key={t} className={on ? "" : "off"}>{on ? <Check size={15} /> : <X size={15} />}<span>{t}</span></li>)}</ul>
           </div>
         );
       })}

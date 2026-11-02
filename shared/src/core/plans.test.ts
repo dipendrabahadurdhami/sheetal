@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { atListingCap, isAllAccess, kindsFor, limitKeysFor, listingCap, priceFor, typesFor } from "./plans";
+import { atListingCap, isAllAccess, kindsFor, limitKeysFor, listingCap, planFeatureList, priceFor, typesFor } from "./plans";
 import { CATALOG } from "../data/catalog";
 import { seed } from "../demo/demo";
 
@@ -46,5 +46,30 @@ describe("plans", () => {
     expect(t.renews).toBe(oneYear.toISOString().slice(0, 10));
     expect(db.tenants).toHaveLength(1); // only the real business; no sample businesses
     expect(db.tenants.every((x) => x.autoRenew === false)).toBe(true);
+  });
+});
+
+describe("plan cards", () => {
+  const db = seed();
+  const types = [...new Set(db.plans.map((p) => p.type))];
+  const lists = Object.fromEntries(types.map((t) => [t, db.plans.filter((p) => p.type === t).map((p) => planFeatureList(p))]));
+
+  it("list the same rows for Starter, Business and Pro, so the cards line up", () => {
+    for (const t of types) {
+      const [starter, business, pro] = lists[t];
+      expect(starter.length).toBe(business.length);
+      expect(business.length).toBe(pro.length);
+      expect(starter.length).toBeGreaterThan(15);
+    }
+  });
+
+  // Rows compared as text, e.g. [true,"Bookings and room calendar"] = included.
+  it("give Starter its type's core tools and Pro everything", () => {
+    const [hotelStarter, , hotelPro] = lists.hotel;
+    expect(JSON.stringify(hotelStarter)).toContain(JSON.stringify([true, "Bookings and room calendar"]));
+    expect(JSON.stringify(hotelStarter)).toContain(JSON.stringify([false, "Point of sale and stock"]));
+    expect(JSON.stringify(hotelPro)).not.toContain("[false,");
+    expect(JSON.stringify(lists.agency[0])).toContain(JSON.stringify([true, "1 listing at a time"]));
+    expect(JSON.stringify(lists.developer[0])).toContain(JSON.stringify([true, "Collections: bookings and instalments"]));
   });
 });
