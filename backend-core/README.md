@@ -9,6 +9,7 @@ in /business shows on the website right away and admin can review it.
 | `website/backend` | `@sheetal/website-api` | 4000 | Public site: accounts and login, properties, search, map, agencies |
 | `business/backend` | `@sheetal/business-api` | 4001 | Business panel (/business) |
 | `admin/backend` | `@sheetal/admin-api` | 4002 | Admin panel (/admin) |
+| `mail-server` | `@sheetal/mail-server` | 25 | Sheetal's own mail server: receives and sends business email (`docs/mail-server.md`) |
 | `backend-core` | `@sheetal/backend-core` | — | Shared by the three: database schema and migrations, errors, cache, login sessions, health, plans and permissions |
 
 Plan: `../docs/backend-plan.md`; old-site rules to keep: `../docs/old-backend-audit.md`.

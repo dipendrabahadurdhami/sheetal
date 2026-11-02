@@ -1,0 +1,35 @@
+{
+  "name": "@sheetal/mail-server",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Sheetal's own mail server: receives mail for business domains, sends queued mail signed with DKIM",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "node ../scripts/build-api.mjs",
+    "start": "node dist/server.js",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "@sheetal/backend-core": "*",
+    "mailauth": "8.0.0",
+    "mailparser": "3.9.46",
+    "nodemailer": "10.1.7",
+    "smtp-server": "3.20.2",
+    "zod": "^4.6.7",
+    "pino": "^10.4.0"
+  },
+  "devDependencies": {
+    "@types/mailparser": "3.9.0",
+    "@types/node": "^22.20.5",
+    "@types/nodemailer": "8.0.2",
+    "@types/smtp-server": "3.5.13",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
+  }
+}

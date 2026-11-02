@@ -128,6 +128,8 @@ describe("mailboxes and mail", () => {
     expect(res.json().data).toMatchObject({ delivered: ["sita@everest.test"], queued: ["buyer@gmail.com"] });
     const sent = (await call("owner", "GET", `/mail/mailboxes/${ids.ram}/messages?folder=sent`)).json().data;
     expect(sent[0]).toMatchObject({ subject: "Site visit", status: "queued", attachments: 1 });
+    const queue = await app.db!.mailDelivery.findMany({ where: { messageId: sent[0].id } });
+    expect(queue.map((d) => [d.recipient, d.status])).toEqual([["buyer@gmail.com", "queued"]]);
     const inbox = await call("agent", "GET", `/mail/mailboxes/${ids.sita}/messages`);
     expect(inbox.json().unread.inbox).toBe(1);
     ids.received = inbox.json().data[0].id;

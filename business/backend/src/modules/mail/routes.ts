@@ -305,7 +305,9 @@ export async function mailRoutes(app: FastifyInstance, opts: MailOptions) {
     const attachCreate = { create: files };
 
     await db.$transaction(async (tx) => {
-      await tx.mailMessage.create({ data: { ...common, id, bcc: b.bcc, mailboxId: box.id, tenantId: box.tenantId, folder: "sent", seen: true, status: external.length ? "queued" : "delivered", attachments: attachCreate } });
+      await tx.mailMessage.create({ data: { ...common, id, bcc: b.bcc, mailboxId: box.id, tenantId: box.tenantId, folder: "sent", seen: true, status: external.length ? "queued" : "delivered", attachments: attachCreate,
+        // One delivery per outside recipient; the mail server works through them (mail-server/src/outbound.ts).
+        deliveries: { create: external.map((recipient) => ({ recipient, tenantId: box.tenantId })) } } });
       for (const r of local) {
         // A teammate's mailbox, or another Sheetal business; never more than their storage allows.
         const theirUsed = (await tx.mailMessage.aggregate({ where: { tenantId: r.tenantId }, _sum: { size: true } }))._sum.size ?? 0;

@@ -5,7 +5,7 @@ import reactHooks from "eslint-plugin-react-hooks";
 import tseslint from "typescript-eslint";
 
 // The three APIs and their shared core.
-const API = ["backend-core/**", "website/backend/**", "business/backend/**", "admin/backend/**"];
+const API = ["backend-core/**", "website/backend/**", "business/backend/**", "admin/backend/**", "mail-server/**"];
 
 export default [
   { ignores: ["**/dist/**", "**/node_modules/**", "backend-core/.pgdata/**"] },

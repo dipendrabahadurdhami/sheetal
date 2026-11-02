@@ -421,6 +421,7 @@ model MailMessage {
   createdAt   DateTime         @default(now()) @map("created_at")
   mailbox     Mailbox          @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
   attachments MailAttachment[]
+  deliveries  MailDelivery[]
 
   @@index([mailboxId, folder, createdAt])
   @@index([tenantId])
@@ -441,4 +442,28 @@ model MailAttachment {
 
   @@index([messageId])
   @@map("mail_attachments")
+}
+
+/// One outside recipient of a sent email, worked through by the mail server: queued → sending → sent,
+/// or deferred (temporary problem, tried again later) → failed after the last attempt or a permanent refusal.
+model MailDelivery {
+  id            String      @id @default(cuid())
+  messageId     String      @map("message_id")
+  tenantId      String      @map("tenant_id")
+  recipient     String
+  status        String      @default("queued")
+  attempts      Int         @default(0)
+  nextAttemptAt DateTime    @default(now()) @map("next_attempt_at")
+  /// Set while a mail server works on it, so two servers never send the same mail.
+  lockedUntil   DateTime?   @map("locked_until")
+  lastError     String?     @map("last_error")
+  /// The receiving server's last reply, e.g. "250 2.0.0 OK".
+  response      String?
+  sentAt        DateTime?   @map("sent_at")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  message       MailMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextAttemptAt])
+  @@index([messageId])
+  @@map("mail_deliveries")
 }
