@@ -30,13 +30,13 @@ export function applyTheme(id) {
   try { localStorage.setItem(THEME_KEY, t.id); } catch { /* ignore */ }
 }
 
-// Calls fn when the theme changes in this tab (any app writes <html data-theme>) or in another tab.
+// Calls fn when the theme changes in this tab (any app writes <html data-theme>).
+// Each tab keeps its own theme: a change in another tab is not followed. The last choice is
+// still saved, so pages opened or reloaded afterwards start with it.
 export function onThemeChange(fn) {
   const mo = new MutationObserver(() => fn(readTheme()));
   mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-  const onStorage = (e) => { if (e.key === THEME_KEY) applyTheme(e.newValue); };
-  window.addEventListener("storage", onStorage);
-  return () => { mo.disconnect(); window.removeEventListener("storage", onStorage); };
+  return () => mo.disconnect();
 }
 
 // For apps that keep the theme in their own state (platform store, website context).

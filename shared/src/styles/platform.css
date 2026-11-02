@@ -22,6 +22,8 @@ code { font-size: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monosp
 /* shell */
 .pf-shell { display: grid; grid-template-columns: 256px minmax(0, 1fr); min-height: 100vh; }
 .pf-side { position: sticky; top: 0; height: 100vh; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding: 18px 14px; background: var(--card); border-right: 1px solid var(--line); scrollbar-width: thin; }
+/* The menu still scrolls; the bar itself is hidden. */
+.pf-side { scrollbar-width: none; } .pf-side::-webkit-scrollbar { display: none; }
 .pf-brand { padding: 0 8px; } .pf-brand img { height: 30px; }
 .pf-nav { display: flex; flex-direction: column; gap: 2px; }
 .pf-nav-group { display: block; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; color: var(--muted); padding: 14px 10px 6px; }
