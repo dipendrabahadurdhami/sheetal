@@ -18,7 +18,7 @@ export default function App() {
   );
 }
 
-// Theme is shared by the website, /admin and /business through <html data-theme> (see shared/core/theme.js).
+// Theme: each app (website, /business, /admin) keeps its own, applied through <html data-theme> (see shared/core/theme.js).
 function useSiteTheme() {
   const { db, update } = useStore();
   useSharedTheme(db.session.theme, (v) => update((d) => { d.session.theme = v; }));

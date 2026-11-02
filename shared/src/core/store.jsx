@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { seed, VERSION } from "../demo/demo";
 import { config } from "./config";
+import { storedTheme } from "./theme";
 
 // Demo store: the whole platform database lives in one object, persisted to localStorage.
 // Every page reads `db` and writes through `update(draft => { ... })`.
@@ -8,18 +9,22 @@ import { config } from "./config";
 const Ctx = createContext(null);
 
 function load() {
+  let s = null;
   try {
-    const s = JSON.parse(localStorage.getItem(config.storageKey));
-    if (s && s.version === VERSION) return s;
+    s = JSON.parse(localStorage.getItem(config.storageKey));
   } catch (e) { /* ignore */ }
-  return seed();
+  if (!s || s.version !== VERSION) s = seed();
+  // The store is shared by the website, /business and /admin, but the theme is not:
+  // each app starts with its own saved choice.
+  s.session.theme = storedTheme();
+  return s;
 }
 
 export function StoreProvider({ children }) {
   const [db, setDb] = useState(load);
   useEffect(() => { try { localStorage.setItem(config.storageKey, JSON.stringify(db)); } catch (e) { /* ignore */ } }, [db]);
   const update = useCallback((fn) => setDb((d) => { const n = structuredClone(d); fn(n); return n; }), []);
-  const reset = useCallback(() => setDb(seed()), []);
+  const reset = useCallback(() => setDb(() => { const n = seed(); n.session.theme = storedTheme(); return n; }), []);
   const value = useMemo(() => ({ db, update, reset }), [db, update, reset]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

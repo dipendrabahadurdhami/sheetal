@@ -23,8 +23,11 @@ export function Shell({ sub, nav, switcher, sideFooter, topLeft, topExtra, userM
   return (
     <div className="pf-shell" style={style}>
       <aside className={`pf-side ${open ? "open" : ""}`} aria-label={t("a11y.mainNav")}>
-        {brandSlot || <Link to="/" className="brand pf-brand"><img src={config.logo} alt="" /><span className="brand-word"><b>SHEETAL</b><span>{sub}</span></span></Link>}
-        {switcher}
+        {/* Logo and workspace switcher stay in view while the menu below scrolls. */}
+        <div className="pf-side-top">
+          {brandSlot || <Link to="/" className="brand pf-brand"><img src={config.logo} alt="" /><span className="brand-word"><b>SHEETAL</b><span>{sub}</span></span></Link>}
+          {switcher}
+        </div>
         <nav className="pf-nav">
           {nav.map((g, i) => (
             <React.Fragment key={i}>

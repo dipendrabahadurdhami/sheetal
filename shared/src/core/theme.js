@@ -1,9 +1,13 @@
 import { useEffect, useRef } from "react";
 
-// One theme system for the website, /admin and /business.
-// Source of truth: <html data-theme> + localStorage "sheetal_theme". The boot script in each index.html sets it before first paint.
+// One theme system for the website, /admin and /business, but each app keeps its own choice:
+// switching the business panel to dark leaves the website and the admin panel as they were.
+// Inside one app every page follows the same theme.
+// Source of truth: <html data-theme> + the app's localStorage key. The boot script in each index.html sets it before first paint.
 // "red" is applied as "dark red" so every dark-mode fix (white logo, maps, photo strength) also applies to the red theme.
-export const THEME_KEY = "sheetal_theme";
+/** localStorage key for the app at `path`: /business and /admin each have their own, everything else is the website. */
+export const themeKeyFor = (path = "") => (/^\/business(\/|$)/.test(path) ? "sheetal_theme_business" : /^\/admin(\/|$)/.test(path) ? "sheetal_theme_admin" : "sheetal_theme");
+export const THEME_KEY = themeKeyFor(typeof location === "undefined" ? "" : location.pathname);
 export const THEMES = [
   { id: "light", attr: "light", icon: "sun", meta: "#FFFFFF" },
   { id: "dark", attr: "dark", icon: "moon", meta: "#59595B" },
