@@ -129,6 +129,8 @@ model Tenant {
   email         String?
   phone         String?
   pan           String?
+  /// Logo shown on the website and receipts (a website path or a photo address).
+  logoUrl       String?      @map("logo_url")
   planId        String       @map("plan_id")
   plan          Plan         @relation(fields: [planId], references: [id])
   status        TenantStatus @default(active)

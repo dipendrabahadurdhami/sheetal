@@ -6,9 +6,9 @@ import { toList } from "../api/client";
 import { useAsync } from "../hooks/useAsync";
 import { HeroSearch } from "../components/HeroSearch";
 import { PropertyCard, CardSkeleton, PropertyGrid } from "../components/PropertyCard";
-import { SectionHead, Avatar } from "../components/ui";
-import { agencyName, agencyTier, fmtDate, imgUrl } from "../utils/format";
-import { JoinPanel } from "./Agencies";
+import { SectionHead } from "../components/ui";
+import { fmtDate, imgUrl } from "../utils/format";
+import { AgencyCard, JoinPanel } from "./Agencies";
 import HomePlatformRows from "../market/SiteRows";
 
 const CATS = [["House", HomeIcon], ["Land", Trees], ["Apartment", Building2], ["Flat", Building], ["Commercial Space", Store], ["Office Space", Briefcase], ["Bungalow", Castle]];
@@ -79,14 +79,7 @@ export default function Home() {
       <section className="container">
         <SectionHead kicker="Our partners" title="Agencies" action={<Link to="/partners?type=agency" className="link">View all</Link>} />
         <div className="agents-grid">
-          {(agencies.data?.items || []).slice(0, 6).map((a) => (
-            <Link key={a.id} to={`/agency/${a.id}`} className="card card-hover agent-card" style={{ color: "var(--text)" }}>
-              <Avatar src={a.photo} name={agencyName(a)} />
-              <span className="tier">{agencyTier(a.tier) || "Agency"}</span>
-              <h3 style={{ fontSize: 20 }}>{agencyName(a)}</h3>
-              <span className="small muted">{a.designation || a.company_name}</span>
-            </Link>
-          ))}
+          {(agencies.data?.items || []).slice(0, 6).map((a) => <AgencyCard key={a.id} a={a} />)}
           {agencies.loading && Array.from({ length: 6 }, (_, i) => <div key={i} className="sk" style={{ height: 200, borderRadius: "var(--r-xl)" }} />)}
           {!agencies.loading && (agencies.data?.items || []).length < 6 && <JoinPanel span={6 - (agencies.data?.items || []).length} />}
         </div>

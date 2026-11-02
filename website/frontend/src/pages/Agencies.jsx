@@ -25,10 +25,11 @@ export function AgencyCard({ a }) {
   );
 }
 
+// Fills the rest of the row next to the agencies: wide when there are only a few, stacked when narrow.
 export function JoinPanel({ span }) {
   const pts = [[HomeIcon, "List your properties", "Reach buyers across Nepal."], [ClipboardList, "Receive buyer requests", "Matched to demands near you."], [Users, "Get real leads", "Calls straight to your phone."]];
   return (
-    <div className={`card join-panel span-${span}`}>
+    <div className={`card join-panel span-${span} ${span >= 3 ? "wide" : "narrow"}`} style={{ "--span": span }}>
       <div className="join-points">
         {pts.map(([I, h, d]) => (
           <div key={h} className="join-point" style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 8 }}>
@@ -39,7 +40,7 @@ export function JoinPanel({ span }) {
         ))}
       </div>
       <div className="join-actions" style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12, width: "100%" }}>
-        <Link to="/plans" className="btn btn-primary btn-block">See agency plans <ArrowRight size={16} /></Link>
+        <Link to="/plans?type=agency" className="btn btn-primary btn-block">See agency plans <ArrowRight size={16} /></Link>
         <Link to="/plans" className="btn btn-outline btn-block">Refer an agency</Link>
       </div>
     </div>

@@ -6,7 +6,7 @@ import { approx, validLatLng } from "./geo.js";
 // Only public data goes out: `private` is never read here, and the location is always an approximate area.
 
 export type ListingRow = Listing & { photos: ListingPhoto[] };
-export type AgencyRow = Pick<Tenant, "id" | "name" | "city" | "email" | "phone"> & { listings?: number };
+export type AgencyRow = Pick<Tenant, "id" | "name" | "city" | "email" | "phone" | "logoUrl"> & { listings?: number };
 
 const STATUS_LABEL: Record<string, string> = { sold: "SOLD OUT", rented: "RENTED OUT" };
 
@@ -111,7 +111,7 @@ export function agencyJson(a: AgencyRow) {
     phone: a.phone,
     whatsapp: a.phone,
     email: a.email,
-    photo: null,
+    photo: a.logoUrl,
     listings_count: a.listings ?? 0,
   };
 }

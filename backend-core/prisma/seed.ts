@@ -51,6 +51,8 @@ async function main() {
     }));
     console.log("✓ Sheetal Property business on Agency Pro for 1 year");
   } else console.log("✓ Sheetal Property business already exists");
+  // Sheetal's own logo on its agency card and profile (only if none has been uploaded).
+  await db.tenant.updateMany({ where: { email: owner.email, type: "agency", logoUrl: null }, data: { logoUrl: "/brand/logo-mark.png" } });
 }
 
 main().then(() => db.$disconnect()).catch(async (e) => { console.error(e); await db.$disconnect(); process.exit(1); });
