@@ -8,7 +8,10 @@
     "website/frontend",
     "admin/frontend",
     "business/frontend",
-    "backend"
+    "backend-core",
+    "website/backend",
+    "business/backend",
+    "admin/backend"
   ],
   "scripts": {
     "dev": "concurrently -k -n website,admin,business -c cyan,magenta,green \"npm:dev:website\" \"npm:dev:admin\" \"npm:dev:business\"",
@@ -18,13 +21,18 @@
     "build": "npm run sitemap && npm run build -w @sheetal/website && npm run build -w @sheetal/admin && npm run build -w @sheetal/business && node scripts/assemble.mjs",
     "preview": "npx vite preview --outDir dist --port 4173",
     "lint": "eslint .",
-    "test": "vitest run && npm run test -w @sheetal/api",
+    "test": "vitest run && npm run test -w @sheetal/backend-core -w @sheetal/website-api -w @sheetal/business-api -w @sheetal/admin-api",
     "test:watch": "vitest",
-    "typecheck": "tsc -p tsconfig.json && tsc -p backend/tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json && npm run typecheck -w @sheetal/backend-core -w @sheetal/website-api -w @sheetal/business-api -w @sheetal/admin-api",
     "check": "npm run lint && npm run typecheck && npm run test",
     "sitemap": "node scripts/generate-sitemap.mjs",
-    "dev:api": "npm run dev -w @sheetal/api",
-    "db:local": "npm run db:local -w @sheetal/api"
+    "db:local": "npm run db:local -w @sheetal/backend-core",
+    "dev:api": "concurrently -k -n website-api,business-api,admin-api -c cyan,green,magenta \"npm:dev:api:website\" \"npm:dev:api:business\" \"npm:dev:api:admin\"",
+    "dev:api:website": "npm run dev -w @sheetal/website-api",
+    "dev:api:business": "npm run dev -w @sheetal/business-api",
+    "dev:api:admin": "npm run dev -w @sheetal/admin-api",
+    "db:migrate": "npm run db:migrate -w @sheetal/backend-core",
+    "db:seed": "npm run db:seed -w @sheetal/backend-core"
   },
   "devDependencies": {
     "@eslint/js": "^9.15.0",

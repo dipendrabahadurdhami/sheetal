@@ -162,7 +162,7 @@ export default function PropertyDetail() {
           <section id="location" className="detail-section">
             <h3>Location</h3>
             <p className="muted" style={{ marginBottom: 16 }}>{p.property_location}{p.district ? `, ${p.district}` : ""}</p>
-            <AreaMap lat={p.latitude ?? p.lat} lng={p.longitude ?? p.lng} seed={p.property_code || p.id} area={p.property_location} />
+            <AreaMap lat={p.latitude ?? p.lat} lng={p.longitude ?? p.lng} seed={p.property_code || p.id} area={p.property_location} shifted={!!p.location_approximate} />
           </section>
 
         </div>

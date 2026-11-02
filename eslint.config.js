@@ -4,11 +4,14 @@ import react from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
 import tseslint from "typescript-eslint";
 
+// The three APIs and their shared core.
+const API = ["backend-core/**", "website/backend/**", "business/backend/**", "admin/backend/**"];
+
 export default [
-  { ignores: ["**/dist/**", "**/node_modules/**", "backend/.pgdata/**"] },
+  { ignores: ["**/dist/**", "**/node_modules/**", "backend-core/.pgdata/**"] },
   {
     files: ["**/*.{js,jsx,ts,tsx}"],
-    ignores: ["backend/**"],
+    ignores: API,
     languageOptions: { ecmaVersion: 2022, sourceType: "module", globals: { ...globals.browser, ...globals.node }, parserOptions: { ecmaFeatures: { jsx: true } } },
     settings: { react: { version: "18.3" } },
     plugins: { react, "react-hooks": reactHooks },
@@ -25,11 +28,11 @@ export default [
       "no-empty": ["warn", { allowEmptyCatch: true }],
     },
   },
-  // Backend: TypeScript rules (strict types are also checked by tsc).
-  ...tseslint.configs.recommended.map((c) => ({ ...c, files: ["backend/**/*.ts"] })),
+  // APIs: TypeScript rules (strict types are also checked by tsc).
+  ...tseslint.configs.recommended.map((c) => ({ ...c, files: API.map((d) => `${d}/*.ts`) })),
   {
-    files: ["backend/**/*.ts"],
+    files: API.map((d) => `${d}/*.ts`),
     rules: { "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", caughtErrors: "none" }] },
   },
-  { files: ["backend/**/*.mjs"], languageOptions: { ecmaVersion: 2023, sourceType: "module", globals: { ...globals.node } }, rules: js.configs.recommended.rules },
+  { files: [...API.map((d) => `${d}/*.mjs`), "scripts/build-api.mjs"], languageOptions: { ecmaVersion: 2023, sourceType: "module", globals: { ...globals.node } }, rules: js.configs.recommended.rules },
 ];

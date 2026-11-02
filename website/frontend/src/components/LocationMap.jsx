@@ -30,10 +30,11 @@ function LeafletBox({ at, zoom, label, draw }) {
   return <div ref={ref} className="map loc-canvas" role="img" aria-label={label} />;
 }
 
-export function AreaMap({ lat, lng, seed, area }) {
+// `shifted`: the API already sent an approximate point (sale and rent from the real API), so it isn't moved again.
+export function AreaMap({ lat, lng, seed, area, shifted = false }) {
   const ll = validLatLng(lat, lng);
   if (!ll) return <div className="card card-pad muted">Exact location shared after you contact the agent.</div>;
-  const centre = approx(ll[0], ll[1], seed);
+  const centre = shifted ? ll : approx(ll[0], ll[1], seed);
   return (
     <div className="loc-map">
       <LeafletBox at={centre} zoom={15} label={`Map of the area around ${area || "this property"}`}

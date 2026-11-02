@@ -1,0 +1,322 @@
+// Sheetal Property database. Models are added module by module (see docs/backend-plan.md phases).
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Platform-wide settings (site name, VAT, trial days…), one row per key.
+model AppSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("app_settings")
+}
+
+// ───────────── Accounts ─────────────
+
+enum UserStatus {
+  active
+  suspended
+}
+
+model User {
+  id              String     @id @default(cuid())
+  /// Always stored lower-case.
+  email           String     @unique
+  userName        String     @map("user_name")
+  firstName       String?    @map("first_name")
+  lastName        String?    @map("last_name")
+  phone           String?
+  address         String?
+  photoUrl        String?    @map("photo_url")
+  /// What the person said they are when signing up (buyer, owner, agent…); shown, not used for access.
+  userType        String     @default("user") @map("user_type")
+  /// Null for accounts imported from the old site until the person sets a new password.
+  passwordHash    String?    @map("password_hash")
+  emailVerifiedAt DateTime?  @map("email_verified_at")
+  status          UserStatus @default(active)
+  /// Sheetal staff role (super_admin, operations, finance, content_editor, support); null for everyone else.
+  platformRole    String?    @map("platform_role")
+  /// Old site's users.id and role, kept for the import and for clarity.
+  legacyId        Int?       @unique @map("legacy_id")
+  legacyRole      String?    @map("legacy_role")
+  lastLoginAt     DateTime?  @map("last_login_at")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+
+  sessions    Session[]
+  tokens      EmailToken[]
+  memberships Membership[]
+
+  @@map("users")
+}
+
+/// A logged-in device. The browser holds a random token; only its SHA-256 hash is stored.
+model Session {
+  id         String    @id @default(cuid())
+  userId     String    @map("user_id")
+  tokenHash  String    @unique @map("token_hash")
+  expiresAt  DateTime  @map("expires_at")
+  lastUsedAt DateTime  @default(now()) @map("last_used_at")
+  ip         String?
+  userAgent  String?   @map("user_agent")
+  revokedAt  DateTime? @map("revoked_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+enum TokenPurpose {
+  verify_email
+  reset_password
+}
+
+/// One-time links sent by email (verify address, reset password). Only the hash is stored.
+model EmailToken {
+  id        String       @id @default(cuid())
+  userId    String       @map("user_id")
+  purpose   TokenPurpose
+  tokenHash String       @unique @map("token_hash")
+  expiresAt DateTime     @map("expires_at")
+  usedAt    DateTime?    @map("used_at")
+  createdAt DateTime     @default(now()) @map("created_at")
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose])
+  @@map("email_tokens")
+}
+
+// ───────────── Businesses, plans, roles ─────────────
+
+/// Starter (free) / Business / Pro for each business type. `limits` and `features` follow shared/src/core/plans.js.
+model Plan {
+  id       String   @id
+  type     String
+  name     String
+  /// Rs. per month; longer periods get the PERIODS discount.
+  price    Int
+  limits   Json
+  features Json
+  active   Boolean  @default(true)
+  sort     Int      @default(0)
+  tenants  Tenant[]
+
+  @@map("plans")
+}
+
+enum TenantStatus {
+  trial
+  active
+  past_due
+  suspended
+  cancelled
+  pending_verification
+}
+
+/// A business workspace (agency, hotel, host, developer, sponsor).
+model Tenant {
+  id            String       @id @default(cuid())
+  name          String
+  type          String
+  city          String?
+  email         String?
+  phone         String?
+  pan           String?
+  planId        String       @map("plan_id")
+  plan          Plan         @relation(fields: [planId], references: [id])
+  status        TenantStatus @default(active)
+  /// Months paid for (1, 3, 6 or 12).
+  period        Int          @default(1)
+  renewsAt      DateTime?    @map("renews_at")
+  /// Only a super admin can switch this on.
+  autoRenew     Boolean      @default(false) @map("auto_renew")
+  emailVerified Boolean      @default(false) @map("email_verified")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  roles       Role[]
+  memberships Membership[]
+
+  @@index([type])
+  @@map("tenants")
+}
+
+/// A role inside one business: a named set of permission ids (see src/domain/permissions.ts).
+model Role {
+  id          String       @id @default(cuid())
+  tenantId    String       @map("tenant_id")
+  key         String
+  name        String?
+  system      Boolean      @default(true)
+  perms       String[]
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  memberships Membership[]
+
+  @@unique([tenantId, key])
+  @@map("roles")
+}
+
+/// A person in a business, with one role. `scopes` = "all" or a list of branches.
+model Membership {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  tenantId  String   @map("tenant_id")
+  roleId    String   @map("role_id")
+  scopes    Json     @default("\"all\"")
+  status    String   @default("active")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  role      Role     @relation(fields: [roleId], references: [id])
+
+  @@unique([userId, tenantId])
+  @@index([tenantId])
+  @@map("memberships")
+}
+
+// ───────────── Email outbox and audit ─────────────
+
+/// Every email the platform sends, queued here first; the mail sender (Cloudflare setup) delivers them.
+model OutboundEmail {
+  id        String    @id @default(cuid())
+  to        String
+  subject   String
+  text      String
+  html      String?
+  status    String    @default("queued")
+  error     String?
+  createdAt DateTime  @default(now()) @map("created_at")
+  sentAt    DateTime? @map("sent_at")
+
+  @@index([status, createdAt])
+  @@map("outbound_emails")
+}
+
+/// Who did what, for the admin audit log and business activity.
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?  @map("actor_id")
+  tenantId  String?  @map("tenant_id")
+  action    String
+  target    String?
+  meta      Json?
+  ip        String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, createdAt])
+  @@index([actorId, createdAt])
+  @@map("audit_logs")
+}
+
+// ───────────── Listings (properties for sale and rent) ─────────────
+
+enum ListingPurpose {
+  sale
+  rent
+}
+
+enum ListingStatus {
+  draft
+  pending
+  published
+  sold
+  rented
+  expired
+  removed
+}
+
+/// One table for every property, posted from /business and shown on the website.
+/// Public fields are columns; `details` holds the rest of what visitors may see; `private` never leaves the server.
+model Listing {
+  id            Int            @id @default(autoincrement())
+  /// Shown to people and used in links: SP-0006.
+  code          String         @unique
+  slug          String         @unique
+  tenantId      String?        @map("tenant_id")
+  /// The person who posted it (imported listings keep their old poster).
+  userId        String?        @map("user_id")
+  purpose       ListingPurpose
+  /// House, Land, Apartment, Office space… (see catalog in shared/src/data/catalog.js).
+  category      String
+  propertyType  String?        @map("property_type")
+  title         String
+  /// Sanitised HTML.
+  description   String?
+  highlights    String?
+  status        ListingStatus  @default(draft)
+  /// Rs. Total price for sale; monthly rent for rent.
+  price         BigInt?
+  pricePer      String?        @map("price_per")
+  negotiable    Boolean        @default(false)
+  province      String?
+  district      String?
+  city          String?
+  /// Neighbourhood (tol) as people say it: "Dhapasi, Tillingtar".
+  area          String?
+  street        String?
+  ward          String?
+  /// Exact point. Sale and rent listings are only ever sent as an approximate area (see website/backend geo).
+  lat           Float?
+  lng           Float?
+  bedrooms      Int?
+  bathrooms     Int?
+  kitchens      Int?
+  livingRooms   Int?           @map("living_rooms")
+  floors        Float?
+  parking       String?
+  /// As written by the owner ("3 Aana 1 Paisa"); `landSqft` is the same size in sq ft for filters.
+  landArea      String?        @map("land_area")
+  landSqft      Float?         @map("land_sqft")
+  builtArea     String?        @map("built_area")
+  roadAccess    String?        @map("road_access")
+  roadType      String?        @map("road_type")
+  facing        String?
+  builtYear     String?        @map("built_year")
+  furnishing    String?
+  facilities    String[]       @default([])
+  youtubeUrl    String?        @map("youtube_url")
+  details       Json           @default("{}")
+  /// Owner name and phone, lalpurja number, commission, internal notes. Never sent to the website.
+  private       Json           @default("{}")
+  featured      Boolean        @default(false)
+  featuredOrder Int            @default(0) @map("featured_order")
+  views         Int            @default(0)
+  /// Fixes proposed from the title and description (import or AI) for a person to accept.
+  suggest       Json?
+  /// Check-ups: the next date someone should confirm it is still correct (listings never expire on their own).
+  checkDueAt    DateTime?      @map("check_due_at")
+  lastCheckedAt DateTime?      @map("last_checked_at")
+  lastCheckedBy String?        @map("last_checked_by")
+  legacyId      Int?           @unique @map("legacy_id")
+  publishedAt   DateTime?      @map("published_at")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  photos        ListingPhoto[]
+
+  @@index([status, purpose, publishedAt])
+  @@index([status, featured, featuredOrder])
+  @@index([district])
+  @@index([category])
+  @@index([tenantId, status])
+  @@index([userId])
+  @@map("listings")
+}
+
+/// Photos in display order; `file` is the name inside the media store (main, thumbnail and original sizes share it).
+model ListingPhoto {
+  id        Int     @id @default(autoincrement())
+  listingId Int     @map("listing_id")
+  file      String
+  sort      Int     @default(0)
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId, sort])
+  @@map("listing_photos")
+}

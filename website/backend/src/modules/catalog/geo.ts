@@ -1,0 +1,21 @@
+// Location privacy. Sale and rent listings are only ever sent as an approximate point: shifted 150–350 m
+// in a direction fixed by the listing, so it is stable between visits but never the property itself.
+// Same method as shared/src/core/geo.js (approx), which the website uses to draw the ~500 m area.
+
+const hash = (s: string) => {
+  let h = 2166136261;
+  for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+};
+
+export function approx(lat: number, lng: number, seed: string | number): [number, number] {
+  const h = hash(String(seed));
+  const angle = ((h % 3600) / 3600) * 2 * Math.PI;
+  const dist = 150 + ((h >>> 12) % 200);
+  const dLat = (dist * Math.cos(angle)) / 111320;
+  const dLng = (dist * Math.sin(angle)) / (111320 * Math.cos((lat * Math.PI) / 180));
+  return [Number((lat + dLat).toFixed(4)), Number((lng + dLng).toFixed(4))];
+}
+
+export const validLatLng = (lat?: number | null, lng?: number | null): [number, number] | null =>
+  lat && lng && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 ? [lat, lng] : null;

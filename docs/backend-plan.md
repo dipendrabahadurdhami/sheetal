@@ -10,7 +10,7 @@ Status: **draft, nothing built yet.** Edit freely; we will lock this before Phas
 | `business/frontend` | Workspace per business: hotel, host, developer, agency, sponsor (listings, bookings, POS, invoices, agreements, team/roles, OTA, inbox, AI) | One `localStorage` object seeded by `shared/src/demo/demo.js` |
 | `admin/frontend` | Sheetal staff console (tenants, plans, billing, moderation, KYC, gateways, staff/roles, settings) | Same `localStorage` object |
 
-`website/backend`, `business/backend`, `admin/backend` are empty placeholders.
+Each app has its own backend: `website/backend` (port 4000), `business/backend` (4001), `admin/backend` (4002), sharing one database and the common code in `backend-core` (see `backend-core/README.md`).
 
 ## 2. Key decisions
 
@@ -25,7 +25,7 @@ Status: **draft, nothing built yet.** Edit freely; we will lock this before Phas
 | Jobs/queue | Redis + BullMQ | Emails, SMS, OTA sync, trial expiry, image processing |
 | Files | S3-compatible storage (Cloudflare R2 / DO Spaces), resized with sharp | Property photos, KYC docs, payment screenshots |
 | Hosting | VPS (Docker Compose: api, postgres, redis, nginx) | Node can't run well on cPanel; recommended unless you prefer otherwise |
-| Structure | **One API** in a new workspace `backend/` (`@sheetal/api`) with route groups `/api/v1/public`, `/api/v1/business`, `/api/v1/admin` | One database, one auth system; the three placeholder folders get removed |
+| Structure | **Three APIs**, one per app: `website/backend`, `business/backend`, `admin/backend`, each its own server; shared schema and basics in `backend-core` | Owner's choice (2026-11-02): each app's backend lives with it. One database and one login system, so data is never copied between apps |
 
 **Frontend switch-over:** `website/frontend/src/api/client.js` gets an env flag (`VITE_API_MODE=mock|live`). We move modules to the live API one by one, and the mock keeps working for anything not built yet. The business and admin apps replace `update(draft => …)` calls with API hooks one module at a time.
 
@@ -78,8 +78,9 @@ Phases 1–2 put the public site live early. Phase 3 is the base everything afte
 |---|---|
 | 0 Foundation | ✅ Done 2026-11-02: `backend/` (Fastify 5, TypeScript strict, Prisma 6 + PostgreSQL 17 locally via embedded-postgres, cache with Redis/in-memory), validated config, request ids, one error format, security headers, CORS allow-list, rate limits, `/health` + `/health/ready`, bot detection, first migration, 18 tests, TypeScript linting, website mock/live switch per path. Git set up (`main`, first commit `ee76a44`). Not done: CI (needs a GitHub repository). |
 | 1a Accounts and login | ✅ Done 2026-11-02: users, sessions (hashed tokens, 30 days), businesses, plans, roles, email outbox, audit log; sign up (with a Starter workspace), log in (lockout after 5 wrong passwords, old-site users asked to set a new password), email verification, forgot/reset password, profile, change password, log out; seed for plans, super admin and Sheetal Property (Agency Pro, 1 year); 14 tests on a real database; website login switched to the API and tested end to end. |
-| 1b Public catalog | Next: listings, search, map, agencies |
-| 1c Old site import | After 1b: listings, photos, users, leads |
+| Split into three APIs | ✅ Done 2026-11-02: `backend/` became `backend-core` (shared) plus `website/backend`, `business/backend`, `admin/backend`; each starts on its own port and has its own tests and build |
+| 1b Public catalog | ✅ Done 2026-11-02 (`website/backend`): listings and photos tables; lists, sale/rent, search with filters and sorting, property page by id/link/code, featured, map pins, filter choices, suggestions, agencies, photos from MEDIA_DIR. Sale/rent locations are blurred on the server; owner details never leave it; views count people, not bots. 14 tests. |
+| 1c Old site import | ✅ Listings, photos and users done 2026-11-02: `npm run import:old -w @sheetal/website-api -- --dump <file>` (safe to re-run). 2,680 listings live (2,595 available, 23 sold, 62 rented), 2,647 with a map point, 16,916 photos linked, 121 users (set a new password on first login). Details missing from columns were filled from the description for 2,175 listings and kept in `suggest` for review. Still to import: leads, requirements, blogs, reviews. |
 
 ## 5. Requirements added on 2026-11-02
 

@@ -1,0 +1,28 @@
+{
+  "name": "@sheetal/admin-api",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Admin panel API (port 4002)",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "node ../../scripts/build-api.mjs",
+    "start": "node dist/server.js",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@sheetal/backend-core": "*",
+    "fastify": "^5.12.7",
+    "zod": "^4.6.7",
+    "@prisma/client": "^6.19.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
+  }
+}
