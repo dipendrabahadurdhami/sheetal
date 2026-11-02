@@ -35,7 +35,8 @@ function loadFromApi() {
   Promise.all(["stays", "projects", "investments"].map((k) => api.kindList(k).then(toList).then((r) => r.items).catch(() => [])))
     .then(([stays, projects, invests]) => {
       fromApi = {
-        stays: stays.map((p) => ({ ...base(p), kind: "hotel", stars: 0, rating: 0, reviews: 0, perks: [], rooms: [], policy: "moderate" })),
+        // A stay is priced by the night.
+        stays: stays.map((p) => ({ ...base(p), deal: "night", kind: "hotel", stars: 0, rating: 0, reviews: 0, perks: [], rooms: [], policy: "moderate" })),
         projects: projects.map((p) => ({ ...base(p), type: p.category, status: p.purpose === "Rent" ? "For rent" : "For sale", from: p.total_price, banks: [] })),
         invests: invests.map((p) => ({ ...base(p), type: p.category, target: p.total_price || 0, raised: 0, investors: 0 })),
       };
@@ -47,7 +48,7 @@ function useFromApi() {
   useEffect(() => { apiListeners.add(setV); loadFromApi(); if (fromApi !== v) setV(fromApi); return () => apiListeners.delete(setV); }, []);
   return v || { stays: [], projects: [], invests: [] };
 }
-const dealPrice = (x) => <span className="pb-price tnum">{rsShort(x.price)}{x.deal === "rent" ? <small> / month</small> : <small> · for sale</small>}</span>;
+const dealPrice = (x) => <span className="pb-price tnum">{rsShort(x.price)}<small>{{ night: " / night", rent: " / month" }[x.deal] ?? " · for sale"}</small></span>;
 
 export function useCatalog() {
   const { db } = useStore();

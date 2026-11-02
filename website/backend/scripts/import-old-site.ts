@@ -10,7 +10,7 @@
 // - Photos: the cover first, then the gallery, only files that exist in MEDIA_DIR/property/main.
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { loadConfig, loadEnvFiles } from "@sheetal/backend-core/config";
 import { createDb } from "@sheetal/backend-core/lib/db";
 
@@ -112,17 +112,10 @@ function cleanHtml(v: unknown) {
 }
 const text = (html: string | null) => (html ?? "").replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ");
 
-/** What the listing offers, from what its title says it is (the old site only had sale and rent).
- *  Only the thing being offered counts: "House for rent, ideal for a hostel" is still a house for rent. */
-function kindOf(title: string, purpose: "sale" | "rent", oldPurposeId: number): { kind: string; why?: string } {
-  // "…near CG Housing" describes the neighbourhood, not what is offered.
-  const t = title.replace(/[^\p{L}\p{N}\s/&-]/gu, " ").replace(/\s+/g, " ").replace(/\bnear\b.*$/i, "");
-  const subject = t.split(/\b(?:on|for|at|in|near)\b/i)[0] ?? t; // the words before "on sale", "for rent", "at …"
-  if (/\b(hotel|hostel|guest ?house|resort|lodge)\b/i.test(subject)) return { kind: "stay_hotel", why: "Title offers a hotel, hostel or guesthouse." };
-  if (/\binvest(ment|or)?s?\b/i.test(t) || oldPurposeId === 3) return { kind: "invest", why: "Title offers it as an investment." };
-  if (/\b(colony|housing|plotting|plots?)\b/i.test(t)) return { kind: "project", why: "Title offers a colony, housing or plot development." };
-  return { kind: purpose === "rent" ? "rentout" : "sell" };
-}
+/** Old listings were all posted for sale or rent, so that is what they stay: a hotel or a colony house for sale
+ *  is still a sale. Stays (priced per night), developer projects and investment offers only come from
+ *  businesses that post them as such in /business. */
+const kindOf = (purpose: "sale" | "rent") => (purpose === "rent" ? "rentout" : "sell");
 
 // Nepali land units in square feet.
 const SQFT = { ropani: 5476, aana: 342.25, paisa: 85.5625, daam: 21.390625, bigha: 72900, katha: 3645, dhur: 182.25, sqm: 10.7639 };
@@ -284,12 +277,11 @@ for (const p of [...T.properties!].sort((a, b) => Number(a.id) - Number(b.id))) 
   const created = date(p.created_at) ?? today;
   const perAnna = str(p.price_per_anna) ?? str(p.anna_price);
 
-  const sorted = kindOf(title, purpose, Number(p.purpose_id));
-  if (sorted.why) suggest.kind = `${sorted.kind}: ${sorted.why}`;
-  kinds.set(sorted.kind, (kinds.get(sorted.kind) ?? 0) + 1);
+  const kind = kindOf(purpose);
+  kinds.set(kind, (kinds.get(kind) ?? 0) + 1);
 
   const data = {
-    kind: sorted.kind,
+    kind,
     code: str(p.property_code)?.toUpperCase() ?? `SP-${String(id).padStart(4, "0")}`,
     slug, tenantId: sheetal.id, userId: userIdOf.get(Number(p.user_id)) ?? null,
     purpose, category, propertyType: titleCase(typeName.get(Number(p.propertytype_id)) ?? null),
@@ -311,7 +303,7 @@ for (const p of [...T.properties!].sort((a, b) => Number(a.id) - Number(b.id))) 
     featured: Number(p.is_featured) === 1 || str(p.advertisement_type) === "featured",
     featuredOrder: Number(p.featured_order) || 0,
     views: Number(p.views) || 0,
-    suggest: Object.keys(suggest).length ? (suggest as Prisma.InputJsonValue) : undefined,
+    suggest: Object.keys(suggest).length ? (suggest as Prisma.InputJsonValue) : Prisma.DbNull, // cleared on re-import when nothing needs review
     // Spread the first check-ups over the next 90 days so the team gets a steady few each day.
     checkDueAt: new Date(today.getTime() + ((n % 90) + 1) * 864e5),
     publishedAt: created, createdAt: created,
