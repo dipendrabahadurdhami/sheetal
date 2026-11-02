@@ -261,6 +261,10 @@ p { margin: 0; text-wrap: pretty; }
 .pcard:hover { color: var(--text); }
 .pcard-media { position: relative; aspect-ratio: 4 / 3.1; border-radius: var(--r-lg); overflow: hidden; background: var(--surface-2); }
 .pcard-media img { width: 100%; height: 100%; object-fit: cover; transition: transform .6s var(--ease), opacity .4s; }
+/* Invitation cards on empty Stays / Projects / Investments: same shape as a listing, an icon instead of a photo. */
+.pcard-invite .pcard-media { display: flex; align-items: center; justify-content: center; color: var(--accent); border: 1.5px dashed var(--line-strong); background: color-mix(in srgb, var(--accent) 5%, var(--surface)); }
+.pcard-invite:hover .pcard-media { border-color: var(--accent); }
+.pcard-invite .pcard-price { color: var(--accent); font-size: 15px; }
 .pcard:hover .pcard-media img { transform: scale(1.05); }
 .pcard-top { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 .heart { width: 36px; height: 36px; border-radius: var(--r); border: 0; background: color-mix(in srgb, var(--c-white) 92%, transparent); color: var(--c-slate); display: flex; align-items: center; justify-content: center; transition: transform .2s; }

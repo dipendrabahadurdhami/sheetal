@@ -1,6 +1,5 @@
 import { useState, useRef } from "react";
 import { useSEO } from "../utils/seo";
-import { ProfileExtras } from "../market/SiteRows";
 import { Link, useParams } from "react-router-dom";
 import { Phone, Mail, MessageCircle, MapPin, Facebook, Instagram, Globe } from "lucide-react";
 import { api } from "../api/endpoints";
@@ -95,7 +94,6 @@ export default function AgencyProfile() {
           <div className="card card-pad stack agent-reviews"><h3>Client reviews</h3><Reviews type="agent" id={a.id} /></div>
         </aside>
       </div>
-      <ProfileExtras />
     </>
   );
 }

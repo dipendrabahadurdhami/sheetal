@@ -5,20 +5,22 @@ import { RouterProvider } from "@sheetal/shared/core/router";
 import { StayCard, ProjectCard, InvestCard, useCatalog } from "./Market";
 import { rs } from "@sheetal/shared/core/format";
 import "@sheetal/shared/styles/platform.css";
+import { InviteCards } from "../components/InviteCards";
 
 // Home-page rows for your existing site (master prompt §3): Popular stays, Featured projects, Open investments.
 // Usage in pages/Home.jsx:  <HomePlatformRows SectionHead={SectionHead} Link={Link} />
 function Rows({ SectionHead, Link }) {
   const { stays, projects, invests } = useCatalog();
   const rows = [
-    ["Stay in Nepal", "Popular stays", "/stays", "See all stays", stays.slice(0, 4).map((s) => <StayCard key={s.id} s={s} />)],
-    ["Under construction and ready", "Featured projects", "/project", "See all projects", projects.slice(0, 4).map((p) => <ProjectCard key={p.id} p={p} />)],
-    ["Fund from Rs. 10,000", "Open investments", "/investment/explore", "See all", invests.slice(0, 4).map((v) => <InvestCard key={v.id} v={v} />)],
+    ["stay", "Stay in Nepal", "Popular stays", "/stays", "See all stays", stays.slice(0, 4).map((s) => <StayCard key={s.id} s={s} />)],
+    ["project", "Under construction and ready", "Featured projects", "/project", "See all projects", projects.slice(0, 4).map((p) => <ProjectCard key={p.id} p={p} />)],
+    ["invest", "Fund from Rs. 10,000", "Open investments", "/investment/explore", "See all", invests.slice(0, 4).map((v) => <InvestCard key={v.id} v={v} />)],
   ];
-  return rows.map(([kicker, title, to, label, cards]) => (
+  // Until something is posted, a row invites owners to post the first one instead of standing empty.
+  return rows.map(([kind, kicker, title, to, label, cards]) => (
     <section key={title} className="section container">
-      <SectionHead kicker={kicker} title={title} action={<Link to={to} className="link">{label}</Link>} />
-      <div className="pb-grid pb-home-row">{cards}</div>
+      <SectionHead kicker={kicker} title={title} action={cards.length ? <Link to={to} className="link">{label}</Link> : null} />
+      {cards.length ? <div className="pb-grid pb-home-row">{cards}</div> : <InviteCards kind={kind} compact />}
     </section>
   ));
 }
@@ -34,6 +36,7 @@ const Chips = ({ value, options, onChange }) => <div className="pf-chips">{optio
 function ProjectsInner({ SectionHead }) {
   const { projects } = useCatalog();
   const [city, setCity] = React.useState("All"); const [status, setStatus] = React.useState("All");
+  if (!projects.length) return <section className="section-sm"><SectionHead kicker="Buildings, colonies and villa projects" title="Projects" /><InviteCards kind="project" /></section>;
   const cities = ["All", ...new Set(projects.map((p) => p.city))];
   const list = projects.filter((p) => (city === "All" || p.city === city) && (status === "All" || p.status === status));
   return (<section className="section-sm"><SectionHead kicker="Buildings, colonies and villa projects" title={`${list.length} projects`} />
@@ -43,6 +46,7 @@ function ProjectsInner({ SectionHead }) {
 function InvestInner({ SectionHead }) {
   const { invests } = useCatalog();
   const [st, setSt] = React.useState("Open");
+  if (!invests.length) return <section><SectionHead kicker="Fund from Rs. 10,000 · returns not guaranteed" title="Project investments" /><InviteCards kind="invest" /></section>;
   const isOpen = (v) => v.raised < v.target;
   const list = invests.filter((v) => st === "All" || (st === "Open" ? isOpen(v) : !isOpen(v)));
   return (<section><SectionHead kicker="Fund from Rs. 10,000 · returns not guaranteed" title="Project investments" />
@@ -78,16 +82,6 @@ export function PostTypePicker() {
     <Tile icon="building-2" title="List a project" sub="Apartments, colony, villas" on={k === "project"} to="/post-property?type=project" />
     <Tile icon="hand-coins" title="Open an investment" sub="Raise funds from Rs. 10,000" on={k === "invest"} to="/post-property?type=invest" />
   </div><p className="small muted" style={{ marginTop: 8 }}>Free with a Sheetal account. Every post is reviewed before it goes live, and you manage it from My profile.</p></div>;
-}
-
-// Agency profile extras (§18): verification, stats, reviews.
-export function ProfileExtras() {
-  const reviews = [["Rita M.", 5, "Clear about every document and quick to reply."], ["Sanjay K.", 4, "Helped us compare three flats in one afternoon."]];
-  return <section className="container section-sm"><div className="pb-grid pb-home-row">
-    <div className="card pf-pad pf-stack tight"><b>Registered business</b><span className="small muted">Registration, PAN and owner ID checked on 12 Jan 2027.</span><div className="pf-legal-slot small">Company registration and licence details from Sheetal.</div></div>
-    <div className="card pf-pad pf-stack tight"><b>Rating 4.7 · 38 reviews</b>{reviews.map(([n, s, t]) => <span key={n} className="small"><b>{"★".repeat(s)}</b> {t} <span className="muted">— {n}</span></span>)}</div>
-    <div className="card pf-pad pf-stack tight"><b>Replies</b><span className="small muted">Usually within 1 hour</span><b style={{ marginTop: 8 }}>Areas covered</b><span className="small muted">Kathmandu, Lalitpur, Bhaktapur</span></div>
-  </div></section>;
 }
 
 export { Wrap as PlatformWrap };

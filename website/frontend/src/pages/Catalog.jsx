@@ -4,6 +4,7 @@ import { FGroup, FScroll, Opts, PriceRange, useGroups } from "../components/Filt
 import { SearchTabs } from "../components/SearchTabs";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { LayoutGrid, List, SlidersHorizontal, X, Search, MapPin, Star, BedDouble, Building2, TrendingUp } from "lucide-react";
+import { InviteCards } from "../components/InviteCards";
 import { useMedia } from "../hooks/useAsync";
 import { PageHead, Empty } from "../components/ui";
 import { Dropdown } from "../components/Dropdown";
@@ -19,12 +20,6 @@ const META = {
     types: ["Apartment building", "Colony", "Villa project", "Commercial complex"], statuses: ["Upcoming", "Under construction", "Ready to move"], sorts: [["", "Newest first"], ["low", "Price: low to high"], ["high", "Price: high to low"]] },
   invest: { kicker: "Invest", title: "Project investments", text: "Fund hotels, villa projects and colonies from Rs. 10,000. Returns are not guaranteed.", base: "/investment",
     types: ["Hotel", "Villa project", "Colony", "Commercial"], statuses: ["Open", "Funded"], sorts: [["", "Closing soon"], ["raised", "Most funded"], ["min", "Lowest minimum"]] },
-};
-// Shown before anything of this kind has been posted.
-const NONE_YET = {
-  stay: ["No stays yet", "Hotels and hosts will list rooms and homes to book by the night here."],
-  project: ["No projects yet", "Developers will list their apartment, colony and villa projects here."],
-  invest: ["No open investments yet", "Investment offers from approved sponsors will show here."],
 };
 const retLow = (r) => parseFloat(String(r).split(/[–-]/)[0]) || 0;
 const years = (t) => parseFloat(t) || 0;
@@ -148,7 +143,7 @@ function Inner({ kind }) {
             </div>
           </div>
           {active.length > 0 && <div className="row-wrap" style={{ gap: 8, marginBottom: 20 }}>{active.map((k) => <button key={k} className="chip active" style={{ height: 32 }} onClick={() => set(k, "")}>{(EXTRA[kind].find((f) => f.k === k)?.label ? `${EXTRA[kind].find((f) => f.k === k).label}: ` : "") + q[k].split("|").join(", ")}<X size={13} /></button>)}</div>}
-          {!all.length ? <Empty icon={kind === "stay" ? BedDouble : kind === "project" ? Building2 : TrendingUp} title={NONE_YET[kind][0]}>{NONE_YET[kind][1]}</Empty>
+          {!all.length ? <InviteCards kind={kind} />
             : !list.length ? <Empty icon={kind === "stay" ? BedDouble : kind === "project" ? Building2 : TrendingUp} title="Nothing matches">Try another city or remove a filter.</Empty>
             : <div className={layout === "list" ? "stack" : "grid-cards"} style={layout === "list" ? { gap: 24 } : undefined}>{list.map((it) => <Card key={it.id} it={it} layout={layout} trip={trip} />)}</div>}
         </section>
