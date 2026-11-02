@@ -2,14 +2,14 @@ import React, { useState } from "react";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
 import { Link, Routes, useRouter } from "@sheetal/shared/core/router";
-import { fdate, rs, rsShort } from "@sheetal/shared/core/format";
+import { TODAY, fdate, rs, rsShort } from "@sheetal/shared/core/format";
 import { Badge, Button, Field, Input, StatusBadge, useToast } from "@sheetal/shared/core/ui";
 import PayScreen from "./PayScreen";
 import { Icon } from "@sheetal/shared/core/icons";
 import { Counter } from "./publicBits";
 import { defaultTenantSettings } from "./publicBits";
 import { config } from "@sheetal/shared/core/config";
-import { Home as MarketHome, Stays, StayDetail, Projects as MarketProjects, ProjectDetail, Investments, InvestDetail, Partners, Tools, MapPage, RequestPage, OffersPage, HelpPage, LegalPage, SystemPage, MarketHeader, MarketFooter, STAYS, PROJECTS, INVESTS , Crumbs, photoFor } from "./Market";
+import { inDays, Home as MarketHome, Stays, StayDetail, Projects as MarketProjects, ProjectDetail, Investments, InvestDetail, Partners, Tools, MapPage, RequestPage, OffersPage, HelpPage, LegalPage, SystemPage, MarketHeader, MarketFooter, STAYS, PROJECTS, INVESTS , Crumbs, photoFor } from "./Market";
 import { Account as CustomerAccount } from "./Orders";
 import { formLink, formsOf } from "@sheetal/shared/core/forms";
 
@@ -118,7 +118,8 @@ function BizProfile({ tenant, ts }) {
 }
 
 // Same layout as the agency profile: header row, then About + listings on the left, message form + reviews on the right.
-const BIZ_REVIEWS = [["Hannah W.", 5, "Lovely place and very helpful staff."], ["Ramesh K.", 5, "Quick replies and everything as shown."], ["Sunita T.", 4, "Clean and easy to find. Would book again."]];
+// Reviews come from real customers (reviews module); none yet.
+const BIZ_REVIEWS = [];
 function Home({ tenant, listings, ts }) {
   const L = useL();
   const toast = useToast();
@@ -215,7 +216,7 @@ function Checkout({ tenant, listing, ts }) {
   const gateways = ts.payments.mode === "own" ? Object.entries(ts.payments.own).filter(([, v]) => v.on).map(([k]) => (k === "bankQr" ? "bank" : k)) : Object.keys(GW).filter((k) => db.platformSettings.gateways[k]);
   const rooms = listing.rooms || [];
   const fit = (g, cur) => (rooms.find((x) => x[0] === cur && x[2] >= g) || rooms.find((x) => x[2] >= g) || rooms.find((x) => x[0] === cur) || rooms[0])?.[0] || "";
-  const [f, setF] = useState({ from: qs.get("from") || "2027-03-12", to: qs.get("to") || "2027-03-15", guests: Number(qs.get("guests")) || 2, room: fit(Number(qs.get("guests")) || 2, qs.get("room")),
+  const [f, setF] = useState({ from: qs.get("from") || inDays(1), to: qs.get("to") || inDays(3), guests: Number(qs.get("guests")) || 2, room: fit(Number(qs.get("guests")) || 2, qs.get("room")),
     amt: Number(qs.get("amt")) || listing.price, name: "", phone: "", email: "", note: "", idno: "", risk: false, part: stay ? "full" : "token" });
   const [step, setStep] = useState(0);
   const [tried, setTried] = useState(false);
@@ -243,13 +244,13 @@ function Checkout({ tenant, listing, ts }) {
     const code = `${stay ? "BK" : invest ? "INV" : "RS"}-2027-${String(Math.floor(500 + Math.random() * 400)).padStart(4, "0")}`;
     update((d) => {
       d.customer = d.customer || { orders: [] };
-      d.customer.orders.unshift({ code, tid: tenant.id, lid: listing.id, title: listing.title, kind: stay ? "stay" : invest ? "invest" : "reserve", policy: listing.policy, from: stay ? f.from : undefined, to: stay ? f.to : undefined, guests: stay ? f.guests : undefined, room: f.room || undefined, total: total - off, paid: due - off, method: m, status: stay ? "confirmed" : invest ? "invested" : "reserved", at: "2027-03-02" });
-      if (invest) { d.sector = d.sector || {}; d.sector[tenant.id] = d.sector[tenant.id] || {}; (d.sector[tenant.id].investors = d.sector[tenant.id].investors || []).unshift({ id: code, name: f.name, city: "Online", amount: total, since: "2027-03-02", kyc: true }); }
+      d.customer.orders.unshift({ code, tid: tenant.id, lid: listing.id, title: listing.title, kind: stay ? "stay" : invest ? "invest" : "reserve", policy: listing.policy, from: stay ? f.from : undefined, to: stay ? f.to : undefined, guests: stay ? f.guests : undefined, room: f.room || undefined, total: total - off, paid: due - off, method: m, status: stay ? "confirmed" : invest ? "invested" : "reserved", at: TODAY.slice(0, 10) });
+      if (invest) { d.sector = d.sector || {}; d.sector[tenant.id] = d.sector[tenant.id] || {}; (d.sector[tenant.id].investors = d.sector[tenant.id].investors || []).unshift({ id: code, name: f.name, city: "Online", amount: total, since: TODAY.slice(0, 10), kyc: true }); }
       const o = d.ops?.[tenant.id]; if (stay && o) o.bookings.unshift({ id: code, guest: f.name || "Website guest", phone: f.phone, room: o.rooms[0]?.no, type: f.room || o.rooms[0]?.type, from: f.from, to: f.to, amount: total, paid: due, status: "confirmed", source: "direct" });
     });
     navigate(`/site/${tenant.id}/done/${code}`);
   };
-  const dateIn = (k) => <label className="ck-date"><small>{k === "from" ? L("ck.checkIn", "Check in") : L("ck.checkOut", "Check out")}</small><input type="date" className="tnum" min={k === "to" ? f.from : "2027-01-01"} value={f[k]}
+  const dateIn = (k) => <label className="ck-date"><small>{k === "from" ? L("ck.checkIn", "Check in") : L("ck.checkOut", "Check out")}</small><input type="date" className="tnum" min={k === "to" ? f.from : TODAY.slice(0, 10)} value={f[k]}
     onChange={(e) => { const v = e.target.value; if (!v) return; if (k === "from") setF({ ...f, from: v, to: v >= f.to ? new Date(new Date(v).getTime() + 864e5).toISOString().slice(0, 10) : f.to }); else if (v > f.from) setF({ ...f, to: v }); }} /></label>;
   const choice = (on, onClick, title, sub, right) => <button type="button" role="radio" aria-checked={on} className={`ck-choice ${on ? "on" : ""}`} onClick={onClick}><i className="pay-dot" aria-hidden="true" /><span className="pf-two"><b>{title}</b>{sub && <small>{sub}</small>}</span>{right != null && <b className="tnum">{right}</b>}</button>;
   return (
@@ -379,17 +380,25 @@ function fullLink(tenant, l) {
 
 // Pay link (/pay/:code): opened from an SMS, email or QR sent by staff or a business — instalments, service fees, balances.
 function PayLink({ code }) {
-  const { update } = useStore();
-  const inv = { code: code.toUpperCase(), from: "Shetal Heights Developers", purpose: "Instalment 2 of 4 · Unit A-1201 (structure stage)", lines: [["Instalment (30%)", 2550000]], due: "2027-03-05" };
-  const total = inv.lines.reduce((s, [, v]) => s + v, 0);
+  const { db, update } = useStore();
+  // Pay links are created by staff or a business (payments module); the code must match one of them.
+  const inv = db.payLinks?.[code.toUpperCase()];
+  const total = (inv?.lines || []).reduce((s, [, v]) => s + v, 0);
   const [done, setDone] = useState(null);
+  if (!inv) return (
+    <div className={`pb-wrap${config.embedPublic ? " pb-photos" : ""}`}><MarketHeader />
+      <section className="pb-inner" style={{ padding: "56px 24px", maxWidth: 640, textAlign: "center" }}>
+        <h1 className="pb-h1" style={{ fontSize: 26 }}>This payment link isn't valid</h1>
+        <p className="muted">It may have expired or already been paid. Please ask the business for a new link.</p>
+      </section><MarketFooter /></div>
+  );
   return (
     <div className={`pb-wrap${config.embedPublic ? " pb-photos" : ""}`}><MarketHeader />
       <section className="pb-inner" style={{ padding: "32px 24px 56px", maxWidth: 640 }}>
         <div className="card pf-pad pf-stack">
           <div className="pf-plan-top"><span className="pf-two"><b>{inv.from}</b><small className="tnum">Invoice {inv.code} · due {fdate(inv.due)}</small></span>{done ? <Badge tone={done === "paid" ? "done" : "progress"}>{done === "paid" ? "Paid" : "Pending verification"}</Badge> : <Badge tone="action">Unpaid</Badge>}</div>
           <PayScreen purpose={inv.purpose} lines={inv.lines} total={total} allowCoupon={false}
-            onPaid={({ method, status, due }) => { setDone(status); update((d) => { d.customer = d.customer || { orders: [] }; d.customer.orders.unshift({ code: inv.code, tid: "t2", title: inv.purpose, kind: "invoice", total, paid: due, method, status: status === "paid" ? "paid" : "pending_verification", at: "2027-03-02" }); }); }} />
+            onPaid={({ method, status, due }) => { setDone(status); update((d) => { d.customer = d.customer || { orders: [] }; d.customer.orders.unshift({ code: inv.code, tid: inv.tid, title: inv.purpose, kind: "invoice", total, paid: due, method, status: status === "paid" ? "paid" : "pending_verification", at: TODAY.slice(0, 10) }); }); }} />
         </div>
       </section><MarketFooter /></div>
   );

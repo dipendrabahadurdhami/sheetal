@@ -293,17 +293,16 @@ export function Payouts({ tenant }) {
   const { db } = useStore();
   const ts = db.tenantSettings[tenant.id] || defaultTenantSettings(tenant);
   const own = ts.payments.mode === "own";
-  const rows = [["PO-31", "2027-03-05", 535890, 53590, "pending"], ["PO-27", "2027-02-26", 437900, 43780, "paid"], ["PO-22", "2027-02-19", 456180, 45620, "paid"], ["PO-18", "2027-02-12", 403220, 40320, "paid"]]
-    .map(([id, date, gross, fee, status]) => ({ id, date, gross, fee, net: gross - fee, status }));
+  const rows = []; // payouts come from the payments API
   const exportRows = rows.map((r) => ({ ...r, status: t(`status.${r.status}`) }));
   return (
     <>
-      <PageHead title={t("nav.payouts")} sub={own ? t("bpay.ownSub") : t("bpay.sub", { bank: ts.payments.payoutBank.bank })} actions={!own && <>
+      <PageHead title={t("nav.payouts")} sub={own ? t("bpay.ownSub") : t("bpay.sub", { bank: ts.payments.payoutBank.bank || "your bank" })} actions={!own && <>
         <DataActions kind="payouts" onlyExport rows={exportRows} />
         <Button variant="outline" icon="download" onClick={() => { exportCSV("payouts", exportRows); toast("Statement downloaded"); }}>{t("bpay.statement")}</Button></>} />
       {own ? <div className="pf-note">{t("bpay.ownNote")}</div> : <>
         <div className="pf-stats">
-          <Stat label={t("bpay.next")} value={rs(rows[0].net)} note={fdate(rows[0].date)} />
+          <Stat label={t("bpay.next")} value={rs(rows[0]?.net || 0)} note={rows[0] ? fdate(rows[0].date) : "None yet"} />
           <Stat label={t("bpay.last30")} value={rs(rows.slice(1).reduce((s, r) => s + r.net, 0))} note={t("bpay.afterFee")} />
           <Stat label={t("bpay.fees")} value={rs(rows.reduce((s, r) => s + r.fee, 0))} note={t("bpay.commission")} />
         </div>

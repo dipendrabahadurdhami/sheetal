@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useStore } from "@sheetal/shared/core/store";
 import { Link } from "@sheetal/shared/core/router";
-import { fdate, rs } from "@sheetal/shared/core/format";
+import { TODAY, fdate, rs } from "@sheetal/shared/core/format";
 import { Badge, Button, Drawer, Field, Input, Seg, Table, Textarea, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { Page, SavedBody } from "./Market";
@@ -13,9 +13,7 @@ const STEP = { confirmed: 1, reserved: 1, invested: 1, completed: 4, cancelled: 
 const Wrap = ({ embedded, children }) => (embedded ? <div className="pf-stack">{children}</div> : <Page><section className="pb-inner pf-stack" style={{ padding: "28px 24px" }}>{children}</section></Page>);
 const LABEL = { paid: "Paid", pending_verification: "Pending verification", confirmed: "Confirmed", reserved: "Reserved", invested: "Invested", completed: "Completed", cancelled: "Cancelled", refund_pending: "Refund pending" };
 const REFUND = { flexible: 100, moderate: 50, strict: 0 };
-export const demoOrders = (db) => [...(db.customer?.orders || []),
-  { code: "BK-2027-0388", tid: "t4", title: "Fewa View Villa, Sedi", kind: "stay", from: "2027-01-18", to: "2027-01-21", total: 36000, paid: 36000, method: "khalti", status: "completed", at: "2027-01-10", policy: "flexible", claim: 3500, problem: "Damage claim: broken lamp" },
-  { code: "INV-2027-0022", tid: "t5", title: "Chitwan Jungle Lodge", kind: "invest", total: 100000, paid: 100000, method: "connectips", status: "invested", at: "2027-01-20" }];
+export const demoOrders = (db) => db.customer?.orders || [];
 
 export function Account({ start = "orders", embedded, kinds }) {
   const { db, update } = useStore();
@@ -34,7 +32,7 @@ export function Account({ start = "orders", embedded, kinds }) {
       const b = ops.bookings?.find((y) => y.id === code);
       if (b && patch.status === "refund_pending") b.status = "cancelled";
       if (b && patch.paid) b.paid = patch.paid;
-      if (patch.problem || patch.status === "refund_pending") { ops.convs = ops.convs || []; ops.convs.unshift({ id: `cv${Date.now()}`, name: "Sita Gurung", phone: "9841010101", ch: "web", stage: "new", unread: 1, last: patch.problem ? `Problem reported: ${patch.problem}` : `Booking ${code} cancelled, refund requested`, at: "2027-03-02T10:00", msgs: [{ from: "them", text: patch.problem ? `${patch.problem} problem in booking ${code}.` : `I cancelled ${code}. Refund ${patch.refund}.`, at: "10:00" }], tags: [patch.problem ? "Problem" : "Cancellation"] }); }
+      if (patch.problem || patch.status === "refund_pending") { ops.convs = ops.convs || []; ops.convs.unshift({ id: `cv${Date.now()}`, name: "Sita Gurung", phone: "9841010101", ch: "web", stage: "new", unread: 1, last: patch.problem ? `Problem reported: ${patch.problem}` : `Booking ${code} cancelled, refund requested`, at: TODAY, msgs: [{ from: "them", text: patch.problem ? `${patch.problem} problem in booking ${code}.` : `I cancelled ${code}. Refund ${patch.refund}.`, at: "10:00" }], tags: [patch.problem ? "Problem" : "Cancellation"] }); }
     }
   });
   return (
@@ -106,7 +104,7 @@ function OrderDetail({ o, setOrder, toast }) {
         <Field label="Arrival time"><Seg value={f.arrival} onChange={(v) => setF({ ...f, arrival: v })} options={["12:00", "14:00", "18:00", "22:00"].map((x) => ({ id: x, label: x }))} /></Field>
         <Field label="ID of each guest"><label className="btn btn-outline"><input type="file" hidden /><Icon name="upload" size={16} />Upload IDs</label></Field>
         <Button onClick={() => { setMode(null); toast("Check-in details sent to the hotel"); }}>Send to hotel</Button></div>}
-      {mode === "hub" && <div className="card pf-pad pf-stack"><b>Your stay</b><dl className="pf-kv"><dt>Wi-Fi</dt><dd className="tnum">Lakeside-Guest · lake2027</dd><dt>Breakfast</dt><dd>07:00–10:00, terrace</dd><dt>Front desk</dt><dd className="tnum">061-465000</dd><dt>Check-out</dt><dd>11:00</dd></dl>
+      {mode === "hub" && <div className="card pf-pad pf-stack"><b>Your stay</b><dl className="pf-kv">{[["Wi-Fi", o.info?.wifi], ["Breakfast", o.info?.breakfast], ["Front desk", o.info?.phone], ["Check-out", o.info?.checkout]].map(([k, v]) => <React.Fragment key={k}><dt>{k}</dt><dd className="tnum">{v || "Ask the front desk"}</dd></React.Fragment>)}</dl>
         <div className="pf-chips">{["Order room service", "Book airport drop", "Late check-out", "Extra towels"].map((x) => <button key={x} className="chip" onClick={() => toast(`${x}: sent to front desk`)}>{x}</button>)}</div></div>}
       {mode === "problem" && <div className="card pf-pad pf-stack"><b>Report a problem</b>
         <div className="pf-chips">{["Hot water", "Cleanliness", "Noise", "Not as described", "Safety", "Other"].map((x) => <button key={x} className={`chip ${f.issue === x ? "active" : ""}`} onClick={() => setF({ ...f, issue: x })}>{x}</button>)}</div>

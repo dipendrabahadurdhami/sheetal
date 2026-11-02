@@ -3,7 +3,7 @@ import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
 import { Link, useRouter } from "@sheetal/shared/core/router";
 import { can } from "@sheetal/shared/core/rbac";
-import { fdate, fdatetime, rs, rsShort, TODAY } from "@sheetal/shared/core/format";
+import { fdate, fdatetime, inDays, rs, rsShort, TODAY } from "@sheetal/shared/core/format";
 import { DataActions } from "@sheetal/shared/components/DataIO";
 import { DeleteConfirm, restoreAt } from "@sheetal/shared/components/Crud";
 import { Badge, Button, Drawer, Empty, Field, Input, PageHead, Panel, Select, Stat, StatusBadge, Table, Tabs, Textarea, ToggleRow, useToast } from "@sheetal/shared/core/ui";
@@ -64,7 +64,7 @@ export function audit(d, what) { d.platformActivity.unshift({ id: Math.random().
 
 /* ───────── Site content: home sections, banners, pages, blog, SEO ───────── */
 const HOME_SECTIONS = ["hero", "featured", "projects", "investments", "stays", "areas", "tools", "agents", "journal"];
-const PAGES = [["about", "About us", "2027-02-10"], ["terms", "Terms and conditions", "2027-01-05"], ["privacy", "Privacy policy", "2027-01-05"], ["cancellation", "Cancellation and refund", "2027-02-20"], ["booking_terms", "Booking terms", "2027-02-20"], ["investment_terms", "Investment terms and risk", "2027-02-26"]];
+const PAGES = [["about", "About us", null], ["terms", "Terms and conditions", null], ["privacy", "Privacy policy", null], ["cancellation", "Cancellation and refund", null], ["booking_terms", "Booking terms", null], ["investment_terms", "Investment terms and risk", null]];
 const siteHref = (p) => (window.location.hash.startsWith("#/") ? `#${p}` : p);
 const ViewLink = ({ to, label = "View on site" }) => <a className="btn btn-ghost btn-sm" href={siteHref(to)} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}><Icon name="external-link" size={14} />{label}</a>;
 const SECTION_AT = { hero: "/", featured: "/featured", projects: "/project", investments: "/investment/explore", stays: "/stays", areas: "/", tools: "/tools/emi", agents: "/agencies", journal: "/blog" };
@@ -73,12 +73,12 @@ export function AdminContent() {
   const { db, update } = useStore();
   const toast = useToast();
   const [tab, setTab] = useState("home");
-  const c = db.content || { sections: Object.fromEntries(HOME_SECTIONS.map((s) => [s, true])), order: HOME_SECTIONS, banners: [{ id: "b1", title: "Lakeside stays from Rs. 4,500", link: "/stays?city=pokhara", active: true, ends: "2027-03-31" }, { id: "b2", title: "Shetal Heights: 2–3 BHK from Rs. 85 Lakh", link: "/project/shetal-heights", active: true, ends: "2027-04-15" }, { id: "b3", title: "Dashain offers", link: "/stays", active: false, ends: "2026-10-20" }] };
+  const c = db.content || { sections: Object.fromEntries(HOME_SECTIONS.map((s) => [s, true])), order: HOME_SECTIONS, banners: [] };
   const setC = (fn) => update((d) => { d.content = d.content || structuredClone(c); fn(d.content); });
   const [editPage, setEditPage] = useState(null);
   const DAY = TODAY.slice(0, 10);
   const posts = c.posts || SEED_POSTS;
-  const pages = PAGES.map(([id, title, upd]) => ({ id, title, upd, version: 3, ...(c.pages?.[id] || {}) }));
+  const pages = PAGES.map(([id, title, upd]) => ({ id, title, upd, version: 1, ...(c.pages?.[id] || {}) }));
   const setCx = (fn) => setC((x) => { if (!x.posts) x.posts = structuredClone(SEED_POSTS); if (!x.pages) x.pages = {}; fn(x); });
   const [post, setPost] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -110,7 +110,7 @@ export function AdminContent() {
         <div className="pf-panel-foot"><span className="small muted">{t("content.liveNote")}</span><Button onClick={() => toast(t("content.toastPublished"))}>{t("content.publish")}</Button></div>
       </Panel>}
       {tab === "banners" && <section className="card pf-panel">
-        <div className="pf-panel-head"><div className="pf-panel-title"><h2>{t("content.banners")}</h2><span>{t("content.bannersSub")}</span></div><Button icon="plus" size="sm" onClick={() => setC((x) => { x.banners.unshift({ id: `b${Date.now()}`, title: t("content.newBanner"), link: "/", active: false, ends: "2027-04-30" }); })}>{t("content.addBanner")}</Button></div>
+        <div className="pf-panel-head"><div className="pf-panel-title"><h2>{t("content.banners")}</h2><span>{t("content.bannersSub")}</span></div><Button icon="plus" size="sm" onClick={() => setC((x) => { x.banners.unshift({ id: `b${Date.now()}`, title: t("content.newBanner"), link: "/", active: false, ends: inDays(30) }); })}>{t("content.addBanner")}</Button></div>
         <Table rows={c.banners} minWidth={680} columns={[
           { key: "title", label: t("content.bTitle"), render: (b) => <span className="pf-two"><b>{b.title}</b><small>{b.link}</small></span> },
           { key: "ends", label: t("content.ends"), num: true, render: (b) => fdate(b.ends) },
@@ -142,7 +142,7 @@ export function AdminContent() {
         <ToggleRow title={t("content.sitemap")} sub={t("content.sitemapSub")} checked onChange={() => {}} />
       </div></Panel>}
       <Drawer open={!!editPage} onClose={() => setEditPage(null)} title={editPage?.title} sub={t("content.pageEditSub")}
-        footer={<><Button variant="outline" onClick={() => setEditPage(null)}>{t("common.cancel")}</Button><Button disabled={!pageBody?.title?.trim()} onClick={() => { const v = (editPage.version || 3) + 1; setCx((x) => { x.pages[editPage.id] = { ...pageBody, title: pageBody.title.trim(), version: v, updated: DAY }; }); setEditPage(null); toast(`${pageBody.title.trim()} published as v${v}`); }}>{t("content.publishV")}</Button></>}>
+        footer={<><Button variant="outline" onClick={() => setEditPage(null)}>{t("common.cancel")}</Button><Button disabled={!pageBody?.title?.trim()} onClick={() => { const v = (editPage.version || 1) + 1; setCx((x) => { x.pages[editPage.id] = { ...pageBody, title: pageBody.title.trim(), version: v, updated: DAY }; }); setEditPage(null); toast(`${pageBody.title.trim()} published as v${v}`); }}>{t("content.publishV")}</Button></>}>
         {editPage && pageBody && <div className="pf-stack">
           <Field label={t("content.page")}><Input value={pageBody.title} onChange={(e) => setPageBody({ ...pageBody, title: e.target.value })} /></Field>
           <Field label={editPage.id === "about" ? "Who we are" : t("content.body")} hint={editPage.id === "about" ? "Two paragraphs, with a blank line between them." : 'Leave empty to keep the current text on the site. Start a line with "## " for a heading and "- " for a list item.'}><Textarea rows={14} value={pageBody.body} onChange={(e) => setPageBody({ ...pageBody, body: e.target.value })} placeholder={"## Who we are\nSheetal Property connects buyers, renters and guests with businesses across Nepal.\n\n## How bookings work\n- Pay online or at the property\n- Cancel free within the stated period"} style={{ minHeight: 280 }} /></Field>
@@ -243,7 +243,7 @@ function AboutFields({ b, set }) {
 }
 const slugify = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
 const POST_CATS = ["Buying guide", "Market trends", "Legal", "Home loans", "Renting", "Stays and travel", "News"];
-const SEED_POSTS = [["How to verify a lal purja before you buy land", "Buying guide", "published", "2026-10-13"], ["Kathmandu land prices in 2026: what changed", "Market trends", "published", "2026-10-04"], ["Home loan interest rates across Nepali banks", "Home loans", "published", "2026-09-25"], ["Renting in Lalitpur: a checklist for tenants", "Renting", "draft", "2027-03-01"]]
+const SEED_POSTS = []
   .map(([title, category, status, date], i) => ({ id: `p${i + 1}`, title, slug: slugify(title), category, status, date, updated: date, body: "", seoTitle: "", seoDesc: "", site: true }));
 const outline = (topic) => `## Why ${topic.toLowerCase()} matters\nWho this is for and what they will learn.\n\n## What to check first\n- \n- \n- \n\n## Step by step\nWalk the reader through it in order.\n\n## Costs and documents\nWhat it costs in Nepal and which papers are needed.\n\n## Before you decide\nOne short paragraph with the key advice.`;
 function PostBody({ body }) {
@@ -266,9 +266,9 @@ export function AdminBilling({ role }) {
   const { db } = useStore();
   const toast = useToast();
   const [tab, setTab] = useState("invoices");
-  const inv = db.tenants.map((x, i) => ({ id: `SH-2027-${String(142 - i).padStart(4, "0")}`, tenant: x, amount: planOf(db, x.planId).price, date: "2027-03-01", due: "2027-03-08", status: x.status === "past_due" ? "overdue" : x.status === "trial" ? "draft" : x.status === "suspended" ? "overdue" : "paid" }));
-  const payouts = [["t1", 482300, "2027-03-05", "pending"], ["t4", 38400, "2027-03-05", "pending"], ["t6", 912000, "2027-02-26", "paid"], ["t12", 126500, "2027-02-26", "paid"]].map(([tid, v, d, s], i) => ({ id: `PO-${i + 31}`, tenant: db.tenants.find((x) => x.id === tid), amount: v, date: d, status: s }));
-  const refunds = [{ id: "RF-0019", who: "Priya Sharma", order: "BK-2027-0391", amount: 31200, method: "Fonepay", status: "pending" }, { id: "RF-0018", who: "Mark Lee", order: "BK-2027-0350", amount: 12400, method: "Khalti", status: "refunded" }];
+  const inv = []; // Sheetal invoices to businesses come from the billing API
+  const payouts = [];
+  const refunds = [];
   const sum = (a, s) => a.filter((x) => !s || x.status === s).reduce((m, x) => m + x.amount, 0);
   return (
     <>
@@ -276,7 +276,7 @@ export function AdminBilling({ role }) {
       <div className="pf-stats">
         <Stat label={t("pbill.collected")} value={rsShort(sum(inv, "paid"))} note={t("pbill.thisMonth")} />
         <Stat label={t("pbill.overdue")} value={rsShort(sum(inv, "overdue"))} note={t("pbill.overdueN", { n: inv.filter((x) => x.status === "overdue").length })} tone="action" noteIcon="circle-alert" />
-        <Stat label={t("pbill.payoutsDue")} value={rsShort(sum(payouts, "pending"))} note={t("pbill.payoutDay", { d: fdate("2027-03-05") })} />
+        <Stat label={t("pbill.payoutsDue")} value={rsShort(sum(payouts, "pending"))} note={t("pbill.payoutDay", { d: fdate(inDays((12 - new Date().getDay()) % 7 || 7)) })} />
         <Stat label={t("pbill.refunds")} value={rsShort(sum(refunds, "pending"))} note={t("pbill.refundsN", { n: refunds.filter((x) => x.status === "pending").length })} />
       </div>
       <Tabs value={tab} onChange={setTab} tabs={[{ id: "invoices", label: t("pbill.invoices"), count: inv.length }, { id: "payouts", label: t("nav.payouts"), count: payouts.length }, { id: "refunds", label: t("pbill.refundsTab"), count: refunds.length }]} />
@@ -336,14 +336,15 @@ export function AdminAudit() {
 export function AdminInbox() {
   const t = useT();
   const { db } = useStore();
-  const tickets = [["t8", "Payment failed twice, please extend", "action", "2027-03-02T09:10"], ["t7", "How do I import my old listings?", "progress", "2027-03-01T16:44"], ["t5", "Uploaded the company registration again", "action", "2027-03-01T12:20"], ["t3", "Thanks, the domain is working now", "done", "2027-02-28T10:02"]];
+  const tickets = []; // support conversations arrive from the business inbox API
   return (
     <>
       <PageHead title={t("nav.inbox")} sub={t("ainbox.sub")} />
-      <section className="card pf-panel"><ul className="pf-list">{tickets.map(([tid, msg, tone, at]) => {
+      {!tickets.length && <section className="card pf-panel"><Empty icon="inbox" title="No support messages yet">Messages from businesses show here.</Empty></section>}
+      {!!tickets.length && <section className="card pf-panel"><ul className="pf-list">{tickets.map(([tid, msg, tone, at]) => {
         const x = db.tenants.find((y) => y.id === tid);
         return <li key={tid}><TenantName r={x} /><div><span>{msg}</span><span className="small muted tnum">{fdatetime(at)}</span></div><Badge tone={tone}>{t(`ainbox.${tone}`)}</Badge><Link to={`/admin/tenants/${tid}`} className="btn btn-outline btn-sm">{t("common.open")}</Link></li>;
-      })}</ul></section>
+      })}</ul></section>}
     </>
   );
 }

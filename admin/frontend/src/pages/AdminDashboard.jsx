@@ -3,7 +3,7 @@ import { DataActions } from "@sheetal/shared/components/DataIO";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
 import { Link, useRouter } from "@sheetal/shared/core/router";
-import { fdate, fdatetime, rs, rsShort, daysFromToday } from "@sheetal/shared/core/format";
+import { TODAY, fdate, fdatetime, inDays, rs, rsShort, daysFromToday } from "@sheetal/shared/core/format";
 import { Button, Drawer, Field, Input, PageHead, Panel, SearchInput, Seg, Select, Stat, StatusBadge, Table, Empty, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { BUSINESS_TYPES, roleTemplatesFor } from "@sheetal/shared/core/rbac";
@@ -17,9 +17,10 @@ export function AdminDashboard() {
   const { navigate } = useRouter();
   const T = db.tenants;
   const mrr = mrrOf(db);
-  const series = [...db.revenue, { m: "Mar", v: mrr }];
-  const max = Math.max(...series.map((s) => s.v));
-  const pct = Math.round(((mrr - series[4].v) / series[4].v) * 100);
+  const series = [...db.revenue, { m: new Date(TODAY).toLocaleDateString("en-GB", { month: "short" }), v: mrr }];
+  const max = Math.max(1, ...series.map((s) => s.v));
+  const prev = series.at(-2)?.v; // last month, once there is history
+  const pct = prev ? Math.round(((mrr - prev) / prev) * 100) : 0;
   const types = Object.keys(BUSINESS_TYPES).map((k) => ({ k, n: T.filter((x) => x.type === k).length }));
   const attention = T.filter((x) => ["pending_verification", "past_due", "trial", "suspended"].includes(x.status));
   const recent = [...T].sort((a, b) => b.since.localeCompare(a.since)).slice(0, 5);
@@ -111,7 +112,7 @@ export function AdminTenants() {
       <Drawer open={!!add} onClose={() => setAdd(null)} title={t("tenants.add")} sub={t("addb.sub")}
         footer={<><Button variant="outline" onClick={() => setAdd(null)}>{t("common.cancel")}</Button><Button disabled={!add?.name || !add?.email} onClick={() => {
           const id = `t${db.tenants.length + 1}`; const plan = db.plans.find((p) => p.type === add.type);
-          update((d) => { d.tenants.unshift({ id, ...add, planId: plan.id, status: "trial", since: "2027-03-02", renews: "2027-03-16", usage: { seats: 1 }, scopes: [add.name] }); d.tenantRoles[id] = roleTemplatesFor(add.type).map((r) => ({ ...r, id: `${id}-${r.key}` })); d.members[id] = [{ id: "m1", name: add.owner || add.name, email: add.email, phone: add.phone, roleId: `${id}-owner`, status: "invited", lastActive: "2027-03-02T10:00", scopes: "all", twofa: false }]; d.invites[id] = []; });
+          update((d) => { d.tenants.unshift({ id, ...add, planId: plan.id, status: "trial", since: TODAY.slice(0, 10), renews: inDays(14), usage: { seats: 1 }, scopes: [add.name] }); d.tenantRoles[id] = roleTemplatesFor(add.type).map((r) => ({ ...r, id: `${id}-${r.key}` })); d.members[id] = [{ id: "m1", name: add.owner || add.name, email: add.email, phone: add.phone, roleId: `${id}-owner`, status: "invited", lastActive: TODAY, scopes: "all", twofa: false }]; d.invites[id] = []; });
           setAdd(null); toast(t("addb.toast")); navigate(`/admin/tenants/${id}`); }}>{t("addb.create")}</Button></>}>
         {add && <div className="pf-stack">
           <Field label={t("tenants.type")}><div className="pf-tiles">{Object.keys(BUSINESS_TYPES).map((k) => <button key={k} className={add.type === k ? "on" : ""} onClick={() => setAdd({ ...add, type: k })}><Icon name={BUSINESS_TYPES[k].icon} size={18} /><span>{t(`type.${k}`)}</span></button>)}</div></Field>

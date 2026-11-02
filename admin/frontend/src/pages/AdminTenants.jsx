@@ -104,12 +104,7 @@ export function TenantDetail({ id, role }) {
             </div>
           </Panel>
           <Panel title={t("tenant.invoices")}>
-            <ul className="pf-list">
-              {["SH-2027-0142", "SH-2027-0098", "SH-2026-0871"].map((n, i) => (
-                <li key={n}><div><b className="tnum">{n}</b><span className="small muted tnum">{fdate(["2027-03-01", "2027-02-01", "2027-01-01"][i])} · {rs(plan.price)}</span></div>
-                  {i === 0 && x.status === "past_due" ? <StatusBadge status="overdue" /> : <StatusBadge status="paid" />}</li>
-              ))}
-            </ul>
+            <p className="small muted" style={{ padding: "12px 16px" }}>No invoices yet.</p>
           </Panel>
         </div>
       </div>

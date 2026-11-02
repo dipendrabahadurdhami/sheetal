@@ -41,24 +41,12 @@ export const OTA_STATUS = {
 export const OPEN = ["requested", "setting_up", "needs_info", "stop_requested"];
 export const canAsk = (st) => !st || st === "paused" || st === "declined";
 
-export function seedOta(db) {
-  const T = (id) => (db.tenants || []).find((x) => x.id === id);
-  const r = (id, tid, lid, title, ch, status, at, extra = {}) => ({ id, tid, lid, title, ch, status, at, price: extra.price ?? 15, note: extra.note || "", ask: extra.ask || "", otaId: extra.otaId || "", url: extra.url || "", by: extra.by || "", log: extra.log || [] });
-  const list = [
-    r("OTA-101", "t1", "S-201", "Lakeside Retreat Hotel", "booking", "live", "2026-11-04", { otaId: "BDC 8841207", by: "Sujata Rai", price: 15 }),
-    r("OTA-103", "t1", "S-201", "Lakeside Retreat Hotel", "google", "live", "2026-12-01", { otaId: "GHA 220931", by: "Kiran Basnet", price: 0 }),
-    r("OTA-118", "t1", "S-201", "Lakeside Retreat Hotel", "agoda", "setting_up", "2027-02-26", { by: "Kiran Basnet", note: "We want this before the April season." }),
-    r("OTA-102", "t1", "S-202", "Garden villa at Lakeside Retreat", "airbnb", "live", "2026-11-10", { otaId: "ABNB 51298874", by: "Sujata Rai", price: 10 }),
-    r("OTA-121", "t4", "S-301", "Fewa View Villa, Sedi", "airbnb", "live", "2026-12-12", { otaId: "ABNB 60011452", by: "Anjali Thapa", price: 10 }),
-    r("OTA-124", "t4", "S-301", "Fewa View Villa, Sedi", "booking", "needs_info", "2027-02-28", { by: "Anjali Thapa", ask: "Please add 8 more photos (bathroom and kitchen) and your check-in time." }),
-  ];
-  [["t6", "booking", "requested", "First time on other sites."], ["t12", "airbnb", "requested", ""], ["t10", "agoda", "setting_up", ""]].forEach(([tid, ch, st, note], i) => {
-    const x = T(tid); if (x) list.push(r(`OTA-13${i}`, tid, null, x.name, ch, st, `2027-03-0${i + 1}`, { note, by: st === "setting_up" ? "Sujata Rai" : "" }));
-  });
-  return { accounts: { booking: "connected", airbnb: "connected", agoda: "connected", expedia: "pending", trip: "connected", google: "connected" }, requests: list };
+// Nothing is listed on other sites until the channel team connects Sheetal's partner accounts.
+export function seedOta() {
+  return { accounts: { booking: "", airbnb: "", agoda: "", expedia: "", trip: "", google: "" }, requests: [] };
 }
-export const otaOf = (db) => db.otaDesk || seedOta(db);
-export const withOta = (d) => (d.otaDesk = d.otaDesk || seedOta(d));
+export const otaOf = (db) => db.otaDesk || seedOta();
+export const withOta = (d) => (d.otaDesk = d.otaDesk || seedOta());
 export const forListing = (db, lid) => otaOf(db).requests.filter((r) => r.lid === lid);
 export const latestFor = (reqs, ch) => reqs.filter((r) => r.ch === ch).sort((a, b) => b.at.localeCompare(a.at))[0];
 
@@ -67,8 +55,5 @@ const BASE = { booking: "https://www.booking.com/hotel/np/", airbnb: "https://ww
 export const otaUrl = (r) => r.url || (BASE[r.ch] || "https://") + String(r.otaId || "").replace(/^[A-Z]+\s*/, "").replace(/\s+/g, "");
 export const siteHref = (p) => (typeof window !== "undefined" && window.location.hash.startsWith("#/") ? `#${p}` : p);
 
-// Reservations that arrive from the sites and still need the business to confirm them (demo data for t1)
-export const OTA_RES = [
-  { id: "BDC-4471028", ch: "booking", guest: "Hannah Weber", country: "Germany", room: "Deluxe lake view", from: "2027-03-08", to: "2027-03-11", amount: 23400, pay: "prepaid", status: "new" },
-  { id: "HMXK29Q", ch: "airbnb", guest: "Arjun Mehta", country: "India", room: "Garden villa", from: "2027-03-14", to: "2027-03-18", amount: 52800, pay: "prepaid", status: "new" },
-];
+// Reservations that arrive from the sites and still need the business to confirm them.
+export const OTA_RES = [];

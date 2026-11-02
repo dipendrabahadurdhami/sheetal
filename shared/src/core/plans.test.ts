@@ -40,7 +40,11 @@ describe("plans", () => {
 
   it("Sheetal Property is on Agency Pro for a year, active and verified; auto-renew is off for everyone", () => {
     const t = db.tenants.find((x) => x.id === "t13");
-    expect(t).toMatchObject({ name: "Sheetal Property", email: "shetalrealestate@gmail.com", planId: "agency-pro", status: "active", emailVerified: true, period: 12, renews: "2028-03-02" });
+    if (!t) throw new Error("Sheetal Property is missing from the seed");
+    expect(t).toMatchObject({ name: "Sheetal Property", email: "shetalrealestate@gmail.com", planId: "agency-pro", status: "active", emailVerified: true, period: 12 });
+    const oneYear = new Date(`${t.since}T00:00:00Z`); oneYear.setUTCFullYear(oneYear.getUTCFullYear() + 1);
+    expect(t.renews).toBe(oneYear.toISOString().slice(0, 10));
+    expect(db.tenants).toHaveLength(1); // only the real business; no sample businesses
     expect(db.tenants.every((x) => x.autoRenew === false)).toBe(true);
   });
 });

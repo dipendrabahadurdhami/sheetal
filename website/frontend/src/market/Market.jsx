@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
 import { Link, useRouter } from "@sheetal/shared/core/router";
-import { fdate, rs, rsShort } from "@sheetal/shared/core/format";
+import { TODAY, fdate, inDays, rs, rsShort } from "@sheetal/shared/core/format";
+export { inDays };
 import { Badge, Button, Drawer, Field, Input, Seg, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { Counter } from "./publicBits";
@@ -17,33 +18,17 @@ export function Crumbs({ items }) {
 // Marketplace pages from the master prompt §5–7, §18, §19, §29: home with search tabs, stays, projects,
 // investments, partners, saved, compare and tools. Shared demo catalogue below.
 export const useL = () => { const t = useT(); return (k, en, v) => { const s = t(k, v); if (s !== k) return s; let o = en; if (v) for (const x in v) o = o.split(`{${x}}`).join(v[x]); return o; }; };
-export const STAYS = [
-  { id: "lakeside-retreat", lat: 28.2108, lng: 83.9569, tid: "t1", kind: "hotel", name: "Lakeside Retreat Hotel", city: "Pokhara", area: "Lakeside", stars: 4, rating: 4.7, reviews: 212, price: 4500, perks: ["Free breakfast", "Lake view", "Airport pickup", "Wi-Fi"], rooms: [["Standard twin", 4500, 2], ["Deluxe lake view", 6500, 2], ["Family suite", 9800, 4]], policy: "moderate" },
-  { id: "nagarkot-sunrise", lat: 27.7158, lng: 85.5201, tid: "t6", kind: "resort", name: "Nagarkot Sunrise Resort", city: "Bhaktapur", area: "Nagarkot", stars: 5, rating: 4.8, reviews: 418, price: 9500, perks: ["Mountain view", "Spa", "Pool", "Free breakfast"], rooms: [["Valley view", 9500, 2], ["Himalaya suite", 16500, 3]], policy: "strict" },
-  { id: "fewa-view-villa", lat: 28.2232, lng: 83.9498, tid: "t4", kind: "villa", name: "Fewa View Villa", city: "Pokhara", area: "Sedi", stars: 0, rating: 4.9, reviews: 64, price: 12000, perks: ["Whole villa", "3 bedrooms", "Kitchen", "Garden"], rooms: [["Entire villa · 6 guests", 12000, 6]], policy: "flexible" },
-  { id: "thamel-boutique", lat: 27.7154, lng: 85.3123, tid: "t12", kind: "apartment", name: "Thamel Boutique Apartments", city: "Kathmandu", area: "Thamel", stars: 0, rating: 4.6, reviews: 131, price: 5200, perks: ["Self check-in", "Fast Wi-Fi", "Kitchenette", "Workspace"], rooms: [["Studio", 5200, 2], ["One bedroom", 7400, 3]], policy: "moderate" },
-];
-export const PROJECTS = [
-  { id: "shetal-heights", tid: "t2", name: "Shetal Heights", type: "Apartment building", city: "Lalitpur", area: "Bhaisepati", status: "Under construction", possession: "Jun 2028", units: 240, left: 98, towers: 2, floors: 12, from: 8500000, progress: 62, banks: ["Nabil Bank", "NIC Asia", "Global IME"] },
-  { id: "imadol-residency", tid: "t2", name: "Imadol Residency", type: "Apartment building", city: "Lalitpur", area: "Imadol", status: "Upcoming", possession: "Dec 2029", units: 120, left: 120, towers: 1, floors: 10, from: 7200000, progress: 5, banks: ["NIC Asia"] },
-  { id: "thimi-towers", tid: "t9", name: "Thimi Towers", type: "Apartment building", city: "Bhaktapur", area: "Thimi", status: "Under construction", possession: "Mar 2028", units: 96, left: 31, towers: 2, floors: 9, from: 9400000, progress: 48, banks: ["Global IME", "Nabil Bank"] },
-  { id: "suryabinayak-homes", tid: "t9", name: "Suryabinayak Homes", type: "Colony", city: "Bhaktapur", area: "Suryabinayak", status: "Ready to move", possession: "Now", units: 86, left: 9, towers: 0, floors: 3, from: 21500000, progress: 100, banks: ["Laxmi Sunrise"] },
-];
-export const INVESTS = [
-  { id: "chitwan-jungle-lodge", tid: "t5", name: "Chitwan Jungle Lodge", type: "Hotel", city: "Chitwan", target: 50000000, raised: 27500000, investors: 128, min: 10000, ret: "12–14%", term: "3 years", payout: "Every year", closes: "2027-03-23", risk: "medium" },
-  { id: "pokhara-lake-hotel", tid: "t5", name: "Pokhara Lakeside Boutique Hotel", type: "Hotel", city: "Pokhara", target: 80000000, raised: 8000000, investors: 36, min: 10000, ret: "11–13%", term: "4 years", payout: "Every year", closes: "2027-06-15", risk: "medium" },
-  { id: "lumbini-colony", tid: "t5", name: "Lumbini Garden Colony", type: "Colony", city: "Rupandehi", target: 30000000, raised: 30000000, investors: 212, min: 10000, ret: "9–11%", term: "3 years", payout: "At exit", closes: "2027-02-01", risk: "low" },
-  { id: "bandipur-villas", tid: "t5", name: "Bandipur Heritage Villas", type: "Villa project", city: "Tanahun", target: 25000000, raised: 6200000, investors: 41, min: 25000, ret: "10–12%", term: "5 years", payout: "Every 6 months", closes: "2027-05-30", risk: "high" },
-];
-// Live catalogue: demo marketplace entries plus every published stay, project and investment from business workspaces.
-const MAPPED = ["S-201", "S-301", "P-31"];
+export const STAYS = [];
+export const PROJECTS = [];
+export const INVESTS = [];
+// Live catalogue: every published stay, project and investment from business workspaces.
 export function useCatalog() {
   const { db } = useStore();
   const ten = (id) => db.tenants.find((x) => x.id === id) || {};
-  const extra = db.listings.filter((l) => l.status === "published" && !MAPPED.includes(l.id));
+  const extra = db.listings.filter((l) => l.status === "published");
   const stays = [...STAYS, ...extra.filter((l) => l.kind === "stay_hotel" || l.kind === "stay_unit").map((l) => ({ id: l.id, tid: l.tenantId, kind: l.kind === "stay_hotel" ? "hotel" : "villa", name: l.title, city: ten(l.tenantId).city, area: ten(l.tenantId).city, stars: 0, rating: 5, reviews: 0, price: l.price, perks: ["New on Sheetal", "Free Wi-Fi"], rooms: [["Standard", l.price, 2]], policy: "moderate", lat: l.values?.pin?.lat, lng: l.values?.pin?.lng }))];
   const projects = [...PROJECTS, ...extra.filter((l) => l.kind === "project").map((l) => ({ id: l.id, tid: l.tenantId, name: l.title, type: "Project", city: ten(l.tenantId).city, area: ten(l.tenantId).city, status: "Under construction", possession: "2028", units: 40, left: 40, towers: 1, floors: 8, from: l.price, progress: 10, banks: [] }))];
-  const invests = [...INVESTS, ...extra.filter((l) => l.kind === "invest").map((l) => ({ id: l.id, tid: l.tenantId, name: l.title, type: "Project", city: ten(l.tenantId).city, target: l.price || 10000000, raised: 0, investors: 0, min: 10000, ret: "10–12%", term: "3 years", payout: "Every year", closes: "2027-06-30", risk: "medium" }))];
+  const invests = [...INVESTS, ...extra.filter((l) => l.kind === "invest").map((l) => ({ id: l.id, tid: l.tenantId, name: l.title, type: "Project", city: ten(l.tenantId).city, target: l.price || 10000000, raised: 0, investors: 0, min: 10000, ret: "10–12%", term: "3 years", payout: "Every year", closes: l.values?.closes || null, risk: "medium" }))];
   return { stays, projects, invests };
 }
 const PHOTOS = [1, 2, 3, 4, 5, 6, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
@@ -86,12 +71,14 @@ export const Page = ({ children, title }) => {
   return <div className={`pb-wrap${photos}`}><MarketHeader />{children}<MarketFooter /></div>;
 };
 
+const Missing = ({ what, to, label }) => <Page title={`${what} not found`}><section className="pb-inner pf-stack" style={{ padding: "56px 24px", alignItems: "center", textAlign: "center" }}><h1 className="pb-h1" style={{ fontSize: 28 }}>{what} not found</h1><p className="muted">It may have been removed, or it isn't published yet.</p><Link to={to} className="btn btn-outline">{label}</Link></section></Page>;
+
 /* Home with search tabs (§6) */
 export function Home() {
   const L = useL();
   const { navigate } = useRouter();
   const [tab, setTab] = useState("stay");
-  const [q, setQ] = useState({ where: "Pokhara", from: "2027-03-12", to: "2027-03-15", guests: 2, budget: "1cr" });
+  const [q, setQ] = useState({ where: "", from: inDays(7), to: inDays(10), guests: 2, budget: "1cr" });
   const go = () => navigate(tab === "stay" ? "/stays" : tab === "project" ? "/project" : tab === "invest" ? "/investment" : "/partners");
   return (
     <Page>
@@ -156,20 +143,24 @@ export function Stays() {
   );
 }
 export function StayDetail({ id }) {
+  const s = useCatalog().stays.find((x) => x.id === id);
+  return s ? <StayView s={s} /> : <Missing what="Stay" to="/stays" label="See all stays" />;
+}
+
+function StayView({ s }) {
   const L = useL();
   const { navigate } = useRouter();
-  const { stays } = useCatalog();
-  const s = stays.find((x) => x.id === id) || stays[0];
   const hotel = s.kind === "hotel" || s.kind === "resort";
   const [tab, setTab] = useState("photos");
   const qs = new URLSearchParams(typeof window !== "undefined" ? (window.location.hash.split("?")[1] || window.location.search || "") : "");
-  const [bk, setBk] = useState({ from: qs.get("from") || "2027-03-12", to: qs.get("to") || "2027-03-15", guests: Number(qs.get("guests")) || 2 });
+  const [bk, setBk] = useState({ from: qs.get("from") || inDays(1), to: qs.get("to") || inDays(3), guests: Number(qs.get("guests")) || 2 });
   const [picking, setPicking] = useState(false);
-  const day = (v) => (String(v).startsWith("2027-03-") ? Number(v.slice(8)) : 0);
-  const ds = (d) => `2027-03-${String(d).padStart(2, "0")}`;
+  const month = TODAY.slice(0, 7); // calendar shows this month
+  const day = (v) => (String(v).startsWith(`${month}-`) ? Number(v.slice(8)) : 0);
+  const ds = (d) => `${month}-${String(d).padStart(2, "0")}`;
   const from = day(bk.from), to = day(bk.to);
   const pick = (d) => { if (!picking || d <= from) { setBk({ ...bk, from: ds(d), to: ds(Math.min(31, d + 1)) }); setPicking(true); } else { setBk({ ...bk, to: ds(d) }); setPicking(false); } };
-  const blocked = [8, 9, 21, 22];
+  const blocked = s.blocked || []; // sold-out days come from the business's calendar
   const n = Math.max(1, Math.round((new Date(bk.to) - new Date(bk.from)) / 864e5));
   const trip = (extra = "") => `?from=${bk.from}&to=${bk.to}&guests=${bk.guests}${extra}`;
   const maxG = Math.max(2, ...(s.rooms || []).map((r) => r[2] || 2)) * 2;
@@ -185,10 +176,10 @@ export function StayDetail({ id }) {
             : <div className="pf-stack tight"><h2 className="pb-h2">House rules</h2><p className="small">Check-in after 14:00 · Check-out by 11:00 · No parties · Quiet after 22:00 · Refundable deposit Rs. 5,000</p></div>}
           <div className="pf-stack tight"><h2 className="pb-h2">Availability</h2>
             <div className="pf-cal">{Array.from({ length: 31 }, (_, i) => { const d = i + 1; const b = blocked.includes(d); const on = d >= from && d <= to; return <button key={d} disabled={b} className={`pf-cal-day ${on ? "on" : ""} ${b ? "blocked" : ""}`} onClick={() => pick(d)}><b className="tnum">{d}</b>{!b && <span className="tnum">{((s.price * (d % 7 === 5 || d % 7 === 6 ? 1.1 : 1)) / 1000).toFixed(1)}k</span>}</button>; })}</div>
-            <span className="small muted">March 2027 · {n} {n === 1 ? "night" : "nights"} selected · tap check-in, then check-out · blocked days are sold out</span></div>
+            <span className="small muted">{fdate(`${month}-01`).slice(2)} · {n} {n === 1 ? "night" : "nights"} selected · tap check-in, then check-out · blocked days are sold out</span></div>
           <div className="pf-stack tight"><h2 className="pb-h2">Location</h2><ExactMap lat={s.lat} lng={s.lng} name={s.name} address={`${s.area}, ${s.city}`} /></div>
           <QA id={s.id} />
-          <div className="pf-stack tight"><h2 className="pb-h2">Reviews · ★ {s.rating}</h2>{["Lovely view and helpful staff.", "Clean, quiet, great breakfast."].map((r, i) => <div key={i} className="card pf-pad"><b>{["Hannah W.", "Ramesh K."][i]}</b> <span className="small muted">stayed in Feb 2027</span><p className="small">{r}</p></div>)}</div>
+          <div className="pf-stack tight"><h2 className="pb-h2">Reviews</h2>{s.reviews ? <span className="small muted">★ {s.rating} · {s.reviews} reviews</span> : <span className="small muted">No reviews yet.</span>}</div>
         </div>
         <aside className="card pb-book">
           <span className="pb-price tnum">{rs(s.price)}<small> / night</small></span>
@@ -218,11 +209,14 @@ export function Projects() {
   return <Page><section className="pb-inner pf-stack" style={{ padding: "28px 24px" }}><h1 className="pb-h1" style={{ fontSize: 30 }}>Projects</h1><div className="pb-grid">{useCatalog().projects.map((p) => <ProjectCard key={p.id} p={p} />)}</div></section></Page>;
 }
 export function ProjectDetail({ id }) {
+  const p = useCatalog().projects.find((x) => x.id === id);
+  return p ? <ProjectView p={p} /> : <Missing what="Project" to="/project" label="See all projects" />;
+}
+
+function ProjectView({ p }) {
   const L = useL();
   const { navigate } = useRouter();
   const toast = useToast();
-  const { projects } = useCatalog();
-  const p = projects.find((x) => x.id === id) || projects[0];
   const [tab, setTab] = useState("photos");
   const [unit, setUnit] = useState(null);
   const [visit, setVisit] = useState(false);
@@ -238,7 +232,7 @@ export function ProjectDetail({ id }) {
           <div className="pb-facts">{[["layout-grid", `${p.units} units`], ["building", `${p.towers || "—"} towers`], ["layers", `${p.floors} floors`], ["tag", `From ${rsShort(p.from)}`], ["construction", `${p.progress}% built`], ["file-check", "Approved plans"]].map(([ic, tx]) => <span key={tx}><Icon name={ic} size={18} />{tx}</span>)}</div>
           <div className="pf-stack tight"><h2 className="pb-h2">Units · {p.left} left</h2><div className="pf-units">{[0, 1, 2, 3].map((r) => <div key={r} className="pf-units-row"><span className="tnum small muted">Floor {12 - r}</span>{units.slice(r * 4, r * 4 + 4).map((u) => <button key={u.id} className={`pf-unit pf-u-${u.status}`} onClick={() => setUnit(u)}><b className="tnum">{u.id}</b><small>{u.type}</small></button>)}</div>)}</div></div>
           <div className="pf-stack tight"><h2 className="pb-h2">Payment plan</h2><div className="pf-totals">{[["Booking", 10], ["Structure", 30], ["Plaster", 30], ["Handover", 30]].map(([n, pc]) => <div key={n}><span>{n}</span><span className="tnum">{pc}%</span></div>)}</div><span className="small muted">Loan partners: {p.banks.join(", ")}</span></div>
-          <div className="pf-stack tight"><h2 className="pb-h2">Construction progress · {p.progress}%</h2><div className="bar" style={{ height: 8 }}><i style={{ width: `${p.progress}%` }} /></div><ul className="pf-list"><li><Icon name="construction" size={16} /><div><span>Tower A 10th floor slab cast</span><span className="small muted">24 Feb 2027</span></div></li><li><Icon name="construction" size={16} /><div><span>Lift shafts complete</span><span className="small muted">30 Jan 2027</span></div></li></ul></div>
+          <div className="pf-stack tight"><h2 className="pb-h2">Construction progress · {p.progress}%</h2><div className="bar" style={{ height: 8 }}><i style={{ width: `${p.progress}%` }} /></div>{!!p.updates?.length && <ul className="pf-list">{p.updates.map((u, i) => <li key={i}><Icon name="construction" size={16} /><div><span>{u.text}</span><span className="small muted">{fdate(u.at)}</span></div></li>)}</ul>}</div>
           <div className="pf-stack tight"><h2 className="pb-h2">Documents</h2><div className="pf-chips">{["Brochure", "Approvals", "Layout plan", "Sample agreement"].map((d) => <span key={d} className="chip"><Icon name="file-text" size={14} />{d}</span>)}</div></div>
           <QA id={p.id} />
         </div>
@@ -263,10 +257,13 @@ export function Investments() {
   return <Page><section className="pb-inner pf-stack" style={{ padding: "28px 24px" }}><h1 className="pb-h1" style={{ fontSize: 30 }}>Open investments</h1><p className="small muted">Returns are estimates and never guaranteed. Read the risks on each page.</p><div className="pb-grid">{useCatalog().invests.map((v) => <InvestCard key={v.id} v={v} />)}</div></section></Page>;
 }
 export function InvestDetail({ id }) {
+  const v = useCatalog().invests.find((x) => x.id === id);
+  return v ? <InvestView v={v} /> : <Missing what="Investment" to="/investment" label="See all investments" />;
+}
+
+function InvestView({ v }) {
   const L = useL();
   const { navigate } = useRouter();
-  const { invests } = useCatalog();
-  const v = invests.find((x) => x.id === id) || invests[0];
   const [amt, setAmt] = useState(100000);
   const lo = parseInt(v.ret); const yrs = parseInt(v.term);
   return (
@@ -278,9 +275,9 @@ export function InvestDetail({ id }) {
           <div className="bar" style={{ height: 8 }}><i style={{ width: `${(v.raised / v.target) * 100}%` }} /></div>
           <div className="pb-facts">{[["wallet", `${rsShort(v.raised)} raised of ${rsShort(v.target)}`], ["users", `${v.investors} investors`], ["trending-up", `${v.ret} a year expected`], ["calendar-days", v.term], ["hand-coins", `Paid ${v.payout.toLowerCase()}`], ["clock", `Closes ${fdate(v.closes)}`]].map(([ic, tx]) => <span key={tx}><Icon name={ic} size={18} />{tx}</span>)}</div>
           <div className="pf-stack tight"><h2 className="pb-h2">The project</h2><p className="small">A 24-room eco lodge on the edge of Chitwan National Park, run by an operator with three lodges already open. Money raised pays for building and furnishing; the land is already owned.</p></div>
-          <div className="card pf-pad pb-risk"><h2 className="pb-h2" style={{ fontSize: 18 }}><Icon name="triangle-alert" size={18} /> Risks</h2><p className="small">Returns depend on how the lodge performs and are not guaranteed. You may get back less than you put in, or nothing. Money is locked for {v.term}. Read the investment agreement before you invest. [Final wording from Sheetal's legal team.]</p></div>
+          <div className="card pf-pad pb-risk"><h2 className="pb-h2" style={{ fontSize: 18 }}><Icon name="triangle-alert" size={18} /> Risks</h2><p className="small">Returns depend on how the business performs and are not guaranteed. You may get back less than you put in, or nothing. Money is locked for {v.term}. Read the investment agreement before you invest. [Final wording from Sheetal's legal team.]</p></div>
           <div className="pf-stack tight"><h2 className="pb-h2">Documents</h2><div className="pf-chips">{["Investment agreement", "Approvals", "Financial plan", "Company registration"].map((d) => <span key={d} className="chip"><Icon name="file-text" size={14} />{d}</span>)}</div></div>
-          <div className="pf-stack tight"><h2 className="pb-h2">Updates</h2><div className="card pf-pad"><b className="small tnum">24 Feb 2027</b><p className="small">Foundations for blocks A and B are complete.</p></div></div>
+          {!!v.updates?.length && <div className="pf-stack tight"><h2 className="pb-h2">Updates</h2>{v.updates.map((u, i) => <div key={i} className="card pf-pad"><b className="small tnum">{fdate(u.at)}</b><p className="small">{u.text}</p></div>)}</div>}
         </div>
         <aside className="card pb-book">
           <Field label="I want to invest"><div className="pf-unit"><span>Rs.</span><input className="input tnum" value={amt.toLocaleString("en-IN")} onChange={(e) => setAmt(Number(e.target.value.replace(/\D/g, "")) || 0)} /></div></Field>
@@ -373,7 +370,7 @@ export function LegalPage({ page }) {
   return <Page title={LEGAL[key]}><section className="pb-inner pb-legal" style={{ padding: "28px 24px" }}>
     <article className="pf-stack">
       <h1 className="pb-h1" style={{ fontSize: 32 }}>{LEGAL[key]}</h1>
-      <div className="pf-row-actions" style={{ justifyContent: "flex-start" }}><span className="small muted">Version 3 · Last updated 1 Feb 2027</span><Button variant="ghost" size="sm" icon="printer" onClick={() => window.print()}>Print</Button><Button variant="ghost" size="sm" icon="download">PDF</Button></div>
+      <div className="pf-row-actions" style={{ justifyContent: "flex-start" }}><span className="small muted">Draft · final wording coming from Sheetal's legal team</span><Button variant="ghost" size="sm" icon="printer" onClick={() => window.print()}>Print</Button><Button variant="ghost" size="sm" icon="download">PDF</Button></div>
       {LEGAL_SECTIONS.map((s, i) => <section key={s} id={`s${i}`} className="pf-stack tight"><h2 className="pb-h2" style={{ fontSize: 20 }}>{i + 1}. {s}</h2><div className="pf-legal-slot">Legal note from company: the text for this section is written by Sheetal's legal team and edited in Super admin → Site content.</div></section>)}
       <div className="card pf-pad"><b>Questions?</b> <span className="small">Call +977 980-1136817 or email legal@sheetalproperty.com.</span></div>
     </article>
@@ -383,11 +380,7 @@ export function LegalPage({ page }) {
 }
 
 /* Offers (§30) */
-export const OFFERS = [
-  { slug: "dashain-stays", title: "Dashain stays: 15% off", code: "DASHAIN10", ends: "2027-10-20", rules: ["Stays of 2 nights or more", "Book by 20 Oct, stay until 10 Nov", "Not with other offers"], kind: "stay" },
-  { slug: "first-booking", title: "Rs. 500 off your first booking", code: "WELCOME500", ends: "2027-12-31", rules: ["New Sheetal accounts only", "Minimum Rs. 5,000", "One use per account"], kind: "stay" },
-  { slug: "project-launch", title: "Imadol Residency launch price", code: "", ends: "2027-04-30", rules: ["Early-bird price on the first 30 units", "Token Rs. 2 Lakh, refundable for 7 days"], kind: "project" },
-];
+export const OFFERS = [];
 const daysLeft = (d) => Math.max(0, Math.ceil((new Date(d) - new Date()) / 864e5));
 export function OffersPage({ slug }) {
   const cat = useCatalog();
@@ -411,8 +404,7 @@ export function SystemPage({ kind }) {
 export function QA({ id }) {
   const { db, update } = useStore();
   const [q, setQ] = useState("");
-  const seed = [{ q: "Is parking included?", a: "Yes, free parking for one car.", by: "Host" }, { q: "Are the papers ready?", a: "Yes, the lal purja and blueprint are ready to see at the office.", by: "Sheetal" }];
-  const list = [...(db.customer?.qa?.[id] || []), ...seed];
+  const list = db.customer?.qa?.[id] || [];
   return (
     <div className="pf-stack tight"><h2 className="pb-h2">Questions and answers</h2>
       {list.map((x, i) => <div key={i} className="card pf-pad"><b>{x.q}</b><p className="small">{x.a ? <>{x.a} <span className="muted">— {x.by}</span></> : <span className="muted">Waiting for an answer. Usually within a day.</span>}</p></div>)}
@@ -452,7 +444,7 @@ export function RequestPage() {
         <div className="pf-grid-2 tight"><Field label="What"><Input value={f.want} onChange={(e) => setF({ ...f, want: e.target.value })} /></Field><Field label="Where"><Input value={f.where} onChange={(e) => setF({ ...f, where: e.target.value })} /></Field></div>
         <div className="pf-grid-2 tight"><Field label="Budget (Rs.)"><Input className="input tnum" value={f.budget} onChange={(e) => setF({ ...f, budget: e.target.value.replace(/\D/g, "") })} /></Field><Field label="Phone"><Input className="input tnum" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></Field></div>
         <div className="pf-note"><Icon name="wallet" size={16} />{fee ? `Posting fee ${rs(fee)}, refunded if nobody matches in 30 days.` : "Free to post."}</div>
-        <Button icon="send" disabled={!f.phone} onClick={() => { update((d) => { d.growth = d.growth || {}; d.growth.demands = d.growth.demands || []; d.growth.demands.unshift({ id: `DM-${600 + d.growth.demands.length}`, who: f.name || "Website visitor", want: f.want, where: f.where, budget: Number(f.budget) || 0, kind: f.kind, fee, paid: !fee, matches: 0, status: fee ? "pending" : "open", at: "2027-03-02" }); }); toast("Posted. You'll get offers by SMS."); }}>{fee ? `Pay ${rs(fee)} and post` : "Post request"}</Button>
+        <Button icon="send" disabled={!f.phone} onClick={() => { update((d) => { d.growth = d.growth || {}; d.growth.demands = d.growth.demands || []; d.growth.demands.unshift({ id: `DM-${600 + d.growth.demands.length}`, who: f.name || "Website visitor", want: f.want, where: f.where, budget: Number(f.budget) || 0, kind: f.kind, fee, paid: !fee, matches: 0, status: fee ? "pending" : "open", at: TODAY.slice(0, 10) }); }); toast("Posted. You'll get offers by SMS."); }}>{fee ? `Pay ${rs(fee)} and post` : "Post request"}</Button>
       </div>
     </section></Page>
   );

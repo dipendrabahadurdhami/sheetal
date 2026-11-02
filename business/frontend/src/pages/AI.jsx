@@ -2,10 +2,11 @@ import React, { useState } from "react";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
 import { useRouter } from "@sheetal/shared/core/router";
-import { rs } from "@sheetal/shared/core/format";
+import { TODAY, rs } from "@sheetal/shared/core/format";
 import { Badge, Button, Field, Input, PageHead, Panel, Seg, Stat, Table, Tabs, Textarea, ToggleRow, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { isAllAccess, kindsFor } from "@sheetal/shared/core/plans";
+import { emptyOps } from "@sheetal/shared/demo/ops";
 
 // AI features (listing from text, lead finder, blog writer, voice agent, Ask AI), available to every business on its plan's AI credits.
 // Uses window.claude.complete when present, otherwise returns sample output so the demo always works.
@@ -19,11 +20,7 @@ const json = (s, fb) => { try { const m = String(s).match(/[[{][\s\S]*[\]}]/); r
 const SAMPLE_DESC = "Ghar bikrima: Budhanilkantha-3, Chandol marg. 8 aana jagga ma 2.5 tale ghar, 4 bedroom, 3 bathroom, modular kitchen, 2 car parking, east facing, 13 feet black topped road. Lalpurja clear, bank loan milchha. Price 3 crore 20 lakh, thorai negotiable. Contact 9841234500.";
 const SAMPLE_FIELDS = { kind: "sell", category: "house", propertyType: "residential_house", district: "kathmandu", area: "Budhanilkantha", ward: 3, tole: "Chandol marg", land: "0-8-0-0 (8 aana)", floors: 2.5, bedrooms: 4, bathrooms: 3, parking: 2, facing: "east", roadWidth: "13_20", roadType: "blacktop", facilities: ["modular_kitchen", "parking"], price: 32000000, negotiable: true, banks: true, phone: "9841234500" };
 const SAMPLE_CHAT = "[10:02] Rajesh: Hi, looking for 5-8 aana land in Budhanilkantha, budget around 2.5 crore. 9841223344\n[10:15] Sarita Gurung: 4BHK house kinna khojeko, Lalitpur side, 3 crore samma. 9856012345\n[11:40] Anil: 1 ropani bechna chha Tokha ma, call 9812233441";
-const SAMPLE_LEADS = [
-  { name: "Rajesh", phone: "9841223344", intent: "buy", type: "Land", location: "Budhanilkantha", budget: 25000000, lang: "en", note: "5–8 aana" },
-  { name: "Sarita Gurung", phone: "9856012345", intent: "buy", type: "House 4 BHK", location: "Lalitpur", budget: 30000000, lang: "ne", note: "" },
-  { name: "Anil", phone: "9812233441", intent: "sell", type: "Land 1 ropani", location: "Tokha", budget: 0, lang: "ne", note: "Owner selling" },
-];
+const SAMPLE_LEADS = [];
 
 export function AIStudio({ tenant, only, onFill }) {
   const t = useT();
@@ -74,7 +71,7 @@ export function AIStudio({ tenant, only, onFill }) {
     setLeads(json(out, SAMPLE_LEADS).map((l, i) => ({ ...l, id: i, saved: false }))); spend(2); setBusy(false);
   };
   const saveLead = (l) => {
-    update((d) => { const o = d.ops[tenant.id] || d.ops.t1; o.convs = o.convs || []; o.convs.unshift({ id: `cv${Date.now()}${l.id}`, name: l.name || l.phone, phone: l.phone, ch: "web", stage: "new", unread: 0, last: `${l.intent} · ${l.type} · ${l.location}`, at: "2027-03-02T10:00", msgs: [{ from: "them", text: `${l.type} in ${l.location}${l.budget ? `, budget ${rs(l.budget)}` : ""}. ${l.note || ""}`, at: "10:00" }], budget: l.budget, tags: ["AI extracted"] }); });
+    update((d) => { const o = d.ops[tenant.id] = d.ops[tenant.id] || emptyOps(); o.convs = o.convs || []; o.convs.unshift({ id: `cv${Date.now()}${l.id}`, name: l.name || l.phone, phone: l.phone, ch: "web", stage: "new", unread: 0, last: `${l.intent} · ${l.type} · ${l.location}`, at: TODAY, msgs: [{ from: "them", text: `${l.type} in ${l.location}${l.budget ? `, budget ${rs(l.budget)}` : ""}. ${l.note || ""}`, at: "10:00" }], budget: l.budget, tags: ["AI extracted"] }); });
     setLeads((x) => x.map((y) => (y.id === l.id ? { ...y, saved: true } : y))); toast(t("ai.toastLead"));
   };
 

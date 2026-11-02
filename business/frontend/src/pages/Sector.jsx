@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { DataActions } from "@sheetal/shared/components/DataIO";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
-import { fdate, rs, rsShort, daysFromToday } from "@sheetal/shared/core/format";
+import { TODAY, fdate, rs, rsShort, daysFromToday } from "@sheetal/shared/core/format";
 import { Badge, Button, Drawer, Empty, Field, Input, PageHead, Panel, Seg, Stat, Table, Tabs, Textarea, ToggleRow, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { Bars, Donut } from "@sheetal/shared/core/charts";
@@ -20,26 +20,17 @@ const useSec = (tid, key, seed) => {
 };
 
 /* ───────── Developer: projects, unit inventory, construction progress ───────── */
-const PROJECTS = [
-  { id: "P-31", name: "Shetal Heights", place: "Bhaisepati, Lalitpur", towers: 2, floors: 12, progress: 62, handover: "2028-06", milestones: [["Foundation", 100], ["Structure", 85], ["Brick and plaster", 40], ["Finishing", 0]],
-    updates: [{ at: "2027-02-24", text: "Tower A 10th floor slab cast. Tower B at 8th floor." }, { at: "2027-01-30", text: "Lift shafts complete in both towers." }] },
-  { id: "P-32", name: "Bhaisepati Villas", place: "Bhaisepati, Lalitpur", towers: 1, floors: 3, progress: 34, handover: "2028-12", milestones: [["Foundation", 100], ["Structure", 40], ["Brick and plaster", 0], ["Finishing", 0]], updates: [] },
-];
-const mkUnits = () => Array.from({ length: 48 }, (_, i) => {
-  const tower = i < 24 ? "A" : "B"; const fl = 12 - Math.floor((i % 24) / 2); const no = `${tower}-${fl}0${(i % 2) + 1}`;
-  const st = [0, 3, 5, 7, 8, 11, 14, 17, 20, 22, 25, 26, 29, 31, 33, 38, 40, 44].includes(i) ? "available" : [2, 9, 19, 35].includes(i) ? "reserved" : [4, 30].includes(i) ? "blocked" : "sold";
-  return { no, tower, floor: fl, type: i % 2 ? "3bhk" : "2bhk", size: i % 2 ? 1450 : 1100, price: (i % 2 ? 14200000 : 8500000) + fl * 60000, status: st, buyer: st === "sold" ? ["Rita Maharjan", "Gopal Sharma", "Sanjay KC", "Anita Rai"][i % 4] : st === "reserved" ? "Arjun Mehta" : "" };
-});
+const PROJECTS = [];
 export function Projects({ tenant }) {
   const L = useL();
   const toast = useToast();
   const [projects, setProjects] = useSec(tenant.id, "projects", PROJECTS);
-  const [units, setUnits] = useSec(tenant.id, "units", mkUnits());
-  const [pid, setPid] = useState(projects[0].id);
+  const [units, setUnits] = useSec(tenant.id, "units", []);
+  const [pid, setPid] = useState(projects[0]?.id);
   const [tab, setTab] = useState("units");
   const [sel, setSel] = useState(null);
   const [post, setPost] = useState("");
-  const p = projects.find((x) => x.id === pid);
+  const p = projects.find((x) => x.id === pid) || projects[0];
   const count = (s) => units.filter((u) => u.status === s).length;
   const floors = [...new Set(units.map((u) => u.floor))];
   const buyerRows = units.filter((u) => u.buyer).map((u) => ({ buyer: u.buyer, phone: u.phone || "", no: u.no, price: u.price, token: u.token || "", citizenship: u.citizenship || "" }));
@@ -48,6 +39,12 @@ export function Projects({ tenant }) {
     setUnits((a) => { rows.forEach((r) => { const u = a.find((y) => y.no.toLowerCase() === r.no.toLowerCase()); if (u) Object.assign(u, { buyer: r.buyer, phone: r.phone, price: r.price, token: r.token || 0, citizenship: r.citizenship || "", status: u.status === "sold" ? "sold" : "reserved" }); }); });
     if (miss.length) toast(L("pj.toastMiss", "{n} rows skipped: unit number not found", { n: miss.length }));
   };
+  if (!p) return (
+    <>
+      <PageHead title={L("nav.projects", "Projects")} sub={L("pj.sub", "Units, prices, buyers and construction progress for each project")} />
+      <section className="card pf-panel"><Empty icon="building-2" title={L("pj.none", "No projects yet")}>{L("pj.noneSub", "Post a project from Listings and its units, buyers and progress show here.")}</Empty></section>
+    </>
+  );
   return (
     <>
       <PageHead title={L("nav.projects", "Projects")} sub={L("pj.sub", "Units, prices, buyers and construction progress for each project")} actions={<><DataActions kind="buyers" rows={buyerRows} onImport={importBuyers} /><LinkChip to="/business/collections" icon="hand-coins">{L("nav.collections", "Collections")}</LinkChip><LinkChip to="/business/agreements" icon="file-pen-line">{L("nav.agreements", "Agreements")}</LinkChip></>} />
@@ -72,7 +69,7 @@ export function Projects({ tenant }) {
         ))}</div></Panel>
         <Panel title={L("pj.updates", "Updates for buyers")} sub={L("pj.updatesSub", "Buyers get these by SMS and on their account page")} className="side" pad><div className="pf-stack">
           <Textarea rows={3} value={post} onChange={(e) => setPost(e.target.value)} placeholder={L("pj.postPh", "What happened on site this week?")} style={{ minHeight: 80 }} />
-          <div className="pf-row-actions"><label className="btn btn-outline btn-sm"><input type="file" hidden accept="image/*" /><Icon name="image" size={14} />{L("pj.photo", "Photo")}</label><Button size="sm" icon="send" disabled={!post.trim()} onClick={() => { setProjects((a) => { a.find((x) => x.id === pid).updates.unshift({ at: "2027-03-02", text: post }); }); setPost(""); toast(L("pj.toastPosted", "Posted. Buyers have been told.")); }}>{L("pj.post", "Post update")}</Button></div>
+          <div className="pf-row-actions"><label className="btn btn-outline btn-sm"><input type="file" hidden accept="image/*" /><Icon name="image" size={14} />{L("pj.photo", "Photo")}</label><Button size="sm" icon="send" disabled={!post.trim()} onClick={() => { setProjects((a) => { a.find((x) => x.id === pid).updates.unshift({ at: TODAY.slice(0, 10), text: post }); }); setPost(""); toast(L("pj.toastPosted", "Posted. Buyers have been told.")); }}>{L("pj.post", "Post update")}</Button></div>
           <ul className="pf-list">{p.updates.map((u, i) => <li key={i}><span className="pf-li-ico"><Icon name="construction" size={16} /></span><div><span>{u.text}</span><span className="small muted tnum">{fdate(u.at)}</span></div></li>)}</ul>
         </div></Panel>
       </div>}
@@ -89,13 +86,7 @@ export function Projects({ tenant }) {
 }
 
 /* ───────── Collections: instalments, tokens, reminders ───────── */
-const INST = [
-  { id: "IN-301", who: "Rita Maharjan", unit: "A-1201", what: "Structure 30%", amount: 2550000, due: "2027-03-05", status: "due" },
-  { id: "IN-302", who: "Gopal Sharma", unit: "A-1102", what: "Structure 30%", amount: 4260000, due: "2027-02-25", status: "overdue" },
-  { id: "IN-303", who: "Sanjay KC", unit: "B-901", what: "Booking 10%", amount: 850000, due: "2027-02-20", status: "paid" },
-  { id: "IN-304", who: "Arjun Mehta", unit: "A-1001", what: "Token", amount: 200000, due: "2027-03-02", status: "due" },
-  { id: "IN-305", who: "Anita Rai", unit: "B-802", what: "Plaster 30%", amount: 4260000, due: "2027-04-15", status: "upcoming" },
-];
+const INST = [];
 export function Collections({ tenant }) {
   const L = useL();
   const toast = useToast();
@@ -111,7 +102,7 @@ export function Collections({ tenant }) {
   const sum = (s) => list.filter((x) => s.includes(x.status)).reduce((a, x) => a + x.amount, 0);
   return (
     <>
-      <PageHead title={L("nav.collections", "Collections")} sub={L("co.sub", "Tokens, instalments and fees. Buyers get a pay link and reminders automatically.")} actions={<><DataActions kind="instalments" rows={instRows} onImport={importInst} /><LinkChip to="/business/invoices" icon="receipt">{L("nav.invoices", "Invoices")}</LinkChip><Button icon="plus" onClick={() => setEd({ who: "", unit: "", what: "", amount: "", due: "2027-03-02", status: "upcoming" })}>{L("co.add", "Add instalment")}</Button></>} />
+      <PageHead title={L("nav.collections", "Collections")} sub={L("co.sub", "Tokens, instalments and fees. Buyers get a pay link and reminders automatically.")} actions={<><DataActions kind="instalments" rows={instRows} onImport={importInst} /><LinkChip to="/business/invoices" icon="receipt">{L("nav.invoices", "Invoices")}</LinkChip><Button icon="plus" onClick={() => setEd({ who: "", unit: "", what: "", amount: "", due: TODAY.slice(0, 10), status: "upcoming" })}>{L("co.add", "Add instalment")}</Button></>} />
       <div className="pf-stats">
         <Stat label={L("co.dueSoon", "Due this month")} value={rs(sum(["due"]))} note={L("co.people", "{n} buyers", { n: list.filter((x) => x.status === "due").length })} />
         <Stat label={L("co.overdue", "Overdue")} value={rs(sum(["overdue"]))} note={L("co.remind", "Reminder sent daily")} tone="action" noteIcon="circle-alert" />
@@ -145,10 +136,7 @@ export function Collections({ tenant }) {
 }
 
 /* ───────── Sponsor: investors and updates ───────── */
-const INVESTORS = [
-  { id: "iv1", name: "Ramesh Adhikari", city: "Kathmandu", amount: 500000, since: "2027-01-12", kyc: true }, { id: "iv2", name: "Sunita Gurung (NRN, UK)", city: "London", amount: 2500000, since: "2027-01-20", kyc: true },
-  { id: "iv3", name: "Bikram Shah", city: "Pokhara", amount: 100000, since: "2027-02-03", kyc: true }, { id: "iv4", name: "Maya Lama", city: "Lalitpur", amount: 50000, since: "2027-02-18", kyc: false },
-];
+const INVESTORS = [];
 export function Investors({ tenant }) {
   const L = useL();
   const toast = useToast();
@@ -163,7 +151,7 @@ export function Investors({ tenant }) {
   const raised = 27500000; const target = 50000000;
   return (
     <>
-      <PageHead title={L("nav.investors", "Investors")} sub={L("iv.sub", "Who has invested, how much, and what you've told them")} actions={<><DataActions kind="investors" rows={ivRows} onImport={importIv} /><LinkChip to="/business/payouts" icon="wallet">{L("iv.returns", "Pay returns")}</LinkChip><Button icon="user-plus" onClick={() => setEd({ name: "", city: "", amount: "", since: "2027-03-02", kyc: false })}>{L("iv.add", "Add investor")}</Button></>} />
+      <PageHead title={L("nav.investors", "Investors")} sub={L("iv.sub", "Who has invested, how much, and what you've told them")} actions={<><DataActions kind="investors" rows={ivRows} onImport={importIv} /><LinkChip to="/business/payouts" icon="wallet">{L("iv.returns", "Pay returns")}</LinkChip><Button icon="user-plus" onClick={() => setEd({ name: "", city: "", amount: "", since: TODAY.slice(0, 10), kyc: false })}>{L("iv.add", "Add investor")}</Button></>} />
       <div className="pf-stats">
         <Stat label={L("kpi.raised", "Raised")} value={rsShort(raised)} note={L("iv.ofTarget", "{p}% of {t}", { p: Math.round((raised / target) * 100), t: rsShort(target) })} />
         <Stat label={L("kpi.investors", "Investors")} value="128" note={L("iv.kycMissing", "{n} need KYC", { n: list.filter((x) => !x.kyc).length })} tone="action" />
@@ -171,7 +159,7 @@ export function Investors({ tenant }) {
       </div>
       <Tabs value={tab} onChange={setTab} tabs={[{ id: "people", label: L("iv.people", "Investors"), icon: "users" }, { id: "updates", label: L("pj.updates", "Updates"), icon: "megaphone" }]} />
       {tab === "people" && <section className="card pf-panel"><Table rows={list} minWidth={640} onRowClick={(x) => setEd({ ...x, amount: String(x.amount) })}
-        empty={<Empty icon="users" title="No investors yet" action={<Button icon="user-plus" onClick={() => setEd({ name: "", city: "", amount: "", since: "2027-03-02", kyc: false })}>{L("iv.add", "Add investor")}</Button>}>Add people who invested, or import your list.</Empty>} columns={[
+        empty={<Empty icon="users" title="No investors yet" action={<Button icon="user-plus" onClick={() => setEd({ name: "", city: "", amount: "", since: TODAY.slice(0, 10), kyc: false })}>{L("iv.add", "Add investor")}</Button>}>Add people who invested, or import your list.</Empty>} columns={[
         { key: "n", label: L("iv.name", "Name"), render: (x) => <span className="pf-two"><b>{x.name}</b><small>{x.city}</small></span> },
         { key: "a", label: L("billing.amount", "Amount"), num: true, align: "right", render: (x) => rs(x.amount) },
         { key: "s", label: L("iv.since", "Since"), num: true, render: (x) => fdate(x.since) },
@@ -197,11 +185,7 @@ export function Investors({ tenant }) {
 }
 
 /* ───────── Reviews (all types) ───────── */
-const REVIEWS = [
-  { id: "rv1", who: "Hannah W.", stars: 5, text: "Lovely lake view and the staff arranged our trek permits. Breakfast was excellent.", about: "Deluxe lake view", at: "2027-02-27", reply: "" },
-  { id: "rv2", who: "Ramesh K.", stars: 4, text: "Clean rooms, good location. Hot water was slow in the morning.", about: "Standard twin", at: "2027-02-22", reply: "Thank you! We have added a second heater since your stay." },
-  { id: "rv3", who: "Li W.", stars: 2, text: "Booking was confirmed late and the pickup did not come.", about: "Family suite", at: "2027-02-18", reply: "", flagged: false },
-];
+const REVIEWS = [];
 export function Reviews({ tenant }) {
   const L = useL();
   const toast = useToast();
@@ -211,7 +195,7 @@ export function Reviews({ tenant }) {
   const undo = useUndo();
   const avg = list.length ? (list.reduce((s, r) => s + r.stars, 0) / list.length).toFixed(1) : "0.0";
   const clearReply = (r) => { const old = r.reply; setList((a) => { a.find((x) => x.id === r.id).reply = ""; }); undo("Reply removed", () => setList((a) => { a.find((x) => x.id === r.id).reply = old; })); };
-  const importReviews = (rows) => setList((a) => { rows.forEach((r, i) => a.unshift({ id: `rv${Date.now()}${i}`, who: r.who, stars: r.stars, text: r.text, about: r.about || "", at: r.at || "2027-03-02", reply: r.reply || "", imported: true })); });
+  const importReviews = (rows) => setList((a) => { rows.forEach((r, i) => a.unshift({ id: `rv${Date.now()}${i}`, who: r.who, stars: r.stars, text: r.text, about: r.about || "", at: r.at || TODAY.slice(0, 10), reply: r.reply || "", imported: true })); });
   return (
     <>
       <PageHead title={L("nav.reviews", "Reviews")} sub={L("rv.sub", "Reviews from people who booked or bought through Sheetal")} actions={<><DataActions kind="reviews" rows={list} onImport={importReviews} /><LinkChip to="/business/promote" icon="trending-up">{L("rv.rank", "Reviews lift your ranking")}</LinkChip></>} />
@@ -241,11 +225,7 @@ export function Reviews({ tenant }) {
 }
 
 /* ───────── Expenses, profit and loss ───────── */
-const EXP = [
-  { id: "ex1", what: "Staff salaries", cat: "salary", amount: 186000, at: "2027-02-28", by: "Bank" }, { id: "ex2", what: "Electricity (NEA)", cat: "utility", amount: 24800, at: "2027-02-25", by: "Fonepay" },
-  { id: "ex3", what: "Vegetables and meat", cat: "food", amount: 61200, at: "2027-02-24", by: "Cash" }, { id: "ex4", what: "Booking.com commission", cat: "commission", amount: 32400, at: "2027-02-20", by: "Card" },
-  { id: "ex5", what: "Plumbing repair, room 204", cat: "repair", amount: 8500, at: "2027-02-18", by: "Cash" }, { id: "ex6", what: "Facebook ads", cat: "marketing", amount: 12000, at: "2027-02-15", by: "Card" },
-];
+const EXP = [];
 const CATS = ["salary", "utility", "food", "commission", "repair", "marketing", "rent", "tax", "other"];
 export function Expenses({ tenant }) {
   const L = useL();
@@ -257,14 +237,14 @@ export function Expenses({ tenant }) {
   const [del, setDel] = useState(null);
   const view = list.find((x) => x.id === viewId);
   const catLabel = (c) => L(`ex.c_${c}`, c[0].toUpperCase() + c.slice(1));
-  const save = () => { const rec = { ...f, amount: Number(f.amount), at: f.at || "2027-03-02" }; setList((a) => { const i = a.findIndex((x) => x.id === rec.id); if (i >= 0) a[i] = rec; else a.unshift({ ...rec, id: `ex${Date.now()}` }); }); setF(null); toast(L("ex.toast", "Expense saved")); };
+  const save = () => { const rec = { ...f, amount: Number(f.amount), at: f.at || TODAY.slice(0, 10) }; setList((a) => { const i = a.findIndex((x) => x.id === rec.id); if (i >= 0) a[i] = rec; else a.unshift({ ...rec, id: `ex${Date.now()}` }); }); setF(null); toast(L("ex.toast", "Expense saved")); };
   const expRows = list.map((x) => ({ ...x, cat: catLabel(x.cat) }));
   const importExp = (rows) => setList((a) => { rows.forEach((r, i) => a.unshift({ id: `ex${Date.now()}${i}`, what: r.what, cat: String(r.cat).toLowerCase(), amount: r.amount, at: r.at, by: r.by || "Cash", bill: r.bill || "" })); });
   const income = 482300; const cost = list.reduce((s, x) => s + x.amount, 0);
   const byCat = CATS.map((c) => ({ label: L(`ex.c_${c}`, c[0].toUpperCase() + c.slice(1)), v: list.filter((x) => x.cat === c).reduce((s, x) => s + x.amount, 0) })).filter((x) => x.v);
   return (
     <>
-      <PageHead title={L("nav.expenses", "Expenses and profit")} sub={L("ex.sub", "Record spending in seconds and see real profit each month")} actions={<><DataActions kind="expenses" rows={expRows} onImport={importExp} /><Button icon="plus" onClick={() => setF({ what: "", cat: "food", amount: "", by: "Cash", at: "2027-03-02" })}>{L("ex.add", "Add expense")}</Button></>} />
+      <PageHead title={L("nav.expenses", "Expenses and profit")} sub={L("ex.sub", "Record spending in seconds and see real profit each month")} actions={<><DataActions kind="expenses" rows={expRows} onImport={importExp} /><Button icon="plus" onClick={() => setF({ what: "", cat: "food", amount: "", by: "Cash", at: TODAY.slice(0, 10) })}>{L("ex.add", "Add expense")}</Button></>} />
       <div className="pf-stats">
         <Stat label={L("ex.income", "Income")} value={rs(income)} note={L("co.month", "This month")} to="/business/invoices" />
         <Stat label={L("ex.spent", "Spent")} value={rs(cost)} note={L("ex.items", "{n} expenses", { n: list.length })} />
@@ -276,7 +256,7 @@ export function Expenses({ tenant }) {
         <Panel title={L("ex.where", "Where money went")} className="side" pad><Donut data={byCat.slice(0, 5)} center={rsShort(cost)} /></Panel>
       </div>}
       {tab === "list" && <section className="card pf-panel"><Table rows={list} minWidth={640} onRowClick={(x) => setViewId(x.id)}
-        empty={<Empty icon="receipt" title="No expenses yet" action={<Button icon="plus" onClick={() => setF({ what: "", cat: "food", amount: "", by: "Cash", at: "2027-03-02" })}>{L("ex.add", "Add expense")}</Button>}>Add what you spend to see real profit.</Empty>} columns={[
+        empty={<Empty icon="receipt" title="No expenses yet" action={<Button icon="plus" onClick={() => setF({ what: "", cat: "food", amount: "", by: "Cash", at: TODAY.slice(0, 10) })}>{L("ex.add", "Add expense")}</Button>}>Add what you spend to see real profit.</Empty>} columns={[
         { key: "w", label: L("ex.what", "What"), render: (x) => <span className="pf-two"><b>{x.what}</b><small>{L(`ex.c_${x.cat}`, x.cat)}</small></span> },
         { key: "b", label: L("ex.paidBy", "Paid by"), render: (x) => x.by },
         { key: "d", label: L("billing.date", "Date"), num: true, render: (x) => fdate(x.at) },
@@ -304,11 +284,7 @@ export function Expenses({ tenant }) {
 }
 
 /* ───────── Stock (restaurant, bar, minibar, housekeeping) ───────── */
-const STOCK = [
-  { id: "s1", name: "Rice (Basmati)", unit: "kg", qty: 42, min: 20, cost: 210, place: "Kitchen" }, { id: "s2", name: "Chicken", unit: "kg", qty: 8, min: 15, cost: 480, place: "Kitchen" },
-  { id: "s3", name: "Gorkha beer 650 ml", unit: "bottle", qty: 96, min: 48, cost: 360, place: "Rooftop Bar" }, { id: "s4", name: "Mineral water 1 L", unit: "bottle", qty: 30, min: 60, cost: 25, place: "Minibar" },
-  { id: "s5", name: "Bath towels", unit: "piece", qty: 64, min: 50, cost: 650, place: "Housekeeping" }, { id: "s6", name: "Toiletry kits", unit: "kit", qty: 18, min: 40, cost: 90, place: "Housekeeping" },
-];
+const STOCK = [];
 export function Stock({ tenant }) {
   const L = useL();
   const toast = useToast();
@@ -363,7 +339,7 @@ export function Renewals({ tenant }) {
   const L = useL();
   const toast = useToast();
   const { db, update } = useStore();
-  const rows = db.listings.filter((l) => l.tenantId === tenant.id && (l.kind === "sell" || l.kind === "rentout")).map((l, i) => ({ ...l, expires: ["2027-03-06", "2027-03-12", "2027-04-20", "2027-03-03"][i % 4] }));
+  const rows = db.listings.filter((l) => l.tenantId === tenant.id && (l.kind === "sell" || l.kind === "rentout") && l.expires).sort((a, b) => a.expires.localeCompare(b.expires));
   return (
     <section className="card pf-panel">
       <div className="pf-panel-head"><div className="pf-panel-title"><h2>{L("rn.title", "Expiring soon")}</h2><span>{L("rn.sub", "Listings go offline after 90 days unless renewed")}</span></div>

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
-import { fdate, fdatetime, rs } from "@sheetal/shared/core/format";
+import { fdate, fdatetime, inDays, rs } from "@sheetal/shared/core/format";
 import { EmbedCtx, Badge, Button, Drawer, Field, Input, PageHead as UIPageHead, Panel, Seg, Stat, Table, Tabs, Textarea, ToggleRow, useToast } from "@sheetal/shared/core/ui";
 
 const PageHead = UIPageHead;
@@ -33,18 +33,8 @@ const useList = (key, seed) => {
 };
 
 /* Leads: extractor + master leads */
-const LEADS = [
-  { id: "ML-2041", name: "Rajesh Shrestha", phone: "9841223344", source: "extractor", from: "Facebook group: Kathmandu Ghar Jagga", want: "Land in Budhanilkantha, 5–8 aana", budget: 25000000, owner: "Himalayan Homes Realty", status: "new", at: "2027-03-02T08:10" },
-  { id: "ML-2040", name: "Sarita Gurung", phone: "9856012345", source: "website", from: "Contact owner · L-1042", want: "4 BHK house", budget: 32000000, owner: "Himalayan Homes Realty", status: "open", at: "2027-03-01T17:40" },
-  { id: "ML-2039", name: "Thomas Keller", phone: "+49 151 2233", source: "voice", from: "Voice agent call", want: "Lake view stay, 5 nights", budget: 60000, owner: "Lakeside Retreat Hotel", status: "matched", at: "2027-03-01T11:02" },
-  { id: "ML-2038", name: "Bimala Thapa", phone: "9803344556", source: "demand", from: "Demand board", want: "2 BHK flat for rent, Lalitpur", budget: 35000, owner: "—", status: "open", at: "2027-02-28T15:20" },
-  { id: "ML-2037", name: "Anil KC", phone: "9812233441", source: "extractor", from: "Hamrobazar listing", want: "Selling 1 ropani in Tokha", budget: 0, owner: "—", status: "new", at: "2027-02-28T09:00" },
-];
-const JOBS = [
-  { id: "EX-14", src: "Facebook groups", q: "ghar jagga bikri kathmandu", every: "6h", found: 412, last: "2027-03-02T06:00", status: "running" },
-  { id: "EX-13", src: "Hamrobazar", q: "land sale lalitpur", every: "12h", found: 188, last: "2027-03-02T00:00", status: "running" },
-  { id: "EX-12", src: "Google Maps", q: "hotels in pokhara lakeside", every: "1d", found: 96, last: "2027-03-01T05:00", status: "done" },
-];
+const LEADS = [];
+const JOBS = [];
 export function AdminLeads() {
   const t = useT();
   const toast = useToast();
@@ -98,11 +88,7 @@ export function AdminLeads() {
 }
 
 /* Voice agent */
-const CALLS = [
-  { id: "C-881", who: "Thomas Keller", phone: "+49 151 2233", dir: "in", lang: "en", mins: 4.2, topic: "Lake view room 12–17 Mar", outcome: "lead", at: "2027-03-01T11:02" },
-  { id: "C-880", who: "Gopal Sharma", phone: "9841556677", dir: "in", lang: "ne", mins: 2.8, topic: "Shetal Heights 2 BHK price", outcome: "visit", at: "2027-03-01T09:40" },
-  { id: "C-879", who: "Rita Maharjan", phone: "9815550011", dir: "out", lang: "ne", mins: 1.5, topic: "Instalment reminder", outcome: "paid", at: "2027-02-28T16:00" },
-];
+const CALLS = [];
 export function AdminVoice() {
   const t = useT();
   const [calls] = useList("calls", CALLS);
@@ -138,12 +124,7 @@ export function AdminVoice() {
 }
 
 /* Social + WhatsApp scheduler, AI blog */
-const POSTS = [
-  { id: "SP-301", text: "Sunrise from Lakeside Retreat. Book 3 nights, get the 4th free this March.", ch: ["fb", "ig"], at: "2027-03-03T09:00", status: "scheduled", reach: 0 },
-  { id: "SP-300", text: "Shetal Heights: 2 BHK from Rs. 85 Lakh, bank loan ready.", ch: ["fb", "ig", "tt"], at: "2027-03-02T18:00", status: "scheduled", reach: 0 },
-  { id: "SP-299", text: "Holi offer for WhatsApp subscribers: 20% off stays in Pokhara.", ch: ["wa"], at: "2027-03-01T10:00", status: "published", reach: 8420 },
-  { id: "SP-298", text: "How to read a lalpurja before you buy land.", ch: ["fb", "li"], at: "2027-02-27T12:00", status: "published", reach: 12880 },
-];
+const POSTS = [];
 const CH = { fb: ["Facebook", "facebook"], ig: ["Instagram", "instagram"], tt: ["TikTok", "music-2"], wa: ["WhatsApp", "message-circle"], li: ["LinkedIn", "linkedin"], yt: ["YouTube", "youtube"] };
 export function AdminSocial() {
   const t = useT();
@@ -154,7 +135,7 @@ export function AdminSocial() {
   const [blog, setBlog] = useState({ topic: "Best areas to buy land in Lalitpur in 2027", tone: "helpful", length: "800", out: "" });
   return (
     <>
-      <PageHead title={t("gso.title")} sub={t("gso.sub")} actions={<Button icon="plus" onClick={() => setF({ text: "", ch: ["fb", "ig"], when: "2027-03-04T09:00" })}>{t("gso.new")}</Button>} />
+      <PageHead title={t("gso.title")} sub={t("gso.sub")} actions={<Button icon="plus" onClick={() => setF({ text: "", ch: ["fb", "ig"], when: `${inDays(1)}T09:00` })}>{t("gso.new")}</Button>} />
       <div className="pf-stats">
         <Stat label={t("gso.scheduled")} value={posts.filter((p) => p.status === "scheduled").length} note={t("gso.next", { at: fdatetime(posts.find((p) => p.status === "scheduled")?.at) })} />
         <Stat label={t("gso.reach")} value={posts.reduce((s, p) => s + p.reach, 0).toLocaleString("en-IN")} note={t("gso.last30")} />
@@ -188,7 +169,7 @@ export function AdminSocial() {
           <Field label={t("gso.post")}><Textarea rows={4} value={f.text} onChange={(e) => setF({ ...f, text: e.target.value })} style={{ minHeight: 110 }} /></Field>
           <Button variant="outline" size="sm" icon="sparkles" onClick={() => setF({ ...f, text: "Wake up to the Annapurnas. 20% off lake view rooms this week, free airport pickup. Book on sheetalproperty.com" })}>{t("gso.aiCaption")}</Button>
           <Field label={t("gso.where")}><div className="pf-chips">{Object.entries(CH).map(([k, [n, ic]]) => { const on = f.ch.includes(k); return <button key={k} className={`chip ${on ? "active" : ""}`} onClick={() => setF({ ...f, ch: on ? f.ch.filter((x) => x !== k) : [...f.ch, k] })}><Icon name={on ? "check" : ic} size={14} />{n}</button>; })}</div></Field>
-          <Field label={t("gso.when")}><div className="pf-chips">{[["2027-03-02T18:00", "Today 18:00"], ["2027-03-03T09:00", "Tomorrow 09:00"], ["2027-03-04T09:00", "Thu 09:00"], ["2027-03-06T12:00", "Sat 12:00"]].map(([v, l]) => <button key={v} className={`chip ${f.when === v ? "active" : ""}`} onClick={() => setF({ ...f, when: v })}>{l}</button>)}</div></Field>
+          <Field label={t("gso.when")}><div className="pf-chips">{[[`${inDays(0)}T18:00`, "Today 18:00"], [`${inDays(1)}T09:00`, "Tomorrow 09:00"], [`${inDays(2)}T09:00`, `${fdate(inDays(2))} 09:00`], [`${inDays(4)}T12:00`, `${fdate(inDays(4))} 12:00`]].map(([v, l]) => <button key={v} className={`chip ${f.when === v ? "active" : ""}`} onClick={() => setF({ ...f, when: v })}>{l}</button>)}</div></Field>
           <label className="drop pf-drop"><input type="file" hidden accept="image/*,video/*" /><Icon name="image" size={22} /><b>{t("gso.media")}</b></label>
         </div>}
       </Drawer>
@@ -197,11 +178,7 @@ export function AdminSocial() {
 }
 
 /* Demand board + requirement fees */
-const DEMANDS = [
-  { id: "DM-512", who: "Bimala Thapa", want: "2 BHK flat for rent", where: "Lalitpur, Jhamsikhel or Sanepa", budget: 35000, kind: "rent", fee: 500, paid: true, matches: 6, status: "open", at: "2027-02-28" },
-  { id: "DM-511", who: "Prakash Joshi (NRN, Australia)", want: "Land 8–12 aana for a house", where: "Budhanilkantha or Tokha", budget: 30000000, kind: "buy", fee: 2000, paid: true, matches: 3, status: "matched", at: "2027-02-26" },
-  { id: "DM-510", who: "Everest Trekking Pvt. Ltd.", want: "Office space 2,000 sq ft", where: "Thamel or Lazimpat", budget: 180000, kind: "rent", fee: 1000, paid: false, matches: 0, status: "pending", at: "2027-02-25" },
-];
+const DEMANDS = [];
 const FEES = [{ id: "rent", fee: 500 }, { id: "buy", fee: 2000 }, { id: "commercial", fee: 1000 }, { id: "stay", fee: 0 }];
 export function AdminDemand() {
   const t = useT();
@@ -236,15 +213,8 @@ export function AdminDemand() {
 }
 
 /* Careers */
-const JOBSP = [
-  { id: "JB-21", title: "Sales executive, Lalitpur", type: "Full time", apps: 34, status: "published", closes: "2027-03-20" },
-  { id: "JB-20", title: "Customer support (Nepali, English)", type: "Full time", apps: 58, status: "published", closes: "2027-03-15" },
-  { id: "JB-19", title: "Field photographer", type: "Contract", apps: 12, status: "closed", closes: "2027-02-20" },
-];
-const APPS = [
-  { id: "A1", name: "Sushma Rai", job: "JB-20", stage: "interview", at: "2027-03-01" }, { id: "A2", name: "Kiran Bista", job: "JB-21", stage: "new", at: "2027-03-02" },
-  { id: "A3", name: "Prabin Lama", job: "JB-21", stage: "shortlist", at: "2027-02-27" }, { id: "A4", name: "Nisha Shah", job: "JB-20", stage: "offer", at: "2027-02-24" },
-];
+const JOBSP = [];
+const APPS = [];
 export function AdminCareers() {
   const t = useT();
   const [jobs, setJobs] = useList("careers", JOBSP);
@@ -274,12 +244,7 @@ export function AdminCareers() {
 }
 
 /* Contact-owner, contact-agent and tour requests (platform-wide view) */
-const REQ = [
-  { id: "RQ-901", kind: "tour", who: "Rita Maharjan", phone: "9815550011", what: "L-1042 · 4 BHK, Budhanilkantha", to: "Himalayan Homes Realty", when: "2027-03-05T11:00", status: "scheduled" },
-  { id: "RQ-900", kind: "owner", who: "Gopal Sharma", phone: "9841556677", what: "P-31 · Shetal Heights", to: "Shetal Heights Developers", when: null, status: "new" },
-  { id: "RQ-899", kind: "agent", who: "Mina Tamang", phone: "9806677889", what: "L-1043 · Jhamsikhel flat", to: "Himalayan Homes Realty", when: null, status: "done" },
-  { id: "RQ-898", kind: "tour", who: "Arun Poudel", phone: "9849001122", what: "Video tour · Fewa View Villa", to: "Fewa View Villa", when: "2027-03-03T17:00", status: "scheduled" },
-];
+const REQ = [];
 export function AdminRequests() {
   const t = useT();
   const [list] = useList("requests", REQ);
@@ -302,11 +267,7 @@ export function AdminRequests() {
 }
 
 /* Deals and agent earnings */
-const DEALS = [
-  { id: "DL-77", what: "4 BHK house, Budhanilkantha", tenant: "Himalayan Homes Realty", agent: "Hari Bhandari", value: 32000000, pct: 2, stage: "baina", at: "2027-02-20" },
-  { id: "DL-76", what: "2 BHK, Shetal Heights", tenant: "Shetal Heights Developers", agent: "Pooja Shrestha", value: 8500000, pct: 1, stage: "registered", at: "2027-02-14" },
-  { id: "DL-75", what: "Jhamsikhel flat (rent)", tenant: "Himalayan Homes Realty", agent: "Gita Rai", value: 45000, pct: 50, stage: "registered", at: "2027-02-10" },
-];
+const DEALS = [];
 export function AdminEarnings() {
   const t = useT();
   const [deals] = useList("deals", DEALS);

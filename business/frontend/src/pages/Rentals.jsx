@@ -1,15 +1,15 @@
 import React, { useMemo, useState } from "react";
 import { useStore } from "@sheetal/shared/core/store";
 import { useRouter } from "@sheetal/shared/core/router";
-import { fdate, rs } from "@sheetal/shared/core/format";
+import { TODAY as NOW, fdate, rs } from "@sheetal/shared/core/format";
 import { Badge, Button, Drawer, Empty, Field, Input, PageHead, Panel, Select, Stat, Table, Tabs, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { DataActions } from "@sheetal/shared/components/DataIO";
 import { DeleteConfirm, restoreAt } from "@sheetal/shared/components/Crud";
 
 // Rentals: property management for agencies that look after homes and shops for owners.
-// Units, tenants and leases, monthly rent, repairs and owner statements. Demo data lives in db.pm[tenantId].
-const TODAY = "2027-03-02"; // demo clock, same as the rest of the demo data
+// Units, tenants and leases, monthly rent, repairs and owner statements. Data lives in db.pm[tenantId].
+const TODAY = NOW.slice(0, 10);
 const MONTH = TODAY.slice(0, 7);
 const D = (s) => new Date(s + "T00:00:00Z");
 const addDays = (s, n) => { const x = D(s); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
@@ -20,47 +20,9 @@ const nextId = (list, prefix) => prefix + (Math.max(100, ...list.map((x) => Numb
 const LATE_FEE = 0.02;
 const METHODS = [["esewa", "eSewa"], ["khalti", "Khalti"], ["fonepay", "Fonepay QR"], ["bank", "Bank transfer"], ["cash", "Cash"]];
 
+// Every business starts with no owners, units or leases.
 export function seedPm() {
-  const u = (id, propId, name, kind, rent, status) => ({ id, propId, name, kind, rent, status });
-  const l = (id, unitId, tenant, phone, start, end, rent, deposit) => ({ id, unitId, tenant, phone, kyc: true, start, end, rent, deposit, escalation: 10 });
-  const inv = (id, leaseId, month, amount, paid, method) => ({ id, leaseId, month, due: month + "-07", amount, paid, method: method || null, paidOn: paid ? month + "-03" : null });
-  const w = (id, unitId, title, priority, vendor, cost, status, created) => ({ id, unitId, title, priority, vendor, cost, status, created });
-  return {
-    owners: [
-      { id: "o1", name: "Shyam Prasad Adhikari", phone: "984-1122334", fee: 8, bank: "NIC Asia •••• 2210" },
-      { id: "o2", name: "Sarita Gurung", phone: "980-5566778", fee: 10, bank: "Global IME •••• 9031" },
-    ],
-    props: [
-      { id: "p1", name: "Jhamsikhel Residency", area: "Jhamsikhel, Lalitpur", ownerId: "o1" },
-      { id: "p2", name: "Baneshwor Commercial", area: "New Baneshwor, Kathmandu", ownerId: "o2" },
-    ],
-    units: [
-      u("u1", "p1", "Flat 1A", "2 BHK", 45000, "occupied"), u("u2", "p1", "Flat 1B", "2 BHK", 42000, "occupied"),
-      u("u3", "p1", "Flat 2A", "3 BHK", 60000, "notice"), u("u4", "p1", "Flat 2B", "1 BHK", 28000, "vacant"),
-      u("u5", "p2", "Shop S1", "Shop", 38000, "occupied"), u("u6", "p2", "Shop S2", "Shop", 35000, "repair"),
-      u("u7", "p2", "Office O1", "Office", 55000, "occupied"),
-    ],
-    leases: [
-      l("LS-101", "u1", "Anil Shrestha", "981-2345678", "2026-04-15", "2027-04-14", 45000, 90000),
-      l("LS-102", "u2", "Priya Tamang", "984-8765432", "2026-09-01", "2027-08-31", 42000, 84000),
-      l("LS-103", "u3", "Rajesh Maharjan", "980-1112223", "2025-03-20", "2027-03-31", 60000, 120000),
-      l("LS-104", "u5", "Everest Mobile Store", "985-3332221", "2025-07-01", "2028-06-30", 38000, 114000),
-      l("LS-105", "u7", "Nepal Tech Solutions", "986-4445556", "2026-01-01", "2027-12-31", 55000, 165000),
-    ],
-    invoices: [
-      inv("RB-2041", "LS-104", "2027-02", 38000, 0),
-      inv("RB-2050", "LS-101", "2027-03", 45000, 45000, "esewa"),
-      inv("RB-2051", "LS-102", "2027-03", 42000, 0),
-      inv("RB-2052", "LS-103", "2027-03", 60000, 30000, "bank"),
-      inv("RB-2053", "LS-104", "2027-03", 38000, 0),
-      inv("RB-2054", "LS-105", "2027-03", 55000, 55000, "fonepay"),
-    ],
-    work: [
-      w("WO-131", "u6", "Shutter motor not working", "urgent", "Bishnu Electricals", 8500, "assigned", "2027-02-27"),
-      w("WO-130", "u1", "Kitchen tap leaking", "normal", "Ram Plumbing", 1800, "done", "2027-02-20"),
-      w("WO-132", "u3", "Repaint before move-out", "normal", "", 0, "open", "2027-03-01"),
-    ],
-  };
+  return { owners: [], props: [], units: [], leases: [], invoices: [], work: [] };
 }
 
 function derive(pm) {

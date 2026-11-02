@@ -5,7 +5,7 @@ import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
 import { useRouter } from "@sheetal/shared/core/router";
 import { can } from "@sheetal/shared/core/rbac";
-import { fdate, fdatetime, rs } from "@sheetal/shared/core/format";
+import { TODAY, fdate, fdatetime, inDays, rs } from "@sheetal/shared/core/format";
 import { Badge, Button, Drawer, Empty, Field, Input, PageHead, Seg, StatusBadge, Table, Tabs, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { Counter } from "./ListingWizard";
@@ -13,12 +13,13 @@ import { IconLink } from "@sheetal/shared/layout/Links";
 import { BookingForm } from "./Branches";
 import { inBranch, useBranch } from "@sheetal/shared/core/branch";
 import { defaultTenantSettings } from "./BusinessSettings";
+import { emptyOps, opsOf } from "@sheetal/shared/demo/ops";
 
 // Ops data lives per tenant; workspaces without their own data show the sample hotel.
 export function useOps(tenant) {
   const { db, update } = useStore();
-  const ops = db.ops[tenant.id] || db.ops.t1;
-  const set = (fn) => update((d) => { if (!d.ops[tenant.id]) d.ops[tenant.id] = structuredClone(d.ops.t1); fn(d.ops[tenant.id], d); });
+  const ops = opsOf(db, tenant.id);
+  const set = (fn) => update((d) => { if (!d.ops[tenant.id]) d.ops[tenant.id] = emptyOps(); fn(d.ops[tenant.id], d); });
   return [ops, set];
 }
 
@@ -135,7 +136,7 @@ function FolioActions({ room, set, t, toast, close }) {
       <Button icon="log-out" disabled={due > 0} title={due > 0 ? t("pos.settleFirst") : undefined} onClick={() => { setStatus("dirty", { guest: null, folio: [], paid: 0 }); toast(t("pos.toastOut", { no: room.no })); close(); }}>{t("pos.checkOut")}</Button>
     </>}
     {st === "dirty" && <Button icon="sparkles" onClick={() => { setStatus("vacant"); close(); }}>{t("pos.markClean")}</Button>}
-    {st === "vacant" && <Button icon="plus" onClick={() => { setStatus("occupied", { guest: "Walk-in guest", folio: [{ id: "w1", what: "Room night", qty: 1, amount: room.rate, at: new Date().toISOString() }], paid: 0, from: "2027-03-02", to: "2027-03-03", idOk: false }); toast(t("pos.toastWalkin")); }}>{t("pos.walkIn")}</Button>}
+    {st === "vacant" && <Button icon="plus" onClick={() => { setStatus("occupied", { guest: "Walk-in guest", folio: [{ id: "w1", what: "Room night", qty: 1, amount: room.rate, at: new Date().toISOString() }], paid: 0, from: TODAY.slice(0, 10), to: inDays(1), idOk: false }); toast(t("pos.toastWalkin")); }}>{t("pos.walkIn")}</Button>}
   </>;
 }
 

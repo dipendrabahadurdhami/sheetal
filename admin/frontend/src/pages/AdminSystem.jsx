@@ -3,7 +3,7 @@ import { OTAS, otaSettings } from "@sheetal/shared/data/ota";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore, uid } from "@sheetal/shared/core/store";
 import { can, PLATFORM_PERMS } from "@sheetal/shared/core/rbac";
-import { TODAY } from "@sheetal/shared/core/format";
+import { TODAY, inDays } from "@sheetal/shared/core/format";
 import { Button, Field, Input, PageHead, Panel, Select, Tabs, ToggleRow, useToast, Badge } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { TeamPanel } from "@sheetal/shared/components/TeamPanel";
@@ -25,12 +25,12 @@ export function AdminStaff({ role }) {
       {tab === "staff" && (
         <TeamPanel members={db.platformStaff} invites={db.platformInvites} roles={db.platformRoles} groups={PLATFORM_PERMS} seats={{ limit: -1 }}
           canManage={manage} activity={db.platformActivity}
-          onInvite={(list) => update((d) => { list.forEach((i) => d.platformInvites.unshift({ id: uid("pi"), ...i, by: d.session.userName, sent: TODAY, expires: "2027-03-09T10:00", status: "pending" })); })}
+          onInvite={(list) => update((d) => { list.forEach((i) => d.platformInvites.unshift({ id: uid("pi"), ...i, by: d.session.userName, sent: TODAY, expires: `${inDays(7)}T10:00`, status: "pending" })); })}
           onUpdateMember={(id, patch) => update((d) => { Object.assign(d.platformStaff.find((m) => m.id === id), patch); })}
           onRemoveMember={(id) => update((d) => { d.platformStaff = d.platformStaff.filter((m) => m.id !== id); })}
           onRestoreMember={(m, at) => update((d) => { if (!d.platformStaff.some((x) => x.id === m.id)) d.platformStaff.splice(at >= 0 ? at : d.platformStaff.length, 0, m); })}
           dataKind="staff"
-          onResend={(id) => update((d) => { Object.assign(d.platformInvites.find((i) => i.id === id), { status: "pending", sent: TODAY, expires: "2027-03-09T10:00" }); })}
+          onResend={(id) => update((d) => { Object.assign(d.platformInvites.find((i) => i.id === id), { status: "pending", sent: TODAY, expires: `${inDays(7)}T10:00` }); })}
           onRevoke={(id) => update((d) => { d.platformInvites.find((i) => i.id === id).status = "revoked"; })} />
       )}
       {tab === "roles" && (

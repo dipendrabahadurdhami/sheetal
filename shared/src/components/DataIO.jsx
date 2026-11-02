@@ -4,6 +4,7 @@ import { Icon } from "../core/icons";
 import { useStore } from "../core/store";
 import { TODAY } from "../core/format";
 import { invoicesOf, invoiceRow, invoiceFromRow } from "../demo/money";
+import { emptyOps } from "../demo/ops";
 
 // Import + export for ONE kind of data, placed on the page that shows that data (Bookings, Leads, Invoices …).
 // Each kind has its own template, so people only fill in the columns that page needs.
@@ -102,8 +103,8 @@ const validate = (T, raw) => {
 
 /* ───────── Where each kind lives when the page does not pass rows/onImport ───────── */
 const tidOf = (db) => db.session?.tenantId;
-const opsOf = (db) => db.ops?.[tidOf(db)] || db.ops?.t1 || {};
-const ensureOps = (d) => { const tid = tidOf(d); if (!d.ops[tid]) d.ops[tid] = structuredClone(d.ops.t1); return d.ops[tid]; };
+const opsOf = (db) => db.ops?.[tidOf(db)] || emptyOps();
+const ensureOps = (d) => { const tid = tidOf(d); if (!d.ops[tid]) d.ops[tid] = emptyOps(); return d.ops[tid]; };
 const mkId = (p, i) => `${p}-${Date.now().toString(36).slice(-5)}${i}`;
 const SRC = { shetal: "Sheetal", booking: "Booking.com", airbnb: "Airbnb", walkin: "Walk-in", direct: "Website" };
 const STAGE = { new: "New", contacted: "Talking", negotiating: "Talking", viewing: "Visit", won: "Won", lost: "Lost" };

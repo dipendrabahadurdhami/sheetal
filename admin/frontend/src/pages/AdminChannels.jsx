@@ -7,7 +7,6 @@ import { OPEN, OTAS, OTA_STATUS, otaName, otaOf, otaSettings, otaUrl, siteHref, 
 import { audit } from "./AdminOps";
 
 // Channel manager desk. Sheetal holds one partner account per OTA; the channel team lists subscribers under it.
-const TEAM = ["Sujata Rai", "Kiran Basnet", "Anjali Thapa"];
 export function AdminChannels() {
   const { db, update } = useStore();
   const toast = useToast();
@@ -78,7 +77,7 @@ export function AdminChannels() {
             {r.status === "live" && <><dt>Links</dt><dd><a className="link" href={otaUrl(r)} target="_blank" rel="noreferrer">View on {otaName(r.ch)}</a> · <a className="link" href={siteHref(`/site/${r.tid}`)} target="_blank" rel="noreferrer">View on website</a></dd></>}
           </dl>
           {r.note && <div className="pf-note"><Icon name="message-circle" size={16} /><span>{r.note}</span></div>}
-          <Field label="Handled by"><div className="pf-chips">{TEAM.map((n) => <button key={n} type="button" className={`chip ${r.by === n ? "active" : ""}`} onClick={() => act(r.id, { by: n }, `Assigned to ${n}`)}>{n}</button>)}</div></Field>
+          <Field label="Handled by"><div className="pf-chips">{db.platformStaff.map((m) => m.name).map((n) => <button key={n} type="button" className={`chip ${r.by === n ? "active" : ""}`} onClick={() => act(r.id, { by: n }, `Assigned to ${n}`)}>{n}</button>)}</div></Field>
           {(r.status === "setting_up" || r.status === "needs_info" || r.status === "requested") && <>
             <Field label="Property ID on the site" hint="Fill in once the listing is created under Sheetal's account."><Input className="input tnum" value={f.otaId} onChange={(e) => setF({ ...f, otaId: e.target.value })} placeholder={r.ch === "booking" ? "BDC 8841207" : "ID"} /></Field>
             <Field label="Public link to the listing" optional hint="The business gets a View button with this link."><Input value={f.url || ""} onChange={(e) => setF({ ...f, url: e.target.value })} placeholder="https://…" /></Field>

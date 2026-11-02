@@ -3,7 +3,7 @@ import React from "react";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore, uid } from "@sheetal/shared/core/store";
 import { Link, useRouter } from "@sheetal/shared/core/router";
-import { fdate, TODAY } from "@sheetal/shared/core/format";
+import { fdate, inDays, TODAY } from "@sheetal/shared/core/format";
 import { can, permsForTypes } from "@sheetal/shared/core/rbac";
 import { typesFor } from "@sheetal/shared/core/plans";
 import { checkupsOf, todaysList } from "@sheetal/shared/data/checkups";
@@ -110,12 +110,12 @@ export function BusinessTeam({ tenant, role, embedded }) {
       <TeamPanel members={(db.members[tid] || []).filter((m) => branch === "all" || m.scopes === "all" || m.scopes.includes(branch))} invites={db.invites[tid] || []} roles={db.tenantRoles[tid]} groups={permsForTypes(typesFor(tenant, plan))}
         scopes={{ label: useT()(`scope.${tenant.type}`), options: tenant.scopes }} seats={{ limit: plan.limits.seats, plan: plan.name }}
         canManage={can(role, "team.manage")} activity={db.activity[tid] || []}
-        onInvite={(list) => update((d) => { list.forEach((i) => { (d.invites[tid] = d.invites[tid] || []).unshift({ id: uid("i"), ...i, by: d.session.userName, sent: TODAY, expires: "2027-03-09T10:00", status: "pending" }); log(d, `invited ${i.email}`); }); })}
+        onInvite={(list) => update((d) => { list.forEach((i) => { (d.invites[tid] = d.invites[tid] || []).unshift({ id: uid("i"), ...i, by: d.session.userName, sent: TODAY, expires: `${inDays(7)}T10:00`, status: "pending" }); log(d, `invited ${i.email}`); }); })}
         onUpdateMember={(id, patch) => update((d) => { const m = d.members[tid].find((x) => x.id === id); Object.assign(m, patch); log(d, `updated ${m.name}`); })}
         onRemoveMember={(id) => update((d) => { const m = d.members[tid].find((x) => x.id === id); d.members[tid] = d.members[tid].filter((x) => x.id !== id); log(d, `removed ${m.name}`); })}
         onRestoreMember={(m, at) => update((d) => { const l = d.members[tid] = d.members[tid] || []; if (!l.some((x) => x.id === m.id)) l.splice(at >= 0 ? at : l.length, 0, m); log(d, `restored ${m.name}`); })}
         dataKind="team"
-        onResend={(id) => update((d) => { Object.assign(d.invites[tid].find((i) => i.id === id), { status: "pending", sent: TODAY, expires: "2027-03-09T10:00" }); })}
+        onResend={(id) => update((d) => { Object.assign(d.invites[tid].find((i) => i.id === id), { status: "pending", sent: TODAY, expires: `${inDays(7)}T10:00` }); })}
         onRevoke={(id) => update((d) => { d.invites[tid].find((i) => i.id === id).status = "revoked"; })} />
     </>
   );

@@ -23,12 +23,7 @@ export const RANK = [
   { id: "verified", w: 20 }, { id: "photos", w: 15 }, { id: "response", w: 15 }, { id: "reviews", w: 15 },
   { id: "fresh", w: 10 }, { id: "complete", w: 10 }, { id: "plan", w: 5 }, { id: "boost", w: 10 },
 ];
-const CAMPAIGNS = [
-  { id: "AD-118", tenantId: "t1", listing: "S-201", title: "Lakeside Retreat Hotel", slot: "home_featured", from: "2027-02-25", to: "2027-03-10", spend: 12600, imp: 48200, clicks: 1930, leads: 41, status: "live" },
-  { id: "AD-121", tenantId: "t3", listing: "L-1042", title: "4 BHK house, Budhanilkantha", slot: "search_top", from: "2027-03-01", to: "2027-03-14", spend: 8400, imp: 21800, clicks: 860, leads: 19, status: "live" },
-  { id: "AD-124", tenantId: "t2", listing: "P-31", title: "Shetal Heights", slot: "home_hero", from: "2027-03-05", to: "2027-03-12", spend: 17500, imp: 0, clicks: 0, leads: 0, status: "review" },
-  { id: "AD-109", tenantId: "t1", listing: "S-202", title: "Garden villa", slot: "social", from: "2027-02-10", to: "2027-02-10", spend: 3500, imp: 15400, clicks: 610, leads: 12, status: "ended" },
-];
+const CAMPAIGNS = [];
 const tone = { live: "done", review: "action", ended: "neutral", paused: "progress" };
 
 export function AdminAds() {
@@ -120,7 +115,7 @@ export function AdminAI({ embedded }) {
   const toast = useToast();
   const cfg = db.aiConfig || { provider: "claude", features: Object.fromEntries(FEATURES.map((f) => [f, true])), credits: { Starter: 500, Business: 2000, Pro: 6000 }, topup: 1000, topupPrice: 900, voiceRate: 4 };
   const set = (patch) => update((d) => { d.aiConfig = { ...cfg, ...patch }; });
-  const usage = db.tenants.slice(0, 8).map((x, i) => ({ id: x.id, name: x.name, plan: db.plans.find((p) => p.id === x.planId)?.name, used: [214, 1820, 96, 40, 0, 2410, 12, 0][i], limit: cfg.credits[db.plans.find((p) => p.id === x.planId)?.name] || 500 }));
+  const usage = db.tenants.map((x) => ({ id: x.id, name: x.name, plan: db.plans.find((p) => p.id === x.planId)?.name, used: x.aiUsed || 0, limit: cfg.credits[db.plans.find((p) => p.id === x.planId)?.name] || 500 }));
   return (
     <>
       {!embedded && <PageHead title={t("ai.adminTitle")} sub={t("ai.adminSub")} />}
@@ -150,9 +145,7 @@ export function AdminAI({ embedded }) {
 
 /* ───────── Customer orders, refunds and claims ───────── */
 const LABEL = { paid: "Paid", pending_verification: "Pending verification", confirmed: "Confirmed", reserved: "Reserved", invested: "Invested", completed: "Completed", cancelled: "Cancelled", refund_pending: "Refund pending" };
-export const demoOrders = (db) => [...(db.customer?.orders || []),
-  { code: "BK-2027-0388", tid: "t4", title: "Fewa View Villa, Sedi", kind: "stay", from: "2027-01-18", to: "2027-01-21", total: 36000, paid: 36000, method: "khalti", status: "completed", at: "2027-01-10", policy: "flexible", claim: 3500, problem: "Damage claim: broken lamp" },
-  { code: "INV-2027-0022", tid: "t5", title: "Chitwan Jungle Lodge", kind: "invest", total: 100000, paid: 100000, method: "connectips", status: "invested", at: "2027-01-20" }];
+export const demoOrders = (db) => db.customer?.orders || [];
 
 export function AdminOrders() {
   const { db, update } = useStore();

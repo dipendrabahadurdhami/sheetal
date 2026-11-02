@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { useT, useLang } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
 import { useRouter } from "@sheetal/shared/core/router";
-import { rsShort } from "@sheetal/shared/core/format";
+import { TODAY, rsShort } from "@sheetal/shared/core/format";
 import { Badge, Button, Checkbox, Confirm, Empty, Menu, PageHead, SearchInput, Select, StatusBadge, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { DataActions } from "@sheetal/shared/components/DataIO";
@@ -38,10 +38,10 @@ export function ListingsPage({ tenant, canEdit }) {
     (status === "all" ? l.status !== "archived" : l.status === status) &&
     (!q.trim() || (l.title + " " + l.id).toLowerCase().includes(q.trim().toLowerCase()))), [all, kind, status, q]);
   const counts = Object.fromEntries(STATUS.map(([id]) => [id, id === "all" ? all.filter((l) => l.status !== "archived").length : all.filter((l) => l.status === id).length]));
-  const setStatusOf = (ids, s, msg) => { update((d) => { d.listings.forEach((l) => { if (ids.includes(l.id)) { l.status = s; l.updated = "2027-03-02"; if (s === "published") delete l.issues; } }); }); setSel([]); toast(msg); };
+  const setStatusOf = (ids, s, msg) => { update((d) => { d.listings.forEach((l) => { if (ids.includes(l.id)) { l.status = s; l.updated = TODAY.slice(0, 10); if (s === "published") delete l.issues; } }); }); setSel([]); toast(msg); };
   const remove = (ids) => { update((d) => { d.listings = d.listings.filter((l) => !ids.includes(l.id)); }); setSel([]); toast(ids.length > 1 ? ids.length + " listings deleted" : "Listing deleted"); };
   const edit = (l) => { update((d) => { d.drafts[tenant.id] = { kind: l.kind, values: { ...(l.values || {}), title: l.title }, editId: l.id }; }); navigate("/business/listings/new"); };
-  const duplicate = (l) => { update((d) => { d.listings.unshift({ ...structuredClone(l), id: nextId(d.listings), title: l.title + " (copy)", status: "draft", views: 0, leads: 0, updated: "2027-03-02" }); }); toast("Copy saved as a draft"); };
+  const duplicate = (l) => { update((d) => { d.listings.unshift({ ...structuredClone(l), id: nextId(d.listings), title: l.title + " (copy)", status: "draft", views: 0, leads: 0, updated: TODAY.slice(0, 10) }); }); toast("Copy saved as a draft"); };
   const allOn = rows.length > 0 && rows.every((r) => sel.includes(r.id));
   const toggleAll = (v) => setSel(v ? rows.map((r) => r.id) : []);
   const toggle = (id, v) => setSel((s) => (v ? [...s, id] : s.filter((x) => x !== id)));

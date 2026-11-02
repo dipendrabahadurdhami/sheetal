@@ -14,8 +14,8 @@ export const defaultTenantSettings = (tenant) => ({
   branding: { useBrand: false, color: "#9D1D21", logoText: tenant.name.split(" ").map((w) => w[0]).slice(0, 2).join(""), receiptHeader: tenant.name, receiptFooter: "Thank you. Please visit again.", showPoweredBy: true },
   payments: {
     mode: "shetal", // shetal = Sheetal collects and pays out; own = money goes straight to the business
-    payoutBank: { bank: "NIC Asia", holder: tenant.owner, account: "•••• 4021", branch: tenant.city },
-    own: { fonepay: { on: true, merchant: "", qr: null }, esewa: { on: false, merchant: "" }, khalti: { on: false, key: "" }, bankQr: { on: true, bank: "NIC Asia", qr: null }, cash: { on: true } },
+    payoutBank: { bank: "", holder: tenant.owner, account: "", branch: tenant.city }, // filled in by the business
+    own: { fonepay: { on: true, merchant: "", qr: null }, esewa: { on: false, merchant: "" }, khalti: { on: false, key: "" }, bankQr: { on: true, bank: "", qr: null }, cash: { on: true } },
     advancePct: 30, autoReceipt: true, partialAllowed: true,
   },
   notifications: { newBooking: { app: true, sms: true, email: true, wa: true }, payment: { app: true, sms: false, email: true, wa: true }, lead: { app: true, sms: false, email: false, wa: true }, agreement: { app: true, sms: true, email: true, wa: false }, dailySummary: true, quietHours: true },

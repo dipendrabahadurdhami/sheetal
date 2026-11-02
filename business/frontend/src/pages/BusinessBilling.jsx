@@ -18,11 +18,7 @@ export function BusinessBilling({ tenant, canManage }) {
   const [cancel, setCancel] = useState(false);
   const plans = db.plans.filter((p) => p.type === tenant.type && p.active);
   const cur = db.plans.find((p) => p.id === tenant.planId);
-  const invoices = [
-    { id: "SH-2027-0142", date: "2027-03-01", amount: cur.price, status: tenant.status === "past_due" ? "overdue" : "paid" },
-    { id: "SH-2027-0098", date: "2027-02-01", amount: cur.price, status: "paid" },
-    { id: "SH-2026-0871", date: "2027-01-01", amount: cur.price, status: "paid" },
-  ];
+  const invoices = []; // real invoices come from the billing API
   const change = (p) => { update((d) => { d.tenants.find((x) => x.id === tenant.id).planId = p.id; }); toast(t("billing.toastChanged", { plan: p.name })); };
 
   return (
@@ -139,10 +135,7 @@ export function BusinessData({ tenant }) {
   const [imp, setImp] = useState(null);
   const cols = ["Name", "Phone", "Email", "Room / unit", "Check-in", "Amount"];
   const fields = ["name", "phone", "email", "unit", "date", "amount", "skip"];
-  const history = [
-    { id: "x1", kind: "export", what: "bookings", rows: 412, by: "Sunita Karki", at: "2027-02-28" },
-    { id: "x2", kind: "import", what: "guests", rows: 1280, by: "Dipesh Dhakal", at: "2027-01-15" },
-  ];
+  const history = [];
   return (
     <>
       <PageHead title={t("data.title")} sub={t("data.sub")} actions={<Button variant="outline" icon="archive" onClick={() => toast(t("data.toastBackup"))}>{t("data.backup")}</Button>} />

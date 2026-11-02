@@ -120,11 +120,11 @@ const routes = [
   ["post", /^\/track-(visit|heartbeat)$/, () => ({ ok: true })],
   ["post", /^\/reset-password$/, () => ({ status: 200, message: "Your password has been reset. Please log in." })],
   ["post", /^\/email\/(resend|change-resend|resend-verification)$/, () => ({ status: 200, message: "Verification email sent." })],
-  ["get", /^\/email\/verify\/.*/, () => { const u = db.users[0]; return { status: 200, token: `demo-token-${u.id}`, user_name: u.user_name }; }],
+  ["get", /^\/email\/verify\/.*/, () => fail(400, "This link has expired or was already used. Please ask for a new one.")],
 
   ["post", /^\/login$/, (q, m, b) => {
     const u = db.users.find((x) => x.email === String(b.email || "").toLowerCase());
-    if (!u || u.password !== b.password) fail(401, "Wrong email or password. Demo login: demo@sheetal.test / password");
+    if (!u || u.password !== b.password) fail(401, "Wrong email or password.");
     return ok({ ...pub(u), token: `demo-token-${u.id}` });
   }],
   ["post", /^\/register$/, (q, m, b) => {
@@ -146,10 +146,10 @@ const routes = [
   ["get", /^\/user-property$/, () => { const u = needUser(); return ok(newest(db.properties.filter((p) => p.user_id === u.id))); }],
   ["post", /^\/post-property\/?$/, (q, m, b) => {
     const u = needUser();
-    const id = Math.max(...db.properties.map((p) => p.id)) + 1;
+    const id = Math.max(0, ...db.properties.map((p) => p.id)) + 1;
     const purpose = Number(b.purpose_id) === 2 ? "Rent" : "Sale";
     const type = PROPERTY_TYPES[Number(b.propertytype_id) - 1] || "House";
-    const p = { ...db.properties[0], ...b, id, property_code: `SP${1000 + id}`, url: `listing-${id}`, name: b.name, title: b.name, purpose, property_type: type,
+    const p = { ...b, id, property_code: `SP${1000 + id}`, url: `listing-${id}`, name: b.name, title: b.name, purpose, property_type: type,
       total_price: Number(b.total_price) || 0, price: Number(b.total_price) || 0, bedroom: Number(b.bedrooms) || 0, bathroom: Number(b.bathrooms) || 0,
       property_location: b.property_location, district: b.district || "", feature_image: b.feature_image || "/demo/1.jpg",
       gallery_images: (b.gallery_images || []).map((image) => ({ image })), sold: 0, property_status: "AVAILABLE", is_featured: false, views: 0,

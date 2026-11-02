@@ -6,9 +6,10 @@ import { Badge, Button, Checkbox, Drawer, Empty, Field, IconButton, Input, Modal
 import { Icon } from "@sheetal/shared/core/icons";
 import {
   CHOICE, DESTS, DEST_LABEL, FIELD_TYPES, FONTS, PALETTE, PLACES, SWATCHES, formFromTemplate, formLimits, formLink, formsOf, makeField, monthResponses,
-  placeLabels, responsesOf, sampleForms, sampleResponses, slugify, templatesFor,
+  placeLabels, responsesOf, slugify, templatesFor,
 } from "@sheetal/shared/core/forms";
 import { defaultTenantSettings } from "./BusinessSettings";
+import { emptyOps } from "@sheetal/shared/demo/ops";
 
 // Online forms: list + templates, drag-and-drop builder, publish, responses, and the public form page (/business/f/:slug).
 const TYPE_WORD = { hotel: "hotels", host: "hosts", developer: "developers", agency: "agencies", sponsor: "investment sponsors" };
@@ -21,8 +22,8 @@ const fontCss = (k) => (FONTS.find((x) => x[0] === k) || FONTS[0])[2];
 
 function ensure(d, tenant) {
   d.forms = d.forms || {}; d.formResponses = d.formResponses || {};
-  if (!d.forms[tenant.id]) d.forms[tenant.id] = sampleForms(tenant, d.tenantSettings?.[tenant.id]);
-  if (!d.formResponses[tenant.id]) d.formResponses[tenant.id] = sampleResponses(tenant, d.forms[tenant.id]);
+  if (!d.forms[tenant.id]) d.forms[tenant.id] = [];
+  if (!d.formResponses[tenant.id]) d.formResponses[tenant.id] = [];
 }
 function useFormsData(tenant) {
   const { db, update } = useStore();
@@ -490,7 +491,7 @@ export function PublicForm({ slug }) {
       ensure(d, tenant);
       d.formResponses[tenant.id].unshift(r);
       if (form.dest === "leads") {
-        if (!d.ops[tenant.id]) d.ops[tenant.id] = structuredClone(d.ops.t1);
+        if (!d.ops[tenant.id]) d.ops[tenant.id] = emptyOps();
         d.ops[tenant.id].conversations.unshift({ id: `c-${r.id}`, channel: "web", name: r.name, phone: r.phone, unread: 1, last: `${form.title}: ${r.summary}`, at, stage: "new", value: r.pay?.amount || 0, listing: null, assignee: null,
           tags: ["Lead", form.title], formResponse: r.id, msgs: [["in", `${form.title}: ${r.answers.map(([q, a]) => `${q}: ${a}`).join(" · ")}`, at.slice(11, 16)]] });
       }

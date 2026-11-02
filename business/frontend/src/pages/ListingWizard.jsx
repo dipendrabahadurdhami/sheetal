@@ -3,7 +3,7 @@ import { DataActions } from "@sheetal/shared/components/DataIO";
 import { useLang, useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
 import { Link, useRouter } from "@sheetal/shared/core/router";
-import { rs, rsShort } from "@sheetal/shared/core/format";
+import { TODAY, rs, rsShort } from "@sheetal/shared/core/format";
 import { Badge, Button, Drawer, Empty, PageHead, Toggle, useToast } from "@sheetal/shared/core/ui";
 import { AIStudio } from "./AI";
 import { Icon } from "@sheetal/shared/core/icons";
@@ -65,7 +65,7 @@ export function ListingWizard({ tenant }) {
     for (let i = 0; i < steps.length; i++) if (!validate(i)) { setStep(i); return; }
     const title = v.title || suggestTitle(kind, v, label);
     update((d) => {
-      const _ed = d.drafts?.[tenant.id]?.editId; const _rec = { id: _ed || `L-${1100 + d.listings.length}`, tenantId: tenant.id, kind, title, values: v, status: "in_review", price: v.price || v.rent || v.nightly || v.target || v.rooms?.[0]?.price || v.units?.[0]?.price || 0, views: 0, leads: 0, updated: "2027-03-02" }; if (_ed) { const _k = d.listings.findIndex((x) => x.id === _ed); if (_k >= 0) d.listings[_k] = { ...d.listings[_k], ..._rec, views: d.listings[_k].views, leads: d.listings[_k].leads }; else d.listings.unshift(_rec); } else d.listings.unshift(_rec);
+      const _ed = d.drafts?.[tenant.id]?.editId; const _rec = { id: _ed || `L-${1100 + d.listings.length}`, tenantId: tenant.id, kind, title, values: v, status: "in_review", price: v.price || v.rent || v.nightly || v.target || v.rooms?.[0]?.price || v.units?.[0]?.price || 0, views: 0, leads: 0, updated: TODAY.slice(0, 10) }; if (_ed) { const _k = d.listings.findIndex((x) => x.id === _ed); if (_k >= 0) d.listings[_k] = { ...d.listings[_k], ..._rec, views: d.listings[_k].views, leads: d.listings[_k].leads }; else d.listings.unshift(_rec); } else d.listings.unshift(_rec);
       delete d.drafts[tenant.id];
     });
     toast(t("wiz.toastSubmitted"));

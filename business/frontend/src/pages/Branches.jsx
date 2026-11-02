@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
 import { can } from "@sheetal/shared/core/rbac";
-import { fdate, rs, rsShort } from "@sheetal/shared/core/format";
+import { TODAY, fdate, inDays, rs, rsShort } from "@sheetal/shared/core/format";
 import { Badge, Button, Confirm, Drawer, Field, Input, PageHead, Panel, Seg, Select, Stat, Table, ToggleRow, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { Counter } from "./ListingWizard";
@@ -84,32 +84,33 @@ export function Branches({ tenant, role }) {
 
 /* ───────── Calendar and rates ───────── */
 const MONTH = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-const SEASONS = [{ id: "holi", name: "Holi", from: "2027-03-21", to: "2027-03-23", pct: 25 }, { id: "spring", name: "Spring trekking", from: "2027-03-15", to: "2027-05-15", pct: 15 }, { id: "dashain", name: "Dashain and Tihar", from: "2027-10-08", to: "2027-11-10", pct: 30 }];
+const SEASONS = [];
 export function Calendar({ tenant, role }) {
   const t = useT();
   const toast = useToast();
   const [ops, set] = useOps(tenant);
   const types = [...new Set(ops.rooms.map((r) => r.type))];
   const [type, setType] = useState(types.find((x) => x.includes("Deluxe")) || types[0]);
-  const [month, setMonth] = useState(2);
+  const YEAR = Number(TODAY.slice(0, 4)); // calendar covers this year
+  const [month, setMonth] = useState(Number(TODAY.slice(5, 7)) - 1);
   const [sel, setSel] = useState([]);
   const [tab, setTab] = useState("cal");
   const rooms = ops.rooms.filter((r) => r.type === type);
   const base = rooms[0]?.rate || 5000;
   const blocked = ops.blocked || {};
   const overrides = ops.rates || {};
-  const days = new Date(2027, month + 1, 0).getDate();
-  const first = new Date(2027, month, 1).getDay();
-  const key = (d) => `${type}|2027-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-  const iso = (d) => `2027-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  const days = new Date(YEAR, month + 1, 0).getDate();
+  const first = new Date(YEAR, month, 1).getDay();
+  const key = (d) => `${type}|${YEAR}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  const iso = (d) => `${YEAR}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
   const priceOf = (d) => {
     if (overrides[key(d)]) return overrides[key(d)];
-    const dt = new Date(2027, month, d); let p = base;
+    const dt = new Date(YEAR, month, d); let p = base;
     if (dt.getDay() === 5 || dt.getDay() === 6) p *= 1.1;
     SEASONS.forEach((s) => { if (iso(d) >= s.from && iso(d) <= s.to) p *= 1 + s.pct / 100; });
     return Math.round(p / 50) * 50;
   };
-  const sold = (d) => Math.min(rooms.length, (d * 7 + month * 3) % (rooms.length + 2));
+  const sold = (d) => ops.bookings.filter((b) => b.type === type && b.from <= iso(d) && b.to > iso(d)).length;
   const edit = can(role, "calendar.edit");
   const apply = (kind, v) => { set((o) => { o.blocked = o.blocked || {}; o.rates = o.rates || {}; sel.forEach((d) => { if (kind === "block") o.blocked[key(d)] = !o.blocked[key(d)]; else o.rates[key(d)] = v; }); }); toast(t(kind === "block" ? "cal.toastBlocked" : "cal.toastRate", { n: sel.length })); setSel([]); };
   return (
@@ -120,7 +121,7 @@ export function Calendar({ tenant, role }) {
           <Select value={type} onChange={(v) => { setType(v); setSel([]); }} options={types.map((x) => ({ id: x, label: `${x} · ${ops.rooms.filter((r) => r.type === x).length}` }))} style={{ width: 240, height: 38 }} aria-label={t("an.roomType")} />
           <div className="pf-row-actions" style={{ marginLeft: "auto" }}>
             <button className="btn btn-ghost btn-icon" aria-label="prev" disabled={month === 0} onClick={() => setMonth(month - 1)}><Icon name="chevron-left" size={18} /></button>
-            <b className="tnum" style={{ minWidth: 130, textAlign: "center" }}>{MONTH[month]} 2027</b>
+            <b className="tnum" style={{ minWidth: 130, textAlign: "center" }}>{MONTH[month]} {YEAR}</b>
             <button className="btn btn-ghost btn-icon" aria-label="next" disabled={month === 11} onClick={() => setMonth(month + 1)}><Icon name="chevron-right" size={18} /></button>
           </div>
         </div>
@@ -175,12 +176,12 @@ export function BookingForm({ tenant, open, onClose }) {
   const toast = useToast();
   const [ops, set] = useOps(tenant);
   const types = [...new Set(ops.rooms.map((r) => r.type))];
-  const [f, setF] = useState({ guest: "", phone: "", type: types[0], nights: 2, adults: 2, children: 0, source: "walkin", pay: "advance", from: "2027-03-02" });
+  const [f, setF] = useState({ guest: "", phone: "", type: types[0], nights: 2, adults: 2, children: 0, source: "walkin", pay: "advance", from: inDays(0) });
   const rate = ops.rooms.find((r) => r.type === f.type)?.rate || 5000;
   const total = Math.round(rate * f.nights * 1.243);
   const freeRoom = ops.rooms.find((r) => r.type === f.type && r.status === "vacant")?.no || ops.rooms.find((r) => r.type === f.type)?.no;
   const save = () => {
-    set((o) => { o.bookings.unshift({ id: `BK-2027-0${430 + o.bookings.length}`, guest: f.guest || "Walk-in guest", phone: f.phone, room: freeRoom, type: f.type, from: f.from, to: new Date(new Date(f.from).getTime() + f.nights * 864e5).toISOString().slice(0, 10), amount: total, paid: f.pay === "full" ? total : f.pay === "advance" ? Math.round(total * 0.3) : 0, status: "confirmed", source: f.source }); });
+    set((o) => { o.bookings.unshift({ id: `BK-${TODAY.slice(0, 4)}-${String(o.bookings.length + 1).padStart(4, "0")}`, guest: f.guest || "Walk-in guest", phone: f.phone, room: freeRoom, type: f.type, from: f.from, to: new Date(new Date(f.from).getTime() + f.nights * 864e5).toISOString().slice(0, 10), amount: total, paid: f.pay === "full" ? total : f.pay === "advance" ? Math.round(total * 0.3) : 0, status: "confirmed", source: f.source }); });
     toast(t("bkf.toastSaved")); onClose();
   };
   return (
@@ -189,7 +190,7 @@ export function BookingForm({ tenant, open, onClose }) {
       <div className="pf-stack">
         <div className="pf-grid-2 tight"><Field label={t("bk.guest")}><Input value={f.guest} onChange={(e) => setF({ ...f, guest: e.target.value })} placeholder="Full name" /></Field><Field label={t("common.phone")}><Input className="input tnum" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} placeholder="98XXXXXXXX" /></Field></div>
         <Field label={t("an.roomType")}><div className="pf-chips">{types.map((x) => <button key={x} className={`chip ${f.type === x ? "active" : ""}`} onClick={() => setF({ ...f, type: x })}>{x}</button>)}</div></Field>
-        <Field label={t("hr.start")}><div className="pf-chips">{[["2027-03-02", "Today"], ["2027-03-03", "Tomorrow"], ["2027-03-05", "Fri 5 Mar"], ["2027-03-12", "12 Mar"]].map(([d, l]) => <button key={d} className={`chip ${f.from === d ? "active" : ""}`} onClick={() => setF({ ...f, from: d })}>{l}</button>)}</div></Field>
+        <Field label={t("hr.start")}><div className="pf-chips">{[[inDays(0), "Today"], [inDays(1), "Tomorrow"], [inDays(2), fdate(inDays(2))], [inDays(7), fdate(inDays(7))]].map(([d, l]) => <button key={d} className={`chip ${f.from === d ? "active" : ""}`} onClick={() => setF({ ...f, from: d })}>{l}</button>)}</div></Field>
         <div className="pf-grid-2 tight">
           <Field label={t("bkf.nights")}><Counter value={f.nights} min={1} max={60} onChange={(n) => setF({ ...f, nights: n })} label={t("bkf.nights")} /></Field>
           <Field label={t("room.guests")}><Counter value={f.adults} min={1} max={12} onChange={(n) => setF({ ...f, adults: n })} label={t("room.guests")} /></Field>

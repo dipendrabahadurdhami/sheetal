@@ -2,26 +2,21 @@ import React, { useState } from "react";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
 import { can } from "@sheetal/shared/core/rbac";
-import { fdate, rs, rsShort } from "@sheetal/shared/core/format";
+import { TODAY, fdate, inDays } from "@sheetal/shared/core/format";
 import { Badge, Button, Drawer, Empty, Field, PageHead, Panel, Person, Seg, Select, Stat, Table, Tabs, Textarea, ToggleRow, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { Counter } from "./ListingWizard";
-import { Bars, Donut, Funnel, Line } from "@sheetal/shared/core/charts";
 import { AIStudio } from "./AI";
 
 /* ───────── People: attendance, leave, shifts, birthdays ───────── */
 const LEAVE_TYPES = ["casual", "sick", "home", "festival", "unpaid"];
 const seedHR = (members) => ({
-  att: members.map((m, i) => ({ id: m.id, name: m.name, in: i % 5 === 4 ? null : `0${7 + (i % 3)}:${["02", "14", "48", "55", "31"][i % 5]}`, out: i === 1 ? "17:05" : null, place: i % 4 === 3 ? "away" : "office", dist: [12, 30, 8, 2400, 45][i % 5], late: i % 3 === 2 })),
-  leaves: [
-    { id: "lv1", name: members[2]?.name || "Bikash Thapa", type: "festival", from: "2027-03-14", days: 2, note: "Holi at home", status: "pending" },
-    { id: "lv2", name: members[4]?.name || "Ramesh Shrestha", type: "sick", from: "2027-02-27", days: 1, note: "Fever", status: "approved" },
-    { id: "lv3", name: members[3]?.name || "Anjali Rai", type: "casual", from: "2027-03-20", days: 1, note: "", status: "pending" },
-  ],
+  att: members.map((m) => ({ id: m.id, name: m.name, in: null, out: null, place: "office", dist: 0, late: false })),
+  leaves: [],
   balance: { casual: 6, sick: 12, home: 18, festival: 4, unpaid: 0 },
-  birthdays: members.slice(0, 4).map((m, i) => ({ name: m.name, date: ["2027-03-04", "2027-03-11", "2027-03-29", "2027-04-02"][i] })),
+  birthdays: [], // added per person in their profile
   wish: { on: true, time: "08:00", sms: true, wa: true, email: false, text: "Happy birthday, {name}! Wishing you a wonderful year ahead from all of us at {business}." },
-  geofence: { on: true, radius: 100, place: "Lakeside office" },
+  geofence: { on: true, radius: 100, place: "Head office" },
 });
 
 export function People({ tenant, role, embedded }) {
@@ -34,7 +29,7 @@ export function People({ tenant, role, embedded }) {
   const manage = can(role, "team.manage");
   const [tab, setTab] = useState("today");
   const [apply, setApply] = useState(false);
-  const [lv, setLv] = useState({ type: "casual", days: 1, from: "2027-03-10", note: "" });
+  const [lv, setLv] = useState({ type: "casual", days: 1, from: inDays(1), note: "" });
   const me = hr.att[0];
   const present = hr.att.filter((a) => a.in).length;
 
@@ -49,7 +44,7 @@ export function People({ tenant, role, embedded }) {
         return embedded ? <div className="pf-row-actions" style={{ justifyContent: "space-between" }}><span className="small muted">{t("hr.sub")}</span>{btn}</div> : <PageHead title={t("hr.title")} sub={t("hr.sub")} actions={btn} />; })()}
       <div className="pf-stats">
         <Stat label={t("hr.present")} value={`${present} / ${hr.att.length}`} note={t("hr.late", { n: hr.att.filter((a) => a.in && a.late).length })} />
-        <Stat label={t("hr.onLeave")} value={hr.leaves.filter((l) => l.status === "approved" && l.from === "2027-03-02").length} note={t("hr.today")} />
+        <Stat label={t("hr.onLeave")} value={hr.leaves.filter((l) => l.status === "approved" && l.from === TODAY.slice(0, 10)).length} note={t("hr.today")} />
         <Stat label={t("hr.requests")} value={hr.leaves.filter((l) => l.status === "pending").length} note={t("hr.waiting")} tone="action" noteIcon="circle-alert" />
         <Stat label={t("hr.myCheckIn")} value={me.in || "—"} note={me.in ? t(`hr.p_${me.place}`, { m: me.dist }) : t("hr.notYet")} />
       </div>
@@ -82,7 +77,7 @@ export function People({ tenant, role, embedded }) {
           footer={<><Button variant="outline" onClick={() => setApply(false)}>{t("common.cancel")}</Button><Button icon="send" onClick={() => { setHR((h) => { h.leaves.unshift({ id: Math.random().toString(36).slice(2), name: members[0]?.name, ...lv, status: "pending" }); }); setApply(false); toast(t("hr.toastApplied")); }}>{t("hr.send")}</Button></>}>
           <div className="pf-stack">
             <Field label={t("hr.type")}><div className="pf-tiles">{LEAVE_TYPES.map((k) => <button key={k} className={lv.type === k ? "on" : ""} onClick={() => setLv({ ...lv, type: k })}><Icon name={{ casual: "coffee", sick: "thermometer", home: "house", festival: "party-popper", unpaid: "wallet" }[k]} size={18} /><span>{t(`hr.lt_${k}`)}</span></button>)}</div></Field>
-            <Field label={t("hr.start")}><div className="pf-chips">{[["2027-03-03", "tomorrow"], ["2027-03-10", "nextweek"], ["2027-03-14", "holi"]].map(([d, k]) => <button key={d} className={`chip ${lv.from === d ? "active" : ""}`} onClick={() => setLv({ ...lv, from: d })}>{t(`hr.d_${k}`)} · {fdate(d)}</button>)}</div></Field>
+            <Field label={t("hr.start")}><div className="pf-chips">{[[inDays(1), "tomorrow"], [inDays(7), "nextweek"]].map(([d, k]) => <button key={d} className={`chip ${lv.from === d ? "active" : ""}`} onClick={() => setLv({ ...lv, from: d })}>{t(`hr.d_${k}`)} · {fdate(d)}</button>)}</div></Field>
             <Field label={t("hr.howMany")}><Counter value={lv.days} min={1} max={30} onChange={(n) => setLv({ ...lv, days: n })} label={t("hr.howMany")} /></Field>
             <Field label={t("hr.note")} optional><Textarea rows={2} value={lv.note} onChange={(e) => setLv({ ...lv, note: e.target.value })} style={{ minHeight: 70 }} /></Field>
           </div>
@@ -95,7 +90,7 @@ export function People({ tenant, role, embedded }) {
       </table></div></section>}
 
       {tab === "birthdays" && <div className="pf-split">
-        <Panel title={t("hr.upcoming")} className="grow"><ul className="pf-list">{hr.birthdays.map((b) => <li key={b.name}><Person name={b.name} /><div><span className="small muted tnum">{fdate(b.date)}</span></div>{b.date === "2027-03-04" ? <Badge tone="action" icon="cake">{t("hr.inTwoDays")}</Badge> : null}</li>)}</ul></Panel>
+        <Panel title={t("hr.upcoming")} className="grow"><ul className="pf-list">{hr.birthdays.map((b) => <li key={b.name}><Person name={b.name} /><div><span className="small muted tnum">{fdate(b.date)}</span></div>{b.date === inDays(2) ? <Badge tone="action" icon="cake">{t("hr.inTwoDays")}</Badge> : null}</li>)}</ul></Panel>
         <Panel title={t("hr.autoWish")} className="side" pad><div className="pf-stack">
           <ToggleRow title={t("hr.autoWishOn")} sub={t("hr.autoWishSub", { time: hr.wish.time })} checked={hr.wish.on} onChange={(v) => setHR((h) => { h.wish.on = v; })} />
           <div className="pf-chips">{[["wa", "WhatsApp"], ["email", t("common.email")]].map(([k, l]) => <button key={k} className={`chip ${hr.wish[k] ? "active" : ""}`} onClick={() => setHR((h) => { h.wish[k] = !h.wish[k]; })}>{hr.wish[k] && <Icon name="check" size={14} />}{l}</button>)}</div>
@@ -117,44 +112,13 @@ export function People({ tenant, role, embedded }) {
 }
 
 /* ───────── Analytics ───────── */
-const MONTHS = ["Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar"];
-export function Analytics({ tenant }) {
+// Filled from real views, enquiries and bookings once the analytics API is live.
+export function Analytics() {
   const t = useT();
-  const [range, setRange] = useState("12m");
-  const stay = tenant.type === "hotel" || tenant.type === "host";
-  const rev = [182, 164, 128, 96, 104, 176, 248, 262, 214, 196, 238, 312].map((v, i) => ({ label: MONTHS[i], v: v * 1000 }));
-  const occ = [62, 58, 41, 33, 36, 61, 84, 88, 72, 66, 74, 79];
-  const last = [55, 52, 44, 30, 31, 55, 79, 81, 70, 60, 69, 71];
   return (
     <>
-      <PageHead title={t("an.title")} sub={t("an.sub")} actions={<><Seg value={range} onChange={setRange} options={[{ id: "30d", label: t("an.30d") }, { id: "90d", label: t("an.90d") }, { id: "12m", label: t("an.12m") }]} /><Button variant="outline" icon="download">{t("common.export")}</Button></>} />
-      <div className="pf-stats">
-        <Stat label={t("an.revenue")} value={rsShort(rev.reduce((s, x) => s + x.v, 0))} note={t("an.vsLy", { p: "+18%" })} noteIcon="trending-up" />
-        <Stat label={stay ? t("an.occupancy") : t("an.conversion")} value={stay ? "66%" : "4.8%"} note={t("an.vsLy", { p: "+6 pts" })} noteIcon="trending-up" />
-        <Stat label={stay ? t("an.adr") : t("an.avgDeal")} value={stay ? rs(6240) : rsShort(18400000)} note={t("an.vsLy", { p: "+4%" })} noteIcon="trending-up" />
-        <Stat label={t("an.repeat")} value="23%" note={t("an.repeatNote")} />
-      </div>
-      <div className="pf-split">
-        <Panel title={t("an.revByMonth")} sub={t("an.revByMonthSub")} className="grow" pad><Bars data={rev} format={rs} /></Panel>
-        <Panel title={t("an.sources")} sub={t("an.sourcesSub")} className="side" pad>
-          <Donut center="412" data={[{ label: "Sheetal", v: 46 }, { label: t("src.direct"), v: 18 }, { label: "Booking.com", v: 17 }, { label: "Airbnb", v: 11 }, { label: t("src.walkin"), v: 8 }]} />
-        </Panel>
-      </div>
-      <div className="pf-split">
-        <Panel title={stay ? t("an.occByMonth") : t("an.leadsByMonth")} sub={t("an.thisVsLast")} className="grow" pad><Line labels={MONTHS} max={100} series={[{ name: t("an.thisYear"), data: occ }, { name: t("an.lastYear"), data: last }]} /></Panel>
-        <Panel title={t("an.funnel")} sub={t("an.funnelSub")} className="side" pad>
-          <Funnel steps={[{ label: t("an.f_views"), v: 18420 }, { label: t("an.f_enquiries"), v: 1260 }, { label: t("an.f_visits"), v: 410 }, { label: t("an.f_booked"), v: 236 }]} />
-        </Panel>
-      </div>
-      <Panel title={t("an.top")} sub={t("an.topSub")}>
-        <Table minWidth={640} rows={[["Deluxe lake view", 1820, 86, 548000], ["Family suite", 940, 41, 412000], ["Garden villa", 760, 22, 386000], ["Standard twin", 1210, 64, 201000]].map(([n, v, b, r], i) => ({ id: i, n, v, b, r }))} columns={[
-          { key: "n", label: stay ? t("an.roomType") : t("listings.listing"), render: (x) => <b className="pf-strong">{x.n}</b> },
-          { key: "v", label: t("listings.views"), num: true, align: "right", render: (x) => x.v.toLocaleString("en-IN") },
-          { key: "b", label: t("an.bookings"), num: true, align: "right", render: (x) => x.b },
-          { key: "c", label: t("an.conv"), num: true, align: "right", render: (x) => `${((x.b / x.v) * 100).toFixed(1)}%` },
-          { key: "r", label: t("an.revenue"), num: true, align: "right", render: (x) => rs(x.r) },
-        ]} />
-      </Panel>
+      <PageHead title={t("an.title")} sub={t("an.sub")} />
+      <section className="card pf-panel"><Empty icon="chart-column" title="No numbers yet">Views, enquiries, bookings and revenue show here once your listings start getting visitors.</Empty></section>
     </>
   );
 }
@@ -162,24 +126,10 @@ export function Analytics({ tenant }) {
 /* Admin: site traffic */
 export function AdminAnalytics() {
   const t = useT();
-  const days = ["24", "25", "26", "27", "28", "1", "2"];
   return (
     <>
-      <PageHead title={t("an.traffic")} sub={t("an.trafficSub")} actions={<Badge tone="done" icon="radio">{t("an.liveNow", { n: 38 })}</Badge>} />
-      <div className="pf-stats">
-        <Stat label={t("an.visitors")} value="24,810" note={t("an.vsLw", { p: "+9%" })} noteIcon="trending-up" />
-        <Stat label={t("an.signups")} value="312" note={t("an.vsLw", { p: "+14%" })} noteIcon="trending-up" />
-        <Stat label={t("an.enquiries")} value="1,946" note={t("an.vsLw", { p: "+6%" })} noteIcon="trending-up" />
-        <Stat label={t("an.bounce")} value="41%" note={t("an.vsLw", { p: "−3 pts" })} noteIcon="trending-down" />
-      </div>
-      <div className="pf-split">
-        <Panel title={t("an.visitsByDay")} className="grow" pad><Line labels={days} series={[{ name: t("an.visitors"), data: [3120, 3340, 2980, 3610, 4020, 3870, 3870] }, { name: t("an.enquiries"), data: [240, 262, 230, 301, 344, 298, 271] }]} /></Panel>
-        <Panel title={t("an.devices")} className="side" pad><Donut center="24.8k" data={[{ label: t("an.mobile"), v: 71 }, { label: t("an.desktop"), v: 24 }, { label: t("an.tablet"), v: 5 }]} /></Panel>
-      </div>
-      <div className="pf-split">
-        <Panel title={t("an.topPages")} className="grow"><Table minWidth={520} rows={[["/stays?city=pokhara", 4820], ["/project/shetal-heights", 3110], ["/buy?area=budhanilkantha", 2640], ["/rent?city=lalitpur", 2210], ["/investment/chitwan-jungle-lodge", 1480]].map(([p, v]) => ({ id: p, p, v }))} columns={[{ key: "p", label: t("an.page"), render: (r) => <code>{r.p}</code> }, { key: "v", label: t("an.visits"), num: true, align: "right", render: (r) => r.v.toLocaleString("en-IN") }]} /></Panel>
-        <Panel title={t("an.cities")} className="side"><ul className="pf-bars">{[["Kathmandu", 42], ["Pokhara", 18], ["Lalitpur", 12], ["Abroad (NRN)", 16], ["Other", 12]].map(([c, v]) => <li key={c}><span>{c}</span><div className="bar"><i style={{ width: `${v * 2}%` }} /></div><b className="tnum">{v}%</b></li>)}</ul></Panel>
-      </div>
+      <PageHead title={t("an.traffic")} sub={t("an.trafficSub")} />
+      <section className="card pf-panel"><Empty icon="chart-column" title="No traffic data yet">Visitors, sign-ups and enquiries show here once the site is live.</Empty></section>
     </>
   );
 }
@@ -196,15 +146,15 @@ export function Developers({ tenant }) {
   const toast = useToast();
   const [tab, setTab] = useState("keys");
   const [lang, setLang] = useState("html");
-  const [keys, setKeys] = useState([{ id: "k1", name: "Website", key: "sk_live_7Hq2…9fXa", scopes: ["listings:read", "bookings:write"], last: "2027-03-02", created: "2027-01-20" }, { id: "k2", name: "WordPress plugin", key: "sk_live_Lp4c…2mQe", scopes: ["listings:read"], last: "2027-02-28", created: "2027-02-01" }]);
-  const hooks = [["https://lakesideretreat.com.np/hooks/shetal", ["booking.created", "payment.received"], "ok"], ["https://hooks.zapier.com/abc123", ["lead.created"], "ok"]];
+  const [keys, setKeys] = useState([]);
+  const hooks = [];
   return (
     <>
       <PageHead title={t("dev.title")} sub={t("dev.sub")} actions={<Button variant="outline" icon="book-open">{t("dev.docs")}</Button>} />
       <Tabs value={tab} onChange={setTab} tabs={[{ id: "keys", label: t("dev.keys"), icon: "key-round" }, { id: "embed", label: t("dev.embed"), icon: "code" }, { id: "hooks", label: t("dev.hooks"), icon: "webhook" }, { id: "blog", label: t("ai.t_blog"), icon: "pen-line" }, { id: "ask", label: t("ai.t_ask"), icon: "message-circle-question" }]} />
       {(tab === "blog" || tab === "ask") && <AIStudio key={tab} tenant={tenant} only={tab} />}
       {tab === "keys" && <section className="card pf-panel">
-        <div className="pf-panel-head"><div className="pf-panel-title"><h2>{t("dev.keys")}</h2><span>{t("dev.keysSub")}</span></div><Button size="sm" icon="plus" onClick={() => { setKeys([{ id: `k${Date.now()}`, name: t("dev.newKey"), key: `sk_live_${Math.random().toString(36).slice(2, 6)}…${Math.random().toString(36).slice(2, 6)}`, scopes: ["listings:read"], last: "—", created: "2027-03-02" }, ...keys]); toast(t("dev.toastKey")); }}>{t("dev.create")}</Button></div>
+        <div className="pf-panel-head"><div className="pf-panel-title"><h2>{t("dev.keys")}</h2><span>{t("dev.keysSub")}</span></div><Button size="sm" icon="plus" onClick={() => { setKeys([{ id: `k${Date.now()}`, name: t("dev.newKey"), key: `sk_live_${Math.random().toString(36).slice(2, 6)}…${Math.random().toString(36).slice(2, 6)}`, scopes: ["listings:read"], last: "—", created: TODAY.slice(0, 10) }, ...keys]); toast(t("dev.toastKey")); }}>{t("dev.create")}</Button></div>
         <Table rows={keys} minWidth={720} columns={[
           { key: "n", label: t("dev.name"), render: (k) => <span className="pf-two"><b>{k.name}</b><small className="tnum">{t("dev.created", { d: fdate(k.created) })}</small></span> },
           { key: "k", label: t("dev.key"), render: (k) => <code>{k.key}</code> },

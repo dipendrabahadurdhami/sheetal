@@ -37,6 +37,7 @@ import { AiAccounts, Channels, Social, VoiceAssistant } from "./Connections";
 import { ListingCheckups } from "./ListingCheckups";
 import { checkupsOf, todaysList } from "@sheetal/shared/data/checkups";
 import { TODAY } from "@sheetal/shared/core/format";
+import { opsOf } from "@sheetal/shared/demo/ops";
 
 // Business workspace at /business (later its own domain). One account can belong to several businesses.
 export default function BusinessApp() {
@@ -144,7 +145,7 @@ export default function BusinessApp() {
       ].filter(Boolean)}
       records={[
         ...settingsSections(role, t).flatMap((g) => g.items.map((i) => ({ kind: "setting", icon: i.icon, label: i.label, sub: `Settings · ${g.group}`, keywords: i.keywords, to: i.to }))),
-        ...((db.ops[tenant.id] || db.ops.t1).bookings || []).map((b) => ({ icon: "clipboard-list", label: `${b.id} · ${b.guest}`, sub: b.type, to: "/business/bookings" })),
+        ...(opsOf(db, tenant.id).bookings || []).map((b) => ({ icon: "clipboard-list", label: `${b.id} · ${b.guest}`, sub: b.type, to: "/business/bookings" })),
         ...db.listings.filter((l) => l.tenantId === tenant.id).map((l) => ({ icon: "house", label: l.title, sub: l.id, to: "/business/listings" })),
         ...(db.agreements[tenant.id] || []).map((a) => ({ icon: "file-pen-line", label: a.title, sub: a.id, to: "/business/agreements" })),
         ...formsOf(db, tenant).map((f) => ({ icon: "file-text", label: f.title, sub: "Form", to: `/business/forms/${f.id}` })),

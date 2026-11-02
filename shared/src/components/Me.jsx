@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { useStore } from "../core/store";
 import { useRouter } from "../core/router";
 import { LANGS } from "../core/i18n";
-import { fdatetime } from "../core/format";
+import { TODAY, fdatetime } from "../core/format";
 import { Avatar, Badge, Button, Confirm, Field, Input, PageHead, Panel, SaveBar, Seg, Tabs, ToggleRow, useToast } from "../core/ui";
 import { Icon } from "../core/icons";
 
@@ -10,15 +10,9 @@ import { Icon } from "../core/icons";
 const KINDS = { booking: "Bookings", payment: "Payments", message: "Messages", team: "Team", system: "System" };
 const ICON = { booking: "clipboard-list", payment: "wallet", message: "messages-square", team: "users", system: "shield-check" };
 
-export function businessSeed(tenant) {
-  return [
-    { id: "n1", kind: "booking", title: "New booking BK-2027-0418 for 12–15 Mar", to: "/business/bookings", at: "2027-03-02T09:50", unread: true },
-    { id: "n2", kind: "message", title: "3 new WhatsApp messages", to: "/business/inbox", at: "2027-03-02T09:28", unread: true },
-    { id: "n3", kind: "payment", title: "Payment Rs. 14,916 received for BK-2027-0412", to: "/business/invoices", at: "2027-03-02T08:12", unread: false },
-    { id: "n4", kind: "team", title: "Anjali Rai asked for 1 day of leave", to: "/business/team", at: "2027-03-01T18:40", unread: false },
-    { id: "n5", kind: "system", title: `${tenant.name}: plan renews soon`, to: "/business/billing", at: "2027-03-01T09:00", unread: false },
-    { id: "n6", kind: "payment", title: "Payout of Rs. 4,82,300 sent to NIC Asia", to: "/business/payouts", at: "2027-02-28T16:00", unread: false },
-  ];
+// A business's notifications come from real events (bookings, messages, payments); none to start with.
+export function businessSeed() {
+  return [];
 }
 
 // Admin bell is built from what is actually waiting on the platform.
@@ -27,10 +21,9 @@ export function adminLive(db) {
   db.tenants.filter((x) => x.status === "pending_verification").forEach((x) => out.push({ id: `kyc-${x.id}`, kind: "system", title: `${x.name} is waiting for verification`, to: `/admin/tenants/${x.id}`, at: `${x.since}T10:00`, unread: true }));
   db.tenants.filter((x) => x.status === "past_due").forEach((x) => out.push({ id: `due-${x.id}`, kind: "payment", title: `${x.name}: subscription payment overdue`, to: `/admin/tenants/${x.id}`, at: `${x.renews}T09:00`, unread: true }));
   db.tenants.filter((x) => x.status === "trial").forEach((x) => out.push({ id: `trial-${x.id}`, kind: "system", title: `${x.name}: trial ends ${x.renews}`, to: `/admin/tenants/${x.id}`, at: `${x.since}T09:00`, unread: false }));
-  (db.customer?.orders || []).filter((o) => o.status === "refund_pending" || o.problem).forEach((o) => out.push({ id: `ord-${o.code}`, kind: "payment", title: o.problem ? `Problem reported on ${o.code}` : `Refund to approve for ${o.code}`, to: "/admin/billing", at: o.at || "2027-03-02T08:00", unread: true }));
+  (db.customer?.orders || []).filter((o) => o.status === "refund_pending" || o.problem).forEach((o) => out.push({ id: `ord-${o.code}`, kind: "payment", title: o.problem ? `Problem reported on ${o.code}` : `Refund to approve for ${o.code}`, to: "/admin/billing", at: o.at || TODAY, unread: true }));
   (db.campaigns || []).filter((c) => c.status === "review").forEach((c) => out.push({ id: `ad-${c.id}`, kind: "system", title: `Ad ${c.id} waiting for review: ${c.title}`, to: "/admin/ads", at: `${c.from}T08:00`, unread: true }));
   (db.platformActivity || []).slice(0, 3).forEach((a) => out.push({ id: `act-${a.id}`, kind: "team", title: `${a.who} ${a.what}`, to: "/admin/audit", at: a.at, unread: false }));
-  if (!out.some((x) => x.kind === "payment")) out.push({ id: "ads-cpl", kind: "payment", title: "Ad AD-124 paid Rs. 17,500, waiting for review", to: "/admin/ads", at: "2027-03-02T08:30", unread: true });
   return out.sort((a, b) => (b.unread - a.unread) || String(b.at).localeCompare(String(a.at)));
 }
 
@@ -96,11 +89,8 @@ export function NotifPrefs({ value, onChange, events = PREF_EVENTS }) {
 }
 
 /* ───────── My profile: the signed-in person, in admin or any workspace ───────── */
-const DEVICES = [
-  ["laptop", "Chrome on Windows", "Kathmandu · this device", "2027-03-02T10:00", true],
-  ["smartphone", "Sheetal app on Android", "Pokhara", "2027-03-02T07:12", false],
-  ["tablet", "Safari on iPad", "Lalitpur", "2027-02-26T19:40", false],
-];
+// Only this browser until the sessions API lists the others.
+const DEVICES = [["laptop", "This browser", "This device", TODAY, true]];
 export function MyProfile({ scope, roleLabel, access, homeTo }) {
   const { db, update } = useStore();
   const toast = useToast();

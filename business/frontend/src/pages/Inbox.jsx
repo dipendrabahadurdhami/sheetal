@@ -4,7 +4,7 @@ import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
 import { useRouter } from "@sheetal/shared/core/router";
 import { AIStudio } from "./AI";
-import { fdate, fdatetime, rsShort } from "@sheetal/shared/core/format";
+import { fdate, fdatetime, inDays, rsShort } from "@sheetal/shared/core/format";
 import { Badge, Button, Empty, Field, PageHead, Seg, Select, ToggleRow, useToast , Drawer } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { useOps } from "./POS";
@@ -83,7 +83,7 @@ export function Inbox({ tenant }) {
               <b className="pf-subhead" style={{ margin: 0 }}>{t("inbox.lead")}</b>
               <Field label={t("inbox.stage")}><Select value={c.stage} onChange={(v) => upd({ stage: v })} options={STAGES.map((s) => ({ id: s, label: t(`stage.${s}`) }))} /></Field>
               <Field label={t("inbox.assign")}><Select value={c.assignee || ""} onChange={(v) => upd({ assignee: v || null })} options={[{ id: "", label: t("inbox.unassigned") }, ...team.map((m) => ({ id: m.name, label: m.name }))]} /></Field>
-              <Field label={t("inbox.follow")}><div className="pf-chips">{[["today", "2027-03-02"], ["tomorrow", "2027-03-03"], ["week", "2027-03-09"]].map(([k, d]) => <button key={k} className={`chip ${c.follow === d ? "active" : ""}`} onClick={() => upd({ follow: d })}>{t(`inbox.f_${k}`)}</button>)}</div>
+              <Field label={t("inbox.follow")}><div className="pf-chips">{[["today", inDays(0)], ["tomorrow", inDays(1)], ["week", inDays(7)]].map(([k, d]) => <button key={k} className={`chip ${c.follow === d ? "active" : ""}`} onClick={() => upd({ follow: d })}>{t(`inbox.f_${k}`)}</button>)}</div>
                 {c.follow && <span className="pf-hint tnum"><Icon name="bell" size={13} />{t("inbox.remind", { d: fdate(c.follow) })}</span>}</Field>
               <dl className="pf-kv">
                 <dt>{t("inbox.value")}</dt><dd className="tnum">{c.value ? rsShort(c.value) : "—"}</dd>

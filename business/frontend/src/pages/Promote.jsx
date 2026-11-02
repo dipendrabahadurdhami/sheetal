@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
-import { fdate, rs } from "@sheetal/shared/core/format";
+import { fdate, inDays, rs } from "@sheetal/shared/core/format";
 import { Badge, Button, Drawer, Field, Input, PageHead, Panel, Seg, Stat, Table, Tabs, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 
@@ -20,12 +20,7 @@ export const RANK = [
   { id: "verified", w: 20 }, { id: "photos", w: 15 }, { id: "response", w: 15 }, { id: "reviews", w: 15 },
   { id: "fresh", w: 10 }, { id: "complete", w: 10 }, { id: "plan", w: 5 }, { id: "boost", w: 10 },
 ];
-const CAMPAIGNS = [
-  { id: "AD-118", tenantId: "t1", listing: "S-201", title: "Lakeside Retreat Hotel", slot: "home_featured", from: "2027-02-25", to: "2027-03-10", spend: 12600, imp: 48200, clicks: 1930, leads: 41, status: "live" },
-  { id: "AD-121", tenantId: "t3", listing: "L-1042", title: "4 BHK house, Budhanilkantha", slot: "search_top", from: "2027-03-01", to: "2027-03-14", spend: 8400, imp: 21800, clicks: 860, leads: 19, status: "live" },
-  { id: "AD-124", tenantId: "t2", listing: "P-31", title: "Shetal Heights", slot: "home_hero", from: "2027-03-05", to: "2027-03-12", spend: 17500, imp: 0, clicks: 0, leads: 0, status: "review" },
-  { id: "AD-109", tenantId: "t1", listing: "S-202", title: "Garden villa", slot: "social", from: "2027-02-10", to: "2027-02-10", spend: 3500, imp: 15400, clicks: 610, leads: 12, status: "ended" },
-];
+const CAMPAIGNS = [];
 const tone = { live: "done", review: "action", ended: "neutral", paused: "progress" };
 
 export function Promote({ tenant }) {
@@ -83,7 +78,7 @@ export function Promote({ tenant }) {
       ))}</div>}
       <Drawer open={!!f} onClose={() => setF(null)} title={t("ads.boost")} sub={t("ads.boostSub")}
         footer={f && <><span className="small muted tnum" style={{ marginRight: "auto" }}>{t("pos.total")}: <b className="pf-strong">{rs(slot.price * (slot.unit === "day" ? f.days : 1))}</b></span><Button variant="outline" onClick={() => setF(null)}>{t("common.cancel")}</Button>
-          <Button icon="credit-card" onClick={() => { const l = listings.find((x) => x.id === f.listing); update((d) => { d.campaigns = d.campaigns || structuredClone(CAMPAIGNS); d.campaigns.unshift({ id: `AD-${130 + d.campaigns.length}`, tenantId: tenant.id, listing: l.id, title: l.title, slot: f.slot, from: "2027-03-03", to: new Date(new Date("2027-03-03").getTime() + (f.days - 1) * 864e5).toISOString().slice(0, 10), spend: slot.price * (slot.unit === "day" ? f.days : 1), imp: 0, clicks: 0, leads: 0, status: "review" }); }); setF(null); setTab("campaigns"); toast(t("ads.toastPaid")); }}>{t("ads.payStart")}</Button></>}>
+          <Button icon="credit-card" onClick={() => { const l = listings.find((x) => x.id === f.listing); update((d) => { d.campaigns = d.campaigns || structuredClone(CAMPAIGNS); d.campaigns.unshift({ id: `AD-${130 + d.campaigns.length}`, tenantId: tenant.id, listing: l.id, title: l.title, slot: f.slot, from: inDays(1), to: inDays(f.days), spend: slot.price * (slot.unit === "day" ? f.days : 1), imp: 0, clicks: 0, leads: 0, status: "review" }); }); setF(null); setTab("campaigns"); toast(t("ads.toastPaid")); }}>{t("ads.payStart")}</Button></>}>
         {f && <div className="pf-stack">
           <Field label={t("listings.listing")}><div className="pf-chips">{listings.map((l) => <button key={l.id} className={`chip ${f.listing === l.id ? "active" : ""}`} onClick={() => setF({ ...f, listing: l.id })}>{l.title}</button>)}</div></Field>
           <Field label={t("ads.where")}><div className="pf-tiles">{slots.map((s) => <button key={s.id} className={f.slot === s.id ? "on" : ""} onClick={() => setF({ ...f, slot: s.id })}><Icon name={s.icon} size={18} /><span>{t(`slot.${s.id}`)}<small className="pf-sub-line tnum">{rs(s.price)} / {t(`ads.u_${s.unit}`)}</small></span></button>)}</div></Field>

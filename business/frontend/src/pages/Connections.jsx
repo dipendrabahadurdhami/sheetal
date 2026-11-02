@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useStore } from "@sheetal/shared/core/store";
 import { Link } from "@sheetal/shared/core/router";
+import { inDays } from "@sheetal/shared/core/format";
 import { Badge, Button, Checkbox, Drawer, Empty, Field, Input, PageHead, Panel, Seg, Select, Table, Tabs, Textarea, ToggleRow, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { integrationsOf, STATUS_LABEL, STATUS_TONE } from "@sheetal/shared/data/integrations";
@@ -99,16 +100,11 @@ export function Channels({ tenant }) {
 
 // ───────────────────────── Social sharing ─────────────────────────
 const PLATFORMS = [["facebook", "Facebook page", "facebook"], ["instagram", "Instagram", "instagram"], ["wagroup", "WhatsApp group", "message-circle"]];
-const seedSocial = (tenant, db) => {
-  const mine = (db.listings || []).filter((l) => l.tenantId === tenant.id);
+const seedSocial = () => {
   return {
     auto: { facebook: true, instagram: true, wagroup: true },
     template: "{title}\n{price} · {area}\nSee photos and details: {link}",
-    posts: mine.slice(0, 3).map((l, i) => ({
-      id: `sp${i + 1}`, listingId: l.id, title: l.title, platforms: ["facebook", "instagram", "wagroup"].slice(0, 3 - (i % 2)),
-      at: ["2027-03-01T10:00", "2027-03-02T09:00", "2027-03-03T18:30"][i], status: ["posted", "posted", "scheduled"][i],
-      results: i === 2 ? {} : { facebook: "posted", instagram: i === 1 ? "failed: photo too small" : "posted", wagroup: "posted" },
-    })),
+    posts: [],
   };
 };
 
@@ -121,7 +117,7 @@ export function Social({ tenant }) {
   const [edit, setEdit] = useState(null);
   return (
     <>
-      <PageHead title="Social sharing" sub="Post your listings to Facebook, Instagram and WhatsApp groups, now or at a set time." actions={<Button icon="plus" disabled={!mine.length} onClick={() => setEdit({ listingId: mine[0]?.id, platforms: PLATFORMS.map(([k]) => k).filter((k) => linked[k]), at: "2027-03-04T10:00" })}>Schedule a post</Button>} />
+      <PageHead title="Social sharing" sub="Post your listings to Facebook, Instagram and WhatsApp groups, now or at a set time." actions={<Button icon="plus" disabled={!mine.length} onClick={() => setEdit({ listingId: mine[0]?.id, platforms: PLATFORMS.map(([k]) => k).filter((k) => linked[k]), at: `${inDays(1)}T10:00` })}>Schedule a post</Button>} />
       <div className="pf-stats">{PLATFORMS.map(([k, l, ic]) => (
         <div key={k} className="card pf-stat"><span><Icon name={ic} size={14} /> {l}</span><b style={{ fontSize: 16 }}>{linked[k] ? <Badge tone="done">Connected</Badge> : <Badge tone="neutral">Not connected</Badge>}</b>{!linked[k] && <small><Link to="/business/channels" className="link">Connect in Channels</Link></small>}</div>
       ))}</div>
@@ -165,18 +161,11 @@ const seedVoice = (tenant) => ({
   name: `${tenant.name} assistant`, voice: "sita", langs: "auto", speed: "normal",
   provider: "sheetal", // "sheetal" = included voices, "eleven" = the business's own ElevenLabs (connected once in AI accounts)
   greeting: `Namaste! ${tenant.name} ma swagat chha. Tapai ghar, jagga kinna, bhadama linna, ki aru kehi khojdai hunuhunchha?`,
-  learnListings: true, info: "Office: 10 am to 6 pm, Sunday to Friday. Site visits are free. Agency fee: 2% on sale, one month's rent on rentals.",
-  faqs: [{ q: "Is the site visit free?", a: "Yes, site visits are free. We can pick you up from our office." }, { q: "Do you help with bank loans?", a: "Yes, we work with Nabil, NIC Asia and Global IME for home loans." }],
+  learnListings: true, info: "",
+  faqs: [],
   skills: { needs: true, match: true, visit: true, lead: true, wa: true, handoff: true }, handoffPhone: tenant.phone, hours: "always",
   tested: false, widget: true, live: false,
-  calls: [
-    { id: "vc1", who: "Rita Maharjan", phone: "981-5550011", via: "Website call", at: "2027-03-02T09:12", secs: 214, needs: ["Buy", "House", "Budhanilkantha", "Rs. 3–3.5 crore", "4 bedrooms"], outcome: "visit",
-      lines: [["ai", "Namaste! Tapai ghar, jagga kinna, bhadama linna, ki aru kehi khojdai hunuhunchha?"], ["user", "Budhanilkantha tira ghar kinna khojeko, 4 bedroom chahiyo."], ["ai", "Ramro! Budget kati samma ho?"], ["user", "Teen dekhi saadhe teen crore samma."], ["ai", "Mile jasto 2 ota ghar chhan: L-1042, 4 BHK Rs. 3.2 crore ra L-2001 ko najik ko naya ghar. Bholi 11 baje site visit garna milchha?"], ["user", "Milchha, 11 baje."], ["ai", "Bholi 11 baje ko visit book bhayo. WhatsApp ma details pathaidinchhu. Dhanyabad!"]] },
-    { id: "vc2", who: "Unknown caller", phone: "984-1203344", via: "Website call", at: "2027-03-01T18:40", secs: 96, needs: ["Rent", "Flat", "Baneshwor", "Rs. 30,000"], outcome: "lead",
-      lines: [["ai", "Namaste! Ke khojdai hunuhunchha?"], ["user", "I need a 2 bedroom flat on rent near Baneshwor, around 30 thousand."], ["ai", "Got it: a 2-bedroom flat in Baneshwor around Rs. 30,000 a month. I have one available now in Jhamsikhel at Rs. 45,000, and I'll ask our agent to find more in your budget. May I have your name?"], ["user", "Later, just send on WhatsApp."], ["ai", "Sure, I'll send the options to this number on WhatsApp."]] },
-    { id: "vc3", who: "Bikash Thapa", phone: "984-1122334", via: "Website call", at: "2027-02-28T14:05", secs: 151, needs: ["Sell", "Land", "Bhaktapur"], outcome: "handoff",
-      lines: [["ai", "Namaste! Ma kasari sahayog garna sakchhu?"], ["user", "Malai mero jagga bechnu chha, manchhe sanga kura garna paryo."], ["ai", "Huncha, hamro agent sanga jodidinchhu. Ek chhin parkhanuhos."]] },
-  ],
+  calls: [],
 });
 const OUTCOME = { visit: ["Visit booked", "done"], lead: ["Lead saved", "progress"], handoff: ["Handed to agent", "action"], info: ["Info only", "neutral"] };
 

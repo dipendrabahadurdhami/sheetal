@@ -5,17 +5,7 @@ import { TODAY } from "../core/format";
 const DAY = TODAY.slice(0, 10);
 const L = (what, qty, rate) => ({ what, qty, rate });
 const R = (id, at, amount, method) => ({ id, at, amount, method });
-const SEED = [
-  { id: "INV-0413", kind: "invoice", to: "Rajesh Koirala", phone: "984-1203344", pan: "", order: "", date: DAY, due: "2027-03-12", vatPct: 13, status: "draft", lines: [L("Room night, Deluxe garden", 2, 6500), L("Airport pickup", 1, 1200)], receipts: [] },
-  { id: "INV-0412", kind: "invoice", to: "Sita Gurung", phone: "984-1010101", pan: "", order: "BK-2027-0418", date: "2027-03-02", due: "2027-03-12", vatPct: 13, status: "sent", lines: [L("Room 201, Deluxe lake view", 3, 14667)], receipts: [R("RC-0291", "2027-03-02", 14916, "Fonepay")] },
-  { id: "INV-0411", kind: "invoice", to: "Lin Chen", phone: "+86 138 0013 8000", pan: "", order: "BK-2027-0411", date: "2027-03-01", due: "2027-03-01", vatPct: 13, status: "sent", lines: [L("Room 207, Deluxe garden", 3, 6903)], receipts: [R("RC-0288", "2027-03-01", 23401, "Card")] },
-  { id: "INV-0409", kind: "invoice", to: "Marco Rossi (company)", phone: "", pan: "609912345", order: "BK-2027-0405", date: "2027-02-26", due: "2027-03-01", vatPct: 13, status: "sent", lines: [L("Corporate stay, 4 nights", 4, 8407)], receipts: [] },
-  { id: "INV-0402", kind: "invoice", to: "Eva Novak", phone: "+420 601 123 456", pan: "", order: "BK-2027-0402", date: "2027-02-27", due: "2027-02-27", vatPct: 13, status: "sent", lines: [L("Room 204, Deluxe lake view", 3, 6478)], receipts: [R("RC-0279", "2027-02-27", 21960, "eSewa")] },
-  { id: "INV-0391", kind: "invoice", to: "Priya Sharma", phone: "+91 98100 12345", pan: "", order: "BK-2027-0391", date: "2027-02-20", due: "2027-02-20", vatPct: 13, status: "sent", lines: [L("Room 205, Deluxe lake view", 2, 13806)], receipts: [R("RC-0262", "2027-02-20", 31201, "Card")] },
-  { id: "CN-0007", kind: "credit", creditFor: "INV-0391", reason: "Booking cancelled within the free cancellation period", to: "Priya Sharma", phone: "+91 98100 12345", pan: "", order: "BK-2027-0391", date: "2027-02-24", due: "2027-02-24", vatPct: 13, status: "sent", lines: [L("Refund for cancelled booking BK-2027-0391", 1, 27612)], receipts: [] },
-];
-
-export const invoicesOf = (db, tid) => db.money?.[tid]?.invoices || structuredClone(SEED);
+export const invoicesOf = (db, tid) => db.money?.[tid]?.invoices || [];
 
 export function totals(inv) {
   const sub = (inv.lines || []).reduce((s, l) => s + (Number(l.qty) || 0) * (Number(l.rate) || 0), 0);

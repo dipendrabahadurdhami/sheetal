@@ -10,6 +10,7 @@ coverage
 .pgdata
 # generated on every build (npm run sitemap)
 website/frontend/public/sitemap.xml
+.env.local.api
 
 # Local editor and tool settings
 .claude/
