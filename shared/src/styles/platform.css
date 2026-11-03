@@ -1581,9 +1581,10 @@ html.has-brand[data-theme~="bars"] .pf-top .btn-primary { color: var(--brand-acc
 .pf-top .pf-menu-wrap:has(> .pf-branch-btn) > .pf-menu { left: 12px; right: auto; min-width: 240px; }
 .pf-wsx-note { margin: 4px 12px 8px; font-size: 12px; line-height: 1.4; color: var(--muted); }
 /* The search fills the free space between the branch picker and the right-side buttons (up to a readable width). */
-.pf-top .pf-jump { flex: 1 1 auto; max-width: 560px; }
-.pf-top .pf-top-right { margin-left: 12px; }
-@media (max-width: 1080px) { .pf-top .pf-jump { flex: 0 0 auto; } .pf-top .pf-top-right { margin-left: auto; } }
+.pf-top .pf-jump { flex: 1 1 auto; max-width: 560px; margin-right: 12px; }
+/* The right-side buttons (New, language, theme, alerts, profile) always sit at the right edge. */
+.pf-top .pf-top-right { margin-left: auto; flex-shrink: 0; }
+@media (max-width: 1080px) { .pf-top .pf-jump { flex: 0 0 auto; } }
 /* Listing form: which branch, when "All branches" is picked. */
 .pf-branch-ask { display: flex; align-items: center; gap: 12px; padding: 14px 16px; margin-bottom: 12px; }
 .pf-branch-ask .pf-two { flex: 1; min-width: 0; }
