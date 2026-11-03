@@ -52,12 +52,12 @@ export function Shell({ sub, nav, switcher, sideFooter, topLeft, topExtra, topTo
           {topLeft}
           {topExtra}
           <button className="pf-jump" onClick={openPalette}><Icon name="search" size={15} /><span>{t("cmd.jump")}</span><kbd>Ctrl K</kbd></button>
-          {/* Quick links right after the search (e.g. leads and email in the business panel). */}
-          {topTools && <div className="pf-top-tools">{topTools}</div>}
           <div className="pf-top-right">
             {quickCreate.length > 0 && <Menu trigger={({ toggle }) => <button className="btn btn-primary btn-sm pf-new" onClick={toggle}><Icon name="plus" size={15} />{t("cmd.new")}</button>}>
               {quickCreate.map((q) => <MenuLink key={q.to + q.label} to={q.to} icon={q.icon}>{q.label}</MenuLink>)}
             </Menu>}
+            {/* Quick links right after New (e.g. leads and email in the business panel). */}
+            {topTools && <div className="pf-top-tools">{topTools}</div>}
             {/* One button: shows the language in use; clicking switches to the other. */}
             {(() => {
               const cur = LANGS.find((l) => l.id === lang) || LANGS[0];
