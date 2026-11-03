@@ -25,6 +25,7 @@ import { Mail } from "./Mail";
 import { isLive, useLiveWorkspace } from "../live";
 import { POS, Bookings } from "./POS";
 import { LiveBookings, LiveFrontDesk, LiveInvestors, LivePOS, LiveProjects } from "./LiveOps";
+import { LiveAnalytics, LiveChannels } from "./LiveGrowth";
 import { Inbox } from "./Inbox";
 import { Forms } from "./Forms";
 import { formsOf } from "@sheetal/shared/core/forms";
@@ -216,12 +217,12 @@ export default function BusinessApp() {
         { path: "/business/promote", render: () => guard(any("listings.manage", "projects.manage", "investments.manage", "calendar.edit", "billing.manage"), <Promote tenant={tenant} />) },
         { path: "/business/branches", render: () => guard(can(role, "settings.business"), <SettingsShell role={role}><Branches tenant={tenant} role={role} /></SettingsShell>) },
         { path: "/business/calendar", render: () => guard(can(role, "calendar.view"), <Calendar key={tenant.id} tenant={tenant} role={role} />) },
-        { path: "/business/analytics", render: () => guard(can(role, "overview.view"), <Analytics tenant={tenant} />) },
+        { path: "/business/analytics", render: () => guard(can(role, "overview.view"), (isLive(tenant.id) ? <LiveAnalytics key={tenant.id} tenant={tenant} /> : <Analytics tenant={tenant} />)) },
         { path: "/business/people", render: () => <TeamHub key={tenant.id + "a"} tenant={tenant} role={role} start="attendance" /> },
         { path: "/business/developers", render: () => guard(can(role, "settings.business"), <SettingsShell role={role}><Developers tenant={tenant} /></SettingsShell>) },
         { path: "/business/mail", render: () => <Mail key={tenant.id} /> },
         { path: "/business/domains", render: () => guard(can(role, "settings.business"), <SettingsShell role={role}><Domains key={tenant.id} tenant={tenant} /></SettingsShell>) },
-        { path: "/business/channels", render: () => guard(can(role, "settings.business"), <SettingsShell role={role}><Channels key={tenant.id} tenant={tenant} /></SettingsShell>) },
+        { path: "/business/channels", render: () => guard(can(role, "settings.business"), <SettingsShell role={role}>{isLive(tenant.id) ? <LiveChannels key={tenant.id} tenant={tenant} /> : <Channels key={tenant.id} tenant={tenant} />}</SettingsShell>) },
         { path: "/business/ai-accounts", render: () => guard(can(role, "settings.business"), <SettingsShell role={role}><AiAccounts key={tenant.id} tenant={tenant} /></SettingsShell>) },
         { path: "/business/voice", render: () => paid(any("messages.reply", "leads.view", "settings.business"), <VoiceAssistant key={tenant.id} tenant={tenant} />) },
         { path: "/business/checkups", render: () => guard(any("listings.manage", "projects.manage", "investments.manage", "calendar.edit"), <ListingCheckups key={tenant.id} tenant={tenant} role={role} />) },

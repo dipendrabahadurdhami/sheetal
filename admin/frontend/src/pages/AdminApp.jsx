@@ -20,6 +20,7 @@ import { AdminStatus } from "./AdminStatus";
 import { otaOf } from "@sheetal/shared/data/ota";
 import { config } from "@sheetal/shared/core/config";
 import { isStaffLive, useLiveStaff, useReviewQueue } from "../live";
+import { LiveAnalytics, LiveSetup, LiveStatus } from "./LiveSetup";
 
 // Super admin: Sheetal staff control panel at /admin.
 export default function AdminApp() {
@@ -79,7 +80,7 @@ export default function AdminApp() {
     { id: "earnings", label: t("nav.earnings"), icon: "hand-coins", el: <AdminEarnings /> },
   ]} />;
   const analyticsHub = (start) => <Hub key={"analytics-" + (start || "")} start={start} title={t("nav.traffic")} sub={t("an.trafficSub")} tabs={[
-    { id: "traffic", label: t("an.traffic"), icon: "chart-column", el: <AdminAnalytics /> },
+    { id: "traffic", label: t("an.traffic"), icon: "chart-column", el: isStaffLive() ? <LiveAnalytics /> : <AdminAnalytics /> },
     { id: "live", label: t("gm.live"), icon: "radio", el: <AdminMessages only="live" /> },
   ]} />;
   const aiHub = (start) => <Hub key={"ai-" + (start || "")} start={start} title={t("hub.aiTitle")} sub={t("hub.aiSub")} tabs={[
@@ -135,8 +136,8 @@ export default function AdminApp() {
         { path: "/admin/inbox", render: () => guard("tenants.view", inboxHub()) },
         { path: "/admin/staff", render: () => guard("staff.view", <AdminStaff role={role} />) },
         { path: "/admin/settings", render: () => guard("settings.platform", <AdminSettings />) },
-        { path: "/admin/status", render: () => guard("settings.platform", <AdminStatus />) },
-        { path: "/admin/integrations", render: () => guard("settings.platform", <AdminIntegrations />) },
+        { path: "/admin/status", render: () => guard("settings.platform", isStaffLive() ? <LiveStatus /> : <AdminStatus />) },
+        { path: "/admin/integrations", render: () => guard("settings.platform", <>{isStaffLive() && <LiveSetup />}<AdminIntegrations /></>) },
         { path: "/admin/integrations/:id", render: ({ id }) => guard("settings.platform", <AdminIntegrations key={id} id={id} />) },
         { path: "/admin/me", render: () => <MyProfile scope="admin" roleLabel={roleName(role, t)} access="Sheetal staff" /> },
         { path: "/admin/notifications", render: () => <NotificationsPage notifs={notifs} prefsTo="/admin/me" /> },

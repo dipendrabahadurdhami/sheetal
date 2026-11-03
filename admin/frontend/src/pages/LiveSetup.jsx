@@ -1,0 +1,100 @@
+import React, { useEffect, useState } from "react";
+import { fdatetime } from "@sheetal/shared/core/format";
+import { Badge, Button, Field, Input, Panel, Stat, ToggleRow, useToast } from "@sheetal/shared/core/ui";
+import { adminApi } from "../api";
+
+// Setup on the admin API: the AI (Claude key, model, monthly credits per plan) and Meta (app secret and webhook
+// verify token for WhatsApp, Messenger and Instagram). Keys are write-only: once saved they are never shown again.
+// Also the live system status and site analytics.
+
+function useApi(path) {
+  const [data, setData] = useState(null);
+  const [tick, setTick] = useState(0);
+  useEffect(() => { adminApi("GET", path).then((r) => setData(r.data)).catch(() => setData(null)); }, [path, tick]);
+  return [data, () => setTick((n) => n + 1)];
+}
+
+export function LiveSetup() {
+  const toast = useToast();
+  const [ai, reloadAi] = useApi("/admin/settings/ai");
+  const [meta, reloadMeta] = useApi("/admin/settings/meta");
+  const [a, setA] = useState(null);
+  const [m, setM] = useState({ appSecret: "", verifyToken: "" });
+  useEffect(() => { if (ai) setA({ enabled: ai.enabled, model: ai.model, apiKey: "", credits: ai.credits }); }, [ai]);
+  const saveAi = () => adminApi("PUT", "/admin/settings/ai", { enabled: a.enabled, model: a.model, apiKey: a.apiKey || undefined, credits: Object.fromEntries(Object.entries(a.credits).map(([k, v]) => [k, Number(v)])) })
+    .then((r) => { toast(r.message); reloadAi(); }).catch((e) => toast(e.message));
+  const saveMeta = () => adminApi("PUT", "/admin/settings/meta", { appSecret: m.appSecret || undefined, verifyToken: m.verifyToken || undefined })
+    .then((r) => { toast(r.message); setM({ appSecret: "", verifyToken: "" }); reloadMeta(); }).catch((e) => toast(e.message));
+  return (
+    <div className="pf-split">
+      <Panel title="AI (Claude)" className="grow" sub="Ask AI on the website and the lead finder in /business. Only the super admin can change the key." pad>
+        {!a ? <p className="muted">Loading…</p> : <div className="pf-stack">
+          <ToggleRow title="AI switched on" checked={a.enabled} onChange={(v) => setA({ ...a, enabled: v })} />
+          <Field label="Model" hint="claude-opus-5-5 is the default."><Input value={a.model} onChange={(e) => setA({ ...a, model: e.target.value })} /></Field>
+          <Field label="Anthropic API key" hint={ai.hasKey ? "A key is saved. Leave empty to keep it." : ai.envKey ? "Using ANTHROPIC_API_KEY from the server's environment." : "From console.anthropic.com → API keys."}>
+            <Input type="password" autoComplete="new-password" value={a.apiKey} onChange={(e) => setA({ ...a, apiKey: e.target.value })} /></Field>
+          <div className="pf-grid-2 tight">{Object.entries(a.credits).map(([plan, n]) => <Field key={plan} label={`${plan} credits a month`}><Input className="input tnum" value={n} onChange={(e) => setA({ ...a, credits: { ...a.credits, [plan]: e.target.value.replace(/[^\d-]/g, "") } })} /></Field>)}</div>
+          <p className="small muted" style={{ margin: 0 }}>1 credit is about 1,000 words read or written. -1 means no limit.</p>
+          <Button onClick={saveAi}>Save AI settings</Button>
+        </div>}
+      </Panel>
+      <Panel title="Meta (WhatsApp, Messenger, Instagram)" className="side" sub="From Sheetal's Meta app. Businesses then connect their own number or page in /business → Channels." pad>
+        {!meta ? <p className="muted">Loading…</p> : <div className="pf-stack">
+          <Field label="Webhook URL" hint="Paste this in the Meta app's webhook settings."><Input readOnly value={meta.webhookUrl} onFocus={(e) => e.target.select()} /></Field>
+          <Field label="App secret" hint={meta.hasAppSecret ? "Saved. Leave empty to keep it." : "Meta app → Settings → Basic."}><Input type="password" autoComplete="new-password" value={m.appSecret} onChange={(e) => setM({ ...m, appSecret: e.target.value })} /></Field>
+          <Field label="Verify token" hint={meta.hasVerifyToken ? "Saved. Leave empty to keep it." : "Any long random text; type the same in Meta."}><Input type="password" autoComplete="new-password" value={m.verifyToken} onChange={(e) => setM({ ...m, verifyToken: e.target.value })} /></Field>
+          <Button disabled={!m.appSecret && !m.verifyToken} onClick={saveMeta}>Save Meta settings</Button>
+        </div>}
+      </Panel>
+    </div>
+  );
+}
+
+export function LiveStatus() {
+  const [s, reload] = useApi("/admin/system/status");
+  if (!s) return <p className="muted pf-pad">Loading…</p>;
+  const ok = (v, label) => <Badge tone={v ? "done" : "action"}>{label ?? (v ? "OK" : "Not set up")}</Badge>;
+  return (
+    <Panel title="System status" sub="Live from the server." actions={<Button variant="outline" size="sm" onClick={reload}>Refresh</Button>} pad>
+      <dl className="pf-kv">
+        <dt>API</dt><dd>{ok(true)} up {Math.round(s.api.uptimeSeconds / 60)} min · {s.api.memoryMb} MB · Node {s.api.node}</dd>
+        <dt>Database</dt><dd>{ok(s.database.ok, s.database.ok ? `OK · ${s.database.ms} ms` : "Down")}</dd>
+        <dt>Cache</dt><dd>{s.cache.kind === "redis" ? ok(true, "Redis") : <Badge tone="neutral">In memory (fine for one server)</Badge>}</dd>
+        <dt>Email</dt><dd>{s.email.queued} waiting · {s.email.failedToday} failed today · {s.email.mailServerQueue} in the mail server queue</dd>
+        <dt>AI</dt><dd>{ok(s.ai.configured)} {s.ai.requestsToday} requests today · {s.ai.tokensToday.toLocaleString("en-IN")} tokens</dd>
+        <dt>Meta</dt><dd>{ok(s.meta.configured)}</dd>
+        <dt>Calendar sync</dt><dd>{s.calendars.feeds} feeds{s.calendars.withErrors ? ` · ${s.calendars.withErrors} with errors` : ""}</dd>
+        <dt>Bots today</dt><dd>{Object.entries(s.bots).map(([k, n]) => `${n} ${k.replace("_", " ")}`).join(" · ") || "None"}</dd>
+        <dt>Photo storage</dt><dd>{ok(s.storage.media)}</dd>
+        <dt>Billing cycle</dt><dd>{s.billingCycle.lastActivity ? `Last change ${fdatetime(s.billingCycle.lastActivity)}` : "Nothing due yet"}</dd>
+      </dl>
+    </Panel>
+  );
+}
+
+export function LiveAnalytics() {
+  const [days, setDays] = useState(30);
+  const [d] = useApi(`/admin/analytics?days=${days}`);
+  if (!d) return <p className="muted pf-pad">Loading…</p>;
+  const change = d.visitorsBefore ? Math.round(((d.visitors - d.visitorsBefore) / d.visitorsBefore) * 100) : null;
+  const max = Math.max(1, ...d.byDay.map((x) => x.visitors));
+  return (
+    <>
+      <div className="pf-row-actions">{[7, 30, 90].map((n) => <Button key={n} size="sm" variant={days === n ? "primary" : "outline"} onClick={() => setDays(n)}>{n} days</Button>)}</div>
+      <div className="pf-stats">
+        <Stat label="Visitors" value={d.visitors.toLocaleString("en-IN")} note={change === null ? "People, not bots" : `${change >= 0 ? "+" : ""}${change}% on the period before`} />
+        <Stat label="Pages seen" value={d.views.toLocaleString("en-IN")} />
+        <Stat label="Sign-ups" value={d.signups} />
+        <Stat label="Enquiries" value={d.enquiries} />
+      </div>
+      <Panel title="Visitors per day" pad>
+        {!d.byDay.length ? <p className="muted">No visits recorded yet.</p> : <div className="pf-bars" style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 140 }}>{d.byDay.map((x) => <div key={x.day} title={`${x.day}: ${x.visitors} visitors`} style={{ flex: 1, height: `${(x.visitors / max) * 100}%`, minHeight: 2, background: "var(--accent)", borderRadius: 3 }} />)}</div>}
+      </Panel>
+      <div className="pf-split">
+        <Panel title="Most viewed listings" className="grow"><ul className="pf-list">{d.topListings.map((l) => <li key={l.code}><span style={{ flex: 1 }}>{l.title} <small className="muted tnum">{l.code}</small></span><b className="tnum">{l.views}</b></li>)}{!d.topListings.length && <li className="muted">None yet.</li>}</ul></Panel>
+        <Panel title="Where visitors come from" className="side"><ul className="pf-list">{d.referrers.map((r) => <li key={r.site}><span style={{ flex: 1 }}>{r.site}</span><b className="tnum">{r.views}</b></li>)}{!d.referrers.length && <li className="muted">Mostly direct.</li>}</ul>
+          <p className="small muted pf-pad" style={{ margin: 0 }}>Bots left out: {Object.entries(d.bots).map(([k, n]) => `${n} ${k.replace("_", " ")}`).join(", ") || "none"}.</p></Panel>
+      </div>
+    </>
+  );
+}
