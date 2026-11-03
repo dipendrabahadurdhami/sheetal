@@ -25,7 +25,8 @@ import { Help, Tour } from "./Help";
 import { MyProfile, NotificationsPage, businessSeed, useNotifs } from "@sheetal/shared/components/Me";
 import { Domains } from "./Domains";
 import { Mail } from "./Mail";
-import { canAddBusiness, isLive, useBrand, useLiveWorkspace } from "../live";
+import { canAddBusiness, isLive, useBrand, useLiveWorkspace, workRefresh } from "../live";
+import { setActiveBranch } from "../api";
 import { AddBusiness } from "./AddBusiness";
 import { POS, Bookings } from "./POS";
 import { LiveBookings, LiveFrontDesk, LiveInvestors, LivePOS, LiveProjects } from "./LiveOps";
@@ -90,6 +91,10 @@ export default function BusinessApp() {
   const allowed = canAll ? openBranches : openBranches.filter((b) => (mine ?? sample.scopes).includes(b));
   const picked = s.branchOf?.[tenant.id] || "all";
   const branch = canAll ? (picked === "all" || allowed.includes(picked) ? picked : "all") : (allowed.includes(picked) ? picked : allowed[0] || "all");
+  // Signed in: every call carries the picked branch, so each branch shows only its own work.
+  const branchId = branch === "all" ? "all" : (db.branches?.[tenant.id] || []).find((b) => b.name === branch)?.id || "all";
+  if (isLive(tenant.id)) setActiveBranch(branchId);
+  React.useEffect(() => { if (isLive(tenant.id)) workRefresh(); }, [tenant.id, branchId]);
   const brand = ts.branding.useBrand ? ts.branding.color : null;
   const T = tenant.type;
   // Pro sees every type's modules; Starter (free) sees only the basics.
@@ -151,20 +156,22 @@ export default function BusinessApp() {
 
   // The business at the top of the sidebar. With its own branding (logo or colours) it takes Sheetal's logo spot;
   // until then Sheetal's logo stays and the business sits just under it. Clicking the name switches business.
-  const branded = ownBrand && ((tenant.brandColors || []).length > 0 || (!!tenant.logoUrl && !tenant.logoUrl.startsWith("/brand/")));
+  // The business always takes the top of the sidebar (no Sheetal logo there): its own logo on Business and Pro,
+  // otherwise its initials. Sheetal's sample logos (/brand/…) never count as the business's.
+  const logoOf = (x) => (db.plans.find((p) => p.id === x.planId)?.price && x.logoUrl && !x.logoUrl.startsWith("/brand/") ? x.logoUrl : null);
   // Each business with its type and the person's role there (the menu and access follow both).
   const roleIn = (id) => { const rs = db.tenantRoles[id] || []; return rs.find((r) => r.id === s.liveRoles?.[id]) || rs.find((r) => r.perms.includes("*")) || rs[0]; };
   const wsList = ids.map((id) => db.tenants.find((y) => y.id === id)).filter(Boolean).map((x) => ({
-    id: x.id, name: x.name, logoUrl: x.logoUrl, color: x.id === tenant.id ? brand : undefined,
+    id: x.id, name: x.name, logoUrl: logoOf(x), color: x.id === tenant.id ? brand || tenant.brandColors?.[0] : undefined,
     typeLabel: t(`type.${x.type}`), typeIcon: TYPE_ICON[x.type], role: roleIn(x.id) ? roleName(roleIn(x.id), t) : undefined,
   }));
   // Switching business opens its overview, since the pages differ by type and role.
   const pickWs = (v) => { update((d) => { d.session.tenantId = v; d.session.previewRoleId = null; }); navigate("/business"); };
   const addWs = canAddBusiness() ? <MenuButton icon="plus" onClick={() => setAdding(true)}>Add a business</MenuButton> : null;
-  const wsSwitcher = <WorkspaceSwitcher footer={addWs} current={wsList.find((w) => w.id === tenant.id) || { id: tenant.id, name: tenant.name, logoUrl: tenant.logoUrl }} list={wsList} onPick={pickWs} big={branded} sub={branded ? `${t(`type.${tenant.type}`)} · ${tenant.city || "Nepal"}` : undefined} label={t("ws.switch")} />;
+  const wsSwitcher = <WorkspaceSwitcher footer={addWs} current={wsList.find((w) => w.id === tenant.id) || { id: tenant.id, name: tenant.name, logoUrl: logoOf(tenant) }} list={wsList} onPick={pickWs} big sub={`${t(`type.${tenant.type}`)} · ${tenant.city || "Nepal"}`} label={t("ws.switch")} />;
 
   return (
-    <Shell sub={t("brand.business")} nav={nav} themes={hasColours ? PANEL_THEMES : THEMES} brandSlot={branded ? wsSwitcher : undefined} switcher={branded ? null : wsSwitcher} notifications={notifications} notifTo="/business/notifications" onReadAll={notifs.readAll}
+    <Shell sub={t("brand.business")} nav={nav} themes={hasColours ? PANEL_THEMES : THEMES} brandSlot={wsSwitcher} switcher={null} notifications={notifications} notifTo="/business/notifications" onReadAll={notifs.readAll}
       quickCreate={[
         any("listings.manage", "projects.manage", "investments.manage", "calendar.edit") && { icon: "house-plus", label: t("listings.new"), to: "/business/listings/new" },
         stays && can(role, "bookings.create") && { icon: "calendar-plus", label: t("bk.manual"), to: "/business/bookings" },
@@ -208,7 +215,8 @@ export default function BusinessApp() {
         <MenuButton icon="log-out" onClick={() => { try { localStorage.removeItem("sheetal_token"); } catch { /* storage off */ } window.location.href = "/"; }}>{t("menu.signOut")}</MenuButton>
       </>}>
       <AddBusiness open={adding} onClose={() => setAdding(false)} onAdded={() => navigate("/business")} />
-      <BranchProvider value={{ branch, allowed, canAll, first: openBranches[0] }}>
+      {/* A new key on switching branch reloads every page's data for that branch. */}
+      <BranchProvider key={branchId} value={{ branch, branchId, allowed, canAll, first: openBranches[0] }}>
       {ended ? <BackupOnly tenant={tenant} /> : <Routes fallback={<Pending part={2} />} routes={[
         { path: "/business", render: () => <BusinessOverview tenant={tenant} role={role} /> },
         { path: "/business/team", render: () => <TeamHub key={tenant.id + "m"} tenant={tenant} role={role} start={can(role, "team.view") ? "members" : "attendance"} /> },

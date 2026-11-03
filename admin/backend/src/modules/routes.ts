@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
+import { syncCovered } from "@sheetal/backend-core/domain/billing";
 import type { Prisma, TenantStatus } from "@prisma/client";
 import { z } from "zod";
 import { dbOf } from "@sheetal/backend-core/lib/db";
@@ -140,7 +141,8 @@ export async function adminRoutes(app: FastifyInstance) {
       const plan = await db.plan.findUnique({ where: { id: b.planId } });
       if (!plan || plan.type !== t.type) throw badRequest("Choose a plan for this business type.");
     }
-    await db.tenant.update({ where: { id: t.id }, data: { status: b.status as TenantStatus | undefined, planId: b.planId, period: b.period, renewsAt: b.renewsAt, autoRenew: b.autoRenew } });
+    await db.tenant.update({ where: { id: t.id }, data: { status: b.status as TenantStatus | undefined, planId: b.planId, period: b.period, renewsAt: b.renewsAt, autoRenew: b.autoRenew, ...(b.planId ? { coveredById: null } : {}) } });
+    await syncCovered(db, t.id);
     await audit(s, request, "admin.tenant_updated", t.name, t.id, { ...b });
     return { status: 200, message: `${t.name} updated.` };
   });
@@ -172,7 +174,8 @@ export async function adminRoutes(app: FastifyInstance) {
       if (b.status === "done" && b.apply) {
         // Paid and confirmed by the team: the new plan starts today for the chosen months.
         const renews = new Date(); renews.setMonth(renews.getMonth() + r.months);
-        await tx.tenant.update({ where: { id: r.tenantId }, data: { planId: r.planId, period: r.months, renewsAt: renews, status: "active" } });
+        await tx.tenant.update({ where: { id: r.tenantId }, data: { planId: r.planId, period: r.months, renewsAt: renews, status: "active", coveredById: null } });
+        await syncCovered(tx, r.tenantId);
       }
     });
     await audit(s, request, b.status === "done" ? "admin.upgrade_done" : "admin.upgrade_declined", r.planId, r.tenantId);

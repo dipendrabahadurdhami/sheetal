@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { useT, useLang } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
+import { useBranch } from "@sheetal/shared/core/branch";
 import { useRouter } from "@sheetal/shared/core/router";
 import { TODAY, rsShort } from "@sheetal/shared/core/format";
 import { Badge, Button, Checkbox, Confirm, Empty, Menu, Modal, PageHead, SearchInput, Select, StatusBadge, useToast } from "@sheetal/shared/core/ui";
@@ -32,6 +33,8 @@ export function ListingsPage({ tenant, canEdit }) {
   const [q, setQ0] = useState(""); const [kind, setKind0] = useState("all"); const [status, setStatus0] = useState("all");
   const [sel, setSel] = useState([]); const [ask, setAsk] = useState(null); const [ota, setOta] = useState(null); const [moving, setMoving] = useState(null); const [shown, setShown] = useState(100);
   const live = isLive(tenant.id) ? liveListings(toast) : null;
+  // With "All branches" picked, each listing says which branch it belongs to.
+  const showBranch = useBranch().branch === "all";
   const setQ = (v) => { setQ0(v); setShown(100); }; const setKind = (v) => { setKind0(v); setShown(100); }; const setStatus = (v) => { setStatus0(v); setShown(100); };
   const all = db.listings.filter((l) => l.tenantId === tenant.id);
   const draft = db.drafts[tenant.id];
@@ -109,7 +112,7 @@ export function ListingsPage({ tenant, canEdit }) {
             <tbody>{rows.slice(0, shown).map((l) => (
               <tr key={l.id} className={sel.includes(l.id) ? "lm-on" : undefined}>
                 {canEdit && <td><Checkbox checked={sel.includes(l.id)} onChange={(v) => toggle(l.id, v)} label="" /></td>}
-                <td><button type="button" className="lm-title" onClick={() => canEdit && edit(l)}><b>{l.title}</b><small className="tnum">{l.id} · {t("listings.updated")} {l.updated}</small>{l.issues?.length > 0 && <small className="lm-issues">{l.issues.join(" · ")}</small>}</button></td>
+                <td><button type="button" className="lm-title" onClick={() => canEdit && edit(l)}><b>{l.title}</b><small className="tnum">{l.id}{l.branch && showBranch ? ` · ${l.branch}` : ""} · {t("listings.updated")} {l.updated}</small>{l.issues?.length > 0 && <small className="lm-issues">{l.issues.join(" · ")}</small>}</button></td>
                 <td>{kindName(l.kind)}</td><td><ListingStatus s={l.status} /></td>
                 <td className="tnum" style={{ textAlign: "right" }}>{rsShort(l.price)}</td>
                 <td className="tnum" style={{ textAlign: "right" }}>{(l.views || 0).toLocaleString("en-IN")}</td>

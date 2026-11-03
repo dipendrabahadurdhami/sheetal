@@ -12,6 +12,7 @@ import { FORMS, HIGHLIGHTS, suggestTitle, summaryOf } from "./listingForms";
 import { PinPicker } from "./PinPicker";
 import { kindsFor, planOf } from "@sheetal/shared/core/plans";
 import { isLive, liveListings, uploadListingPhoto } from "../live";
+import { useBranch } from "@sheetal/shared/core/branch";
 
 // One wizard renders every listing kind from listingForms.js.
 // Almost everything is a tap: chips with icons, counters, segments, quick prices.
@@ -37,6 +38,12 @@ export function ListingWizard({ tenant }) {
   // On the API, photos upload as they are picked and the listing is sent to Sheetal for review.
   const live = isLive(tenant.id) ? liveListings(toast) : null;
   const editId = draft?.editId;
+  // Which branch a new listing is for: the one picked at the top, or (with "All branches") chosen here.
+  const br = useBranch();
+  const choices = (db.branches?.[tenant.id] || []).filter((b) => b.status === "open" && br.allowed.includes(b.name));
+  const mustPick = !!live && !editId && br.branch === "all" && choices.length > 1;
+  const [branchId, setBranchId] = useState(null);
+  const pickedBranch = branchId || choices[0]?.id;
   React.useEffect(() => { if (!fillTick) return; const d2 = db.drafts[tenant.id]; if (d2 && FORMS[d2.kind]) { setKind(d2.kind); setStep(0); setV(d2.values || {}); } }, [fillTick, db.drafts, tenant.id]);
   const aiDrawer = <Drawer open={aiOpen} onClose={() => setAiOpen(false)} title={t("ai.listingTitle")} sub={t("ai.listingSub")}><AIStudio tenant={tenant} only="listing" onFill={() => { setAiOpen(false); setFillTick((n) => n + 1); }} /></Drawer>;
 
@@ -68,7 +75,7 @@ export function ListingWizard({ tenant }) {
   const send = (submit) => {
     const title = v.title || suggestTitle(kind, v, label);
     setBusy(true);
-    live.save(editId, { kind, values: { ...v, title }, summary: summaryOf(kind, { ...v, title }, C), submit })
+    live.save(editId, { kind, values: { ...v, title }, summary: summaryOf(kind, { ...v, title }, C), submit, ...(mustPick ? { branchId: pickedBranch } : {}) })
       .then(() => { update((d) => { delete d.drafts[tenant.id]; }); navigate("/business/listings"); })
       .catch((e) => { if (e.errors) setErr(Object.fromEntries(Object.entries(e.errors).map(([k, m]) => [k, [].concat(m)[0]]))); })
       .finally(() => setBusy(false));
@@ -90,6 +97,8 @@ export function ListingWizard({ tenant }) {
     return (
       <>
         <PageHead title={t("wiz.title")} sub={t("wiz.pickSub")} back={<Link to="/business/listings" className="pf-back"><Icon name="arrow-left" size={15} />{t("nav.listings")}</Link>} />
+        {mustPick && <label className="card pf-branch-ask"><Icon name="map-pin" size={18} /><span className="pf-two"><b>Which branch is this listing for?</b><small className="muted">Only that branch's team will see it and its enquiries.</small></span>
+          <select className="select" value={pickedBranch} onChange={(e) => setBranchId(e.target.value)} aria-label="Branch">{choices.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label>}
         <button className="card pf-ai-card" onClick={() => setAiOpen(true)}><span className="pf-kind-ico"><Icon name="wand-sparkles" size={24} /></span><span className="pf-two"><b>{t("ai.fromText")}</b><small>{t("ai.fromTextSub")}</small></span><Icon name="arrow-right" size={18} /></button>
         {aiDrawer}
         <div className="pf-kind-grid">

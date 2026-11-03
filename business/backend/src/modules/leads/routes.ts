@@ -1,4 +1,4 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { dbOf } from "@sheetal/backend-core/lib/db";
@@ -6,12 +6,14 @@ import { badRequest, forbidden, notFound } from "@sheetal/backend-core/lib/error
 import { Vault } from "@sheetal/backend-core/lib/vault";
 import { sendMetaText } from "@sheetal/backend-core/lib/meta";
 import type { Fetch } from "@sheetal/backend-core/lib/payments";
-import { workspaceOf, type Workspace } from "../access.js";
+import { branchView, inView, workspaceOf, type Workspace } from "../access.js";
+import { worksAt } from "@sheetal/backend-core/domain/branches";
 
 // Enquiries from the website (contact agent or owner, site visits, requirements) land here as leads of the
 // business that owns the listing. The Inbox shows each one as a conversation and the pipeline by stage.
 // Replies go to the person by email, with the business's own email and phone to answer on.
-// Who sees what: people who can assign leads see all of them; others see their own and unassigned ones.
+// Who sees what: people who can assign leads see all of them; others see their own and unassigned ones; and
+// everyone only sees the leads of the branches in view (a lead belongs to its listing's branch, or where it came in).
 
 const STAGES = ["new", "contacted", "viewing", "negotiating", "won", "lost"] as const;
 const time = (d: Date) => d.toISOString();
@@ -20,15 +22,15 @@ export async function leadRoutes(app: FastifyInstance, opts: { fetch?: Fetch } =
   const db = () => dbOf(app);
   const vault = new Vault(app.config.SECRETS_KEY, app.config.NODE_ENV === "production");
 
-  function access(ws: Workspace) {
+  async function access(ws: Workspace, request: FastifyRequest) {
     if (!ws.can("leads.view") && !ws.can("messages.reply")) throw forbidden("Your role can't see leads.");
     const all = ws.can("leads.assign") || ws.member.role.key === "owner";
-    const where: Prisma.LeadWhereInput = { tenantId: ws.tenantId, ...(all ? {} : { OR: [{ assigneeId: ws.user.id }, { assigneeId: null }] }) };
+    const where: Prisma.LeadWhereInput = { tenantId: ws.tenantId, ...inView(await branchView(db(), request, ws)), ...(all ? {} : { OR: [{ assigneeId: ws.user.id }, { assigneeId: null }] }) };
     return { all, where };
   }
 
-  async function one(ws: Workspace, id: string) {
-    const { where } = access(ws);
+  async function one(ws: Workspace, request: FastifyRequest, id: string) {
+    const { where } = await access(ws, request);
     const l = await db().lead.findFirst({ where: { AND: [where, { id }] } });
     if (!l) throw notFound("Lead not found.");
     return l;
@@ -36,11 +38,11 @@ export async function leadRoutes(app: FastifyInstance, opts: { fetch?: Fetch } =
 
   app.get("/leads", async (request) => {
     const ws = workspaceOf(request);
-    const { where } = access(ws);
+    const { where } = await access(ws, request);
     const q = z.object({ stage: z.enum(STAGES).optional(), take: z.coerce.number().int().min(1).max(500).default(200) }).parse(request.query);
     const leads = await db().lead.findMany({
       where: { ...where, ...(q.stage ? { status: q.stage } : {}) },
-      include: { messages: { orderBy: { createdAt: "asc" } } }, orderBy: { lastAt: "desc" }, take: q.take,
+      include: { messages: { orderBy: { createdAt: "asc" } }, branch: { select: { name: true } } }, orderBy: { lastAt: "desc" }, take: q.take,
     });
     const listings = await db().listing.findMany({ where: { id: { in: leads.map((l) => l.listingId).filter((x): x is number => x != null) } }, select: { id: true, code: true, title: true, price: true } });
     const byId = new Map(listings.map((l) => [l.id, l]));
@@ -54,7 +56,7 @@ export async function leadRoutes(app: FastifyInstance, opts: { fetch?: Fetch } =
           stage: l.status, assignee: l.assigneeId, assigneeName: l.assigneeId ? names.get(l.assigneeId) ?? null : null,
           follow: l.followAt ? l.followAt.toISOString().slice(0, 10) : null, tags: l.tags,
           value: l.value != null ? Number(l.value) : listing?.price != null ? Number(listing.price) : null,
-          listing: listing?.code ?? null, listingTitle: listing?.title ?? null, details: l.details,
+          listing: listing?.code ?? null, listingTitle: listing?.title ?? null, details: l.details, branchId: l.branchId, branch: l.branch?.name ?? null,
           last: msgs[msgs.length - 1]![1], at: time(l.lastAt), unread: !l.readAt || l.readAt < l.lastAt ? 1 : 0, msgs,
         };
       }),
@@ -63,8 +65,8 @@ export async function leadRoutes(app: FastifyInstance, opts: { fetch?: Fetch } =
 
   app.patch<{ Params: { id: string } }>("/leads/:id", async (request) => {
     const ws = workspaceOf(request);
-    const { all } = access(ws);
-    const l = await one(ws, request.params.id);
+    const { all } = await access(ws, request);
+    const l = await one(ws, request, request.params.id);
     const b = z.object({
       stage: z.enum(STAGES).optional(),
       assignee: z.string().max(40).nullable().optional(),
@@ -75,7 +77,15 @@ export async function leadRoutes(app: FastifyInstance, opts: { fetch?: Fetch } =
     }).parse(request.body);
     if (b.assignee !== undefined) {
       if (!all && b.assignee !== ws.user.id && b.assignee !== null) throw forbidden("Your role can't hand leads to others.");
-      if (b.assignee && !(await db().membership.findFirst({ where: { tenantId: ws.tenantId, userId: b.assignee, status: "active" } }))) throw badRequest("Pick someone in your team.");
+      if (b.assignee) {
+        // Only to someone in the team who works at the lead's branch.
+        const [m, br] = await Promise.all([
+          db().membership.findFirst({ where: { tenantId: ws.tenantId, userId: b.assignee, status: "active" }, include: { role: true } }),
+          l.branchId ? db().branch.findUnique({ where: { id: l.branchId }, select: { name: true } }) : null,
+        ]);
+        if (!m) throw badRequest("Pick someone in your team.");
+        if (!worksAt(m.scopes, m.role.perms, br?.name)) throw badRequest(`They don't work at ${br?.name}. Give them that branch on the Team page first.`);
+      }
     }
     await db().lead.update({
       where: { id: l.id },
@@ -93,7 +103,7 @@ export async function leadRoutes(app: FastifyInstance, opts: { fetch?: Fetch } =
   app.post<{ Params: { id: string } }>("/leads/:id/reply", { config: { rateLimit: { max: 60, timeWindow: "10 minutes" } } }, async (request) => {
     const ws = workspaceOf(request);
     if (!ws.can("messages.reply")) throw forbidden("Your role can't reply to leads.");
-    const l = await one(ws, request.params.id);
+    const l = await one(ws, request, request.params.id);
     const { text } = z.object({ text: z.string().trim().min(1, "Write a reply.").max(5000) }).parse(request.body);
     // A chat from WhatsApp, Messenger or Instagram is answered there; everything else by email.
     const d = (l.details ?? {}) as { channel?: string; account?: string; contact?: string };

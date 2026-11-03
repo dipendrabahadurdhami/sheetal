@@ -11,7 +11,8 @@ import { leadPeople, notify } from "@sheetal/backend-core/lib/notify";
 import { dayOf, ymd } from "@sheetal/backend-core/domain/money";
 import { syncOtaFeed } from "@sheetal/backend-core/domain/ota";
 import type { Fetch } from "@sheetal/backend-core/lib/payments";
-import { workspaceOf, type Workspace } from "../access.js";
+import { branchFor, branchView, inView, workspaceOf, type Workspace } from "../access.js";
+import { headOffice } from "@sheetal/backend-core/domain/branches";
 
 // Growth tools of a business: finding leads in pasted text with AI, its analytics, keeping rooms in sync with
 // Booking.com / Airbnb / Agoda through their calendar (iCal) feeds, and its WhatsApp / Messenger / Instagram
@@ -36,8 +37,10 @@ export async function growthRoutes(app: FastifyInstance, opts: { ai?: Ai; fetch?
     const r = await extractLeads(db(), a, { text: b.text, tenantId: ws.tenantId, planName: ws.member.tenant.plan.name, userId: ws.user.id });
     let saved = 0;
     if (b.save) {
+      // Into the branch open in the panel (or the person's only branch).
+      const branchId = branchFor(await branchView(db(), request, ws));
       for (const l of r.leads) {
-        await db().lead.create({ data: { tenantId: ws.tenantId, kind: "chat", name: l.name || l.phone || l.email, phone: l.phone || null, email: l.email || null, message: [l.need, l.budget && `Budget: ${l.budget}`, l.location && `Area: ${l.location}`, l.note].filter(Boolean).join(" · "), details: { channel: "web", source: "ai_found", budget: l.budget, location: l.location } } });
+        await db().lead.create({ data: { tenantId: ws.tenantId, branchId, kind: "chat", name: l.name || l.phone || l.email, phone: l.phone || null, email: l.email || null, message: [l.need, l.budget && `Budget: ${l.budget}`, l.location && `Area: ${l.location}`, l.note].filter(Boolean).join(" · "), details: { channel: "web", source: "ai_found", budget: l.budget, location: l.location } } });
         saved++;
       }
     }
@@ -57,12 +60,16 @@ export async function growthRoutes(app: FastifyInstance, opts: { ai?: Ai; fetch?
     need(ws, "overview.view", "listings.manage", "leads.view");
     const { days } = z.object({ days: z.coerce.number().int().min(7).max(365).default(30) }).parse(request.query);
     const since = new Date(Date.now() - days * 864e5);
+    // For one branch (or staff limited to some): views of that branch's listings and its leads only.
+    const v = await branchView(db(), request, ws);
+    const ids = v.ids ? (await db().listing.findMany({ where: { tenantId: ws.tenantId, ...inView(v) }, select: { id: true } })).map((l) => l.id) : null;
+    const pv = { tenantId: ws.tenantId, createdAt: { gte: since }, ...(ids ? { listingId: { in: ids } } : {}) };
     const [views, visitors, byListing, leads, byDay] = await Promise.all([
-      db().pageView.count({ where: { tenantId: ws.tenantId, createdAt: { gte: since } } }),
-      db().pageView.groupBy({ by: ["session"], where: { tenantId: ws.tenantId, createdAt: { gte: since } } }).then((r) => r.length),
-      db().pageView.groupBy({ by: ["listingId"], where: { tenantId: ws.tenantId, createdAt: { gte: since }, listingId: { not: null } }, _count: true, orderBy: { _count: { listingId: "desc" } }, take: 20 }),
-      db().lead.groupBy({ by: ["listingId"], where: { tenantId: ws.tenantId, createdAt: { gte: since } }, _count: true }),
-      db().$queryRaw<{ day: string; views: number; visitors: number }[]>`SELECT to_char(created_at AT TIME ZONE 'Asia/Kathmandu', 'YYYY-MM-DD') AS day, count(*)::int AS views, count(DISTINCT session)::int AS visitors FROM page_views WHERE tenant_id = ${ws.tenantId} AND created_at >= ${since} GROUP BY 1 ORDER BY 1`,
+      db().pageView.count({ where: pv }),
+      db().pageView.groupBy({ by: ["session"], where: pv }).then((r) => r.length),
+      db().pageView.groupBy({ by: ["listingId"], where: { ...pv, listingId: ids ? { in: ids } : { not: null } }, _count: true, orderBy: { _count: { listingId: "desc" } }, take: 20 }),
+      db().lead.groupBy({ by: ["listingId"], where: { tenantId: ws.tenantId, createdAt: { gte: since }, ...inView(v) }, _count: true }),
+      db().$queryRaw<{ day: string; views: number; visitors: number }[]>`SELECT to_char(created_at AT TIME ZONE 'Asia/Kathmandu', 'YYYY-MM-DD') AS day, count(*)::int AS views, count(DISTINCT session)::int AS visitors FROM page_views WHERE tenant_id = ${ws.tenantId} AND created_at >= ${since} AND (${ids === null} OR listing_id = ANY(${ids ?? []}::int[])) GROUP BY 1 ORDER BY 1`,
     ]);
     const titles = new Map((await db().listing.findMany({ where: { id: { in: byListing.map((b) => b.listingId!).filter(Boolean) } }, select: { id: true, code: true, title: true } })).map((l) => [l.id, l]));
     const leadsBy = new Map(leads.map((l) => [l.listingId, l._count]));
@@ -200,8 +207,9 @@ export async function growthRoutes(app: FastifyInstance, opts: { ai?: Ai; fetch?
             ]);
           }
         } else {
-          await db().lead.create({ data: { tenantId: acct.tenantId, kind: "chat", name: msg.name || "New contact", phone: msg.channel === "whatsapp" ? `+${msg.from}` : null, message: msg.text, contactKey: key, details: { channel: msg.channel, account: acct.externalId, contact: msg.from }, createdAt: msg.at, lastAt: msg.at } });
-          await notify(db(), await leadPeople(db(), acct.tenantId), { type: "lead", title: `New ${msg.channel} message from ${msg.name || "someone"}`, message: msg.text.slice(0, 140), link: "/business/inbox" });
+          const branchId = await headOffice(db(), acct.tenantId);
+          await db().lead.create({ data: { tenantId: acct.tenantId, branchId, kind: "chat", name: msg.name || "New contact", phone: msg.channel === "whatsapp" ? `+${msg.from}` : null, message: msg.text, contactKey: key, details: { channel: msg.channel, account: acct.externalId, contact: msg.from }, createdAt: msg.at, lastAt: msg.at } });
+          await notify(db(), await leadPeople(db(), acct.tenantId, branchId), { type: "lead", title: `New ${msg.channel} message from ${msg.name || "someone"}`, message: msg.text.slice(0, 140), link: "/business/inbox" });
         }
       }
       // Meta wants a quick 200, or it retries.

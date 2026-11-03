@@ -6,7 +6,7 @@ import { Icon } from "@sheetal/shared/core/icons";
 import { planFeatureList } from "@sheetal/shared/core/plans";
 import { config } from "@sheetal/shared/core/config";
 import { bizApi, fileToBase64 } from "../api";
-import { workRefresh } from "../live";
+import { workRefresh, workspacesReload } from "../live";
 
 // Billing on the business API: the plan, paying by eSewa, Khalti, Fonepay or bank transfer, and invoices.
 // Gateways send the payer back to /business/billing/return/<provider>/<payment> (BillingReturn below).
@@ -58,6 +58,9 @@ export function LiveBilling({ tenant, canManage }) {
         <div className="pf-alert progress"><Icon name="receipt" size={18} /><div><b>Invoice {openInvoices[0].number} is ready</b><span>{openInvoices[0].plan} for {PERIOD_LABEL[openInvoices[0].months]}: {rs(openInvoices[0].total)}, due {fdate(openInvoices[0].dueAt)}.</span></div>
           <Button size="sm" icon="credit-card" onClick={() => setPay({ invoiceId: openInvoices[0].id, label: `${openInvoices[0].number} · ${openInvoices[0].plan}`, total: openInvoices[0].total })}>Pay</Button></div>
       ) : null}
+      {data.coveredBy && <div className="pf-alert done"><Icon name="badge-check" size={18} /><div><b>Covered by {data.coveredBy.name}'s Pro plan</b><span>{tenant.name} has Pro with no bill of its own, as long as {data.coveredBy.name} stays on Pro{data.coveredBy.renewsAt ? ` (paid until ${fdate(data.coveredBy.renewsAt)})` : ""}. Renew from {data.coveredBy.name}'s billing page.</span></div></div>}
+      {data.canCover && canManage && <div className="pf-alert action"><Icon name="layers" size={18} /><div><b>Include in your Pro plan</b><span>{data.canCover.name} is on Pro. Put {tenant.name} on Pro too, with no extra bill.</span></div>
+        <Button size="sm" icon="badge-check" disabled={busy} onClick={() => { setBusy(true); bizApi("POST", "/workspace/cover", { on: true }).then((r) => { toast(r.message); load(); workspacesReload(); }).catch((e) => toast(e.message)).finally(() => setBusy(false)); }}>Include in my Pro plan</Button></div>}
       {data.pendingProofs.length > 0 && <div className="pf-alert progress"><Icon name="clock" size={18} /><div><b>Bank transfer being checked</b><span>Sheetal confirms transfers within a working day; your plan starts then.</span></div></div>}
 
       <Panel title="Your plan" pad>

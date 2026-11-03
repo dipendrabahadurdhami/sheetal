@@ -5,6 +5,7 @@ import { dbOf } from "@sheetal/backend-core/lib/db";
 import { badRequest, notFound } from "@sheetal/backend-core/lib/errors";
 import { requireUser } from "@sheetal/backend-core/modules/auth/sessions";
 import { savePrivateFile } from "@sheetal/backend-core/lib/files";
+import { headOffice } from "@sheetal/backend-core/domain/branches";
 import { leadPeople, notify } from "@sheetal/backend-core/lib/notify";
 import { listingCard, mediaBase } from "../catalog/present.js";
 import { feeSettings } from "../board/routes.js";
@@ -75,7 +76,7 @@ export async function engageRoutes(app: FastifyInstance) {
       if (!b.email && !contact) throw badRequest("Add a phone number or an email so they can reach you.", { phone: ["Add a phone number or an email."] });
 
       const db = dbOf(app);
-      const listing = b.property_id ? await db.listing.findFirst({ where: { id: b.property_id, ...LIVE }, select: { id: true, tenantId: true, title: true, code: true } }) : null;
+      const listing = b.property_id ? await db.listing.findFirst({ where: { id: b.property_id, ...LIVE }, select: { id: true, tenantId: true, branchId: true, title: true, code: true } }) : null;
       const agency = !listing && b.agent_id ? await db.tenant.findUnique({ where: { id: b.agent_id }, select: { id: true } }) : null;
       const tenantId = listing?.tenantId ?? agency?.id ?? null;
       const message = [b.message_description, b.contact_form, b.reason_other, b.description].filter(Boolean).join("\n").slice(0, 4000);
@@ -97,8 +98,9 @@ export async function engageRoutes(app: FastifyInstance) {
         const ref = typeof rawBody.payment_reference === "string" ? rawBody.payment_reference.trim().slice(0, 80) : undefined;
         feeData = { feeStatus: "pending", feeAmount: fee.amount, feeRef: ref || null, feeProof: await savePrivateFile(app.config.MEDIA_DIR, "proofs", proof) };
       }
-      const lead = await db.lead.create({ data: { tenantId, listingId: listing?.id, userId: request.user?.id, kind, name: b.name, email: b.email || null, phone: contact, message, details, ip: request.ip, public: board && !fee?.enabled, ...feeData } });
-      if (tenantId) await notify(db, await leadPeople(db, tenantId), { type: "lead", title: `New enquiry from ${b.name}`, message: listing ? `${listing.title} (${listing.code})` : message.slice(0, 140), link: "/business/inbox" });
+      const branchId = tenantId ? listing?.branchId ?? await headOffice(db, tenantId) : null;
+      const lead = await db.lead.create({ data: { tenantId, branchId, listingId: listing?.id, userId: request.user?.id, kind, name: b.name, email: b.email || null, phone: contact, message, details, ip: request.ip, public: board && !fee?.enabled, ...feeData } });
+      if (tenantId) await notify(db, await leadPeople(db, tenantId, branchId), { type: "lead", title: `New enquiry from ${b.name}`, message: listing ? `${listing.title} (${listing.code})` : message.slice(0, 140), link: "/business/inbox" });
 
       // Let the business know by email (their Inbox shows it too).
       const to = tenantId ? (await db.tenant.findUnique({ where: { id: tenantId }, select: { email: true } }))?.email : null;

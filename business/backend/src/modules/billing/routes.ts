@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
+import { isPro } from "@sheetal/backend-core/domain/billing";
 import { dbOf } from "@sheetal/backend-core/lib/db";
 import { AppError, badRequest, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
 import { Vault } from "@sheetal/backend-core/lib/vault";
@@ -42,6 +43,10 @@ export async function billingRoutes(app: FastifyInstance, opts: { fetch?: Fetch 
       db().payment.findMany({ where: { tenantId: t.id, status: "pending_review" }, select: { id: true, invoiceId: true, amount: true, createdAt: true } }),
     ]);
     const names = new Map((await db().plan.findMany({ select: { id: true, name: true } })).map((p) => [p.id, p.name]));
+    const coveredBy = t.coveredById ? await db().tenant.findUnique({ where: { id: t.coveredById }, select: { id: true, name: true, renewsAt: true, status: true } }) : null;
+    // The owner's own Pro business that could cover this one.
+    const canCover = !coveredBy && ws.member.role.perms.includes("*")
+      ? ws.user.memberships.find((m) => m.tenantId !== t.id && m.role.perms.includes("*") && !m.tenant.coveredById && isPro(m.tenant.plan) && ["active", "trial", "past_due"].includes(m.tenant.status))?.tenant ?? null : null;
     return {
       data: {
         plan: { id: t.plan.id, name: t.plan.name, price: t.plan.price }, status: t.status, period: t.period, renewsAt: t.renewsAt, graceUntil: t.graceUntil, autoRenew: t.autoRenew,
@@ -49,6 +54,8 @@ export async function billingRoutes(app: FastifyInstance, opts: { fetch?: Fetch 
         plans: plans.map((p) => ({ id: p.id, name: p.name, price: p.price, periods: PERIODS.map((x) => ({ months: x.months, save: x.save, total: priceFor(p.price, x.months) })) })),
         methods: [g.esewa && { id: "esewa", name: "eSewa", test: g.esewa.mode === "test" }, g.khalti && { id: "khalti", name: "Khalti", test: g.khalti.mode === "test" }, g.fonepay && { id: "fonepay", name: "Fonepay", test: g.fonepay.mode === "test" }, g.manual && { id: "manual", name: "Bank transfer" }].filter(Boolean),
         bank: g.manual ? s.bank : null, vatRate: s.vatRate,
+        coveredBy: coveredBy ? { id: coveredBy.id, name: coveredBy.name, renewsAt: coveredBy.renewsAt } : null,
+        canCover: canCover ? { id: canCover.id, name: canCover.name } : null,
       },
     };
   });

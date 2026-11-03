@@ -8,6 +8,7 @@ import { join } from "node:path";
 import { loadConfig } from "@sheetal/backend-core/config";
 import { PLANS } from "@sheetal/backend-core/domain/plans";
 import { createWorkspace } from "@sheetal/backend-core/modules/accounts/workspace";
+import { syncCovered } from "@sheetal/backend-core/domain/billing";
 import { createSession } from "@sheetal/backend-core/modules/auth/sessions";
 import { buildApp } from "../src/app.js";
 
@@ -151,5 +152,36 @@ describe("roles", () => {
 
   it("needs a plan with custom roles", async () => {
     expect((await call("solo", "POST", "/team/roles", { name: "Helper", perms: [] }, ids.small)).statusCode).toBe(402);
+  });
+});
+
+describe("businesses covered by a Pro plan", () => {
+  it("puts a new business on Pro when the owner has a Pro business, and lets an existing one join", async () => {
+    const db = app.db!;
+    // Starter-only owner: the new business is on Starter.
+    expect((await call("solo", "POST", "/workspaces", { name: "Solo Stays", type: "host" }, ids.small)).statusCode).toBe(200);
+    expect((await db.tenant.findFirstOrThrow({ where: { name: "Solo Stays" } })).planId).toBe("host-starter");
+    // With a Pro business, the next one is covered by it.
+    await db.tenant.update({ where: { id: ids.small }, data: { planId: "agency-pro", renewsAt: new Date(Date.now() + 30 * 864e5) } });
+    const r = await call("solo", "POST", "/workspaces", { name: "Solo Hotel", type: "hotel" }, ids.small);
+    expect(r.json().message).toContain("on Pro");
+    const hotel = await db.tenant.findFirstOrThrow({ where: { name: "Solo Hotel" } });
+    expect(hotel).toMatchObject({ planId: "hotel-pro", coveredById: ids.small, renewsAt: null });
+    // The earlier one can join; its billing page says it is covered.
+    const stays = await db.tenant.findFirstOrThrow({ where: { name: "Solo Stays" } });
+    expect((await call("solo", "GET", "/billing", undefined, stays.id)).json().data.canCover).toMatchObject({ id: ids.small });
+    expect((await call("solo", "POST", "/workspace/cover", { on: true }, stays.id)).statusCode).toBe(200);
+    expect((await db.tenant.findUniqueOrThrow({ where: { id: stays.id } })).planId).toBe("host-pro");
+    expect((await call("solo", "GET", "/billing", undefined, stays.id)).json().data.coveredBy).toMatchObject({ name: "Small Agency" });
+  });
+
+  it("moves covered businesses to Starter when the Pro business does, and back when it pays again", async () => {
+    const db = app.db!;
+    await db.tenant.update({ where: { id: ids.small }, data: { planId: "agency-starter" } });
+    await syncCovered(db, ids.small!);
+    expect((await db.tenant.findFirstOrThrow({ where: { name: "Solo Hotel" } })).planId).toBe("hotel-starter");
+    await db.tenant.update({ where: { id: ids.small }, data: { planId: "agency-pro" } });
+    await syncCovered(db, ids.small!);
+    expect((await db.tenant.findFirstOrThrow({ where: { name: "Solo Hotel" } })).planId).toBe("hotel-pro");
   });
 });

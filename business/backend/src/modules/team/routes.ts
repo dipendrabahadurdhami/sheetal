@@ -5,6 +5,8 @@ import { AppError, badRequest, conflict, forbidden, notFound } from "@sheetal/ba
 import { newToken, sha256 } from "@sheetal/backend-core/lib/secrets";
 import { requireUser } from "@sheetal/backend-core/modules/auth/sessions";
 import { createWorkspace } from "@sheetal/backend-core/modules/accounts/workspace";
+import { isPro, syncCovered } from "@sheetal/backend-core/domain/billing";
+import { starterPlanId } from "@sheetal/backend-core/domain/plans";
 import { mediaBase, photoUrl, savePhoto } from "@sheetal/backend-core/lib/photos";
 import { BUSINESS_TYPES, businessPermsFor, type BusinessType } from "@sheetal/backend-core/domain/permissions";
 import { branchesOf, workspaceOf, type Workspace } from "../access.js";
@@ -19,6 +21,9 @@ import { checkScopes } from "../branches/routes.js";
 const INVITE_DAYS = 7;
 /** Businesses one person can own (more through Sheetal support). */
 const MAX_OWNED = 10;
+/** The person's own business on an active Pro plan that isn't itself covered (other than `except`). */
+const proOf = (user: { memberships: { tenantId: string; role: { perms: string[] }; tenant: { id: string; name: string; status: string; coveredById: string | null; plan: { price: number; features: unknown } } }[] }, except?: string) =>
+  user.memberships.find((m) => m.tenantId !== except && m.role.perms.includes("*") && !m.tenant.coveredById && isPro(m.tenant.plan) && ["active", "trial", "past_due"].includes(m.tenant.status))?.tenant ?? null;
 const email = z.email("Enter a valid email address.").transform((s) => s.trim().toLowerCase());
 const scopes = z.union([z.literal("all"), z.array(z.string().trim().min(1).max(60)).max(50)]).default("all");
 
@@ -54,9 +59,38 @@ export async function teamRoutes(app: FastifyInstance) {
     const owned = user.memberships.filter((m) => m.role.perms.includes("*")).length;
     if (owned >= MAX_OWNED) throw badRequest(`You can own up to ${MAX_OWNED} businesses. Ask Sheetal support for more.`);
     if (user.memberships.some((m) => m.tenant.name.toLowerCase() === b.name.toLowerCase())) throw conflict(`You already have a business called ${b.name}.`);
-    const tenant = await dbOf(app).$transaction((tx) => createWorkspace(tx, { ownerId: user.id, name: b.name, type: b.type, city: b.city, email: user.email, phone: user.phone ?? undefined, emailVerified: true }));
-    await dbOf(app).auditLog.create({ data: { tenantId: tenant.id, actorId: user.id, action: "business.created", target: b.name, ip: request.ip } });
-    return { status: 201, message: `${b.name} is ready.`, data: { id: tenant.id } };
+    // Covered by the person's own Pro business, if they have one: Pro for its type, no bill of its own.
+    const pro = proOf(user);
+    const tenant = await dbOf(app).$transaction(async (tx) => {
+      const t = await createWorkspace(tx, { ownerId: user.id, name: b.name, type: b.type, city: b.city, email: user.email, phone: user.phone ?? undefined, emailVerified: true, ...(pro ? { planId: `${b.type}-pro` } : {}) });
+      return pro ? tx.tenant.update({ where: { id: t.id }, data: { coveredById: pro.id } }) : t;
+    });
+    await dbOf(app).auditLog.create({ data: { tenantId: tenant.id, actorId: user.id, action: "business.created", target: b.name, ip: request.ip, meta: pro ? { coveredBy: pro.name } : undefined } });
+    return { status: 201, message: pro ? `${b.name} is ready, on Pro with ${pro.name}'s plan.` : `${b.name} is ready.`, data: { id: tenant.id } };
+  });
+
+  // ───── Cover this business with the owner's Pro plan (or stop) ─────
+  app.post("/workspace/cover", async (request) => {
+    const ws = workspaceOf(request);
+    if (!ws.member.role.perms.includes("*")) throw forbidden("Only an owner can do this.");
+    const { on } = z.object({ on: z.boolean() }).parse(request.body);
+    const t = ws.member.tenant;
+    if (!on) {
+      if (!t.coveredById) throw badRequest("This business isn't covered by another plan.");
+      await dbOf(app).tenant.update({ where: { id: t.id }, data: { coveredById: null, planId: starterPlanId(t.type as BusinessType), renewsAt: null, period: 1 } });
+      return { message: `${t.name} is on its own Starter plan now.` };
+    }
+    const pro = proOf(ws.user, t.id);
+    if (!pro) throw badRequest("You don't own a business on the Pro plan.");
+    if (t.plan.price > 0 && !t.coveredById && t.renewsAt && t.renewsAt > new Date()) throw badRequest("This business has its own paid plan until it ends. Include it once that period is over.");
+    if (await dbOf(app).tenant.count({ where: { coveredById: t.id } })) throw badRequest("Other businesses are covered by this one's plan.");
+    await dbOf(app).$transaction(async (tx) => {
+      await tx.tenant.update({ where: { id: t.id }, data: { coveredById: pro.id } });
+      await syncCovered(tx, pro.id);
+      await tx.invoice.updateMany({ where: { tenantId: t.id, status: "open" }, data: { status: "void" } });
+    });
+    await dbOf(app).auditLog.create({ data: { tenantId: t.id, actorId: ws.user.id, action: "billing.covered", target: pro.name, ip: request.ip } });
+    return { message: `${t.name} is on Pro now, with ${pro.name}'s plan.` };
   });
 
   // ───── Branding (Business and Pro): the business's logo and its colours (read from the logo, or picked) ─────

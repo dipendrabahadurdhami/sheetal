@@ -82,6 +82,27 @@ async function ownerOf(db: Db, tenantId: string) {
  * Marks a payment paid and applies its invoice: the plan, period and paid-until date. Safe to call twice (a gateway
  * may send the payer back more than once); only the first call changes anything. Returns false if already applied.
  */
+// ───── Businesses covered by a Pro plan ─────
+// An owner's other businesses can be covered by one of their businesses on Pro: they get Pro for their own type,
+// with no bill of their own (renewsAt stays empty, so the renewal cycle skips them). They follow that business:
+// Pro while it has Pro (grace period included), Starter when it doesn't, and Pro again when it is paid again.
+
+type Tx = Db | Prisma.TransactionClient;
+/** Whether a business's plan is Pro, the one that can cover others. */
+export const isPro = (plan: { price: number; features: unknown }) => plan.price > 0 && !!(plan.features as Record<string, boolean> | null)?.all_kinds;
+
+/** Puts every business covered by `parentId` on Pro (of its own type) or back on Starter, following the parent. */
+export async function syncCovered(db: Tx, parentId: string) {
+  const parent = await db.tenant.findUnique({ where: { id: parentId }, include: { plan: true } });
+  const on = !!parent && isPro(parent.plan) && parent.status !== "suspended" && parent.status !== "cancelled";
+  const kids = await db.tenant.findMany({ where: { coveredById: parentId } });
+  for (const k of kids) {
+    const planId = on ? `${k.type}-pro` : starterPlanId(k.type as BusinessType);
+    if (k.planId !== planId) await db.tenant.update({ where: { id: k.id }, data: { planId, period: 1, renewsAt: null, graceUntil: null, remindedFor: null, ...(k.status === "past_due" ? { status: "active" } : {}) } });
+  }
+  return kids.length;
+}
+
 export async function applyPayment(db: Db, mailer: Mailer, o: { paymentId: string; providerRef?: string; raw?: unknown; reviewedBy?: string; siteUrl: string }) {
   const now = new Date();
   const done = await db.$transaction(async (tx) => {
@@ -94,6 +115,9 @@ export async function applyPayment(db: Db, mailer: Mailer, o: { paymentId: strin
     await tx.payment.update({ where: { id: p.id }, data: { status: "paid", paidAt: now, providerRef: o.providerRef ?? p.providerRef, raw: (o.raw ?? p.raw ?? undefined) as Prisma.InputJsonValue | undefined, reviewedBy: o.reviewedBy } });
     await tx.invoice.update({ where: { id: p.invoiceId }, data: { status: "paid", paidAt: now, periodStart: start, periodEnd: end } });
     await tx.tenant.update({ where: { id: tenant.id }, data: { planId: p.invoice.planId, period: p.invoice.months, renewsAt: end, status: "active", graceUntil: null, remindedFor: null } });
+    // Its own bill now: it stops being covered by another business; businesses it covers follow its new plan.
+    if (tenant.coveredById) await tx.tenant.update({ where: { id: tenant.id }, data: { coveredById: null } });
+    await syncCovered(tx, tenant.id);
     await tx.auditLog.create({ data: { actorId: o.reviewedBy, tenantId: tenant.id, action: "billing.paid", target: `${invoiceNumber(p.invoice)} · ${p.provider} · Rs. ${p.amount}` } });
     return { p, tenant, end };
   });
@@ -166,6 +190,7 @@ export async function runBillingCycle(db: Db, mailer: Mailer, o: { siteUrl: stri
         db.invoice.updateMany({ where: { tenantId: t.id, status: "open" }, data: { status: "void" } }),
         db.auditLog.create({ data: { tenantId: t.id, action: "billing.moved_to_starter", target: t.name } }),
       ]);
+      await syncCovered(db, t.id);
       await tell(`${t.name} is now on Starter`, `The ${t.plan.name} plan wasn't renewed, so ${t.name} is on the free Starter plan now. Your listings and data stay; Starter's limits apply to anything new. Pay for a plan any time to get everything back.`, "Moved to the free Starter plan");
       out.downgraded++;
     }

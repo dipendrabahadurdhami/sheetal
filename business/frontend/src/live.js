@@ -115,6 +115,8 @@ export const addBusiness = async (body) => {
   await wsReload?.(r.data.id);
   return r;
 };
+/** Reloads the person's businesses (plans, roles) after a change such as joining a Pro plan. */
+export const workspacesReload = () => wsReload?.();
 /** Whether the panel is signed in to the API (adding a business needs it). */
 export const canAddBusiness = () => bizApiReady() && signedIn();
 

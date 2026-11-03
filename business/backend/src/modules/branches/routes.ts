@@ -7,9 +7,10 @@ import { workspaceOf, type Workspace } from "../access.js";
 
 // A business's branches (outlets, offices, sites). Everyone in the business sees the branches they work in
 // (owners and "all branches" people see every one); "settings.business" adds, edits, closes and removes them.
-// - Branch names are what team access (Membership.scopes) and records (rooms) point at, so renaming a branch
-//   renames it there too, in one transaction.
-// - A business always keeps at least one open branch; a branch with rooms, or someone's only branch, can't be removed.
+// - Work (listings, leads, rooms, bookings, POS) points at the branch id; team access (Membership.scopes) holds
+//   branch names, so renaming a branch renames it there too, in one transaction.
+// - A business always keeps at least one open branch; a branch with any work in it, or someone's only branch, can't
+//   be removed (close it instead: its history stays).
 
 const name = z.string().trim().min(2, "Give the branch a name.").max(60);
 const text = (max: number) => z.string().trim().max(max).optional().nullable();
@@ -36,9 +37,10 @@ export async function branchRoutes(app: FastifyInstance) {
 
   app.get("/branches", async (request) => {
     const ws = workspaceOf(request);
-    const [rows, rooms, members] = await Promise.all([
+    const [rows, rooms, listings, members] = await Promise.all([
       db().branch.findMany({ where: { tenantId: ws.tenantId }, orderBy: [{ sort: "asc" }, { createdAt: "asc" }] }),
-      db().room.groupBy({ by: ["branch"], where: { tenantId: ws.tenantId, active: true }, _count: true }),
+      db().room.groupBy({ by: ["branchId"], where: { tenantId: ws.tenantId, active: true }, _count: true }),
+      db().listing.groupBy({ by: ["branchId"], where: { tenantId: ws.tenantId, status: { notIn: ["removed", "archived"] } }, _count: true }),
       db().membership.findMany({ where: { tenantId: ws.tenantId, status: "active" }, select: { scopes: true } }),
     ]);
     const mine = rows.filter((b) => ws.inBranch(b.name));
@@ -47,7 +49,8 @@ export async function branchRoutes(app: FastifyInstance) {
         access: ws.branches,
         branches: mine.map((b) => ({
           id: b.id, name: b.name, address: b.address, phone: b.phone, manager: b.manager, receipt: b.receipt, status: b.status, sort: b.sort,
-          rooms: rooms.find((r) => r.branch === b.name)?._count ?? 0,
+          rooms: rooms.find((r) => r.branchId === b.id)?._count ?? 0,
+          listings: listings.find((r) => r.branchId === b.id)?._count ?? 0,
           // People who work here: those limited to this branch, plus everyone with all branches.
           staff: members.filter((m) => { const l = scopeList(m.scopes); return !l || l.includes(b.name); }).length,
         })),
@@ -77,8 +80,7 @@ export async function branchRoutes(app: FastifyInstance) {
     await db().$transaction(async (tx) => {
       await tx.branch.update({ where: { id: br.id }, data: { name: b.name, address: b.address, phone: b.phone, manager: b.manager, receipt: b.receipt, status: b.status, sort: b.sort } });
       if (!renamed) return;
-      // The new name everywhere the old one was used.
-      await tx.room.updateMany({ where: { tenantId: ws.tenantId, branch: br.name }, data: { branch: renamed } });
+      // The new name in everyone's branch access (work points at the branch itself).
       const { members, invites } = await scoped(tx, ws.tenantId);
       const swap = (s: unknown) => scopeList(s)!.map((x) => (x === br.name ? renamed : x));
       for (const m of members.filter((m) => scopeList(m.scopes)!.includes(br.name))) await tx.membership.update({ where: { id: m.id }, data: { scopes: swap(m.scopes) } });
@@ -93,8 +95,15 @@ export async function branchRoutes(app: FastifyInstance) {
     const br = await branchOf(ws, request.params.id);
     if ((await db().branch.count({ where: { tenantId: ws.tenantId } })) <= 1) throw badRequest("A business needs at least one branch.");
     if (br.status === "open" && !(await db().branch.count({ where: { tenantId: ws.tenantId, status: "open", id: { not: br.id } } }))) throw badRequest("A business needs at least one open branch.");
-    const rooms = await db().room.count({ where: { tenantId: ws.tenantId, branch: br.name } });
-    if (rooms) throw badRequest(`${br.name} has ${rooms} room${rooms > 1 ? "s" : ""}. Move them to another branch, or close the branch instead.`);
+    const w = { branchId: br.id };
+    const [listings, rooms, leads, bookings, shifts, bills] = await Promise.all([
+      db().listing.count({ where: { ...w, status: { not: "removed" } } }), db().room.count({ where: w }), db().lead.count({ where: w }),
+      db().booking.count({ where: w }), db().shift.count({ where: w }), db().posBill.count({ where: w }),
+    ]);
+    const work = [[listings, "listing"], [rooms, "room"], [leads, "enquiry"], [bookings, "booking"], [shifts + bills, "till record"]]
+      .filter(([n]) => n).map(([n, w]) => `${n} ${n === 1 ? w : w === "enquiry" ? "enquiries" : `${w}s`}`);
+    if (work.length) throw badRequest(`${br.name} has ${work.join(", ")}. Move them to another branch, or close the branch instead (its history stays).`);
+    await db().menuItem.deleteMany({ where: { tenantId: ws.tenantId, branchId: br.id } });
     await db().$transaction(async (tx) => {
       const { members, invites } = await scoped(tx, ws.tenantId);
       const only = members.filter((m) => { const l = scopeList(m.scopes)!; return l.length === 1 && l[0] === br.name; });

@@ -135,6 +135,8 @@ model Tenant {
   brandColors   String[]     @default([]) @map("brand_colors")
   planId        String       @map("plan_id")
   plan          Plan         @relation(fields: [planId], references: [id])
+  /// Covered by another business's Pro plan (same owner): no bill of its own; it has Pro while that business does.
+  coveredById   String?      @map("covered_by_id")
   status        TenantStatus @default(active)
   /// Months paid for (1, 3, 6 or 12).
   period        Int          @default(1)
@@ -155,14 +157,16 @@ model Tenant {
   branches    Branch[]
 
   @@index([type])
+  @@index([coveredById])
   @@map("tenants")
 }
 
 /// A branch (outlet, office, site) of a business. Team members can be limited to some branches (Membership.scopes
-/// holds branch names); data such as rooms carries its branch name. Every business starts with "Head office".
+/// holds branch names); a business's work (listings and everything under them, leads, rooms, bookings, POS) belongs
+/// to one branch. Every business starts with "Head office".
 model Branch {
-  id        String   @id @default(cuid())
-  tenantId  String   @map("tenant_id")
+  id        String     @id @default(cuid())
+  tenantId  String     @map("tenant_id")
   name      String
   address   String?
   phone     String?
@@ -171,10 +175,17 @@ model Branch {
   /// The name printed on this branch's receipts.
   receipt   String?
   /// open or closed (closed branches keep their history but can't be picked).
-  status    String   @default("open")
-  sort      Int      @default(0)
-  createdAt DateTime @default(now()) @map("created_at")
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  status    String     @default("open")
+  sort      Int        @default(0)
+  createdAt DateTime   @default(now()) @map("created_at")
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  listings  Listing[]
+  leads     Lead[]
+  rooms     Room[]
+  bookings  Booking[]
+  menuItems MenuItem[]
+  shifts    Shift[]
+  posBills  PosBill[]
 
   @@unique([tenantId, name])
   @@map("branches")
@@ -277,6 +288,9 @@ model Listing {
   code          String         @unique
   slug          String         @unique
   tenantId      String?        @map("tenant_id")
+  /// The branch it belongs to (see Branch); null = no business, or shared by all branches where noted.
+  branchId      String?        @map("branch_id")
+  branch        Branch?        @relation(fields: [branchId], references: [id], onDelete: Restrict)
   /// The person who posted it (imported listings keep their old poster).
   userId        String?        @map("user_id")
   /// What is offered, as in /business: sell, rentout, stay_hotel, stay_unit, project, invest
@@ -353,6 +367,7 @@ model Listing {
   @@index([tenantId, status])
   @@index([userId])
   @@index([status, submittedAt])
+  @@index([branchId])
   @@map("listings")
 }
 
@@ -528,6 +543,9 @@ model Lead {
   id         String        @id @default(cuid())
   /// The business it is for; null = Sheetal itself.
   tenantId   String?       @map("tenant_id")
+  /// The branch handling it: the listing's branch, or where it came in.
+  branchId   String?       @map("branch_id")
+  branch     Branch?       @relation(fields: [branchId], references: [id], onDelete: Restrict)
   listingId  Int?          @map("listing_id")
   userId     String?       @map("user_id")
   /// contact_agent, contact_owner, site_visit, requirement, service
@@ -571,6 +589,7 @@ model Lead {
   @@index([tenantId, status, createdAt])
   @@index([tenantId, lastAt])
   @@index([listingId])
+  @@index([branchId])
   @@map("leads")
 }
 
@@ -862,7 +881,8 @@ model Room {
   tenantId  String    @map("tenant_id")
   /// The stay listing it belongs to, when there is one.
   listingId Int?      @map("listing_id")
-  branch    String?
+  branchId  String?   @map("branch_id")
+  branch    Branch?   @relation(fields: [branchId], references: [id], onDelete: Restrict)
   no        String
   type      String
   /// Rs. a night.
@@ -876,6 +896,7 @@ model Room {
 
   @@unique([tenantId, no])
   @@index([tenantId, type])
+  @@index([branchId])
   @@map("rooms")
 }
 
@@ -886,6 +907,8 @@ model Booking {
   seq         Int            @unique @default(autoincrement())
   tenantId    String         @map("tenant_id")
   roomId      String?        @map("room_id")
+  branchId    String?        @map("branch_id")
+  branch      Branch?        @relation(fields: [branchId], references: [id], onDelete: Restrict)
   roomType    String         @map("room_type")
   guestName   String         @map("guest_name")
   phone       String?
@@ -916,6 +939,7 @@ model Booking {
   @@unique([tenantId, externalUid])
   @@index([tenantId, status, checkIn])
   @@index([roomId, checkIn])
+  @@index([branchId])
   @@map("bookings")
 }
 
@@ -957,6 +981,9 @@ model GuestPayment {
 model MenuItem {
   id        String   @id @default(cuid())
   tenantId  String   @map("tenant_id")
+  /// null = on the menu at every branch.
+  branchId  String?  @map("branch_id")
+  branch    Branch?  @relation(fields: [branchId], references: [id], onDelete: Restrict)
   outlet    String   @default("Restaurant")
   category  String   @default("Food")
   name      String
@@ -972,6 +999,8 @@ model MenuItem {
 model Shift {
   id       String    @id @default(cuid())
   tenantId String    @map("tenant_id")
+  branchId String?   @map("branch_id")
+  branch   Branch?   @relation(fields: [branchId], references: [id], onDelete: Restrict)
   openedBy String    @map("opened_by")
   float    Int       @default(0)
   openedAt DateTime  @default(now()) @map("opened_at")
@@ -983,6 +1012,7 @@ model Shift {
   bills    PosBill[]
 
   @@index([tenantId, closedAt])
+  @@index([branchId])
   @@map("shifts")
 }
 
@@ -991,6 +1021,8 @@ model PosBill {
   id        String   @id @default(cuid())
   seq       Int      @unique @default(autoincrement())
   tenantId  String   @map("tenant_id")
+  branchId  String?  @map("branch_id")
+  branch    Branch?  @relation(fields: [branchId], references: [id], onDelete: Restrict)
   shiftId   String?  @map("shift_id")
   outlet    String
   /// [{ itemId?, name, qty, price }]
@@ -1011,6 +1043,7 @@ model PosBill {
   shift     Shift?   @relation(fields: [shiftId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, createdAt])
+  @@index([branchId])
   @@map("pos_bills")
 }
 

@@ -10,6 +10,9 @@ export const signedIn = () => !!token();
 // The business the panel has open; sent with every call so the API acts in that business.
 let activeTenant = null;
 export const setActiveTenant = (id) => { activeTenant = id || null; };
+// The branch picked in the top bar (a branch id, or "all"); the API shows and files work under it.
+let activeBranch = null;
+export const setActiveBranch = (id) => { activeBranch = id || null; };
 
 export class ApiError extends Error {
   constructor(status, message, errors) { super(message); this.status = status; this.errors = errors; }
@@ -21,6 +24,7 @@ export async function bizApi(method, path, body) {
   const t = token();
   if (t) headers.Authorization = `Bearer ${t}`;
   if (activeTenant) headers["x-tenant-id"] = activeTenant;
+  if (activeTenant && activeBranch) headers["x-branch"] = activeBranch;
   if (body !== undefined) headers["Content-Type"] = "application/json";
   let res;
   try {

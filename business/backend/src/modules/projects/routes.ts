@@ -1,9 +1,9 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Prisma, Unit } from "@prisma/client";
 import { z } from "zod";
 import { dbOf } from "@sheetal/backend-core/lib/db";
 import { badRequest, conflict, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
-import { workspaceOf, type Workspace } from "../access.js";
+import { branchView, inView, workspaceOf, type Workspace } from "../access.js";
 
 // Developers: the units of each project (from its project listing), short holds, reservations with a payment plan,
 // and collections against them. A unit can be held or reserved by one buyer at a time; a hold lapses on its own.
@@ -19,8 +19,16 @@ export async function projectRoutes(app: FastifyInstance) {
   /** A hold that has passed its time counts as available. */
   const live = (u: Unit) => (u.status === "held" && u.holdUntil && u.holdUntil < new Date() ? "available" : u.status);
   const unitJson = (u: Unit) => ({ id: u.id, listingId: u.listingId, block: u.block, no: u.no, type: u.type, sizeSqft: u.sizeSqft, price: n(u.price), status: live(u), holdUntil: live(u) === "held" ? u.holdUntil : null });
-  async function myListing(ws: Workspace, id: number, kind: "project" | "invest") {
-    const l = await db().listing.findFirst({ where: { id, tenantId: ws.tenantId, kind, status: { not: "removed" } } });
+  // Units, reservations, investor commitments and updates belong to their project or investment listing, so they
+  // follow that listing's branch: people see those of the branches in view.
+  /** Ids of the business's listings in the branches in view; null = the whole business. */
+  async function inBranches(ws: Workspace, request: FastifyRequest) {
+    const v = await branchView(db(), request, ws);
+    return v.ids ? (await db().listing.findMany({ where: { tenantId: ws.tenantId, ...inView(v) }, select: { id: true } })).map((l) => l.id) : null;
+  }
+  const of = (ids: number[] | null) => (ids ? { listingId: { in: ids } } : {});
+  async function myListing(ws: Workspace, request: FastifyRequest, id: number, kind: "project" | "invest") {
+    const l = await db().listing.findFirst({ where: { id, tenantId: ws.tenantId, kind, status: { not: "removed" }, ...inView(await branchView(db(), request, ws)) } });
     if (!l) throw notFound(kind === "project" ? "Project not found." : "Investment not found.");
     return l;
   }
@@ -29,8 +37,9 @@ export async function projectRoutes(app: FastifyInstance) {
   app.get("/projects", async (request) => {
     const ws = workspaceOf(request);
     need(ws, "projects.manage", "reservations.manage", "visits.manage", "collect.payments", "overview.view");
-    const projects = await db().listing.findMany({ where: { tenantId: ws.tenantId, kind: "project", status: { not: "removed" } }, select: { id: true, code: true, title: true, status: true, district: true, area: true } });
-    const units = await db().unit.findMany({ where: { tenantId: ws.tenantId }, orderBy: [{ block: "asc" }, { no: "asc" }] });
+    const ids = await inBranches(ws, request);
+    const projects = await db().listing.findMany({ where: { tenantId: ws.tenantId, kind: "project", status: { not: "removed" }, ...(ids ? { id: { in: ids } } : {}) }, select: { id: true, code: true, title: true, status: true, district: true, area: true } });
+    const units = await db().unit.findMany({ where: { tenantId: ws.tenantId, ...of(ids) }, orderBy: [{ block: "asc" }, { no: "asc" }] });
     return { data: projects.map((p) => {
       const us = units.filter((u) => u.listingId === p.id);
       const count = (s: string) => us.filter((u) => live(u) === s).length;
@@ -41,7 +50,7 @@ export async function projectRoutes(app: FastifyInstance) {
   app.post<{ Params: { id: string } }>("/projects/:id/units", async (request) => {
     const ws = workspaceOf(request);
     need(ws, "projects.manage");
-    const p = await myListing(ws, Number(request.params.id) || -1, "project");
+    const p = await myListing(ws, request, Number(request.params.id) || -1, "project");
     const b = z.object({ block: z.string().trim().max(20).default(""), type: z.string().trim().min(1).max(40), sizeSqft: z.number().int().min(0).optional(), price: money, nos: z.array(z.string().trim().min(1).max(20)).min(1).max(500) }).parse(request.body);
     const plan = ws.member.tenant.plan.limits as Record<string, number>;
     const total = await db().unit.count({ where: { tenantId: ws.tenantId } });
@@ -55,7 +64,7 @@ export async function projectRoutes(app: FastifyInstance) {
     const ws = workspaceOf(request);
     need(ws, "projects.manage");
     const b = z.object({ price: money.optional(), type: z.string().max(40).optional(), sizeSqft: z.number().int().min(0).optional(), blocked: z.boolean().optional() }).parse(request.body);
-    const u = await db().unit.findFirst({ where: { id: request.params.id, tenantId: ws.tenantId } });
+    const u = await db().unit.findFirst({ where: { id: request.params.id, tenantId: ws.tenantId, ...of(await inBranches(ws, request)) } });
     if (!u) throw notFound("Unit not found.");
     if (b.blocked !== undefined && !["available", "blocked"].includes(live(u))) throw badRequest("Only free units can be blocked or unblocked.");
     await db().unit.update({ where: { id: u.id }, data: { price: b.price === undefined ? undefined : BigInt(b.price), type: b.type, sizeSqft: b.sizeSqft, status: b.blocked === undefined ? undefined : b.blocked ? "blocked" : "available" } });
@@ -68,7 +77,7 @@ export async function projectRoutes(app: FastifyInstance) {
     const { days } = z.object({ days: z.number().int().min(1).max(14).default(3) }).parse(request.body ?? {});
     const until = new Date(Date.now() + days * 864e5);
     // Only one person can hold it: the update only matches a free unit (or one whose hold has run out).
-    const r = await db().unit.updateMany({ where: { id: request.params.id, tenantId: ws.tenantId, OR: [{ status: "available" }, { status: "held", holdUntil: { lt: new Date() } }] }, data: { status: "held", holdUntil: until } });
+    const r = await db().unit.updateMany({ where: { id: request.params.id, tenantId: ws.tenantId, ...of(await inBranches(ws, request)), OR: [{ status: "available" }, { status: "held", holdUntil: { lt: new Date() } }] }, data: { status: "held", holdUntil: until } });
     if (!r.count) throw conflict("This unit isn't free.");
     return { message: `Held for ${days} day${days > 1 ? "s" : ""}.` };
   });
@@ -90,7 +99,8 @@ export async function projectRoutes(app: FastifyInstance) {
   app.get("/reservations", async (request) => {
     const ws = workspaceOf(request);
     need(ws, "reservations.manage", "collect.payments", "projects.manage");
-    return { data: await resJson({ tenantId: ws.tenantId }) };
+    const ids = await inBranches(ws, request);
+    return { data: await resJson({ tenantId: ws.tenantId, ...(ids ? { unit: { listingId: { in: ids } } } : {}) }) };
   });
 
   app.post<{ Params: { id: string } }>("/units/:id/reserve", async (request) => {
@@ -100,7 +110,7 @@ export async function projectRoutes(app: FastifyInstance) {
       buyer: z.string().trim().min(2).max(80), phone: z.string().trim().max(30).optional(), email: z.union([z.email(), z.literal("")]).optional(), price: money.optional(),
       plan: z.array(z.object({ label: z.string().trim().min(1).max(60), due: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), amount: money })).max(60).default([]), notes: z.string().max(1000).optional(),
     }).parse(request.body);
-    const u = await db().unit.findFirst({ where: { id: request.params.id, tenantId: ws.tenantId } });
+    const u = await db().unit.findFirst({ where: { id: request.params.id, tenantId: ws.tenantId, ...of(await inBranches(ws, request)) } });
     if (!u) throw notFound("Unit not found.");
     if (!["available", "held"].includes(live(u))) throw conflict("This unit is already reserved or sold.");
     const price = BigInt(b.price ?? Number(u.price));
@@ -118,7 +128,8 @@ export async function projectRoutes(app: FastifyInstance) {
     const ws = workspaceOf(request);
     const b = z.object({ amount: z.number().int().refine((v) => v !== 0).refine((v) => Math.abs(v) <= 1e12), method: z.enum(["cash", "bank", "cheque", "fonepay", "esewa", "khalti"]), ref: z.string().trim().max(80).optional(), note: z.string().trim().max(200).optional() }).parse(request.body);
     need(ws, b.amount < 0 ? "collect.refund" : "collect.payments");
-    const r = await db().reservation.findFirst({ where: { id: request.params.id, tenantId: ws.tenantId }, include: { collections: true } });
+    const ids = await inBranches(ws, request);
+    const r = await db().reservation.findFirst({ where: { id: request.params.id, tenantId: ws.tenantId, ...(ids ? { unit: { listingId: { in: ids } } } : {}) }, include: { collections: true } });
     if (!r || r.status === "cancelled") throw notFound("Reservation not found.");
     const paid = r.collections.reduce((s, c) => s + Number(c.amount), 0) + b.amount;
     if (paid < 0) throw badRequest("A refund can't be more than what was paid.");
@@ -139,7 +150,8 @@ export async function projectRoutes(app: FastifyInstance) {
     const ws = workspaceOf(request);
     need(ws, "reservations.manage");
     const { note } = z.object({ note: z.string().trim().min(3, "Say why.").max(300) }).parse(request.body);
-    const r = await db().reservation.findFirst({ where: { id: request.params.id, tenantId: ws.tenantId } });
+    const ids = await inBranches(ws, request);
+    const r = await db().reservation.findFirst({ where: { id: request.params.id, tenantId: ws.tenantId, ...(ids ? { unit: { listingId: { in: ids } } } : {}) } });
     if (!r || r.status !== "reserved") throw badRequest("Only open reservations can be cancelled.");
     await db().$transaction([
       db().reservation.update({ where: { id: r.id }, data: { status: "cancelled", notes: [r.notes, `Cancelled: ${note}`].filter(Boolean).join("\n") } }),
@@ -153,9 +165,10 @@ export async function projectRoutes(app: FastifyInstance) {
   app.get("/investments", async (request) => {
     const ws = workspaceOf(request);
     need(ws, "investments.manage", "investors.view");
-    const ls = await db().listing.findMany({ where: { tenantId: ws.tenantId, kind: "invest", status: { not: "removed" } }, select: { id: true, code: true, title: true, status: true, price: true } });
-    const cs = await db().commitment.findMany({ where: { tenantId: ws.tenantId }, orderBy: { createdAt: "desc" } });
-    const ups = await db().investmentUpdate.findMany({ where: { tenantId: ws.tenantId }, orderBy: { createdAt: "desc" }, take: 100 });
+    const ids = await inBranches(ws, request);
+    const ls = await db().listing.findMany({ where: { tenantId: ws.tenantId, kind: "invest", status: { not: "removed" }, ...(ids ? { id: { in: ids } } : {}) }, select: { id: true, code: true, title: true, status: true, price: true } });
+    const cs = await db().commitment.findMany({ where: { tenantId: ws.tenantId, ...of(ids) }, orderBy: { createdAt: "desc" } });
+    const ups = await db().investmentUpdate.findMany({ where: { tenantId: ws.tenantId, ...of(ids) }, orderBy: { createdAt: "desc" }, take: 100 });
     return { data: ls.map((l) => {
       const mine = cs.filter((c) => c.listingId === l.id && c.status !== "refunded");
       return { id: l.id, code: l.code, title: l.title, status: l.status, target: n(l.price),
@@ -168,7 +181,7 @@ export async function projectRoutes(app: FastifyInstance) {
   app.post<{ Params: { id: string } }>("/investments/:id/commitments", async (request) => {
     const ws = workspaceOf(request);
     need(ws, "investments.manage");
-    const l = await myListing(ws, Number(request.params.id) || -1, "invest");
+    const l = await myListing(ws, request, Number(request.params.id) || -1, "invest");
     const b = z.object({ name: z.string().trim().min(2).max(80), email: z.union([z.email(), z.literal("")]).optional(), phone: z.string().trim().max(30).optional(), amount: money.refine((v) => v > 0) }).parse(request.body);
     await db().commitment.create({ data: { tenantId: ws.tenantId, listingId: l.id, name: b.name, email: b.email || null, phone: b.phone, amount: BigInt(b.amount) } });
     return { message: `${b.name}: Rs. ${b.amount.toLocaleString("en-IN")} pledged.` };
@@ -178,7 +191,7 @@ export async function projectRoutes(app: FastifyInstance) {
     const ws = workspaceOf(request);
     need(ws, "investments.manage");
     const b = z.object({ status: z.enum(["paid", "refunded"]), ref: z.string().trim().max(80).optional() }).parse(request.body);
-    const c = await db().commitment.findFirst({ where: { id: request.params.id, tenantId: ws.tenantId } });
+    const c = await db().commitment.findFirst({ where: { id: request.params.id, tenantId: ws.tenantId, ...of(await inBranches(ws, request)) } });
     if (!c) throw notFound("Commitment not found.");
     if (b.status === "paid" && c.status !== "pledged") throw badRequest("Only pledges can be marked paid.");
     if (b.status === "refunded" && c.status === "refunded") throw badRequest("Already refunded.");
@@ -190,7 +203,7 @@ export async function projectRoutes(app: FastifyInstance) {
   app.post<{ Params: { id: string } }>("/investments/:id/updates", { config: { rateLimit: { max: 10, timeWindow: "1 hour" } } }, async (request) => {
     const ws = workspaceOf(request);
     need(ws, "updates.post");
-    const l = await myListing(ws, Number(request.params.id) || -1, "invest");
+    const l = await myListing(ws, request, Number(request.params.id) || -1, "invest");
     const b = z.object({ title: z.string().trim().min(3).max(120), body: z.string().trim().min(10).max(5000) }).parse(request.body);
     await db().investmentUpdate.create({ data: { tenantId: ws.tenantId, listingId: l.id, title: b.title, body: b.body, byUserId: ws.user.id } });
     const to = [...new Set((await db().commitment.findMany({ where: { listingId: l.id, status: { not: "refunded" }, email: { not: null } }, select: { email: true } })).map((c) => c.email!.toLowerCase()))];
