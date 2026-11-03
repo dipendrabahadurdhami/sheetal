@@ -42,10 +42,12 @@ export async function teamRoutes(app: FastifyInstance) {
     };
   });
 
-  // ───── Branding: the business's logo and its colours (read from the logo in the browser, or picked) ─────
+  // ───── Branding (Business and Pro): the business's logo and its colours (read from the logo, or picked) ─────
   app.put("/workspace/branding", { bodyLimit: 4 * 1024 * 1024 }, async (request) => {
     const ws = workspaceOf(request);
     if (!ws.can("settings.business")) throw forbidden("Your role can't change the branding.");
+    // Own logo and colours come with the Business and Pro plans; Starter keeps Sheetal's look.
+    if (!ws.member.tenant.plan.price) throw new AppError(402, "plan_feature", "Your own logo and colours come with the Business and Pro plans.");
     const b = z.object({
       logo: z.string().max(3 * 1024 * 1024).nullable().optional(),
       colors: z.array(z.string().regex(/^#[0-9a-fA-F]{6}$/, "Use colours like #9D1D21.")).max(4),

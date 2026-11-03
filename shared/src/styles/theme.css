@@ -1311,11 +1311,17 @@ html, body { overflow-x: clip; }
 .featured-hero::before { background-image: url("/featured/featured-bg.jpg"), url("/services/services-bg.jpg"); background-position: center 50%; }
 
 /* nav + footer stand apart from the page in every theme */
-/* Light: the light header as designed. Dark: red header and footer. Red: dark header and footer (the two swap). */
-[data-theme~="dark"] .header { background: color-mix(in srgb, var(--c-crimson) 96%, transparent); border-bottom-color: color-mix(in srgb, var(--c-white) 20%, var(--c-crimson)); }
-[data-theme~="dark"] .footer { background: var(--c-crimson); border-top: 1px solid var(--c-crimson); }
-[data-theme~="dark"] .footer-bottom { border-top-color: color-mix(in srgb, var(--c-white) 22%, var(--c-crimson)); }
-[data-theme~="dark"] .header-actions .btn-icon:hover { background: color-mix(in srgb, var(--c-white) 12%, var(--c-crimson)); }
+/* Header and footer, the same rule as /business and /admin:
+   light: light header and footer · dark: dark header and footer · third theme: red page, dark header and footer. */
+[data-theme~="dark"]:not([data-theme~="red"]) .header { background: color-mix(in srgb, color-mix(in srgb, var(--c-silver) 14%, var(--c-slate)) 94%, transparent); border-bottom-color: var(--line-strong); }
+[data-theme~="dark"]:not([data-theme~="red"]) .footer { background: color-mix(in srgb, var(--c-silver) 16%, var(--c-slate)) !important; border-top: 1px solid var(--line-strong); }
+[data-theme~="dark"]:not([data-theme~="red"]) .footer-bottom { border-top-color: color-mix(in srgb, var(--c-white) 22%, var(--c-slate)); }
+[data-theme~="light"] .footer { background: var(--c-white); color: var(--text); border-top: 1px solid var(--line); }
+[data-theme~="light"] .footer h4, [data-theme~="light"] .footer .brand-word b { color: var(--text-strong); }
+[data-theme~="light"] .footer a, [data-theme~="light"] .footer-brand p, [data-theme~="light"] .footer .brand-word span, [data-theme~="light"] .footer-contact a svg, [data-theme~="light"] .footer-bottom { color: var(--muted); }
+[data-theme~="light"] .footer a:hover { color: var(--accent-ink); }
+[data-theme~="light"] .footer-bottom { border-top-color: var(--line); }
+[data-theme~="light"] .footer .brand img { filter: none; }
 [data-theme~="red"] .header { background: color-mix(in srgb, color-mix(in srgb, var(--c-silver) 14%, var(--c-slate)) 96%, transparent) !important; border-bottom-color: color-mix(in srgb, var(--c-white) 18%, var(--c-slate)); }
 [data-theme~="red"] .footer { background: color-mix(in srgb, var(--c-silver) 14%, var(--c-slate)) !important; border-top: 1px solid color-mix(in srgb, var(--c-white) 14%, var(--c-slate)) !important; }
 [data-theme~="red"] .footer-bottom { border-top-color: color-mix(in srgb, var(--c-white) 22%, var(--c-slate)) !important; }

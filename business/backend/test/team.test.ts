@@ -57,6 +57,8 @@ describe("branding", () => {
     expect((await call("owner", "PUT", "/workspace/branding", { colors: ["#111111", "#222222", "#333333", "#444444", "#555555"] })).statusCode).toBe(422);
     const ws = (await call("owner", "GET", "/workspaces", undefined, "")).json().data.workspaces[0];
     expect(ws).toMatchObject({ brandColors: ["#0A7D3B", "#F2A900"], logoUrl: expect.stringContaining("/brand/") });
+    // Starter keeps Sheetal's look.
+    expect((await call("solo", "PUT", "/workspace/branding", { colors: ["#123456"] }, ids.small)).statusCode).toBe(402);
   });
 });
 

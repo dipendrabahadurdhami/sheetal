@@ -1484,35 +1484,30 @@ select.pform-in { cursor: pointer; }
 .pf-choice.off { opacity: .55; cursor: not-allowed; }
 .pf-choice input { accent-color: var(--accent); }
 
-/* Top bar and sidebar, as on the website: light stays as designed, dark theme makes them red, red theme makes
-   them dark. Their own colour tokens change so menus, hovers and the active item read on them. */
-[data-theme~="dark"] :is(.pf-top, .pf-side, .pf-side-top) {
-  --card: var(--c-crimson); --surface: color-mix(in srgb, var(--c-white) 12%, var(--c-crimson)); --surface-2: color-mix(in srgb, var(--c-white) 18%, var(--c-crimson));
-  --line: color-mix(in srgb, var(--c-white) 18%, var(--c-crimson)); --line-strong: color-mix(in srgb, var(--c-white) 28%, var(--c-crimson));
-  --accent-soft: color-mix(in srgb, var(--c-white) 16%, var(--c-crimson)); --accent-ink: var(--c-white); --muted: color-mix(in srgb, var(--c-white) 75%, var(--c-crimson));
-  background: var(--c-crimson); border-color: color-mix(in srgb, var(--c-white) 18%, var(--c-crimson));
-}
+/* Top bar and sidebar in each theme, the same rule as the website:
+   light: light (as designed) · dark: dark (as designed) · third theme: the page in the colour, bars dark. */
 [data-theme~="red"] :is(.pf-top, .pf-side, .pf-side-top) {
   --card: color-mix(in srgb, var(--c-silver) 14%, var(--c-slate)); --surface: color-mix(in srgb, var(--c-white) 12%, var(--c-slate)); --surface-2: color-mix(in srgb, var(--c-white) 18%, var(--c-slate));
   --line: color-mix(in srgb, var(--c-white) 16%, var(--c-slate)); --line-strong: color-mix(in srgb, var(--c-white) 26%, var(--c-slate));
   --accent-soft: color-mix(in srgb, var(--c-white) 14%, var(--c-slate)); --accent-ink: var(--c-white); --muted: color-mix(in srgb, var(--c-white) 72%, var(--c-slate));
   background: color-mix(in srgb, var(--c-silver) 14%, var(--c-slate)); border-color: color-mix(in srgb, var(--c-white) 16%, var(--c-slate));
 }
-[data-theme~="dark"]:not([data-theme~="red"]) .pf-top .btn-primary { background: var(--c-white); color: var(--c-crimson); border-color: var(--c-white); }
 
-/* A business's own colours (read from its logo in Settings -> Branding): top bar and sidebar in its first
-   colour, buttons and the active item in its second, in every theme. Set by applyBrand() in the business app. */
-html.has-brand :is(.pf-top, .pf-side, .pf-side-top) {
-  --card: var(--brand-bar); --surface: color-mix(in srgb, var(--brand-bar-text) 12%, var(--brand-bar)); --surface-2: color-mix(in srgb, var(--brand-bar-text) 18%, var(--brand-bar));
-  --line: color-mix(in srgb, var(--brand-bar-text) 18%, var(--brand-bar)); --line-strong: color-mix(in srgb, var(--brand-bar-text) 28%, var(--brand-bar));
-  --text: var(--brand-bar-text); --text-strong: var(--brand-bar-text); --muted: color-mix(in srgb, var(--brand-bar-text) 75%, var(--brand-bar));
-  --accent-soft: color-mix(in srgb, var(--brand-bar-text) 16%, var(--brand-bar)); --accent-ink: var(--brand-bar-text);
-  background: var(--brand-bar); border-color: color-mix(in srgb, var(--brand-bar-text) 18%, var(--brand-bar)); color: var(--brand-bar-text);
-}
+/* A business's own colours (Business and Pro; Settings -> Branding), set by useBrand() in the business app.
+   Light: light bars with a tint of the brand colour. Dark: dark bars (its darkest colour). Third theme: the
+   brand colour takes the place of Sheetal's red everywhere (page, highlights), with dark bars. */
 html.has-brand { --accent: var(--brand-accent); --btn-bg: var(--brand-accent); --btn-bg-hover: color-mix(in srgb, var(--brand-accent) 85%, #000); --btn-ink: var(--brand-accent-text); }
 html.has-brand[data-theme~="light"] { --accent-ink: var(--brand-accent-ink); --accent-soft: var(--brand-accent-soft); }
-html.has-brand[data-theme~="dark"] { --accent-soft: color-mix(in srgb, var(--brand-accent) 22%, var(--card)); }
-html.has-brand[data-theme] .pf-top .btn-primary { background: var(--brand-accent); color: var(--brand-accent-text); border-color: color-mix(in srgb, var(--brand-bar-text) 30%, var(--brand-accent)); }
+html.has-brand[data-theme~="light"] :is(.pf-top, .pf-side, .pf-side-top) { --card: var(--brand-light-bar); background: var(--brand-light-bar); border-color: color-mix(in srgb, var(--brand-accent) 18%, var(--brand-light-bar)); }
+html.has-brand[data-theme~="dark"]:not([data-theme~="red"]) :is(.pf-top, .pf-side, .pf-side-top) {
+  --card: var(--brand-dark-bar); --surface: color-mix(in srgb, #fff 10%, var(--brand-dark-bar)); --surface-2: color-mix(in srgb, #fff 16%, var(--brand-dark-bar));
+  --line: color-mix(in srgb, #fff 14%, var(--brand-dark-bar)); --accent-soft: color-mix(in srgb, var(--brand-accent) 30%, var(--brand-dark-bar));
+  background: var(--brand-dark-bar); border-color: color-mix(in srgb, #fff 12%, var(--brand-dark-bar));
+}
+html.has-brand[data-theme~="dark"]:not([data-theme~="red"]) { --accent-soft: color-mix(in srgb, var(--brand-accent) 22%, var(--card)); }
+/* The third theme in the business's colour: Sheetal's crimson and red are swapped for theirs. */
+html.has-brand[data-theme~="red"] { --c-crimson: var(--brand-deep); --c-red: var(--brand-base); }
+html.has-brand[data-theme~="red"] :is(.pf-top, .pf-side, .pf-side-top) { --card: var(--brand-dark-bar); background: var(--brand-dark-bar); border-color: color-mix(in srgb, #fff 12%, var(--brand-dark-bar)); }
 .pf-ws-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
 
 /* Business switcher at the top of the sidebar: slim, the name opens the list. */

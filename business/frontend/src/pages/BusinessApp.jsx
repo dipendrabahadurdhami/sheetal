@@ -63,7 +63,9 @@ export default function BusinessApp() {
   }, [s.impersonating, s.impersonatingUntil]);
   const ids = [...new Set([...s.memberships, ...(s.impersonating ? [s.impersonating] : [])])];
   const tenant = db.tenants.find((x) => x.id === s.tenantId) || db.tenants.find((x) => x.id === ids[0]);
-  useBrand(tenant?.brandColors); // the business's own colours, when it has set them
+  // The business's own colours and logo (Business and Pro plans).
+  const ownBrand = !!(db.plans.find((p) => p.id === tenant?.planId)?.price);
+  useBrand(ownBrand ? tenant?.brandColors : null);
   const roles = db.tenantRoles[tenant.id];
   const owner = roles.find((r) => r.perms.includes("*"));
   // Previewing a role (owners checking what someone sees) wins; then the person's own role in this business.
@@ -136,7 +138,7 @@ export default function BusinessApp() {
 
   // The business at the top of the sidebar. With its own branding (logo or colours) it takes Sheetal's logo spot;
   // until then Sheetal's logo stays and the business sits just under it. Clicking the name switches business.
-  const branded = (tenant.brandColors || []).length > 0 || (!!tenant.logoUrl && !tenant.logoUrl.startsWith("/brand/"));
+  const branded = ownBrand && ((tenant.brandColors || []).length > 0 || (!!tenant.logoUrl && !tenant.logoUrl.startsWith("/brand/")));
   const wsList = ids.map((id) => db.tenants.find((y) => y.id === id)).filter(Boolean).map((x) => ({ id: x.id, name: x.name, logoUrl: x.logoUrl, color: x.id === tenant.id ? brand : undefined }));
   const pickWs = (v) => update((d) => { d.session.tenantId = v; d.session.previewRoleId = null; });
   const wsSwitcher = <WorkspaceSwitcher current={wsList.find((w) => w.id === tenant.id) || { id: tenant.id, name: tenant.name, logoUrl: tenant.logoUrl }} list={wsList} onPick={pickWs} big={branded} sub={branded ? `${t(`type.${tenant.type}`)} · ${tenant.city || "Nepal"}` : undefined} label={t("ws.switch")} />;

@@ -62,7 +62,7 @@ export function BusinessSettings({ tenant, tab: tabProp }) {
             </>}
 
             {tab === "branding" && <>
-              {isLive(tenant.id) ? <BrandFromLogo tenant={tenant} canEdit /> : <>
+              {isLive(tenant.id) ? <BrandFromLogo tenant={tenant} canEdit paid={!!plan.price} /> : <>
               <ToggleRow title={t("brand.use")} sub={t("brand.useSub")} checked={get("branding.useBrand")} onChange={(v) => set("branding.useBrand", v)} />
               <Field label={t("brand.color")}>
                 <div className="pf-swatches">

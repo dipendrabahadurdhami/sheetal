@@ -70,14 +70,33 @@ export function extractPalette(img, max = 4) {
 }
 
 /**
- * The workspace colours from the brand colours: bars (top bar and sidebar) from the first, buttons and the
- * active item from the second when it differs enough, each adjusted so text on it stays readable.
+ * The workspace theme from a business's colours. It works out which colour is the brand colour (the most
+ * colourful one), which is light and which is dark, and makes the three themes from them:
+ *  - light: light bars with a light tint of the brand colour; buttons in the brand colour;
+ *  - dark: dark bars (the business's darkest colour, or a very dark shade of the brand colour);
+ *  - the third theme: the page in the brand colour (as it is red for Sheetal), with dark bars.
+ * Every colour is adjusted so text on it stays readable.
  */
 export function brandTheme(colors) {
   if (!colors?.length) return null;
-  const bar = darkEnough(colors[0], 4.5);
-  const second = colors.find((c, i) => i > 0 && dist(toRgb(c), toRgb(colors[0])) > 60 && luminance(c) < 0.75) || colors[0];
-  const accent = darkEnough(second, 3);
-  // accentInk: the same colour dark enough for text on white (links, the selected tab).
-  return { bar, barText: textOn(bar), accent, accentText: textOn(accent), accentInk: darkEnough(second, 4.5), accentSoft: shade(accent, 0.88), colors };
+  // The brand colour: the most colourful, ignoring near-white and near-black.
+  const usable = colors.filter((c) => luminance(c) > 0.02 && luminance(c) < 0.85);
+  const brand = (usable.length ? usable : colors).reduce((best, c) => (sat(toRgb(c)) > sat(toRgb(best)) ? c : best));
+  const darkest = colors.reduce((a, c) => (luminance(c) < luminance(a) ? c : a));
+  const lightest = colors.reduce((a, c) => (luminance(c) > luminance(a) ? c : a));
+  const accent = darkEnough(brand, 3);
+  return {
+    brand,
+    accent, accentText: textOn(accent),
+    // Text in the brand colour on white (links, the selected tab).
+    accentInk: darkEnough(brand, 4.5),
+    accentSoft: shade(brand, 0.88),
+    // Light theme bars: the business's own light colour if it has one, else a light tint of the brand colour.
+    lightBar: luminance(lightest) > 0.85 && lightest !== brand ? lightest : shade(brand, 0.93),
+    // Dark theme bars: its own dark colour if dark enough, else a very dark shade of the brand colour.
+    darkBar: luminance(darkest) < 0.04 ? darkest : darkEnough(shade(brand, -0.72), 12),
+    // The third theme: the brand colour as the page (deep) and highlights (base), like Sheetal's crimson and red.
+    deep: darkEnough(brand, 7), base: darkEnough(brand, 3.2),
+    colors,
+  };
 }
