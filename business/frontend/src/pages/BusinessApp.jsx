@@ -104,6 +104,8 @@ export default function BusinessApp() {
   const stays = types.includes("hotel") || types.includes("host");
   const any = (...p) => role.perms.includes("*") || canAny(role, p);
   const drafts = db.drafts[tenant.id] ? 1 : 0;
+  // Unread leads, for the Inbox button in the top bar.
+  const newLeads = (opsOf(db, tenant.id).conversations || []).filter((c) => c.unread).length;
   const pendingAg = (db.agreements[tenant.id] || []).filter((a) => a.status === "sent").length;
   const ck = checkupsOf(db, tenant.id);
   const toCheck = todaysList(db.listings.filter((l) => l.tenantId === tenant.id), ck.settings, ck.log, TODAY.slice(0, 10)).length;
@@ -195,6 +197,10 @@ export default function BusinessApp() {
         <div className="pf-imp"><Icon name="eye" size={16} /><span>{t("ws.impersonating", { name: tenant.name })}</span>
           <Button size="sm" variant="light" onClick={() => { update((d) => { d.session.impersonating = null; d.session.tenantId = d.session.memberships[0]; }); navigate(`/admin/tenants/${tenant.id}`); }}>{t("ws.backToAdmin")}</Button></div>
       )}</>}
+      topTools={<>
+        {any("messages.reply", "leads.view") && <Link to="/business/inbox" className="btn btn-ghost btn-icon pf-top-tool" title="Leads (Inbox)" aria-label={`Leads${newLeads ? `, ${newLeads} unread` : ""}`}><Icon name="messages-square" size={18} />{newLeads > 0 && <b className="pf-top-count">{newLeads > 99 ? "99+" : newLeads}</b>}</Link>}
+        <Link to="/business/mail" className="btn btn-ghost btn-icon pf-top-tool" title="Email" aria-label="Email"><Icon name="mail" size={18} /></Link>
+      </>}
       topLeft={<div className="pf-top-title"><b>{tenant.name}</b><span className="small muted">{t(`type.${T}`)} · {tenant.city}</span></div>}
       topExtra={<BranchPicker branch={branch} allowed={allowed} canAll={canAll} allLabel={t("br.all")} label={t("br.filter")}
         footer={can(role, "settings.business") ? <MenuLink to="/business/branches" icon={openBranches.length > 1 ? "settings" : "plus"}>{openBranches.length > 1 ? "Manage branches" : "Add a branch"}</MenuLink> : null}

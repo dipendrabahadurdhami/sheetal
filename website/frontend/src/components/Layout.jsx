@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { Newspaper, Calculator, TrendingUp, ClipboardList, Images, Info, Building2, HandCoins, Landmark, Scale, KeyRound, Wallet, FilePlus2, Briefcase, BadgeCheck, Sun, Moon, Droplet, Check, Heart, Plus, User, Home, Search, LogOut, LayoutGrid, Bell, Menu, X, Facebook, Instagram, Phone, Mail, MapPin, MessageCircle, MessagesSquare } from "lucide-react";
+import { Newspaper, Calculator, TrendingUp, ClipboardList, Images, Info, Building2, HandCoins, Landmark, Scale, KeyRound, Wallet, FilePlus2, Briefcase, BadgeCheck, Sun, Moon, Droplet, Heart, Plus, User, Home, Search, LogOut, LayoutGrid, Bell, Menu, X, Facebook, Instagram, Phone, Mail, MapPin, MessageCircle, MessagesSquare } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { Logo, Avatar } from "./ui";
 import { HeaderSearch } from "./HeaderSearch";
@@ -158,26 +158,14 @@ export function WhatsAppButton() {
 }
 const THEME_ICON = { light: Sun, dark: Moon, red: Droplet };
 const THEME_LABEL = { light: "Light", dark: "Dark", red: "Red" };
+// Theme: icon only; each click moves to the next theme (light, dark, red) and round again.
 export function ThemeMenu() {
   const { theme, setTheme } = useApp();
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-  useEffect(() => {
-    if (!open) return;
-    const h = (e) => !ref.current?.contains(e.target) && setOpen(false);
-    const k = (e) => e.key === "Escape" && setOpen(false);
-    document.addEventListener("mousedown", h); document.addEventListener("keydown", k);
-    return () => { document.removeEventListener("mousedown", h); document.removeEventListener("keydown", k); };
-  }, [open]);
-  const Cur = THEME_ICON[theme] || Sun;
+  const ids = THEMES.map((x) => x.id);
+  const cur = ids.includes(theme) ? theme : ids[0];
+  const next = ids[(ids.indexOf(cur) + 1) % ids.length];
+  const Cur = THEME_ICON[cur] || Sun;
   return (
-    <div className="theme-menu" ref={ref}>
-      <button type="button" className="btn btn-ghost btn-icon" onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open} aria-label={`Theme: ${THEME_LABEL[theme] || "Light"}`} title="Theme"><Cur size={18} /></button>
-      {open && <div className="menu theme-menu-pop" role="menu">
-        {THEMES.map(({ id }) => { const I = THEME_ICON[id]; return (
-          <button key={id} type="button" role="menuitemradio" aria-checked={theme === id} onClick={() => { setTheme(id); setOpen(false); }}><I size={16} />{THEME_LABEL[id]}{theme === id && <Check size={15} className="menu-check" />}</button>
-        ); })}
-      </div>}
-    </div>
+    <button type="button" className="btn btn-ghost btn-icon" onClick={() => setTheme(next)} aria-label={`Theme: ${THEME_LABEL[cur]}. Switch to ${THEME_LABEL[next]}`} title={`${THEME_LABEL[cur]} · click for ${THEME_LABEL[next]}`}><Cur size={18} /></button>
   );
 }

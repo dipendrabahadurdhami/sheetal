@@ -9,7 +9,7 @@ import { CommandPalette, openPalette } from "./CommandPalette";
 import { PANEL_THEMES } from "../core/theme";
 
 // Shared frame for /admin and /business. Each app passes its own nav and slots.
-export function Shell({ sub, nav, switcher, sideFooter, topLeft, topExtra, userMenu, banner, notifications = [], notifTo, onReadAll, brandSlot, style, quickCreate = [], records = [], themes = PANEL_THEMES, children }) {
+export function Shell({ sub, nav, switcher, sideFooter, topLeft, topExtra, topTools, userMenu, banner, notifications = [], notifTo, onReadAll, brandSlot, style, quickCreate = [], records = [], themes = PANEL_THEMES, children }) {
   const { path } = useRouter();
   const t = useT();
   const lang = useLang();
@@ -52,25 +52,26 @@ export function Shell({ sub, nav, switcher, sideFooter, topLeft, topExtra, userM
           {topLeft}
           {topExtra}
           <button className="pf-jump" onClick={openPalette}><Icon name="search" size={15} /><span>{t("cmd.jump")}</span><kbd>Ctrl K</kbd></button>
+          {/* Quick links right after the search (e.g. leads and email in the business panel). */}
+          {topTools && <div className="pf-top-tools">{topTools}</div>}
           <div className="pf-top-right">
             {quickCreate.length > 0 && <Menu trigger={({ toggle }) => <button className="btn btn-primary btn-sm pf-new" onClick={toggle}><Icon name="plus" size={15} />{t("cmd.new")}</button>}>
               {quickCreate.map((q) => <MenuLink key={q.to + q.label} to={q.to} icon={q.icon}>{q.label}</MenuLink>)}
             </Menu>}
-            <div className="seg pf-lang" role="radiogroup" aria-label={t("a11y.language")}>
-              {LANGS.map((l) => (
-                <button key={l.id} role="radio" aria-checked={lang === l.id} className={lang === l.id ? "on" : ""} title={l.label}
-                  onClick={() => update((d) => { d.session.lang = l.id; })}>{l.short}</button>
-              ))}
-            </div>
-            <Menu trigger={({ toggle, open: o }) => (
-              <button className="btn btn-ghost btn-icon" onClick={toggle} aria-haspopup="menu" aria-expanded={o} aria-label={t(`theme.${theme}`)} title={t(`theme.${theme}`)}><Icon name={(PANEL_THEMES.find((x) => x.id === theme) || PANEL_THEMES[0]).icon} size={18} /></button>
-            )}>
-              {themes.map((x) => (
-                <button key={x.id} type="button" data-close="" role="menuitemradio" aria-checked={theme === x.id} onClick={() => update((d) => { d.session.theme = x.id; })}>
-                  <Icon name={x.icon} size={16} />{t(`theme.${x.id}`)}{theme === x.id && <Icon name="check" size={15} className="menu-check" />}
-                </button>
-              ))}
-            </Menu>
+            {/* One button: shows the language in use; clicking switches to the other. */}
+            {(() => {
+              const cur = LANGS.find((l) => l.id === lang) || LANGS[0];
+              const next = LANGS[(LANGS.indexOf(cur) + 1) % LANGS.length];
+              return <button type="button" className="btn btn-ghost pf-lang-one" title={`${cur.label}. Switch to ${next.label}`} aria-label={`${t("a11y.language")}: ${cur.label}. Switch to ${next.label}`}
+                onClick={() => update((d) => { d.session.lang = next.id; })}>{cur.short}</button>;
+            })()}
+            {/* Theme: icon only; each click moves to the next theme (light, dark, colour, …) and round again. */}
+            {(() => {
+              const cur = themes.find((x) => x.id === theme) || themes[0];
+              const next = themes[(themes.indexOf(cur) + 1) % themes.length];
+              return <button type="button" className="btn btn-ghost btn-icon" aria-label={`${t(`theme.${cur.id}`)}. Switch to ${t(`theme.${next.id}`)}`} title={`${t(`theme.${cur.id}`)} · click for ${t(`theme.${next.id}`)}`}
+                onClick={() => update((d) => { d.session.theme = next.id; })}><Icon name={cur.icon} size={18} /></button>;
+            })()}
             <Menu trigger={({ toggle }) => (
               <button className="btn btn-ghost btn-icon pf-bell" onClick={toggle} aria-label={t("a11y.notifications")}><Icon name="bell" size={18} />{notifications.some((n) => n.unread) && <i />}</button>
             )}>
