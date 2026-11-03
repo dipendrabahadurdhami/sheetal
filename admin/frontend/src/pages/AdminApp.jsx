@@ -24,6 +24,10 @@ import { adminApi } from "../api";
 import { LiveAnalytics, LiveOutbox, LiveSetup, LiveStatus } from "./LiveSetup";
 
 // Super admin: Sheetal staff control panel at /admin.
+// Pages that still show sample data when signed in as staff (nothing on them is saved on the server yet): tagged in
+// the menu, with a note on the page. Remove a path once its page is on the admin API.
+const PREVIEW = ["/admin/catalog", "/admin/ai", "/admin/voice", "/admin/messages", "/admin/leads", "/admin/social", "/admin/earnings", "/admin/ads", "/admin/channels", "/admin/addons", "/admin/settings"];
+
 export default function AdminApp() {
   const t = useT();
   const { db, update, reset } = useStore();
@@ -97,7 +101,7 @@ export default function AdminApp() {
   const serverNotifs = useServerNotifs(adminApi, "/admin/notifications", isStaffLive());
   const notifs = isStaffLive() ? serverNotifs : sampleNotifs;
   return (
-    <Shell sub={t("brand.admin")} nav={nav} notifications={notifs.list.slice(0, 6).map((n) => ({ ...n, onOpen: () => notifs.read(n.id) }))} notifTo="/admin/notifications" onReadAll={notifs.readAll}
+    <Shell sub={t("brand.admin")} nav={nav} preview={isStaffLive() ? PREVIEW : []} notifications={notifs.list.slice(0, 6).map((n) => ({ ...n, onOpen: () => notifs.read(n.id) }))} notifTo="/admin/notifications" onReadAll={notifs.readAll}
       quickCreate={[{ icon: "building-2", label: t("tenants.add"), to: "/admin/tenants" }, { icon: "layers", label: t("plans.new"), to: "/admin/plans" }, { icon: "user-plus", label: t("team.invite"), to: "/admin/staff" }, { icon: "newspaper", label: t("content.newPost"), to: "/admin/content" }]}
       records={db.tenants.map((x) => ({ icon: "building-2", label: x.name, sub: `${x.city} · ${x.owner}`, to: `/admin/tenants/${x.id}` }))}
       topLeft={<div className="pf-top-title"><b>{t("brand.adminTitle")}</b><span className="small muted">{db.platformSettings.mainDomain}{db.platformSettings.adminPath}</span></div>}

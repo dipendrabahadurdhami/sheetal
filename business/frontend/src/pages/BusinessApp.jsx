@@ -50,6 +50,15 @@ import { TODAY } from "@sheetal/shared/core/format";
 import { opsOf } from "@sheetal/shared/demo/ops";
 
 // Business workspace at /business (later its own domain). One account can belong to several businesses.
+// Pages that still show sample data when signed in (nothing on them is saved on the server yet). They stay visible
+// as a preview, tagged in the menu and with a note on the page; remove a path here once its page is on the server.
+const PREVIEW = [
+  "/business/calendar", "/business/agreements", "/business/forms", "/business/invoices", "/business/payouts", "/business/expenses",
+  "/business/rentals", "/business/stock", "/business/promote", "/business/social", "/business/voice", "/business/reviews",
+  "/business/people", "/business/ai-accounts", "/business/developers", "/business/data",
+  "/business/settings/payments", "/business/settings/notifications", "/business/settings/listings", "/business/settings/documents",
+];
+
 const TYPE_ICON = { hotel: "hotel", host: "bed-double", developer: "building-2", agency: "briefcase", sponsor: "hand-coins" };
 
 export default function BusinessApp() {
@@ -178,7 +187,7 @@ export default function BusinessApp() {
   const wsSwitcher = <WorkspaceSwitcher footer={addWs} current={wsList.find((w) => w.id === tenant.id) || { id: tenant.id, name: tenant.name, logoUrl: logoOf(tenant) }} list={wsList} onPick={pickWs} big sub={`${t(`type.${tenant.type}`)} · ${tenant.city || "Nepal"}`} label={t("ws.switch")} />;
 
   return (
-    <Shell sub={t("brand.business")} nav={nav} themes={hasColours ? PANEL_THEMES : THEMES} brandSlot={wsSwitcher} switcher={null} notifications={notifications} notifTo="/business/notifications" onReadAll={notifs.readAll}
+    <Shell sub={t("brand.business")} nav={nav} themes={hasColours ? PANEL_THEMES : THEMES} brandSlot={wsSwitcher} switcher={null} preview={isLive(tenant.id) ? PREVIEW : []} notifications={notifications} notifTo="/business/notifications" onReadAll={notifs.readAll}
       quickCreate={[
         any("listings.manage", "projects.manage", "investments.manage", "calendar.edit") && { icon: "house-plus", label: t("listings.new"), to: "/business/listings/new" },
         stays && can(role, "bookings.create") && { icon: "calendar-plus", label: t("bk.manual"), to: "/business/bookings" },

@@ -1595,3 +1595,8 @@ html.has-brand[data-theme~="bars"] .pf-top .btn-primary { color: var(--brand-acc
 .pf-top-count { position: absolute; top: 2px; right: 0; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: var(--btn-bg); color: var(--btn-ink); font-size: 10.5px; font-weight: 700; line-height: 17px; text-align: center; }
 /* Language: one small button with the language in use. */
 .pf-lang-one { min-width: 40px; height: 36px; padding: 0 10px; font-weight: 700; font-size: 13px; border: 1px solid var(--line); border-radius: var(--r); }
+/* Pages that only show sample data for now. */
+.pf-preview-tag { margin-left: auto; padding: 1px 7px; border: 1px solid var(--line-strong); border-radius: 999px; font-size: 10.5px; font-weight: 600; letter-spacing: .02em; color: var(--muted); background: transparent; }
+.pf-nav a .pf-count + .pf-preview-tag { margin-left: 6px; }
+.pf-preview-note { display: flex; align-items: center; gap: 10px; margin: 0 0 16px; padding: 10px 14px; border: 1px dashed var(--line-strong); border-radius: var(--r); background: var(--surface); color: var(--text-strong); font-size: 13.5px; }
+.pf-preview-note svg { flex-shrink: 0; color: var(--muted); }

@@ -9,7 +9,7 @@ import { CommandPalette, openPalette } from "./CommandPalette";
 import { PANEL_THEMES } from "../core/theme";
 
 // Shared frame for /admin and /business. Each app passes its own nav and slots.
-export function Shell({ sub, nav, switcher, sideFooter, topLeft, topExtra, topTools, userMenu, banner, notifications = [], notifTo, onReadAll, brandSlot, style, quickCreate = [], records = [], themes = PANEL_THEMES, children }) {
+export function Shell({ sub, nav, switcher, sideFooter, topLeft, topExtra, topTools, preview = [], userMenu, banner, notifications = [], notifTo, onReadAll, brandSlot, style, quickCreate = [], records = [], themes = PANEL_THEMES, children }) {
   const { path } = useRouter();
   const t = useT();
   const lang = useLang();
@@ -17,6 +17,9 @@ export function Shell({ sub, nav, switcher, sideFooter, topLeft, topExtra, topTo
   const [open, setOpen] = useState(false);
   useEffect(() => setOpen(false), [path]);
   const under = (to) => path === to || path.startsWith(to + "/");
+  // Pages not on the server yet (sample data only): tagged in the menu, with a note on the page.
+  const isPreview = (to) => preview.some((p) => to === p || to.startsWith(p + "/"));
+  const previewHere = preview.some(under);
   const isOn = (it) => (it.exact ? path === it.to : under(it.to) || (it.match || []).some(under));
   const theme = db.session.theme;
 
@@ -36,6 +39,7 @@ export function Shell({ sub, nav, switcher, sideFooter, topLeft, topExtra, topTo
                 <Link key={it.to} to={it.to} className={isOn(it) ? "on" : undefined} aria-current={isOn(it) ? "page" : undefined}>
                   <Icon name={it.icon} size={17} /><span>{t(it.key)}</span>
                   {it.count ? <span className={`pf-count ${it.countTone || ""}`}>{it.count}</span> : null}
+                  {isPreview(it.to) && <span className="pf-preview-tag" title="Sample data: nothing here is saved yet">Preview</span>}
                 </Link>
               ))}
             </React.Fragment>
@@ -91,7 +95,10 @@ export function Shell({ sub, nav, switcher, sideFooter, topLeft, topExtra, topTo
             </Menu>
           </div>
         </header>
-        <main className="pf-main" id="main">{children}</main>
+        <main className="pf-main" id="main">
+          {previewHere && <div className="pf-preview-note" role="note"><Icon name="eye" size={16} /><span><b>Preview.</b> This page shows sample data. Nothing you enter here is saved yet; it's coming soon.</span></div>}
+          {children}
+        </main>
         <CommandPalette nav={nav} actions={quickCreate} records={records} />
       </div>
     </div>
