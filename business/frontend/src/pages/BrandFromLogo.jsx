@@ -24,7 +24,8 @@ export function BrandFromLogo({ tenant, canEdit, paid = true }) {
 
 function BrandEditor({ tenant, canEdit }) {
   const toast = useToast();
-  const { update } = useStore();
+  const { db, update } = useStore();
+  const theme = db.session.theme;
   const [logo, setLogo] = useState(null); // { file, url }
   const [colors, setColors] = useState(tenant.brandColors || []);
   const [busy, setBusy] = useState(false);
@@ -86,14 +87,16 @@ function BrandEditor({ tenant, canEdit }) {
       </Field>
       {preview && (
         <div className="pf-grid-3 tight" aria-label="Preview of the four themes" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
-          {[["Light", preview.lightBar, "#1F1F21", "#FFFFFF"], ["Dark", preview.darkBar, "#FFFFFF", preview.darkPage], ["Your colour", preview.darkBar, "#FFFFFF", preview.deep], ["Colour bars", preview.accentInk, "#FFFFFF", preview.darkPage]].map(([name, bar, ink, page]) => (
-            <div key={name} style={{ borderRadius: 10, overflow: "hidden", border: "1px solid var(--line)", display: "flex", height: 84 }}>
+          {[["light", "Light", preview.lightBar, "#1F1F21", "#FFFFFF"], ["dark", "Dark", preview.darkBar, "#FFFFFF", preview.darkPage], ["red", "Your colour", preview.darkBar, "#FFFFFF", preview.deep], ["bars", "Colour bars", preview.accentInk, "#FFFFFF", preview.darkPage]].map(([id, name, bar, ink, page]) => (
+            // Click a preview to switch the workspace to that theme (it is saved for this browser).
+            <button key={id} type="button" aria-pressed={theme === id} title={`Use the ${name.toLowerCase()} theme`} onClick={() => update((d) => { d.session.theme = id; })}
+              style={{ borderRadius: 10, overflow: "hidden", border: theme === id ? "2px solid var(--accent)" : "1px solid var(--line)", outline: theme === id ? "2px solid color-mix(in srgb, var(--accent) 30%, transparent)" : "none", display: "flex", height: 84, padding: 0, cursor: "pointer", textAlign: "left", font: "inherit", background: "none" }}>
               <div style={{ width: 54, background: bar, color: ink, fontSize: 11, padding: 8 }}><b>Menu</b></div>
               <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-                <div style={{ height: 24, background: bar, color: ink, fontSize: 11, padding: "5px 8px" }}>{name}</div>
+                <div style={{ height: 24, background: bar, color: ink, fontSize: 11, padding: "5px 8px", display: "flex", justifyContent: "space-between" }}><span>{name}</span>{theme === id && <b>✓ In use</b>}</div>
                 <div style={{ flex: 1, background: page, padding: 8 }}><span style={{ background: preview.accent, color: preview.accentText, borderRadius: 999, padding: "3px 10px", fontSize: 11 }}>Button</span></div>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}
