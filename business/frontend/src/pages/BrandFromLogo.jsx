@@ -87,7 +87,7 @@ function BrandEditor({ tenant, canEdit }) {
       </Field>
       {preview && (
         <div className="pf-grid-3 tight" aria-label="Preview of the four themes" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
-          {[["light", "Light", preview.lightBar, "#1F1F21", "#FFFFFF"], ["dark", "Dark", preview.darkBar, "#FFFFFF", preview.darkPage], ["red", "Your colour", preview.darkBar, "#FFFFFF", preview.deep], ["bars", "Colour bars", preview.accentInk, "#FFFFFF", preview.darkPage]].map(([id, name, bar, ink, page]) => (
+          {[["light", "Light", preview.lightBar, "#1F1F21", "#FFFFFF"], ["dark", "Dark", preview.darkBar, "#FFFFFF", preview.darkPage], ["red", "Your colour", preview.darkBar, "#FFFFFF", preview.deep], ["bars", "Colour bars", preview.accentInk, "#FFFFFF", preview.darkPage]].filter(([id]) => id !== "bars" || (tenant.brandColors || []).length > 0).map(([id, name, bar, ink, page]) => (
             // Click a preview to switch the workspace to that theme (it is saved for this browser).
             <button key={id} type="button" aria-pressed={theme === id} title={`Use the ${name.toLowerCase()} theme`} onClick={() => update((d) => { d.session.theme = id; })}
               style={{ borderRadius: 10, overflow: "hidden", border: theme === id ? "2px solid var(--accent)" : "1px solid var(--line)", outline: theme === id ? "2px solid color-mix(in srgb, var(--accent) 30%, transparent)" : "none", display: "flex", height: 84, padding: 0, cursor: "pointer", textAlign: "left", font: "inherit", background: "none" }}>

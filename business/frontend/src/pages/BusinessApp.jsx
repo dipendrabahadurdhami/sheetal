@@ -67,8 +67,10 @@ export default function BusinessApp() {
   // The business's own colours and logo (Business and Pro plans).
   const ownBrand = !!(db.plans.find((p) => p.id === tenant?.planId)?.price);
   useBrand(ownBrand ? tenant?.brandColors : null);
-  // The colour-bars theme comes with Business and Pro; on Starter it falls back to dark.
-  React.useEffect(() => { if (!ownBrand && db.session.theme === "bars") update((d) => { d.session.theme = "dark"; }); }, [ownBrand, db.session.theme]);
+  // The colour-bars theme needs the business's own colours (Business and Pro): without them it isn't offered,
+  // and a workspace using it falls back to dark.
+  const hasColours = ownBrand && (tenant?.brandColors || []).length > 0;
+  React.useEffect(() => { if (!hasColours && db.session.theme === "bars") update((d) => { d.session.theme = "dark"; }); }, [hasColours, db.session.theme]);
   const roles = db.tenantRoles[tenant.id];
   const owner = roles.find((r) => r.perms.includes("*"));
   // Previewing a role (owners checking what someone sees) wins; then the person's own role in this business.
@@ -147,7 +149,7 @@ export default function BusinessApp() {
   const wsSwitcher = <WorkspaceSwitcher current={wsList.find((w) => w.id === tenant.id) || { id: tenant.id, name: tenant.name, logoUrl: tenant.logoUrl }} list={wsList} onPick={pickWs} big={branded} sub={branded ? `${t(`type.${tenant.type}`)} · ${tenant.city || "Nepal"}` : undefined} label={t("ws.switch")} />;
 
   return (
-    <Shell sub={t("brand.business")} nav={nav} themes={ownBrand ? PANEL_THEMES : THEMES} brandSlot={branded ? wsSwitcher : undefined} switcher={branded ? null : wsSwitcher} notifications={notifications} notifTo="/business/notifications" onReadAll={notifs.readAll}
+    <Shell sub={t("brand.business")} nav={nav} themes={hasColours ? PANEL_THEMES : THEMES} brandSlot={branded ? wsSwitcher : undefined} switcher={branded ? null : wsSwitcher} notifications={notifications} notifTo="/business/notifications" onReadAll={notifs.readAll}
       quickCreate={[
         any("listings.manage", "projects.manage", "investments.manage", "calendar.edit") && { icon: "house-plus", label: t("listings.new"), to: "/business/listings/new" },
         stays && can(role, "bookings.create") && { icon: "calendar-plus", label: t("bk.manual"), to: "/business/bookings" },
