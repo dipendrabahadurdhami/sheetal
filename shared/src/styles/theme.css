@@ -1311,7 +1311,20 @@ html, body { overflow-x: clip; }
 .featured-hero::before { background-image: url("/featured/featured-bg.jpg"), url("/services/services-bg.jpg"); background-position: center 50%; }
 
 /* nav + footer stand apart from the page in every theme */
-[data-theme~="dark"] .header { background: color-mix(in srgb, color-mix(in srgb, var(--c-silver) 14%, var(--c-slate)) 94%, transparent); border-bottom-color: var(--line-strong); }
+/* Dark mode: red header and footer (as in the red theme). Light mode: dark header and footer, with the header's
+   own colours switched to light-on-dark so its links, search, buttons and menus read on it. */
+[data-theme~="dark"] .header { background: color-mix(in srgb, var(--c-crimson) 96%, transparent); border-bottom-color: color-mix(in srgb, var(--c-white) 20%, var(--c-crimson)); }
+[data-theme~="dark"] .footer { background: var(--c-crimson); border-top: 1px solid var(--c-crimson); }
+[data-theme~="dark"] .footer-bottom { border-top-color: color-mix(in srgb, var(--c-white) 22%, var(--c-crimson)); }
+[data-theme~="dark"] .header-actions .btn-icon:hover { background: color-mix(in srgb, var(--c-white) 12%, var(--c-crimson)); }
+[data-theme~="light"] .header {
+  --bg: var(--c-slate); --card: color-mix(in srgb, var(--c-white) 6%, var(--c-slate)); --surface: color-mix(in srgb, var(--c-white) 12%, var(--c-slate));
+  --surface-2: color-mix(in srgb, var(--c-white) 16%, var(--c-slate)); --text: var(--c-white); --text-strong: var(--c-white); --muted: var(--c-silver);
+  --line: color-mix(in srgb, var(--c-white) 18%, var(--c-slate)); --line-strong: color-mix(in srgb, var(--c-white) 28%, var(--c-slate)); --accent-ink: var(--c-white);
+  background: color-mix(in srgb, var(--c-slate) 97%, transparent); border-bottom-color: color-mix(in srgb, var(--c-white) 14%, var(--c-slate)); color: var(--c-white);
+}
+[data-theme~="light"] .header .brand img { filter: brightness(0) invert(1); }
+[data-theme~="light"] .footer { background: var(--c-slate); }
 [data-theme~="red"] .header { background: color-mix(in srgb, var(--c-crimson) 96%, transparent) !important; border-bottom-color: color-mix(in srgb, var(--c-white) 20%, var(--c-crimson)); }
 [data-theme~="red"] .footer { background: var(--c-crimson) !important; border-top: 1px solid color-mix(in srgb, var(--c-white) 0%, var(--c-crimson)) !important; }
 [data-theme~="red"] .tabbar { background: var(--c-crimson); }
