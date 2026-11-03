@@ -32,6 +32,7 @@ import { POS, Bookings } from "./POS";
 import { LiveBookings, LiveFrontDesk, LiveInvestors, LivePOS, LiveProjects, LiveCalendar } from "./LiveOps";
 import { LiveAnalytics, LiveChannels } from "./LiveGrowth";
 import { LiveReviews } from "./LiveReviews";
+import { Verification } from "./Verification";
 import { Inbox } from "./Inbox";
 import { Forms } from "./Forms";
 import { formsOf } from "@sheetal/shared/core/forms";
@@ -246,6 +247,7 @@ export default function BusinessApp() {
         { path: "/business/listings/new", render: () => (!db.drafts[tenant.id]?.editId && atListingCap(plan, db.listings.filter((l) => l.tenantId === tenant.id && l.status !== "archived" && l.status !== "rejected").length) ? <UpgradeNeeded cap={listingCap(plan)} /> : guard(any("listings.manage", "projects.manage", "investments.manage", "calendar.edit"), <ListingWizard key={tenant.id} tenant={tenant} />)) },
         { path: "/business/agreements", render: () => paid(any("customers.view", "listings.manage", "reservations.manage", "investments.manage", "overview.view"), <Agreements tenant={tenant} />) },
         { path: "/business/settings", render: () => guard(can(role, "settings.business"), <SettingsShell role={role}><BusinessSettings key={tenant.id} tenant={tenant} tab="profile" /></SettingsShell>) },
+        { path: "/business/settings/verification", render: () => guard(can(role, "settings.business"), <SettingsShell role={role}>{isLive(tenant.id) ? <Verification key={tenant.id} tenant={tenant} /> : <Pending part={2} />}</SettingsShell>) },
         { path: "/business/settings/roles", render: () => guard(can(role, "roles.manage"), <SettingsShell role={role}><BusinessRoles key={tenant.id} tenant={tenant} role={role} /></SettingsShell>) },
         { path: "/business/settings/:tab", render: ({ tab }) => guard(can(role, "settings.business"), <SettingsShell role={role}><BusinessSettings key={tenant.id} tenant={tenant} tab={tab} /></SettingsShell>) },
         { path: "/business/billing/return/:provider/:id", render: ({ provider, id }) => <BillingReturn provider={provider} id={id} /> },

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useSEO } from "../utils/seo";
 import { Link } from "react-router-dom";
-import { Search, Home as HomeIcon, ClipboardList, Users, ArrowRight } from "lucide-react";
+import { Search, Home as HomeIcon, ClipboardList, Users, ArrowRight, BadgeCheck } from "lucide-react";
 import { api } from "../api/endpoints";
 import { toList } from "../api/client";
 import { useAsync } from "../hooks/useAsync";
@@ -15,7 +15,7 @@ export function AgencyCard({ a }) {
     <Link to={`/agency/${a.id}`} className="card card-hover agent-card fade-in" style={{ color: "var(--text)" }}>
       <span className="agent-logo"><Avatar src={a.photo} name={agencyName(a)} logo /></span>
       <span className="tier">{agencyTier(a.tier) || "Agency"}</span>
-      <h3 style={{ fontSize: 20 }} className="row">{agencyName(a)}</h3>
+      <h3 style={{ fontSize: 20 }} className="row">{agencyName(a)}{a.is_verified && <span className="verified-badge" title="Documents checked by Sheetal Property"><BadgeCheck size={16} />Verified</span>}</h3>
       <span className="small muted">{a.address || a.designation || "Real estate agency"}</span>
       <div className="row small" style={{ gap: 14, marginTop: 6 }}>
         {a.avg_rating ? <span className="row" style={{ gap: 6 }}><Stars value={a.avg_rating} size={12} /><span className="tnum">{a.avg_rating}</span></span> : null}

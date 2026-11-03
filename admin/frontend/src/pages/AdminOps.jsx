@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { LiveVerifications } from "./LiveVerify";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
 import { Link, useRouter } from "@sheetal/shared/core/router";
@@ -94,7 +95,7 @@ export function AdminModeration({ role, queue }) {
   const kyc = db.tenants.filter((x) => x.status === "pending_verification");
   const l = db.listings.find((x) => x.id === open);
   const decide = (id, status) => { update((d) => { const x = d.listings.find((y) => y.id === id); x.status = status; if (status === "rejected") x.reason = reason; audit(d, `${status === "published" ? "approved" : "rejected"} listing ${id}`); }); setOpen(null); toast(t(status === "published" ? "mod.toastApproved" : "mod.toastRejected")); };
-  const tabs = [can(role, "moderation.listings") && { id: "listings", label: t("mod.listings"), count: queue ? queue.waiting : pendingLocal.length, icon: "house" }, can(role, "moderation.kyc") && { id: "kyc", label: t("mod.kyc"), count: kyc.length, icon: "badge-check" }, !queue && { id: "reports", label: t("mod.reports"), count: 2, icon: "flag" }].filter(Boolean);
+  const tabs = [can(role, "moderation.listings") && { id: "listings", label: t("mod.listings"), count: queue ? queue.waiting : pendingLocal.length, icon: "house" }, can(role, "moderation.kyc") && { id: "kyc", label: t("mod.kyc"), count: isStaffLive() ? undefined : kyc.length, icon: "badge-check" }, !queue && { id: "reports", label: t("mod.reports"), count: 2, icon: "flag" }].filter(Boolean);
   return (
     <>
       <PageHead title={t("nav.moderation")} sub={t("mod.sub")} />
@@ -107,7 +108,8 @@ export function AdminModeration({ role, queue }) {
         { key: "at", label: t("mod.submitted"), num: true, render: (r) => fdate(r.updated) },
         { key: "act", label: "", align: "right", render: (r) => <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); setOpen(r.id); }}>{t("common.review")}</Button> },
       ]} /></section>}
-      {tab === "kyc" && <section className="card pf-panel"><Table rows={kyc} onRowClick={(r) => navigate(`/admin/tenants/${r.id}`)} minWidth={720} empty={<Empty icon="badge-check" title={t("mod.kycClear")} />} columns={[
+      {tab === "kyc" && isStaffLive() && <LiveVerifications />}
+      {tab === "kyc" && !isStaffLive() && <section className="card pf-panel"><Table rows={kyc} onRowClick={(r) => navigate(`/admin/tenants/${r.id}`)} minWidth={720} empty={<Empty icon="badge-check" title={t("mod.kycClear")} />} columns={[
         { key: "n", label: t("tenants.business"), render: (r) => <TenantName r={r} /> },
         { key: "pan", label: t("tenant.pan"), num: true, render: (r) => r.pan },
         { key: "docs", label: t("mod.docs"), render: () => <span className="pf-chips"><Badge tone="done">{t("mod.reg")}</Badge><Badge tone="done">PAN</Badge><Badge tone="action">{t("mod.ownerId")}</Badge></span> },

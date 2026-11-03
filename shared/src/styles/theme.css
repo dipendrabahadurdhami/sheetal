@@ -2630,3 +2630,7 @@ main section:has(> .section-head), main section:has(> .container > .section-head
 /* Dark and red themes: every business logo in one colour, white, like Sheetal's own. */
 [data-theme~="dark"] .logo-mono img, [data-theme~="dark"] .agent-logo img { filter: brightness(0) invert(1); }
 .logo-mono { display: inline-flex; flex-shrink: 0; }
+
+/* Agencies whose documents Sheetal checked. */
+.verified-badge { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, #1E7B4F 12%, transparent); color: #1E7B4F; font-size: 12px; font-weight: 600; vertical-align: middle; white-space: nowrap; }
+[data-theme~="dark"] .verified-badge { color: #7BD3A6; background: color-mix(in srgb, #7BD3A6 16%, transparent); }

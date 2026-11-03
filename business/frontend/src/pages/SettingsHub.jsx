@@ -7,6 +7,7 @@ import { Icon } from "@sheetal/shared/core/icons";
 export const settingsSections = (role, t) => [
   { group: "Business", items: [
     { id: "profile", to: "/business/settings/profile", icon: "building-2", label: t("bsettings.profile"), perm: "settings.business", keywords: "general name pan vat tax address phone email" },
+    { id: "verification", to: "/business/settings/verification", icon: "badge-check", label: "Verification", perm: "settings.business", keywords: "verify kyc documents registration pan certificate badge" },
     { id: "branding", to: "/business/settings/branding", icon: "palette", label: t("bsettings.branding"), perm: "settings.business", keywords: "colour color logo receipt brand" },
     { id: "branches", to: "/business/branches", icon: "git-branch", label: t("nav.branches"), perm: "settings.business", keywords: "branch office location" },
     { id: "roles", to: "/business/settings/roles", icon: "key-round", label: "Roles and access", perm: "roles.manage", keywords: "roles permissions access staff team" },

@@ -6,7 +6,7 @@ import { approx, validLatLng } from "./geo.js";
 // Only public data goes out: `private` is never read here, and the location is always an approximate area.
 
 export type ListingRow = Listing & { photos: ListingPhoto[] };
-export type AgencyRow = Pick<Tenant, "id" | "name" | "city" | "email" | "phone" | "logoUrl"> & Partial<Pick<Tenant, "address" | "website">> & { listings?: number };
+export type AgencyRow = Pick<Tenant, "id" | "name" | "city" | "email" | "phone" | "logoUrl"> & Partial<Pick<Tenant, "address" | "website" | "verifiedAt">> & { listings?: number };
 
 const STATUS_LABEL: Record<string, string> = { sold: "SOLD OUT", rented: "RENTED OUT" };
 
@@ -105,6 +105,8 @@ export function agencyJson(a: AgencyRow) {
     company_name: a.name,
     address: a.address || (a.city ? `${a.city}, Nepal` : "Nepal"),
     website_url: a.website ?? null,
+    // Documents checked by Sheetal.
+    is_verified: !!a.verifiedAt,
     phone: a.phone,
     whatsapp: a.phone,
     email: a.email,

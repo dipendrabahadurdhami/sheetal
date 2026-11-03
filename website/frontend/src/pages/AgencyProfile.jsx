@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { useSEO } from "../utils/seo";
 import { Link, useParams } from "react-router-dom";
-import { Phone, Mail, MessageCircle, MapPin, Facebook, Instagram, Globe } from "lucide-react";
+import { Phone, Mail, MessageCircle, MapPin, Facebook, Instagram, Globe, BadgeCheck } from "lucide-react";
 import { api } from "../api/endpoints";
 import { toItem, toList } from "../api/client";
 import { useAsync } from "../hooks/useAsync";
@@ -53,7 +53,7 @@ export default function AgencyProfile() {
           <Avatar src={a.photo} name={name} size={140} logo />
           <div className="stack" style={{ gap: 10 }}>
             <span className="tier">{agencyTier(a.tier) ? `${agencyTier(a.tier)} agency` : "Agency"}</span>
-            <h1 style={{ fontSize: "clamp(28px, 3.6vw, 42px)" }} className="row">{name}</h1>
+            <h1 style={{ fontSize: "clamp(28px, 3.6vw, 42px)" }} className="row">{name}{a.is_verified && <span className="verified-badge" title="Documents checked by Sheetal Property"><BadgeCheck size={16} />Verified</span>}</h1>
             <span className="muted">{[a.designation, a.company_name !== name ? a.company_name : null].filter(Boolean).join(" · ")}</span>
             <div className="row-wrap" style={{ gap: 18 }}>
               {a.avg_rating && <span className="row" style={{ gap: 8 }}><Stars value={a.avg_rating} /><span className="tnum">{a.avg_rating} ({a.review_count || 0})</span></span>}

@@ -213,3 +213,30 @@ describe("notifications", () => {
     expect((await call("owner", "DELETE", `/notifications/${agency.data[1].id}`)).statusCode).toBe(200);
   });
 });
+
+describe("business verification", () => {
+  const PDF = Buffer.from("%PDF-1.4\n1 0 obj << >> endobj\ntrailer << >>\n%%EOF").toString("base64");
+  it("takes documents, sends them to Sheetal once complete, and locks them while checked", async () => {
+    const db = app.db!;
+    const kyc = await db.user.create({ data: { email: "kyc@sheetal.test", userName: "KYC", platformRole: "operations" } });
+    expect((await call("agent", "GET", "/verification")).statusCode).toBe(403); // settings people only
+    expect((await call("owner", "GET", "/verification")).json().data).toMatchObject({ status: "none", docs: [] });
+    expect((await call("owner", "POST", "/verification/docs", { kind: "pan", data: Buffer.from("not a document at all").toString("base64") })).statusCode).toBe(400);
+    expect((await call("owner", "POST", "/verification/docs", { kind: "registration", filename: "registration.pdf", data: PDF })).statusCode).toBe(200);
+    const early = await call("owner", "POST", "/verification/submit");
+    expect(early.statusCode).toBe(400);
+    expect(early.json().message).toContain("PAN/VAT certificate");
+    expect((await call("owner", "POST", "/verification/docs", { kind: "pan", filename: "pan.png", data: PNG })).statusCode).toBe(200);
+    const v = (await call("owner", "GET", "/verification")).json().data;
+    expect(v.docs.map((d: { kind: string }) => d.kind)).toEqual(["registration", "pan"]);
+    const file = await call("owner", "GET", `/verification/docs/${v.docs[0].id}/file`);
+    expect(file.headers["content-type"]).toBe("application/pdf");
+    expect((await call("owner", "GET", `/verification/docs/${v.docs[0].id}/file`, undefined, ids.hotel)).statusCode).toBe(404); // another business
+    expect((await call("owner", "POST", "/verification/submit")).statusCode).toBe(200);
+    expect((await db.tenant.findUniqueOrThrow({ where: { id: ids.agency } })).verification).toBe("pending");
+    expect(await db.notification.findFirst({ where: { userId: kyc.id, type: "verification" } })).toMatchObject({ link: "/admin/moderation" });
+    // Locked while being checked.
+    expect((await call("owner", "DELETE", `/verification/docs/${v.docs[0].id}`)).statusCode).toBe(400);
+    expect((await call("owner", "POST", "/verification/docs", { kind: "other", data: PDF })).statusCode).toBe(400);
+  });
+});

@@ -22,6 +22,7 @@ const toTenant = (w, prev = {}) => ({
   planId: w.plan.id, status: w.status, emailVerified: true, period: w.period, since: day(w.createdAt), renews: day(w.renewsAt), autoRenew: w.autoRenew,
   usage: prev.usage || { listings: 0, seats: 1, featured: 0 }, scopes: prev.scopes || ["Head office"], logoUrl: w.logoUrl, brandColors: w.brandColors || [],
   pan: w.pan || "", address: w.address || "", vatRegistered: !!w.vatRegistered, website: w.website || "", coveredById: w.coveredById || null,
+  verification: w.verification || "none",
 });
 /** The settings form's profile from the server's business record. */
 export const profileOf = (t) => ({ displayName: t.name, city: t.city || "", phone: t.phone || "", email: t.email || "", address: t.address || "", pan: t.pan || "", vatRegistered: !!t.vatRegistered, website: t.website || "" });

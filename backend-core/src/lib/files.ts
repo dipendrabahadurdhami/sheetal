@@ -4,11 +4,11 @@ import { join } from "node:path";
 import { AppError, badRequest } from "./errors.js";
 import { photoKind } from "./photos.js";
 
-// Private files people send: payment proofs and CVs. Kept in MEDIA_DIR/private/<kind>, which is never served as
+// Private files people send: payment proofs, CVs and business verification documents. Kept in MEDIA_DIR/private/<kind>, which is never served as
 // /media; staff open them through the admin API only. Checked by their first bytes, saved under a random name.
 
-export type PrivateKind = "proofs" | "cv";
-const MAX = { proofs: 8 * 1024 * 1024, cv: 5 * 1024 * 1024 };
+export type PrivateKind = "proofs" | "cv" | "kyc";
+const MAX = { proofs: 8 * 1024 * 1024, cv: 5 * 1024 * 1024, kyc: 10 * 1024 * 1024 };
 
 const docKind = (b: Buffer) => {
   if (b.subarray(0, 5).toString("latin1") === "%PDF-") return "pdf";
@@ -26,8 +26,10 @@ export const CONTENT_TYPES: Record<string, string> = {
 export async function savePrivateFile(mediaDir: string | undefined, kind: PrivateKind, data: Buffer): Promise<string> {
   if (!mediaDir) throw new AppError(503, "storage_off", "File uploads aren't set up on this server yet.");
   if (data.length > MAX[kind]) throw badRequest(`Files can be up to ${MAX[kind] / 1024 / 1024} MB.`);
-  const ext = photoKind(data) ?? (kind === "cv" ? docKind(data) : null);
-  if (!ext) throw badRequest(kind === "cv" ? "Send your CV as a PDF, Word file or photo." : "Send a JPG, PNG or WebP picture of the payment.");
+  const doc = docKind(data);
+  // CVs may be Word files; verification documents a PDF or a photo; payment proofs a photo.
+  const ext = photoKind(data) ?? (kind === "cv" ? doc : kind === "kyc" && doc === "pdf" ? "pdf" : null);
+  if (!ext) throw badRequest(kind === "cv" ? "Send your CV as a PDF, Word file or photo." : kind === "kyc" ? "Send the document as a PDF or a photo (JPG, PNG or WebP)." : "Send a JPG, PNG or WebP picture of the payment.");
   const name = `${randomBytes(12).toString("base64url")}.${ext}`;
   const dir = join(mediaDir, "private", kind);
   await mkdir(dir, { recursive: true });

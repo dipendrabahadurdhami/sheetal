@@ -22,8 +22,8 @@ function useApi(path, deps = []) {
   return { ...state, reload: () => setTick((n) => n + 1) };
 }
 
-/** Opens a private file (CV, payment proof) with the staff sign-in, in a new tab. */
-async function openPrivate(path, toast) {
+/** Opens a private file (CV, payment proof, verification document) with the staff sign-in, in a new tab. */
+export async function openPrivate(path, toast) {
   try {
     const t = localStorage.getItem("sheetal_token");
     const res = await fetch(`${API_FILES}/v1${path}`, { headers: { Authorization: `Bearer ${t}` } });

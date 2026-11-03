@@ -248,3 +248,26 @@ describe("staff notifications", () => {
     expect((await call("owner", "GET", "/admin/notifications")).statusCode).toBe(403);
   });
 });
+
+describe("business verification", () => {
+  it("lists businesses to check, and verifies or sends back with a reason", async () => {
+    const db = app.db!;
+    await db.tenant.update({ where: { id: ids.tenant }, data: { verification: "pending" } });
+    await db.verificationDoc.create({ data: { tenantId: ids.tenant!, kind: "registration", file: "AAAAAAAAAAAAAAAA.pdf", filename: "reg.pdf", size: 100 } });
+    expect((await call("owner", "GET", "/admin/verifications")).statusCode).toBe(403); // businesses can't
+    const list = (await call("ops", "GET", "/admin/verifications")).json().data;
+    expect(list[0]).toMatchObject({ name: "Everest Realty", status: "pending", owner: { email: "owner@everest.test" }, docs: [expect.objectContaining({ kind: "registration" })] });
+    expect((await call("ops", "POST", `/admin/verifications/${ids.tenant}/review`, { decision: "reject" })).statusCode).toBe(400); // needs a reason
+    expect((await call("ops", "POST", `/admin/verifications/${ids.tenant}/review`, { decision: "reject", note: "The PAN certificate is cut off." })).statusCode).toBe(200);
+    expect(await db.tenant.findUniqueOrThrow({ where: { id: ids.tenant } })).toMatchObject({ verification: "rejected", verificationNote: "The PAN certificate is cut off." });
+    expect(await db.notification.findFirst({ where: { userId: ids.owner, type: "verification" }, orderBy: { createdAt: "desc" } })).toMatchObject({ tenantId: ids.tenant, title: "Verification needs changes" });
+    // Sent again, then verified.
+    await db.tenant.update({ where: { id: ids.tenant }, data: { verification: "pending" } });
+    expect((await call("ops", "POST", `/admin/verifications/${ids.tenant}/review`, { decision: "verify" })).statusCode).toBe(200);
+    const t = await db.tenant.findUniqueOrThrow({ where: { id: ids.tenant } });
+    expect(t.verification).toBe("verified");
+    expect(t.verifiedAt).not.toBeNull();
+    expect(await db.outboundEmail.findFirst({ where: { to: "owner@everest.test", subject: "Everest Realty is verified" } })).not.toBeNull();
+    expect((await call("ops", "POST", `/admin/verifications/${ids.tenant}/review`, { decision: "verify" })).statusCode).toBe(400); // nothing pending
+  });
+});

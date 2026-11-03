@@ -8,6 +8,7 @@ import { adminContentRoutes } from "./modules/content.js";
 import { adminBillingRoutes, startBillingJob } from "./modules/billing.js";
 import { adminInsightRoutes, startOtaJob } from "./modules/insight.js";
 import { notificationRoutes } from "@sheetal/backend-core/modules/notifications";
+import { adminVerificationRoutes } from "./modules/verification.js";
 import { staffOf } from "./modules/routes.js";
 
 // Admin API: the admin panel (/admin): Sheetal staff managing businesses, plans, moderation and settings.
@@ -22,6 +23,7 @@ export async function buildApp(config: Config, deps: AppDeps = {}): Promise<Fast
   await app.register(adminContentRoutes, { prefix: "/v1" });
   await app.register(adminBillingRoutes, { prefix: "/v1" });
   await app.register(adminInsightRoutes, { prefix: "/v1" });
+  await app.register(adminVerificationRoutes, { prefix: "/v1" });
   // The bell: work for Sheetal staff (notes without a business that lead into the admin panel).
   await app.register(async (a) => notificationRoutes(a, "/admin/notifications", (request) => ({ userId: staffOf(request).user.id, tenantId: null, link: { startsWith: "/admin" } })), { prefix: "/v1" });
   // The renewal cycle and calendar sync run in this process only. JOBS=off turns them off.

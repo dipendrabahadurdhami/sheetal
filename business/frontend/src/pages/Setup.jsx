@@ -9,7 +9,7 @@ export function setupSteps(db, tenant) {
   const pay = saved?.payments;
   const payOk = !!pay && (pay.mode === "shetal" ? !!pay.payoutBank?.account : Object.values(pay.own || {}).some((g) => g.on && (g.merchant || g.key || g.qr || g === pay.own.cash)));
   return [
-    { id: "verify", icon: "shield-check", label: "Verify your business", sub: "Upload company registration and PAN. Usually checked within 24 hours.", to: "/business/settings/profile", cta: "Verify", done: tenant.status !== "pending_verification" },
+    { id: "verify", icon: "shield-check", label: "Verify your business", sub: tenant.verification === "pending" ? "Documents sent; Sheetal is checking them." : "Upload company registration and PAN. Usually checked within a working day.", to: "/business/settings/verification", cta: "Verify", done: tenant.verification ? tenant.verification === "verified" : tenant.status !== "pending_verification" },
     { id: "profile", icon: "building-2", label: "Check business details", sub: "Name, PAN, VAT, address and contact shown on bills.", to: "/business/settings/profile", cta: "Review", done: !!saved },
     { id: "brand", icon: "palette", label: "Add your logo and colour", sub: "Used on receipts, POS and your booking page.", to: "/business/settings/branding", cta: "Add", done: !!saved?.branding?.useBrand },
     { id: "pay", icon: "wallet", label: "Set up payments", sub: "Choose Sheetal payouts or your own eSewa, Khalti or Fonepay.", to: "/business/settings/payments", cta: "Set up", done: payOk },

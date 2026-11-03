@@ -44,6 +44,7 @@ export async function teamRoutes(app: FastifyInstance) {
         workspaces: user.memberships.map((m) => ({
           id: m.tenant.id, name: m.tenant.name, type: m.tenant.type, city: m.tenant.city, email: m.tenant.email, phone: m.tenant.phone, logoUrl: m.tenant.logoUrl, brandColors: m.tenant.brandColors,
           pan: m.tenant.pan, address: m.tenant.address, vatRegistered: m.tenant.vatRegistered, website: m.tenant.website, coveredById: m.tenant.coveredById,
+          verification: m.tenant.verification,
           status: m.tenant.status, period: m.tenant.period, renewsAt: m.tenant.renewsAt, autoRenew: m.tenant.autoRenew, createdAt: m.tenant.createdAt,
           plan: { id: m.tenant.plan.id, name: m.tenant.plan.name, price: m.tenant.plan.price, limits: m.tenant.plan.limits, features: m.tenant.plan.features },
           role: { id: m.role.id, key: m.role.key, name: m.role.name, perms: m.role.perms }, scopes: branchesOf(m),
