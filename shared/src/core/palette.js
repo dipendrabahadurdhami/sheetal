@@ -36,9 +36,12 @@ export function darkEnough(h, ratio = 4.5) {
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 const sat = ([r, g, b]) => { const mx = Math.max(r, g, b), mn = Math.min(r, g, b); return mx === 0 ? 0 : (mx - mn) / mx; };
 
-/** Up to `max` main colours of an <img> (already loaded). */
-export function extractPalette(img, max = 4) {
-  const size = 72;
+/**
+ * The main colours of an <img> (already loaded), most used first, up to `max`. `keepLight`: count white and pale
+ * colours too (use it on a logo whose background was already removed by cleanLogo, so white is the logo's own).
+ */
+export function extractPalette(img, max = 6, { keepLight = false } = {}) {
+  const size = 96;
   const canvas = document.createElement("canvas");
   const scale = Math.min(1, size / Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height));
   canvas.width = Math.max(1, Math.round((img.naturalWidth || img.width) * scale));
@@ -52,67 +55,98 @@ export function extractPalette(img, max = 4) {
   const buckets = new Map();
   for (let i = 0; i < data.length; i += 4) {
     const [r, g, b, a] = [data[i], data[i + 1], data[i + 2], data[i + 3]];
-    if (a < 128) continue; // transparent background
-    if (r > 238 && g > 238 && b > 238) continue; // white background
+    if (a < 200) continue; // transparent, or a soft edge
+    if (!keepLight && r > 238 && g > 238 && b > 238) continue; // white background
     const key = ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
     const x = buckets.get(key) || { n: 0, r: 0, g: 0, b: 0 };
     x.n++; x.r += r; x.g += g; x.b += b;
     buckets.set(key, x);
   }
-  // Colourful pixels count a little more than greys, so a red mark beats a grey outline of the same size.
   const total = [...buckets.values()].reduce((t, x) => t + x.n, 0) || 1;
   const groups = [...buckets.values()]
-    .map((x) => { const c = [x.r / x.n, x.g / x.n, x.b / x.n]; return { c, n: x.n, w: x.n * (0.6 + sat(c)) }; })
-    // Leave out specks (anti-aliased edges, tiny details) and pale tints that are really background.
-    .filter((g) => g.n / total >= 0.02 && luminance(hex(...g.c)) < 0.85)
-    .sort((p, q) => q.w - p.w);
+    .map((x) => ({ c: [x.r / x.n, x.g / x.n, x.b / x.n], n: x.n }))
+    // Leave out specks (anti-aliased edges, tiny details).
+    .filter((g) => g.n / total >= 0.015 && (keepLight || luminance(hex(...g.c)) < 0.85))
+    .sort((p, q) => q.n - p.n);
+  // Merge near-identical colours into the bigger one.
   const picked = [];
   for (const g of groups) {
-    if (picked.length >= max) break;
-    if (picked.every((p) => dist(p.c, g.c) > 60)) picked.push(g);
-    else { const near = picked.find((p) => dist(p.c, g.c) <= 60); near.w += g.w; }
+    const near = picked.find((p) => dist(p.c, g.c) <= 48);
+    if (near) near.n += g.n; else picked.push({ ...g });
   }
-  return picked.sort((p, q) => q.w - p.w).map((p) => hex(...p.c));
+  return picked.sort((p, q) => q.n - p.n).slice(0, max).map((p) => hex(...p.c));
 }
 
 /**
- * The workspace theme from a business's colours. It works out which colour is the brand colour (the most
- * colourful one), which is light and which is dark, and makes the three themes from them:
- *  - light: light bars with a light tint of the brand colour; buttons in the brand colour;
- *  - dark: dark bars (the business's darkest colour, or a very dark shade of the brand colour);
- *  - the third theme: the page in the brand colour (as it is red for Sheetal), with dark bars.
- * Every colour is adjusted so text on it stays readable.
+ * The three roles from a logo's colours:
+ *  - brand: the most colourful one (buttons, highlights, the colour themes);
+ *  - dark: the darkest, if it is really dark (dark themes);
+ *  - light: the lightest, if it is really light (the light theme).
+ * A role the logo doesn't have is null; fillRoles makes it from the brand colour.
  */
-export function brandTheme(colors) {
-  if (!colors?.length) return null;
-  const t = makeTheme(colors);
-  // Dark theme page from the logo's own colours only: its dark colour with a touch of the brand colour (no grey).
-  t.darkPage = mix(t.darkBar, t.brand, 0.1);
-  // Replaces Sheetal's silver (cards, lines, muted text) in the dark themes: a pale tint of the brand colour.
-  t.mist = mix("#FFFFFF", t.brand, 0.22);
-  return t;
-}
-
-function makeTheme(colors) {
-  // The brand colour: the most colourful, ignoring near-white and near-black.
-  const usable = colors.filter((c) => luminance(c) > 0.02 && luminance(c) < 0.85);
-  const brand = (usable.length ? usable : colors).reduce((best, c) => (sat(toRgb(c)) > sat(toRgb(best)) ? c : best));
-  const darkest = colors.reduce((a, c) => (luminance(c) < luminance(a) ? c : a));
-  const lightest = colors.reduce((a, c) => (luminance(c) > luminance(a) ? c : a));
-  const accent = darkEnough(brand, 3);
+export function rolesFrom(colors) {
+  if (!colors?.length) return { brand: null, dark: null, light: null };
+  const mid = colors.filter((c) => luminance(c) > 0.03 && luminance(c) < 0.8);
+  const brand = (mid.length ? mid : colors).reduce((best, c) => (sat(toRgb(c)) > sat(toRgb(best)) ? c : best));
+  const others = colors.filter((c) => c !== brand);
+  const darkest = others.length ? others.reduce((a, c) => (luminance(c) < luminance(a) ? c : a)) : null;
+  const lightest = others.length ? others.reduce((a, c) => (luminance(c) > luminance(a) ? c : a)) : null;
   return {
     brand,
+    dark: darkest && luminance(darkest) < 0.12 ? darkest : null,
+    light: lightest && luminance(lightest) > 0.7 ? lightest : null,
+  };
+}
+
+/** The three roles always filled: a missing dark or light colour is made from the brand colour. */
+export function fillRoles({ brand, dark, light }) {
+  const b = brand || "#9D1D21";
+  return {
+    brand: b,
+    dark: dark || darkEnough(shade(b, -0.8), 14),
+    light: light || shade(b, 0.94),
+    made: { dark: !dark, light: !light },
+  };
+}
+
+/** Saved colours to roles: new saves are [brand, dark, light]; older saves (any order) are sorted into roles. */
+export function savedRoles(colors) {
+  if (!colors?.length) return null;
+  if (colors.length === 3) return { brand: colors[0], dark: colors[1], light: colors[2] };
+  return fillRoles(rolesFrom(colors));
+}
+
+/**
+ * The workspace theme from a business's three colours (brand, dark, light; see savedRoles). Only those colours
+ * are used, plus lighter or darker versions of them where text must stay readable:
+ *  - light theme: bars in the light colour, text in the dark colour, buttons in the brand colour;
+ *  - dark theme: bars in the dark colour, the page the dark colour with a touch of the brand colour;
+ *  - colour theme: the page in the brand colour, bars in the dark colour;
+ *  - colour bars: bars in the brand colour, the page dark.
+ */
+export function brandTheme(colors) {
+  const r = savedRoles(colors);
+  if (!r) return null;
+  const { brand, dark, light } = r;
+  const accent = darkEnough(brand, 3);
+  const darkBar = darkEnough(dark, 12);
+  return {
+    brand, dark, light,
     accent, accentText: textOn(accent),
     // Text in the brand colour on white (links, the selected tab).
     accentInk: darkEnough(brand, 4.5),
-    accentSoft: shade(brand, 0.88),
-    // Light theme bars: the business's own light colour if it has one, else a light tint of the brand colour.
-    lightBar: luminance(lightest) > 0.85 && lightest !== brand ? lightest : shade(brand, 0.93),
-    // Dark theme bars: its own dark colour if dark enough, else a very dark shade of the brand colour.
-    darkBar: luminance(darkest) < 0.04 ? darkest : darkEnough(shade(brand, -0.72), 12),
-    // The third theme: the brand colour as the page (deep) and highlights (base), like Sheetal's crimson and red.
+    accentSoft: mix(light, brand, 0.12),
+    lightBar: light,
+    // Light theme text and lines from the dark colour (no Sheetal grey).
+    lightText: darkEnough(mix(dark, "#FFFFFF", 0.18), 7),
+    lightLine: mix("#FFFFFF", dark, 0.22),
+    darkBar,
+    darkPage: mix(darkBar, brand, 0.1),
+    // Cards, lines and muted text in the dark themes: a pale tint of the brand colour.
+    mist: mix(light, brand, 0.22),
+    // The colour theme: the brand colour as the page (deep) and highlights (base).
     deep: darkEnough(brand, 7), base: darkEnough(brand, 3.2),
-    colors,
+    colors: [brand, dark, light],
   };
 }
 

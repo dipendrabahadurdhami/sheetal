@@ -1510,6 +1510,9 @@ html.has-brand[data-theme~="dark"]:not([data-theme~="red"]) { --accent-soft: col
    red and crimson in every theme, and in the dark theme the grey too (from its dark colour). */
 html.has-brand[data-theme] { --c-crimson: var(--brand-deep); --c-red: var(--brand-base); }
 html.has-brand[data-theme~="dark"]:not([data-theme~="red"]) { --c-slate: var(--brand-dark-page); --c-silver: var(--brand-mist); --c-red: var(--brand); }
+/* Light theme: text and lines from the business's dark colour; colour theme: dark parts from it too. No Sheetal grey left. */
+html.has-brand[data-theme~="light"] { --c-slate: var(--brand-light-text); --c-silver: var(--brand-light-line); }
+html.has-brand[data-theme~="red"] { --c-slate: var(--brand-dark-bar); --c-silver: var(--brand-mist); }
 html.has-brand[data-theme~="red"] :is(.pf-top, .pf-side, .pf-side-top) { --card: var(--brand-dark-bar); background: var(--brand-dark-bar); border-color: color-mix(in srgb, #fff 12%, var(--brand-dark-bar)); }
 .pf-ws-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
 
