@@ -6,7 +6,7 @@ import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
 import { Link, Routes, useRouter } from "@sheetal/shared/core/router";
 import { can, canAny, filterNav, roleName } from "@sheetal/shared/core/rbac";
-import { Button, Select } from "@sheetal/shared/core/ui";
+import { Button, Select, Tabs } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { MenuButton, MenuLink, MenuSep, NoAccess, Pending, Shell } from "@sheetal/shared/layout/Shell";
 import { BusinessOverview, BusinessRoles, TeamHub } from "./BusinessPages";
@@ -22,8 +22,9 @@ import { Help, Tour } from "./Help";
 import { MyProfile, NotificationsPage, businessSeed, useNotifs } from "@sheetal/shared/components/Me";
 import { Domains } from "./Domains";
 import { Mail } from "./Mail";
-import { useLiveWorkspace } from "../live";
+import { isLive, useLiveWorkspace } from "../live";
 import { POS, Bookings } from "./POS";
+import { LiveBookings, LiveFrontDesk, LiveInvestors, LivePOS, LiveProjects } from "./LiveOps";
 import { Inbox } from "./Inbox";
 import { Forms } from "./Forms";
 import { formsOf } from "@sheetal/shared/core/forms";
@@ -195,8 +196,8 @@ export default function BusinessApp() {
         { path: "/business/billing/return/:provider/:id", render: ({ provider, id }) => <BillingReturn provider={provider} id={id} /> },
         { path: "/business/billing", render: () => guard(can(role, "billing.manage"), <SettingsShell role={role}><BusinessBilling tenant={tenant} canManage /></SettingsShell>) },
         { path: "/business/data", render: () => guard(can(role, "settings.business"), <SettingsShell role={role}><BusinessData tenant={tenant} /></SettingsShell>) },
-        { path: "/business/pos", render: () => paid(any("pos.frontdesk", "pos.restaurant", "pos.extras", "shift.close"), <POS key={tenant.id} tenant={tenant} role={role} />) },
-        { path: "/business/bookings", render: () => guard(can(role, "bookings.view"), <Bookings tenant={tenant} role={role} />) },
+        { path: "/business/pos", render: () => paid(any("pos.frontdesk", "pos.restaurant", "pos.extras", "shift.close"), (isLive(tenant.id) ? <LivePOSHub key={tenant.id} tenant={tenant} role={role} /> : <POS key={tenant.id} tenant={tenant} role={role} />)) },
+        { path: "/business/bookings", render: () => guard(can(role, "bookings.view"), (isLive(tenant.id) ? <LiveBookings key={tenant.id} tenant={tenant} role={role} /> : <Bookings tenant={tenant} role={role} />)) },
         { path: "/business/inbox", render: () => guard(any("messages.reply", "leads.view"), <Inbox key={tenant.id} tenant={tenant} />) },
         { path: "/business/forms", render: () => guard(any("messages.reply", "leads.view", "settings.business"), <Forms key={tenant.id} tenant={tenant} />) },
         { path: "/business/forms/responses", render: () => guard(any("messages.reply", "leads.view", "settings.business"), <Forms key={tenant.id + "r"} tenant={tenant} view="responses" />) },
@@ -204,9 +205,9 @@ export default function BusinessApp() {
         { path: "/business/forms/:id", render: ({ id }) => guard(any("messages.reply", "leads.view", "settings.business"), <Forms key={tenant.id + id} tenant={tenant} view="build" id={id} />) },
         { path: "/business/invoices", render: () => guard(can(role, "invoices.view"), <Invoices tenant={tenant} />) },
         { path: "/business/payouts", render: () => guard(can(role, "payouts.view"), <Payouts tenant={tenant} />) },
-        { path: "/business/projects", render: () => guard(any("projects.manage", "progress.post"), <Projects key={tenant.id} tenant={tenant} />) },
-        { path: "/business/collections", render: () => guard(can(role, "collect.payments"), <Collections key={tenant.id} tenant={tenant} />) },
-        { path: "/business/investors", render: () => guard(can(role, "investors.view"), <Investors key={tenant.id} tenant={tenant} />) },
+        { path: "/business/projects", render: () => guard(any("projects.manage", "progress.post"), (isLive(tenant.id) ? <LiveProjects key={tenant.id} tenant={tenant} role={role} /> : <Projects key={tenant.id} tenant={tenant} />)) },
+        { path: "/business/collections", render: () => guard(can(role, "collect.payments"), (isLive(tenant.id) ? <LiveProjects key={tenant.id + "c"} tenant={tenant} role={role} /> : <Collections key={tenant.id} tenant={tenant} />)) },
+        { path: "/business/investors", render: () => guard(can(role, "investors.view"), (isLive(tenant.id) ? <LiveInvestors key={tenant.id} tenant={tenant} role={role} /> : <Investors key={tenant.id} tenant={tenant} />)) },
         { path: "/business/reviews", render: () => guard(any("reviews.reply", "customers.view"), <Reviews key={tenant.id} tenant={tenant} />) },
         { path: "/business/expenses", render: () => paid(can(role, "invoices.view"), <Expenses key={tenant.id} tenant={tenant} />) },
         { path: "/business/rentals", render: () => guard(any("listings.manage", "customers.view", "collect.payments"), <Rentals key={tenant.id} tenant={tenant} />) },
@@ -242,3 +243,14 @@ function withoutPaid(free, nav) {
 }
 
 export { Link };
+
+/** Live front desk and restaurant till in one place, as the sample POS has them. */
+function LivePOSHub({ tenant, role }) {
+  const [tab, setTab] = React.useState(can(role, "pos.frontdesk") || can(role, "bookings.edit") ? "desk" : "till");
+  return (
+    <>
+      <Tabs value={tab} onChange={setTab} tabs={[{ id: "desk", label: "Front desk", icon: "concierge-bell" }, { id: "till", label: "Restaurant and extras", icon: "utensils" }]} />
+      {tab === "desk" ? <LiveFrontDesk tenant={tenant} role={role} /> : <LivePOS tenant={tenant} role={role} />}
+    </>
+  );
+}
