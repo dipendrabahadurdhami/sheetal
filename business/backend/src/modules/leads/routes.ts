@@ -3,6 +3,9 @@ import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { dbOf } from "@sheetal/backend-core/lib/db";
 import { badRequest, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
+import { Vault } from "@sheetal/backend-core/lib/vault";
+import { sendMetaText } from "@sheetal/backend-core/lib/meta";
+import type { Fetch } from "@sheetal/backend-core/lib/payments";
 import { workspaceOf, type Workspace } from "../access.js";
 
 // Enquiries from the website (contact agent or owner, site visits, requirements) land here as leads of the
@@ -13,8 +16,9 @@ import { workspaceOf, type Workspace } from "../access.js";
 const STAGES = ["new", "contacted", "viewing", "negotiating", "won", "lost"] as const;
 const time = (d: Date) => d.toISOString();
 
-export async function leadRoutes(app: FastifyInstance) {
+export async function leadRoutes(app: FastifyInstance, opts: { fetch?: Fetch } = {}) {
   const db = () => dbOf(app);
+  const vault = new Vault(app.config.SECRETS_KEY, app.config.NODE_ENV === "production");
 
   function access(ws: Workspace) {
     if (!ws.can("leads.view") && !ws.can("messages.reply")) throw forbidden("Your role can't see leads.");
@@ -91,15 +95,24 @@ export async function leadRoutes(app: FastifyInstance) {
     if (!ws.can("messages.reply")) throw forbidden("Your role can't reply to leads.");
     const l = await one(ws, request.params.id);
     const { text } = z.object({ text: z.string().trim().min(1, "Write a reply.").max(5000) }).parse(request.body);
-    if (!l.email) throw badRequest(`${l.name} left a phone number only${l.phone ? ` (${l.phone})` : ""}. Call or WhatsApp them instead.`);
+    // A chat from WhatsApp, Messenger or Instagram is answered there; everything else by email.
+    const d = (l.details ?? {}) as { channel?: string; account?: string; contact?: string };
+    const chat = d.account && d.contact && ["whatsapp", "messenger", "instagram"].includes(d.channel ?? "")
+      ? await db().channelAccount.findFirst({ where: { externalId: d.account, tenantId: ws.tenantId, active: true } }) : null;
+    if (!chat && !l.email) throw badRequest(`${l.name} left a phone number only${l.phone ? ` (${l.phone})` : ""}. Call or WhatsApp them instead.`);
     const t = ws.member.tenant;
     const now = new Date();
     await db().$transaction([
       db().leadMessage.create({ data: { leadId: l.id, direction: "out", body: text, userId: ws.user.id } }),
       db().lead.update({ where: { id: l.id }, data: { lastAt: now, readAt: now, status: l.status === "new" ? "contacted" : undefined, assigneeId: l.assigneeId ?? ws.user.id } }),
     ]);
+    if (chat) {
+      try { await sendMetaText({ channel: d.channel!, accountId: chat.externalId, token: vault.open(chat.accessToken), to: d.contact!, text, fetch: opts.fetch }); }
+      catch (e) { throw badRequest(`${d.channel} didn't take the message: ${e instanceof Error ? e.message : "failed"}. It's saved here; try again.`); }
+      return { message: `Sent on ${d.channel === "whatsapp" ? "WhatsApp" : d.channel === "instagram" ? "Instagram" : "Messenger"}.` };
+    }
     await app.mailer.send({
-      to: l.email, subject: `Re: your enquiry with ${t.name}`,
+      to: l.email!, subject: `Re: your enquiry with ${t.name}`,
       text: `${text}\n\n— ${ws.user.userName}, ${t.name}${t.phone ? ` · ${t.phone}` : ""}${t.email ? `\nTo answer, write to ${t.email}.` : ""}\n\nYou wrote:\n${l.message}`,
     });
     return { message: `Sent to ${l.email}.` };

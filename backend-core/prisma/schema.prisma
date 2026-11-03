@@ -531,6 +531,8 @@ model Lead {
   feeRef     String?       @map("fee_ref")
   feeProof   String?       @map("fee_proof")
   legacyId   Int?          @unique @map("legacy_id")
+  /// For chats: the channel and the person's id there ("whatsapp:9779800000000"), so new messages join the same lead.
+  contactKey String?       @map("contact_key")
   /// Short public number: REQ-0042 on the requirement board.
   ref        Int           @unique @default(autoincrement())
   lastAt     DateTime      @default(now()) @map("last_at")
@@ -540,6 +542,7 @@ model Lead {
   matches    DemandMatch[]
 
   @@index([kind, public, createdAt])
+  @@index([tenantId, contactKey])
   @@index([tenantId, status, createdAt])
   @@index([tenantId, lastAt])
   @@index([listingId])
@@ -853,36 +856,39 @@ model Room {
 
 /// A stay: requested (from the website or another site), confirmed, checked_in, completed, or cancelled.
 model Booking {
-  id         String         @id @default(cuid())
+  id          String         @id @default(cuid())
   /// BK-0001
-  seq        Int            @unique @default(autoincrement())
-  tenantId   String         @map("tenant_id")
-  roomId     String?        @map("room_id")
-  roomType   String         @map("room_type")
-  guestName  String         @map("guest_name")
-  phone      String?
-  email      String?
-  adults     Int            @default(2)
-  children   Int            @default(0)
+  seq         Int            @unique @default(autoincrement())
+  tenantId    String         @map("tenant_id")
+  roomId      String?        @map("room_id")
+  roomType    String         @map("room_type")
+  guestName   String         @map("guest_name")
+  phone       String?
+  email       String?
+  adults      Int            @default(2)
+  children    Int            @default(0)
   /// Dates only (check-in day and check-out day, midnight UTC).
-  checkIn    DateTime       @map("check_in")
-  checkOut   DateTime       @map("check_out")
+  checkIn     DateTime       @map("check_in")
+  checkOut    DateTime       @map("check_out")
   /// Rs. a night agreed for this stay.
-  rate       Int
-  status     String         @default("confirmed")
+  rate        Int
+  status      String         @default("confirmed")
   /// shetal, direct, walkin, booking, airbnb, agoda, expedia
-  source     String         @default("direct")
+  source      String         @default("direct")
   /// The guest ID was seen at check-in (Nepal requires it).
-  idChecked  Boolean        @default(false) @map("id_checked")
-  notes      String?
-  createdBy  String?        @map("created_by")
-  createdAt  DateTime       @default(now()) @map("created_at")
-  checkedIn  DateTime?      @map("checked_in_at")
-  checkedOut DateTime?      @map("checked_out_at")
-  room       Room?          @relation(fields: [roomId], references: [id], onDelete: SetNull)
-  folio      FolioLine[]
-  payments   GuestPayment[]
+  idChecked   Boolean        @default(false) @map("id_checked")
+  notes       String?
+  /// The other site's id for a stay imported from its calendar (iCal UID), so syncing again updates it.
+  externalUid String?        @map("external_uid")
+  createdBy   String?        @map("created_by")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  checkedIn   DateTime?      @map("checked_in_at")
+  checkedOut  DateTime?      @map("checked_out_at")
+  room        Room?          @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  folio       FolioLine[]
+  payments    GuestPayment[]
 
+  @@unique([tenantId, externalUid])
   @@index([tenantId, status, checkIn])
   @@index([roomId, checkIn])
   @@map("bookings")
@@ -1080,4 +1086,86 @@ model InvestmentUpdate {
 
   @@index([listingId, createdAt])
   @@map("investment_updates")
+}
+
+// ───────────── AI and analytics ─────────────
+
+/// One AI request, for monthly credits per business (1 credit per 1,000 tokens, at least 1) and cost tracking.
+model AiUsage {
+  id        String   @id @default(cuid())
+  tenantId  String?  @map("tenant_id")
+  userId    String?  @map("user_id")
+  /// compare, extract_leads
+  feature   String
+  model     String
+  inputTok  Int      @map("input_tokens")
+  outputTok Int      @map("output_tokens")
+  credits   Int
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, createdAt])
+  @@map("ai_usage")
+}
+
+/// A page seen on the website by a person (bots are never stored). The session id is the browser's random id, hashed.
+model PageView {
+  id        String   @id @default(cuid())
+  session   String
+  path      String
+  pageType  String?  @map("page_type")
+  listingId Int?     @map("listing_id")
+  tenantId  String?  @map("tenant_id")
+  referrer  String?
+  userId    String?  @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([listingId, createdAt])
+  @@index([tenantId, createdAt])
+  @@map("page_views")
+}
+
+/// Visits that were filtered out as bots, counted per day and kind (search engine, other bot).
+model BotDay {
+  day   String
+  kind  String
+  count Int    @default(0)
+
+  @@id([day, kind])
+  @@map("bot_days")
+}
+
+// ───────────── Channels and other sites ─────────────
+
+/// A business's WhatsApp number or Facebook page connected to its Inbox. The access token is encrypted.
+model ChannelAccount {
+  id          String   @id @default(cuid())
+  tenantId    String   @map("tenant_id")
+  /// whatsapp, messenger, instagram
+  kind        String
+  /// WhatsApp phone number id, or the Facebook page id.
+  externalId  String   @unique @map("external_id")
+  name        String
+  accessToken String   @map("access_token")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@map("channel_accounts")
+}
+
+/// A calendar feed (iCal) from Booking.com, Airbnb, Agoda… for one room type: its stays block those rooms here.
+model OtaFeed {
+  id        String    @id @default(cuid())
+  tenantId  String    @map("tenant_id")
+  roomType  String    @map("room_type")
+  /// booking, airbnb, agoda, expedia, other
+  site      String
+  url       String
+  lastSync  DateTime? @map("last_sync")
+  lastError String?   @map("last_error")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@map("ota_feeds")
 }
