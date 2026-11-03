@@ -390,6 +390,9 @@ p { margin: 0; text-wrap: pretty; }
 .loc-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
 .stars { display: inline-flex; gap: 2px; color: var(--accent); }
 .review { padding: var(--s4) 0; border-bottom: 1px solid var(--line); }
+/* The business's reply under a review. */
+.review-reply { margin: 8px 0 0 46px; padding: 10px 12px; border-left: 3px solid var(--line-strong); background: var(--surface); border-radius: 0 var(--r) var(--r) 0; font-size: 13.5px; }
+.review-reply b { display: block; font-weight: 600; color: var(--text-strong); margin-bottom: 2px; } .review-reply p { margin: 0; }
 
 /* lightbox & modal */
 .overlay { position: fixed; inset: 0; z-index: 100; background: color-mix(in srgb, var(--c-slate) 72%, transparent); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: var(--s4); animation: fade .2s; }

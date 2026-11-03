@@ -6,7 +6,7 @@ import { badRequest, notFound } from "@sheetal/backend-core/lib/errors";
 import { requireUser } from "@sheetal/backend-core/modules/auth/sessions";
 import { savePrivateFile } from "@sheetal/backend-core/lib/files";
 import { headOffice } from "@sheetal/backend-core/domain/branches";
-import { leadPeople, notify, notifyStaff } from "@sheetal/backend-core/lib/notify";
+import { leadPeople, notify, notifyStaff, teamWith } from "@sheetal/backend-core/lib/notify";
 import { listingCard, mediaBase } from "../catalog/present.js";
 import { feeSettings } from "../board/routes.js";
 
@@ -138,12 +138,17 @@ export async function engageRoutes(app: FastifyInstance) {
     if (b.type === "agent") {
       if (!b.agent_id || !(await db.tenant.findUnique({ where: { id: b.agent_id }, select: { id: true } }))) throw notFound("Agency not found.");
       if (user.memberships.some((m) => m.tenantId === b.agent_id)) throw badRequest("You can't review your own business.");
+      const had = await db.review.findUnique({ where: { userId_tenantId: { userId: user.id, tenantId: b.agent_id } }, select: { id: true } });
       await db.review.upsert({ where: { userId_tenantId: { userId: user.id, tenantId: b.agent_id } }, create: { userId: user.id, tenantId: b.agent_id, rating: b.rating, comment: b.comment }, update: { rating: b.rating, comment: b.comment } });
+      if (!had) await notify(db, await teamWith(db, b.agent_id, ["reviews.reply"]), { tenantId: b.agent_id, type: "review", title: `New ${b.rating}-star review`, message: b.comment.slice(0, 140), link: "/business/reviews" });
     } else {
-      const l = b.property_id ? await db.listing.findFirst({ where: { id: b.property_id, ...LIVE }, select: { id: true, tenantId: true } }) : null;
+      const l = b.property_id ? await db.listing.findFirst({ where: { id: b.property_id, ...LIVE }, select: { id: true, tenantId: true, branchId: true, title: true } }) : null;
       if (!l) throw notFound("This property isn't available any more.");
       if (l.tenantId && user.memberships.some((m) => m.tenantId === l.tenantId)) throw badRequest("You can't review your own listing.");
+      const had = await db.review.findUnique({ where: { userId_listingId: { userId: user.id, listingId: l.id } }, select: { id: true } });
       await db.review.upsert({ where: { userId_listingId: { userId: user.id, listingId: l.id } }, create: { userId: user.id, listingId: l.id, rating: b.rating, comment: b.comment }, update: { rating: b.rating, comment: b.comment } });
+      // The business's people who answer reviews, at the listing's branch.
+      if (!had && l.tenantId) await notify(db, await teamWith(db, l.tenantId, ["reviews.reply"], l.branchId), { tenantId: l.tenantId, type: "review", title: `New ${b.rating}-star review: ${l.title}`, message: b.comment.slice(0, 140), link: "/business/reviews" });
     }
     return { status: 200, message: "Thanks for your review." };
   });

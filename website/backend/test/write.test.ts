@@ -109,6 +109,17 @@ describe("reviews", () => {
     expect((await call(null, "GET", `/reviews-public?type=agent&agent_id=${ids.tenant}`)).json().data).toHaveLength(1);
   });
 
+  it("tells the business once about a new review, and shows its reply", async () => {
+    const db = app.db!;
+    // Two reviews above (listing and agency): the owner was told once each, in the business's bell.
+    const notes = await db.notification.findMany({ where: { userId: ids.agencyOwner, type: "review" } });
+    expect(notes).toHaveLength(2);
+    expect(notes.every((n) => n.tenantId === ids.tenant && n.link === "/business/reviews")).toBe(true);
+    const r = await db.review.findFirstOrThrow({ where: { listingId: 1 } });
+    await db.review.update({ where: { id: r.id }, data: { reply: "Thank you, Sita!", repliedAt: new Date() } });
+    expect((await call(null, "GET", "/reviews-public?type=property&property_id=1")).json().data[0].reply).toBe("Thank you, Sita!");
+  });
+
   it("won't let a business review itself", async () => {
     expect((await call("agencyOwner", "POST", "/reviews", { type: "property", property_id: 1, rating: 5 })).statusCode).toBe(400);
     expect((await call("agencyOwner", "POST", "/reviews", { type: "agent", agent_id: ids.tenant, rating: 5 })).statusCode).toBe(400);

@@ -184,3 +184,39 @@ describe("across businesses", () => {
     expect((await call("agent", "GET", "/rooms", undefined, ids.hotel)).statusCode).toBe(403);
   });
 });
+
+describe("reviews", () => {
+  it("lists the business's reviews by branch, replies in public and tells the reviewer", async () => {
+    const db = app.db!;
+    const buyer = await db.user.create({ data: { email: "buyer@peak.test", userName: "Sita" } });
+    const listings = await db.listing.findMany({ where: { tenantId: ids.realty }, select: { id: true, title: true, branchId: true } });
+    const baneshwor = listings.find((l) => l.title === "Baneshwor house")!;
+    const flat = listings.find((l) => l.title === "Head office flat")!;
+    await db.review.createMany({ data: [
+      { userId: buyer.id, tenantId: ids.realty!, rating: 5, comment: "Very helpful agency" },
+      { userId: buyer.id, listingId: baneshwor.id, rating: 2, comment: "Photos were old" },
+      { userId: (await db.user.create({ data: { email: "x@peak.test", userName: "Hari" } })).id, listingId: flat.id, rating: 4, comment: "Nice flat" },
+    ] });
+    const all = (await call("owner", "GET", "/reviews", undefined, ids.realty, "all")).json();
+    expect(all.meta).toMatchObject({ count: 3, unanswered: 3, average: 3.7, canReply: true });
+    // One branch: the business's own review plus that branch's listings (both reviewed listings are at Baneshwor now).
+    const head = (await call("owner", "GET", "/reviews", undefined, ids.realty, await idOf("Head office", ids.realty))).json().data;
+    expect(head.map((r: { comment: string }) => r.comment)).toEqual(["Very helpful agency"]);
+    const one = (await call("owner", "GET", "/reviews", undefined, ids.realty, await idOf("Baneshwor", ids.realty))).json().data;
+    expect(one).toHaveLength(3);
+    expect((await call("owner", "GET", "/reviews?show=low", undefined, ids.realty, "all")).json().data.map((r: { rating: number }) => r.rating)).toEqual([2]);
+
+    const low = one.find((r: { rating: number }) => r.rating === 2);
+    const rep = await call("owner", "POST", `/reviews/${low.id}/reply`, { text: "Sorry, Sita. New photos are up." }, ids.realty, "all");
+    expect(rep.statusCode).toBe(200);
+    expect(await db.review.findUniqueOrThrow({ where: { id: low.id } })).toMatchObject({ reply: "Sorry, Sita. New photos are up.", repliedBy: ids.owner });
+    expect(await db.notification.findFirst({ where: { userId: buyer.id, type: "review_reply" } })).toMatchObject({ title: "Peak Realty replied to your review", tenantId: null });
+    expect((await call("owner", "GET", "/reviews?show=unanswered", undefined, ids.realty, "all")).json().meta.unanswered).toBe(2);
+    // Taking the reply down.
+    await call("owner", "POST", `/reviews/${low.id}/reply`, { text: "" }, ids.realty, "all");
+    expect((await db.review.findUniqueOrThrow({ where: { id: low.id } })).reply).toBeNull();
+    // Someone else's business's review is out of reach; the hotel desk has no access here.
+    expect((await call("owner", "POST", `/reviews/${low.id}/reply`, { text: "x" }, ids.hotel)).statusCode).toBe(404);
+    expect((await call("desk", "GET", "/reviews", undefined, ids.realty)).statusCode).toBe(403);
+  });
+});

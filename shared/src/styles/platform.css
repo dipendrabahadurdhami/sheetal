@@ -1603,3 +1603,8 @@ html.has-brand[data-theme~="bars"] .pf-top .btn-primary { color: var(--brand-acc
 /* Calendar: a night with its own price. */
 .pf-cal-day.set span { font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
 .pf-cal-day:disabled { cursor: default; opacity: .6; }
+/* Reviews page: stars, star breakdown, and the business's reply. */
+.pf-stars { display: inline-flex; gap: 1px; color: var(--line-strong); } .pf-stars .on { color: #E0A100; fill: #E0A100; }
+.pf-star-row { display: grid; grid-template-columns: 40px 1fr 32px; align-items: center; gap: 10px; margin: 4px 0; }
+.pf-review-reply { margin-top: 10px; padding: 10px 12px; border-left: 3px solid var(--accent); background: var(--surface); border-radius: 0 var(--r) var(--r) 0; }
+.pf-review-reply p { margin: 4px 0; }

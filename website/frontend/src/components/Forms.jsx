@@ -113,6 +113,8 @@ export function Reviews({ type, id }) {
             <span style={{ marginLeft: "auto" }}><Stars value={r.rating} size={13} /></span>
           </div>
           <p>{r.comment}</p>
+          {/* The business's public answer. */}
+          {r.reply && <div className="review-reply"><b>Reply from the agency</b><p>{r.reply}</p></div>}
         </div>
       ))}
       <form className="stack" style={{ gap: 10, marginTop: 16 }} onSubmit={submit}>

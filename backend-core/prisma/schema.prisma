@@ -623,18 +623,20 @@ model LeadMessage {
 
 /// A star rating with a comment, for a listing or for a business. One per person per listing or business.
 model Review {
-  id        String   @id @default(cuid())
-  userId    String   @map("user_id")
-  listingId Int?     @map("listing_id")
-  tenantId  String?  @map("tenant_id")
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  listingId Int?      @map("listing_id")
+  tenantId  String?   @map("tenant_id")
   rating    Int
-  comment   String   @default("")
+  comment   String    @default("")
   /// published or hidden (by the business or Sheetal)
-  status    String   @default("published")
-  /// The business's public answer.
+  status    String    @default("published")
+  /// The business's public answer, when and by whom.
   reply     String?
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  repliedAt DateTime? @map("replied_at")
+  repliedBy String?   @map("replied_by")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
 
   @@unique([userId, listingId])
   @@unique([userId, tenantId])

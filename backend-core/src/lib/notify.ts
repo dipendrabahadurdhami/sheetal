@@ -21,12 +21,14 @@ export async function notifyStaff(db: Db, perm: string, note: Omit<Note, "tenant
   await notify(db, staff.map((s) => s.id), { ...note, tenantId: null });
 }
 
-/** Everyone in a business whose role can see leads (owners always). */
-export async function leadPeople(db: Db, tenantId: string, branchId?: string | null) {
+/** Everyone in a business whose role has one of `perms` (owners always), at that branch when one is given. */
+export async function teamWith(db: Db, tenantId: string, perms: string[], branchId?: string | null) {
   const [members, branch] = await Promise.all([
     db.membership.findMany({ where: { tenantId, status: "active" }, select: { userId: true, scopes: true, role: { select: { perms: true } } } }),
     branchId ? db.branch.findUnique({ where: { id: branchId }, select: { name: true } }) : null,
   ]);
-  // People who handle leads, at that branch (when one is given).
-  return members.filter((m) => (m.role.perms.includes("*") || m.role.perms.includes("leads.view") || m.role.perms.includes("messages.reply")) && worksAt(m.scopes, m.role.perms, branch?.name)).map((m) => m.userId);
+  return members.filter((m) => (m.role.perms.includes("*") || perms.some((p) => m.role.perms.includes(p))) && worksAt(m.scopes, m.role.perms, branch?.name)).map((m) => m.userId);
 }
+
+/** Everyone in a business whose role can see leads (owners always). */
+export const leadPeople = (db: Db, tenantId: string, branchId?: string | null) => teamWith(db, tenantId, ["leads.view", "messages.reply"], branchId);
