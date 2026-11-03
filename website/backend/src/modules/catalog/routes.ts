@@ -87,7 +87,7 @@ export async function catalogRoutes(app: FastifyInstance) {
 
   async function agencyOf(tenantId: string | null): Promise<AgencyRow | null> {
     if (!tenantId) return null;
-    return dbOf(app).tenant.findUnique({ where: { id: tenantId }, select: { id: true, name: true, city: true, email: true, phone: true, logoUrl: true } });
+    return dbOf(app).tenant.findUnique({ where: { id: tenantId }, select: { id: true, name: true, city: true, email: true, phone: true, logoUrl: true, address: true, website: true } });
   }
 
   async function showListing(where: Prisma.ListingWhereInput, request: { headers: Record<string, string | string[] | undefined> }) {
@@ -206,7 +206,7 @@ export async function catalogRoutes(app: FastifyInstance) {
     cached(app.cache, "catalog:agencies", LIST_TTL, async () => {
       const db = dbOf(app);
       const [agencies, counts] = await Promise.all([
-        db.tenant.findMany({ where: { type: "agency", status: { in: ["active", "trial"] } }, select: { id: true, name: true, city: true, email: true, phone: true, logoUrl: true }, orderBy: { name: "asc" } }),
+        db.tenant.findMany({ where: { type: "agency", status: { in: ["active", "trial"] } }, select: { id: true, name: true, city: true, email: true, phone: true, logoUrl: true, address: true, website: true }, orderBy: { name: "asc" } }),
         db.listing.groupBy({ by: ["tenantId"], where: LIVE, _count: true }),
       ]);
       const n = new Map(counts.map((c) => [c.tenantId, c._count]));

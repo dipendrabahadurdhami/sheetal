@@ -185,3 +185,23 @@ describe("businesses covered by a Pro plan", () => {
     expect((await db.tenant.findFirstOrThrow({ where: { name: "Solo Hotel" } })).planId).toBe("hotel-pro");
   });
 });
+
+describe("business profile", () => {
+  it("saves name and contact details for people who manage settings, and checks them", async () => {
+    expect((await call("hari", "PATCH", "/workspace/profile", { name: "Not allowed" })).statusCode).toBe(403);
+    expect((await call("owner", "PATCH", "/workspace/profile", { pan: "123" })).statusCode).toBe(422);
+    expect((await call("owner", "PATCH", "/workspace/profile", { website: "everest.test" })).statusCode).toBe(422);
+    expect((await call("owner", "PATCH", "/workspace/profile", { vatRegistered: true })).statusCode).toBe(400); // needs a PAN first
+    const r = await call("owner", "PATCH", "/workspace/profile", {
+      name: "Everest Realty Pvt. Ltd.", city: "Lalitpur", address: "Jhamsikhel, Lalitpur", phone: "01-5555555",
+      email: "Info@Everest.test", pan: "601234567", vatRegistered: true, website: "https://everest.test",
+    });
+    expect(r.statusCode).toBe(200);
+    expect(r.json().data).toMatchObject({ name: "Everest Realty Pvt. Ltd.", email: "info@everest.test", vatRegistered: true });
+    const w = (await call("owner", "GET", "/workspaces")).json().data.workspaces.find((x: { id: string }) => x.id === ids.tenant);
+    expect(w).toMatchObject({ name: "Everest Realty Pvt. Ltd.", address: "Jhamsikhel, Lalitpur", pan: "601234567", website: "https://everest.test" });
+    // Clearing a field stores nothing.
+    await call("owner", "PATCH", "/workspace/profile", { website: "" });
+    expect((await app.db!.tenant.findUniqueOrThrow({ where: { id: ids.tenant } })).website).toBeNull();
+  });
+});

@@ -43,6 +43,7 @@ export async function teamRoutes(app: FastifyInstance) {
         user: { id: user.id, name: user.userName, email: user.email, phone: user.phone, emailVerified: !!user.emailVerifiedAt, platformRole: user.platformRole },
         workspaces: user.memberships.map((m) => ({
           id: m.tenant.id, name: m.tenant.name, type: m.tenant.type, city: m.tenant.city, email: m.tenant.email, phone: m.tenant.phone, logoUrl: m.tenant.logoUrl, brandColors: m.tenant.brandColors,
+          pan: m.tenant.pan, address: m.tenant.address, vatRegistered: m.tenant.vatRegistered, website: m.tenant.website, coveredById: m.tenant.coveredById,
           status: m.tenant.status, period: m.tenant.period, renewsAt: m.tenant.renewsAt, autoRenew: m.tenant.autoRenew, createdAt: m.tenant.createdAt,
           plan: { id: m.tenant.plan.id, name: m.tenant.plan.name, price: m.tenant.plan.price, limits: m.tenant.plan.limits, features: m.tenant.plan.features },
           role: { id: m.role.id, key: m.role.key, name: m.role.name, perms: m.role.perms }, scopes: branchesOf(m),
@@ -91,6 +92,26 @@ export async function teamRoutes(app: FastifyInstance) {
     });
     await dbOf(app).auditLog.create({ data: { tenantId: t.id, actorId: ws.user.id, action: "billing.covered", target: pro.name, ip: request.ip } });
     return { message: `${t.name} is on Pro now, with ${pro.name}'s plan.` };
+  });
+
+  // ───── Business profile: name and contact details shown on the website, bills and invoices ─────
+  app.patch("/workspace/profile", async (request) => {
+    const ws = workspaceOf(request);
+    if (!ws.can("settings.business")) throw forbidden("Your role can't change the business profile.");
+    const text = (max: number) => z.string().trim().max(max).transform((x) => x || null).nullish();
+    const b = z.object({
+      name: z.string().trim().min(2, "Enter the business name.").max(80).optional(),
+      city: text(60), address: text(200), phone: text(30),
+      email: z.union([z.email("Enter a valid email address.").transform((x) => x.trim().toLowerCase()), z.literal("").transform(() => null)]).nullish(),
+      // Nepal PAN and VAT numbers are 9 digits.
+      pan: z.union([z.string().trim().regex(/^\d{9}$/, "PAN is 9 digits."), z.literal("").transform(() => null)]).nullish(),
+      vatRegistered: z.boolean().optional(),
+      website: z.union([z.url("Enter the full address, starting with https://").refine((x) => /^https?:\/\//.test(x), "Enter the full address, starting with https://"), z.literal("").transform(() => null)]).nullish(),
+    }).parse(request.body);
+    if (b.vatRegistered && !(b.pan ?? ws.member.tenant.pan)) throw badRequest("Add the PAN/VAT number to show VAT on bills.");
+    const t = await dbOf(app).tenant.update({ where: { id: ws.tenantId }, data: b });
+    await audit(ws, request.ip, "business.profile_updated", t.name, Object.fromEntries(Object.entries(b).filter(([, v]) => v !== undefined).map(([k]) => [k, true])));
+    return { message: "Business profile saved.", data: { name: t.name, city: t.city, address: t.address, phone: t.phone, email: t.email, pan: t.pan, vatRegistered: t.vatRegistered, website: t.website } };
   });
 
   // ───── Branding (Business and Pro): the business's logo and its colours (read from the logo, or picked) ─────

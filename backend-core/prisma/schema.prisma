@@ -129,6 +129,10 @@ model Tenant {
   email         String?
   phone         String?
   pan           String?
+  /// Shown on bills, invoices and the website: street address, VAT registration and the business's own website.
+  address       String?
+  vatRegistered Boolean      @default(false) @map("vat_registered")
+  website       String?
   /// Logo shown on the website and receipts (a website path or a photo address).
   logoUrl       String?      @map("logo_url")
   /// Up to 3 colours read from the logo (or picked), "#RRGGBB": the workspace uses the first for its bars and the second for buttons.

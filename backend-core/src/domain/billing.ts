@@ -67,7 +67,7 @@ export async function createInvoice(db: Db | Prisma.TransactionClient, o: { tena
   return db.invoice.create({
     data: {
       tenantId: o.tenant.id, planId: o.plan.id, months: o.months, ...splitVat(priceFor(o.plan.price, o.months), o.vatRate),
-      billedTo: { name: o.tenant.name, pan: o.tenant.pan, email: o.tenant.email, phone: o.tenant.phone, city: o.tenant.city },
+      billedTo: { name: o.tenant.name, pan: o.tenant.pan, vatRegistered: o.tenant.vatRegistered, email: o.tenant.email, phone: o.tenant.phone, city: o.tenant.city, address: o.tenant.address },
       periodStart: start, periodEnd: end, dueAt: new Date(now.getTime() + (o.dueInDays ?? 7) * 864e5), createdBy: o.by,
     },
   });

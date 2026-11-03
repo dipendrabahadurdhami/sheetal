@@ -18,10 +18,13 @@ export const liveRefresh = () => reload?.();
 
 const day = (d) => (d ? String(d).slice(0, 10) : null);
 const toTenant = (w, prev = {}) => ({
-  ...prev, id: w.id, name: w.name, type: w.type, city: w.city || "", owner: prev.owner || w.name, email: w.email || "", phone: w.phone || "", pan: prev.pan || "",
+  ...prev, id: w.id, name: w.name, type: w.type, city: w.city || "", owner: prev.owner || w.name, email: w.email || "", phone: w.phone || "",
   planId: w.plan.id, status: w.status, emailVerified: true, period: w.period, since: day(w.createdAt), renews: day(w.renewsAt), autoRenew: w.autoRenew,
   usage: prev.usage || { listings: 0, seats: 1, featured: 0 }, scopes: prev.scopes || ["Head office"], logoUrl: w.logoUrl, brandColors: w.brandColors || [],
+  pan: w.pan || "", address: w.address || "", vatRegistered: !!w.vatRegistered, website: w.website || "", coveredById: w.coveredById || null,
 });
+/** The settings form's profile from the server's business record. */
+export const profileOf = (t) => ({ displayName: t.name, city: t.city || "", phone: t.phone || "", email: t.email || "", address: t.address || "", pan: t.pan || "", vatRegistered: !!t.vatRegistered, website: t.website || "" });
 const toMember = (m) => ({ id: m.id, name: m.name, email: m.email, phone: m.phone || "", roleId: m.roleId, status: m.status === "paused" ? "suspended" : m.status, lastActive: m.lastActive, scopes: m.scopes, twofa: false });
 const toInvite = (i) => ({ id: i.id, email: i.email, roleId: i.roleId, scopes: i.scopes, status: i.status, sent: i.sent, expires: i.expires, by: i.by || "" });
 const toBranch = (b) => ({ id: b.id, name: b.name, address: b.address || "", phone: b.phone || "", manager: b.manager || "", receipt: b.receipt || "", status: b.status, rooms: b.rooms, staff: b.staff, live: true });
@@ -47,6 +50,8 @@ export function useLiveWorkspace() {
           // The branches the person works in, per business: "all" or a list of names (owners always "all").
           liveScopes: Object.fromEntries(data.workspaces.map((w) => [w.id, w.scopes])) };
         for (const w of data.workspaces) {
+          // The profile always comes from the server (the same on every device).
+          if (d.tenantSettings[w.id]) d.tenantSettings[w.id].profile = profileOf(d.tenants.find((t) => t.id === w.id));
           d.tenantRoles[w.id] = d.tenantRoles[w.id] || [toRole(w.role)];
           d.members[w.id] = d.members[w.id] || [];
           d.invites[w.id] = d.invites[w.id] || [];
@@ -216,6 +221,12 @@ export const liveTeam = (toast) => {
     onDeleteRole: (id) => run(bizApi("DELETE", `/team/roles/${id}`)),
   };
 };
+
+/** Saves the business profile (name, city, address, contacts, PAN, VAT, website). */
+export const saveProfile = (p) => bizApi("PATCH", "/workspace/profile", {
+  name: p.displayName?.trim(), city: p.city ?? "", address: p.address ?? "", phone: p.phone ?? "", email: p.email ?? "",
+  pan: p.pan ?? "", vatRegistered: !!p.vatRegistered, website: p.website ?? "",
+});
 
 /** Saves the logo (base64, or null to remove) and brand colours, then updates the open business. */
 export const saveBranding = (tenantId, body) => bizApi("PUT", "/workspace/branding", body);

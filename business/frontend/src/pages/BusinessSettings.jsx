@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { isLive } from "../live";
+import { isLive, profileOf, saveProfile } from "../live";
 import { BrandFromLogo } from "./BrandFromLogo";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
@@ -12,7 +12,7 @@ import { Link } from "@sheetal/shared/core/router";
 export const BRAND_PRESETS = ["#9D1D21", "#EA2229", "#59595B", "#1F6F5C", "#1E4E8C", "#7A4B12", "#5B3B8C", "#0F766E"];
 
 export const defaultTenantSettings = (tenant) => ({
-  profile: { displayName: tenant.name, phone: tenant.phone, email: tenant.email, address: `${tenant.city}, Nepal`, pan: tenant.pan, vatRegistered: true, website: "" },
+  profile: { displayName: tenant.name, city: tenant.city || "", phone: tenant.phone || "", email: tenant.email || "", address: tenant.address ?? (tenant.city ? `${tenant.city}, Nepal` : ""), pan: tenant.pan || "", vatRegistered: tenant.vatRegistered ?? true, website: tenant.website || "" },
   branding: { useBrand: false, color: "#9D1D21", logoText: tenant.name.split(" ").map((w) => w[0]).slice(0, 2).join(""), receiptHeader: tenant.name, receiptFooter: "Thank you. Please visit again.", showPoweredBy: true },
   payments: {
     mode: "shetal", // shetal = Sheetal collects and pays out; own = money goes straight to the business
@@ -38,7 +38,32 @@ export function BusinessSettings({ tenant, tab: tabProp }) {
   const set = (path, v) => setS((x) => { const n = structuredClone(x); const ks = path.split("."); let o = n; ks.slice(0, -1).forEach((k) => (o = o[k])); o[ks.at(-1)] = v; return n; });
   const get = (path) => path.split(".").reduce((o, k) => o?.[k], s);
   const dirty = JSON.stringify(s) !== JSON.stringify(saved);
-  const save = () => { update((d) => { d.tenantSettings[tenant.id] = s; }); toast(t("settings.toastSaved")); };
+  const [busy, setBusy] = useState(false);
+  const [errs, setErrs] = useState({});
+  const save = async () => {
+    // Signed in: the profile is saved on the server (it shows on the website, bills and invoices); the other
+    // settings stay with the panel for now.
+    if (isLive(tenant.id) && JSON.stringify(s.profile) !== JSON.stringify(saved.profile)) {
+      setBusy(true);
+      try {
+        const r = await saveProfile(s.profile);
+        const p = r.data;
+        update((d) => {
+          const x = d.tenants.find((y) => y.id === tenant.id);
+          if (x) Object.assign(x, { name: p.name, city: p.city || "", address: p.address || "", phone: p.phone || "", email: p.email || "", pan: p.pan || "", vatRegistered: p.vatRegistered, website: p.website || "" });
+          d.tenantSettings[tenant.id] = { ...s, profile: profileOf(x) };
+        });
+        setErrs({});
+        toast(r.message);
+      } catch (e) {
+        setErrs(Object.fromEntries(Object.entries(e.errors || {}).map(([k, m]) => [k, [].concat(m)[0]])));
+        toast(e.message);
+      } finally { setBusy(false); }
+      return;
+    }
+    update((d) => { d.tenantSettings[tenant.id] = s; });
+    toast(t("settings.toastSaved"));
+  };
   React.useEffect(() => setAdv(false), [tab]);
 
   return (
@@ -50,14 +75,18 @@ export function BusinessSettings({ tenant, tab: tabProp }) {
             {tab === "voice" && <div className="pf-note"><Icon name="phone-call" size={16} /><span>The AI voice assistant has its own page now, with setup steps and call history: <Link to="/business/voice" className="link">open AI voice assistant</Link>.</span></div>}
             {tab === "profile" && <>
               <div className="pf-grid-2 tight">
-                <Field label={t("bsettings.displayName")}><Input value={get("profile.displayName")} onChange={(e) => set("profile.displayName", e.target.value)} /></Field>
-                <Field label={t("tenant.pan")}><Input className="input tnum" value={get("profile.pan")} onChange={(e) => set("profile.pan", e.target.value.replace(/\D/g, "").slice(0, 9))} /></Field>
+                <Field label={t("bsettings.displayName")} error={errs.name}><Input value={get("profile.displayName")} onChange={(e) => set("profile.displayName", e.target.value)} /></Field>
+                <Field label={t("tenant.pan")} hint="9 digits" error={errs.pan}><Input className="input tnum" value={get("profile.pan")} onChange={(e) => set("profile.pan", e.target.value.replace(/\D/g, "").slice(0, 9))} /></Field>
               </div>
               <div className="pf-grid-2 tight">
-                <Field label={t("common.phone")}><Input className="input tnum" value={get("profile.phone")} onChange={(e) => set("profile.phone", e.target.value)} /></Field>
-                <Field label={t("common.email")}><Input value={get("profile.email")} onChange={(e) => set("profile.email", e.target.value)} /></Field>
+                <Field label={t("common.phone")} error={errs.phone}><Input className="input tnum" value={get("profile.phone")} onChange={(e) => set("profile.phone", e.target.value)} /></Field>
+                <Field label={t("common.email")} error={errs.email}><Input value={get("profile.email")} onChange={(e) => set("profile.email", e.target.value)} /></Field>
               </div>
-              <Field label={t("bsettings.address")}><Input value={get("profile.address")} onChange={(e) => set("profile.address", e.target.value)} /></Field>
+              <div className="pf-grid-2 tight">
+                <Field label="City" error={errs.city}><Input value={get("profile.city") ?? ""} onChange={(e) => set("profile.city", e.target.value)} placeholder="e.g. Kathmandu" /></Field>
+                <Field label="Website" hint="Your own site, if you have one" error={errs.website}><Input value={get("profile.website") ?? ""} onChange={(e) => set("profile.website", e.target.value)} placeholder="https://" /></Field>
+              </div>
+              <Field label={t("bsettings.address")} error={errs.address}><Input value={get("profile.address")} onChange={(e) => set("profile.address", e.target.value)} /></Field>
               <ToggleRow title={t("bsettings.vat")} sub={t("bsettings.vatSub")} checked={get("profile.vatRegistered")} onChange={(v) => set("profile.vatRegistered", v)} />
             </>}
 

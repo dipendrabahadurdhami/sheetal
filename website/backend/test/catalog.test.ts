@@ -148,6 +148,11 @@ describe("filters, suggestions and agencies", () => {
     expect((await get(`/v1/agent-properties/${agencyId}`)).json().meta.total).toBe(4);
     expect((await get("/v1/agent-detail/unknown")).statusCode).toBe(404);
   });
+
+  it("shows the agency's own address and website from its business profile", async () => {
+    await app.db!.tenant.update({ where: { id: agencyId }, data: { address: "Jhamsikhel, Lalitpur", website: "https://sheetal.test" } });
+    expect((await get(`/v1/agent-detail/${agencyId}`)).json().data).toMatchObject({ address: "Jhamsikhel, Lalitpur", website_url: "https://sheetal.test" });
+  });
 });
 
 describe("photos", () => {
