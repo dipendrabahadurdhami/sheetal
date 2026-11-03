@@ -85,8 +85,8 @@ function BrandEditor({ tenant, canEdit }) {
         </div>
       </Field>
       {preview && (
-        <div className="pf-grid-3 tight" aria-label="Preview of the three themes" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10 }}>
-          {[["Light", preview.lightBar, "#1F1F21", "#FFFFFF"], ["Dark", preview.darkBar, "#FFFFFF", "#2B2B2D"], ["Your colour", preview.darkBar, "#FFFFFF", preview.deep]].map(([name, bar, ink, page]) => (
+        <div className="pf-grid-3 tight" aria-label="Preview of the four themes" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+          {[["Light", preview.lightBar, "#1F1F21", "#FFFFFF"], ["Dark", preview.darkBar, "#FFFFFF", preview.darkPage], ["Your colour", preview.darkBar, "#FFFFFF", preview.deep], ["Colour bars", preview.accentInk, "#FFFFFF", preview.darkPage]].map(([name, bar, ink, page]) => (
             <div key={name} style={{ borderRadius: 10, overflow: "hidden", border: "1px solid var(--line)", display: "flex", height: 84 }}>
               <div style={{ width: 54, background: bar, color: ink, fontSize: 11, padding: 8 }}><b>Menu</b></div>
               <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
