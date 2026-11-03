@@ -7,8 +7,15 @@ import { Badge, Button, Confirm, Empty, PageHead, Panel, Seg, StatusBadge, Table
 import { Icon } from "@sheetal/shared/core/icons";
 import { PERIODS, planFeatureList, priceFor, savingFor } from "@sheetal/shared/core/plans";
 import { BusinessAddons } from "@sheetal/shared/components/Addons";
+import { isLive } from "../live";
+import { LiveBilling } from "./LiveBilling";
 
+// On the business API (signed in), the real billing screen; otherwise the sample one.
 export function BusinessBilling({ tenant, canManage }) {
+  return isLive(tenant.id) ? <LiveBilling tenant={tenant} canManage={canManage} /> : <SampleBilling tenant={tenant} canManage={canManage} />;
+}
+
+function SampleBilling({ tenant, canManage }) {
   const t = useT();
   const { db, update } = useStore();
   const toast = useToast();

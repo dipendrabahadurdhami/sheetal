@@ -11,6 +11,7 @@ import { Icon } from "@sheetal/shared/core/icons";
 import { planOf, TenantName } from "./AdminDashboard";
 import { decideListing, isStaffLive, reviewListing } from "../live";
 import { LiveBlog } from "./LiveContent";
+import { LiveAdminBilling } from "./LiveBilling";
 
 /* ───────── Moderation: listing review + business verification (KYC) ───────── */
 const REJECT = ["blurry", "wrong_price", "duplicate", "missing_docs", "contact_in_photo", "other"];
@@ -332,7 +333,12 @@ function ToggleRowInline({ on, onChange, label }) {
 }
 
 /* ───────── Billing: Sheetal invoices to businesses, payouts, refunds ───────── */
+// Signed in as staff: billing on the admin API; otherwise the sample screen.
 export function AdminBilling({ role }) {
+  return isStaffLive() ? <LiveAdminBilling /> : <SampleBilling role={role} />;
+}
+
+function SampleBilling({ role }) {
   const t = useT();
   const { db } = useStore();
   const toast = useToast();

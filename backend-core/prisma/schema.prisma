@@ -139,6 +139,10 @@ model Tenant {
   renewsAt      DateTime?    @map("renews_at")
   /// Only a super admin can switch this on.
   autoRenew     Boolean      @default(false) @map("auto_renew")
+  /// Billing: after the paid period ends, the plan keeps working until graceUntil; then it moves to Starter.
+  graceUntil    DateTime?    @map("grace_until")
+  /// The last renewal reminder sent ("<renewsAt date>:<days before>"), so each is sent once.
+  remindedFor   String?      @map("reminded_for")
   emailVerified Boolean      @default(false) @map("email_verified")
   createdAt     DateTime     @default(now()) @map("created_at")
   updatedAt     DateTime     @updatedAt @map("updated_at")
@@ -759,4 +763,65 @@ model JobApplication {
 
   @@index([jobId, createdAt])
   @@map("job_applications")
+}
+
+// ───────────── Billing ─────────────
+
+/// A bill for a plan. Prices include 13% VAT (shown on the invoice). Paid in one go by eSewa, Khalti, Fonepay
+/// or a bank transfer that Sheetal confirms; paying applies the plan for the months bought.
+model Invoice {
+  id          String    @id @default(cuid())
+  /// INV-2026-0001
+  seq         Int       @unique @default(autoincrement())
+  tenantId    String    @map("tenant_id")
+  planId      String    @map("plan_id")
+  months      Int
+  /// Rs., whole rupees: subtotal + vat = total.
+  subtotal    Int
+  vat         Int
+  total       Int
+  /// open, paid, void
+  status      String    @default("open")
+  /// The business's name and PAN as they were when billed.
+  billedTo    Json      @default("{}") @map("billed_to")
+  periodStart DateTime? @map("period_start")
+  periodEnd   DateTime? @map("period_end")
+  dueAt       DateTime  @map("due_at")
+  paidAt      DateTime? @map("paid_at")
+  createdBy   String?   @map("created_by")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  payments    Payment[]
+
+  @@index([tenantId, createdAt])
+  @@index([status, dueAt])
+  @@map("invoices")
+}
+
+model Payment {
+  id          String    @id @default(cuid())
+  invoiceId   String    @map("invoice_id")
+  tenantId    String    @map("tenant_id")
+  /// esewa, khalti, fonepay, manual
+  provider    String
+  amount      Int
+  /// initiated, pending_review (manual proof sent), paid, failed, refunded
+  status      String    @default("initiated")
+  /// Our id sent to the gateway (unique per attempt).
+  ref         String    @unique
+  /// The gateway's id for the payment (eSewa ref, Khalti pidx, Fonepay UID).
+  providerRef String?   @map("provider_ref")
+  /// Bank transfer proof (a private file).
+  proofFile   String?   @map("proof_file")
+  note        String?
+  /// What the gateway answered, for checking later (no card or account numbers are ever sent to us).
+  raw         Json?
+  userId      String?   @map("user_id")
+  reviewedBy  String?   @map("reviewed_by")
+  paidAt      DateTime? @map("paid_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  invoice     Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@index([status, createdAt])
+  @@map("payments")
 }

@@ -17,6 +17,7 @@ import { BusinessSettings, defaultTenantSettings } from "./BusinessSettings";
 import { SettingsShell, settingsSections } from "./SettingsHub";
 import { config } from "@sheetal/shared/core/config";
 import { BusinessBilling, BusinessData } from "./BusinessBilling";
+import { BillingReturn } from "./LiveBilling";
 import { Help, Tour } from "./Help";
 import { MyProfile, NotificationsPage, businessSeed, useNotifs } from "@sheetal/shared/components/Me";
 import { Domains } from "./Domains";
@@ -191,6 +192,7 @@ export default function BusinessApp() {
         { path: "/business/settings", render: () => guard(can(role, "settings.business"), <SettingsShell role={role}><BusinessSettings key={tenant.id} tenant={tenant} tab="profile" /></SettingsShell>) },
         { path: "/business/settings/roles", render: () => guard(can(role, "roles.manage"), <SettingsShell role={role}><BusinessRoles key={tenant.id} tenant={tenant} role={role} /></SettingsShell>) },
         { path: "/business/settings/:tab", render: ({ tab }) => guard(can(role, "settings.business"), <SettingsShell role={role}><BusinessSettings key={tenant.id} tenant={tenant} tab={tab} /></SettingsShell>) },
+        { path: "/business/billing/return/:provider/:id", render: ({ provider, id }) => <BillingReturn provider={provider} id={id} /> },
         { path: "/business/billing", render: () => guard(can(role, "billing.manage"), <SettingsShell role={role}><BusinessBilling tenant={tenant} canManage /></SettingsShell>) },
         { path: "/business/data", render: () => guard(can(role, "settings.business"), <SettingsShell role={role}><BusinessData tenant={tenant} /></SettingsShell>) },
         { path: "/business/pos", render: () => paid(any("pos.frontdesk", "pos.restaurant", "pos.extras", "shift.close"), <POS key={tenant.id} tenant={tenant} role={role} />) },
