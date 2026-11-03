@@ -135,6 +135,11 @@ describe("mailboxes and mail", () => {
     ids.received = inbox.json().data[0].id;
   });
 
+  it("counts unread email in the person's own and shared mailboxes for the top bar", async () => {
+    expect((await call("agent", "GET", "/mail/unread")).json().data.unread).toBe(1); // in sita@
+    expect((await call("owner", "GET", "/mail/unread")).json().data.unread).toBe(0); // the owner's own box only, not Sita's
+  });
+
   it("opens, replies in the same thread, and downloads attachments", async () => {
     const m = (await call("agent", "GET", `/mail/messages/${ids.received}`)).json().data;
     expect(m).toMatchObject({ seen: true, fromAddress: "ram@everest.test", text: "Please show the Dhapasi house at 3." });

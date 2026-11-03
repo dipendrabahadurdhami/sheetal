@@ -73,6 +73,13 @@ export async function mailRoutes(app: FastifyInstance, opts: MailOptions) {
     return { id: d.id, name: d.name, verified: d.verified, checkedAt: d.checkedAt, records: recordsFor(d.name, d, mailHost).map((r) => ({ ...r, status: checks[r.id] ?? "unchecked" })) };
   };
 
+  // ───── Unread email for the top bar: the person's own mailboxes and the ones shared with them ─────
+  app.get("/mail/unread", async (request) => {
+    const ws = workspaceOf(request);
+    const count = await dbOf(app).mailMessage.count({ where: { folder: "inbox", seen: false, mailbox: { tenantId: ws.tenantId, active: true, OR: [{ userId: ws.user.id }, { access: { some: { userId: ws.user.id } } }] } } });
+    return { data: { unread: count } };
+  });
+
   // ───── Overview: domains, the mailboxes I can open, storage ─────
   app.get("/mail", async (request) => {
     const ws = workspaceOf(request);

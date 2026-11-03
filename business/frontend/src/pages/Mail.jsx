@@ -4,6 +4,7 @@ import { fdatetime } from "@sheetal/shared/core/format";
 import { Badge, Button, Drawer, Empty, Field, Input, PageHead, Select, Textarea, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { bizApi, bizApiReady, fileToBase64, formatBytes, signedIn } from "../api";
+import { mailCountRefresh } from "../live";
 
 // Team email: each person's mailbox and the shared ones they answer (info@, sales@); owners and managers can
 // open every team mailbox. Mail between Sheetal mailboxes arrives at once; mail to anyone else goes through
@@ -57,6 +58,8 @@ function MailApp({ ov, reload }) {
   const markRead = (id) => setList((l) => {
     const row = l?.data.find((x) => x.id === id);
     if (!row || row.seen) return l;
+    // The Email button in the top bar counts down too (once the server has marked it read).
+    setTimeout(mailCountRefresh, 800);
     return { ...l, data: l.data.map((x) => (x.id === id ? { ...x, seen: true } : x)), unread: { ...l.unread, [folder]: Math.max(0, (l.unread[folder] || 0) - 1) } };
   });
   const groups = [["Your mailbox", ov.mailboxes.filter((m) => m.mine)], ["Shared", ov.mailboxes.filter((m) => m.kind === "shared")], ["Team", ov.mailboxes.filter((m) => !m.mine && m.kind !== "shared")]].filter(([, l]) => l.length);

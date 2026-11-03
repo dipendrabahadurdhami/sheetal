@@ -95,6 +95,8 @@ export function useLiveWorkspace() {
       const t = d.tenants.find((x) => x.id === current);
       if (t) t.usage = { ...t.usage, listings: meta.used };
     })).catch(() => {});
+    mailReload = () => bizApi("GET", "/mail/unread").then(({ data }) => update((d) => { d.session.mailUnread = { ...(d.session.mailUnread || {}), [current]: data.unread }; })).catch(() => {});
+    mailReload();
     bizApi("GET", "/leads").then(({ data }) => update((d) => {
       if (!d.ops[current]) d.ops[current] = emptyOps();
       d.ops[current].conversations = data.map((c) => ({ ...c, assignee: c.assignee || null }));
@@ -134,6 +136,9 @@ export const liveBranches = (toast) => {
 };
 
 let workReload = null;
+let mailReload = null;
+/** Re-counts unread email for the top bar (after reading mail). */
+export const mailCountRefresh = () => mailReload?.();
 /** Reloads listings and leads of the open business after a change. */
 const workListeners = new Set();
 export const workRefresh = () => { workReload?.(); workListeners.forEach((fn) => fn()); };

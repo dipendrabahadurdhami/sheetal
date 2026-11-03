@@ -106,6 +106,8 @@ export default function BusinessApp() {
   const drafts = db.drafts[tenant.id] ? 1 : 0;
   // Unread leads, for the Inbox button in the top bar.
   const newLeads = (opsOf(db, tenant.id).conversations || []).filter((c) => c.unread).length;
+  // Unread emails in the person's own and shared mailboxes (checked every minute), for the Email button.
+  const newMail = s.mailUnread?.[tenant.id] || 0;
   const pendingAg = (db.agreements[tenant.id] || []).filter((a) => a.status === "sent").length;
   const ck = checkupsOf(db, tenant.id);
   const toCheck = todaysList(db.listings.filter((l) => l.tenantId === tenant.id), ck.settings, ck.log, TODAY.slice(0, 10)).length;
@@ -199,7 +201,7 @@ export default function BusinessApp() {
       )}</>}
       topTools={<>
         {any("messages.reply", "leads.view") && <Link to="/business/inbox" className="btn btn-ghost btn-icon pf-top-tool" title="Leads (Inbox)" aria-label={`Leads${newLeads ? `, ${newLeads} unread` : ""}`}><Icon name="messages-square" size={18} />{newLeads > 0 && <b className="pf-top-count">{newLeads > 99 ? "99+" : newLeads}</b>}</Link>}
-        <Link to="/business/mail" className="btn btn-ghost btn-icon pf-top-tool" title="Email" aria-label="Email"><Icon name="mail" size={18} /></Link>
+        <Link to="/business/mail" className="btn btn-ghost btn-icon pf-top-tool" title="Email" aria-label={`Email${newMail ? `, ${newMail} unread` : ""}`}><Icon name="mail" size={18} />{newMail > 0 && <b className="pf-top-count">{newMail > 99 ? "99+" : newMail}</b>}</Link>
       </>}
       topLeft={<div className="pf-top-title"><b>{tenant.name}</b><span className="small muted">{t(`type.${T}`)} · {tenant.city}</span></div>}
       topExtra={<BranchPicker branch={branch} allowed={allowed} canAll={canAll} allLabel={t("br.all")} label={t("br.filter")}
