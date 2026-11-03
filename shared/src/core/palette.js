@@ -79,6 +79,13 @@ export function extractPalette(img, max = 4) {
  */
 export function brandTheme(colors) {
   if (!colors?.length) return null;
+  const t = makeTheme(colors);
+  // Dark theme page: a little lighter than the dark bars (Sheetal's grey is replaced by it).
+  t.darkPage = shade(t.darkBar, 0.1);
+  return t;
+}
+
+function makeTheme(colors) {
   // The brand colour: the most colourful, ignoring near-white and near-black.
   const usable = colors.filter((c) => luminance(c) > 0.02 && luminance(c) < 0.85);
   const brand = (usable.length ? usable : colors).reduce((best, c) => (sat(toRgb(c)) > sat(toRgb(best)) ? c : best));

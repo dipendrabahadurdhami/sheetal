@@ -1506,7 +1506,10 @@ html.has-brand[data-theme~="dark"]:not([data-theme~="red"]) :is(.pf-top, .pf-sid
 }
 html.has-brand[data-theme~="dark"]:not([data-theme~="red"]) { --accent-soft: color-mix(in srgb, var(--brand-accent) 22%, var(--card)); }
 /* The third theme in the business's colour: Sheetal's crimson and red are swapped for theirs. */
-html.has-brand[data-theme~="red"] { --c-crimson: var(--brand-deep); --c-red: var(--brand-base); }
+/* Sheetal's three base colours are swapped for the business's, so every page, card and icon follows its brand:
+   red and crimson in every theme, and in the dark theme the grey too (from its dark colour). */
+html.has-brand[data-theme] { --c-crimson: var(--brand-deep); --c-red: var(--brand-base); }
+html.has-brand[data-theme~="dark"]:not([data-theme~="red"]) { --c-slate: var(--brand-dark-page); --c-red: var(--brand); }
 html.has-brand[data-theme~="red"] :is(.pf-top, .pf-side, .pf-side-top) { --card: var(--brand-dark-bar); background: var(--brand-dark-bar); border-color: color-mix(in srgb, #fff 12%, var(--brand-dark-bar)); }
 .pf-ws-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
 
