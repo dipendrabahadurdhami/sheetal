@@ -91,7 +91,31 @@ export function useLiveWorkspace() {
 
 let workReload = null;
 /** Reloads listings and leads of the open business after a change. */
-export const workRefresh = () => workReload?.();
+const workListeners = new Set();
+export const workRefresh = () => { workReload?.(); workListeners.forEach((fn) => fn()); };
+
+/** One page of the open business's listings from the API, with counts per status; reloads after every change. */
+export function useListingPage(tenantId, { q, kind, status, per }) {
+  const [state, setState] = useState({ rows: null, meta: null, error: null });
+  const [tick, setTick] = useState(0);
+  useEffect(() => { const fn = () => setTick((n) => n + 1); workListeners.add(fn); return () => workListeners.delete(fn); }, []);
+  useEffect(() => {
+    if (!tenantId) return undefined;
+    let gone = false;
+    const params = new URLSearchParams({ page: "1", per: String(per), status });
+    if (kind !== "all") params.set("kind", kind);
+    if (q.trim()) params.set("q", q.trim());
+    // Typing in the search waits a moment before asking the server.
+    const wait = setTimeout(() => {
+      setActiveTenant(tenantId);
+      bizApi("GET", `/listings?${params}`)
+        .then((r) => !gone && setState({ rows: r.data, meta: r.meta, error: null }))
+        .catch((e) => !gone && setState((x) => ({ ...x, rows: x.rows || [], error: e.message })));
+    }, q.trim() ? 300 : 0);
+    return () => { gone = true; clearTimeout(wait); };
+  }, [tenantId, q, kind, status, per, tick]);
+  return state;
+}
 
 const runWith = (toast) => (p) => p.then((r) => { if (r?.message) toast(r.message); workRefresh(); return r; }).catch((e) => { toast(e.message); workRefresh(); throw e; });
 

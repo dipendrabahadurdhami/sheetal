@@ -82,6 +82,41 @@ describe("upgrade requests", () => {
   });
 });
 
+describe("adding a business", () => {
+  it("sets it up for a new owner with a set-password link, for staff who manage businesses", async () => {
+    const body = { name: "Pokhara Homes", type: "agency", city: "Pokhara", owner: "Maya Gurung", email: "Maya@Pokhara.test", phone: "9800000002" };
+    expect((await call("help", "POST", "/admin/tenants", body)).statusCode).toBe(403);
+    const res = await call("ops", "POST", "/admin/tenants", body);
+    expect(res.statusCode).toBe(200);
+    const t = await app.db!.tenant.findUniqueOrThrow({ where: { id: res.json().data.id }, include: { memberships: { include: { user: true, role: true } } } });
+    expect(t).toMatchObject({ name: "Pokhara Homes", planId: "agency-starter", city: "Pokhara" });
+    expect(t.memberships[0]).toMatchObject({ role: { key: "owner" }, user: { email: "maya@pokhara.test", userName: "Maya Gurung" } });
+    expect((await app.db!.outboundEmail.findFirstOrThrow({ where: { to: "maya@pokhara.test" } })).text).toContain("/reset-password/");
+    const list = (await call("ops", "GET", "/admin/tenants?q=pokhara")).json().data;
+    expect(list[0]).toMatchObject({ owner: { name: "Maya Gurung", email: "maya@pokhara.test" }, members: 1 });
+  });
+});
+
+describe("plans", () => {
+  it("lists plans with the yearly price and how many businesses are on each", async () => {
+    const d = (await call("help", "GET", "/admin/plans")).json().data;
+    expect(d.find((p: { id: string }) => p.id === "agency-pro")).toMatchObject({ price: 3000, yearly: Math.round(3000 * 12 * 0.61) });
+    expect(d.find((p: { id: string }) => p.id === "hotel-business").businesses).toBe(1);
+  });
+
+  it("lets plan managers change prices, never making Starter paid or hidden", async () => {
+    const edit = { name: "Business", price: 1800, limits: { listings: 200, seats: 10, featured: 8 }, features: { agreements: true }, active: true };
+    expect((await call("ops", "PATCH", "/admin/plans/agency-business", edit)).statusCode).toBe(403);
+    expect((await call("boss", "PATCH", "/admin/plans/agency-business", edit)).statusCode).toBe(200);
+    expect(await app.db!.plan.findUniqueOrThrow({ where: { id: "agency-business" } })).toMatchObject({ price: 1800, limits: { listings: 200 } });
+    expect((await call("boss", "PATCH", "/admin/plans/agency-starter", { ...edit, name: "Starter", price: 100 })).statusCode).toBe(400);
+    expect((await call("boss", "PATCH", "/admin/plans/agency-starter", { ...edit, name: "Starter", price: 0, active: false })).statusCode).toBe(400);
+    const add = await call("boss", "POST", "/admin/plans", { ...edit, type: "host", name: "Host Plus", price: 2200 });
+    expect(add.json().data.id).toBe("host-host-plus");
+    expect((await call("boss", "POST", "/admin/plans", { ...edit, type: "host", name: "Host Plus", price: 2200 })).statusCode).toBe(400);
+  });
+});
+
 describe("listing review", () => {
   it("queues pending listings oldest first, for moderators only", async () => {
     const db = app.db!;

@@ -8,7 +8,7 @@ import { Icon } from "@sheetal/shared/core/icons";
 import { DataActions } from "@sheetal/shared/components/DataIO";
 import { OtaCell, OtaDrawer, isStayListing } from "./OtaPanel";
 import { atListingCap, listingCap, planOf } from "@sheetal/shared/core/plans";
-import { isLive, liveListings } from "../live";
+import { isLive, liveListings, useListingPage } from "../live";
 
 // Listings: one place to find, edit, duplicate, pause, publish, archive and delete every listing.
 // "Needs review" holds listings imported from the old site until someone checks and publishes them.
@@ -29,21 +29,29 @@ function ListingStatus({ s }) {
 export function ListingsPage({ tenant, canEdit }) {
   const t = useT(); const lang = useLang(); const toast = useToast();
   const { db, update } = useStore(); const { navigate } = useRouter();
-  const [q, setQ] = useState(""); const [kind, setKind] = useState("all"); const [status, setStatus] = useState("all");
+  const [q, setQ0] = useState(""); const [kind, setKind0] = useState("all"); const [status, setStatus0] = useState("all");
   const [sel, setSel] = useState([]); const [ask, setAsk] = useState(null); const [ota, setOta] = useState(null); const [moving, setMoving] = useState(null); const [shown, setShown] = useState(100);
   const live = isLive(tenant.id) ? liveListings(toast) : null;
+  const setQ = (v) => { setQ0(v); setShown(100); }; const setKind = (v) => { setKind0(v); setShown(100); }; const setStatus = (v) => { setStatus0(v); setShown(100); };
   const all = db.listings.filter((l) => l.tenantId === tenant.id);
   const draft = db.drafts[tenant.id];
-  const kinds = db.catalog.listingKinds.filter((k) => all.some((l) => l.kind === k.id));
+  // Live: the server searches, filters and pages (Sheetal alone has thousands); otherwise everything is in the store.
+  const page = useListingPage(live ? tenant.id : null, { q, kind, status, per: shown });
+  const kinds = db.catalog.listingKinds.filter((k) => (live ? page.meta?.listedKinds || [] : all.map((l) => l.kind)).includes(k.id));
   const kindName = (k) => { const o = db.catalog.listingKinds.find((x) => x.id === k); return o ? (lang === "ne" ? o.ne : o.en) : k; };
   const stays = all.some(isStayListing);
   const plan = planOf(db, tenant);
-  const capped = atListingCap(plan, all.filter((l) => l.status !== "archived" && l.status !== "rejected").length);
-  const rows = useMemo(() => all.filter((l) =>
+  const capped = live ? !!page.meta && page.meta.cap !== -1 && page.meta.used >= page.meta.cap : atListingCap(plan, all.filter((l) => l.status !== "archived" && l.status !== "rejected").length);
+  const localRows = useMemo(() => all.filter((l) =>
     (kind === "all" || l.kind === kind) &&
     (status === "all" ? l.status !== "archived" : l.status === status) &&
     (!q.trim() || (l.title + " " + l.id).toLowerCase().includes(q.trim().toLowerCase()))), [all, kind, status, q]);
-  const counts = Object.fromEntries(STATUS.map(([id]) => [id, id === "all" ? all.filter((l) => l.status !== "archived").length : all.filter((l) => l.status === id).length]));
+  const counts = live
+    ? Object.fromEntries(STATUS.map(([id]) => [id, page.meta?.counts?.[id] || 0]))
+    : Object.fromEntries(STATUS.map(([id]) => [id, id === "all" ? all.filter((l) => l.status !== "archived").length : all.filter((l) => l.status === id).length]));
+  const rows = live ? page.rows || [] : localRows;
+  // How many match the filters (the server knows; locally it is the filtered list).
+  const total = live ? page.meta?.total ?? 0 : rows.length;
   const setStatusOf = (ids, s, msg) => { if (live) { live.setStatus(ids, s); setSel([]); return; } update((d) => { d.listings.forEach((l) => { if (ids.includes(l.id)) { l.status = s; l.updated = TODAY.slice(0, 10); if (s === "published") delete l.issues; } }); }); setSel([]); toast(msg); };
   const remove = (ids) => { if (live) { live.remove(ids); setSel([]); return; } update((d) => { d.listings = d.listings.filter((l) => !ids.includes(l.id)); }); setSel([]); toast(ids.length > 1 ? ids.length + " listings deleted" : "Listing deleted"); };
   const edit = (l) => {
@@ -59,7 +67,7 @@ export function ListingsPage({ tenant, canEdit }) {
 
   return (
     <>
-      <PageHead title={t("nav.listings")} sub={counts.published + " live · " + all.length + " in total"}
+      <PageHead title={t("nav.listings")} sub={counts.published + " live · " + (live ? Object.entries(counts).filter(([k]) => k !== "all").reduce((a, [, n]) => a + n, 0) : all.length).toLocaleString("en-IN") + " in total"}
         actions={<><DataActions kind="listings" onlyExport={!canEdit} />{canEdit && <Button icon="plus" onClick={() => { update((d) => { if (d.drafts[tenant.id]?.editId) delete d.drafts[tenant.id]; }); navigate("/business/listings/new"); }}>{t("listings.new")}</Button>}</>} />
       {draft && !draft.editId && (
         <div className="pf-alert progress"><Icon name="file-pen" size={18} /><div><b>{t("listings.draftTitle")}</b><span>{t("listings.draftText", { kind: kindName(draft.kind) })}</span></div><Button size="sm" onClick={() => navigate("/business/listings/new")}>{t("listings.resume")}</Button></div>
@@ -132,8 +140,10 @@ export function ListingsPage({ tenant, canEdit }) {
                   </div>
                 </td>
               </tr>
-            ))}</tbody></table>{rows.length > shown && <div className="pf-pad" style={{ textAlign: "center" }}><Button variant="outline" onClick={() => setShown((n) => n + 100)}>Show more ({(rows.length - shown).toLocaleString("en-IN")} left)</Button></div>}</div>
-        ) : all.length ? (
+            ))}</tbody></table>{total > shown && <div className="pf-pad" style={{ textAlign: "center" }}><Button variant="outline" onClick={() => setShown((n) => n + 100)}>Show more ({(total - shown).toLocaleString("en-IN")} left)</Button></div>}</div>
+        ) : live && !page.rows ? (
+          <p className="muted pf-pad">Loading listings…</p>
+        ) : (live ? counts.all + (counts.archived || 0) : all.length) ? (
           <Empty icon="search" title="No listings match" action={<Button variant="outline" onClick={() => { setQ(""); setKind("all"); setStatus("all"); }}>Clear filters</Button>}>Try another type or status.</Empty>
         ) : (
           <Empty icon="house-plus" title={t("listings.none")} action={canEdit && <Button icon="plus" onClick={() => navigate("/business/listings/new")}>{t("listings.new")}</Button>}>{t("listings.noneText")}</Empty>

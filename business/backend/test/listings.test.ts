@@ -91,6 +91,15 @@ describe("listings", () => {
     expect((await call("owner", "GET", "/listings/SP-0003")).statusCode).toBe(404); // the free business's listing
   });
 
+  it("pages, searches and filters on the server, with counts per status", async () => {
+    const r = (await call("owner", "GET", "/listings?page=1&per=10&status=in_review")).json();
+    expect(r.data.map((l: { id: string }) => l.id)).toEqual(["SP-0001"]);
+    expect(r.meta).toMatchObject({ total: 1, counts: { all: 2, in_review: 1, draft: 1 }, listedKinds: expect.arrayContaining(["sell", "rentout"]) });
+    expect((await call("owner", "GET", "/listings?page=1&q=dhapasi")).json().data.map((l: { id: string }) => l.id)).toEqual(["SP-0001"]);
+    expect((await call("owner", "GET", "/listings?page=1&q=sp-0002")).json().data.map((l: { id: string }) => l.id)).toEqual(["SP-0002"]);
+    expect((await call("owner", "GET", "/listings?page=1&kind=rentout")).json().meta.total).toBe(1);
+  });
+
   it("opens the saved form for editing, and edits go back for review", async () => {
     const d = (await call("agent", "GET", "/listings/SP-0001")).json().data;
     expect(d.values).toMatchObject({ category: "house", photos: [expect.objectContaining({ url: expect.stringContaining("/property/main/") })] });

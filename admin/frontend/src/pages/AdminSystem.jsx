@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { isStaffLive, liveAdmin } from "../live";
 import { OTAS, otaSettings } from "@sheetal/shared/data/ota";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore, uid } from "@sheetal/shared/core/store";
@@ -17,6 +18,16 @@ export function AdminStaff({ role }) {
   const counts = {};
   db.platformStaff.forEach((m) => { counts[m.roleId] = (counts[m.roleId] || 0) + 1; });
   const manage = can(role, "staff.manage");
+  const toast = useToast();
+  // Live: people and their staff role come from the admin API; roles are the fixed staff roles (not editable yet).
+  const live = isStaffLive() ? liveAdmin(toast) : null;
+  const liveTeam = live && {
+    onInvite: (list) => live.inviteStaff(list),
+    onUpdateMember: (id, patch) => { if (patch.roleId) live.setStaffRole(id, patch.roleId).catch(() => {}); else if (patch.status) toast("Remove them from staff instead; they are signed out at once."); },
+    onRemoveMember: (id) => live.removeStaff(id).catch(() => {}),
+    onRestoreMember: () => toast("Add them again to bring them back."),
+    onResend: () => {}, onRevoke: () => {},
+  };
 
   return (
     <>
@@ -30,11 +41,12 @@ export function AdminStaff({ role }) {
           onRemoveMember={(id) => update((d) => { d.platformStaff = d.platformStaff.filter((m) => m.id !== id); })}
           onRestoreMember={(m, at) => update((d) => { if (!d.platformStaff.some((x) => x.id === m.id)) d.platformStaff.splice(at >= 0 ? at : d.platformStaff.length, 0, m); })}
           dataKind="staff"
+          {...(liveTeam || {})}
           onResend={(id) => update((d) => { Object.assign(d.platformInvites.find((i) => i.id === id), { status: "pending", sent: TODAY, expires: `${inDays(7)}T10:00` }); })}
           onRevoke={(id) => update((d) => { d.platformInvites.find((i) => i.id === id).status = "revoked"; })} />
       )}
       {tab === "roles" && (
-        <RoleEditor roles={db.platformRoles} groups={PLATFORM_PERMS} counts={counts} canManage={can(role, "roles.manage")}
+        <RoleEditor roles={db.platformRoles} groups={PLATFORM_PERMS} counts={counts} canManage={can(role, "roles.manage") && !live}
           onCreate={(r) => { const id = uid("p-role"); update((d) => { d.platformRoles.push({ id, key: id, system: false, ...r }); }); return id; }}
           onSave={(r) => update((d) => { d.platformRoles[d.platformRoles.findIndex((x) => x.id === r.id)] = r; })}
           onDelete={(id) => update((d) => { d.platformRoles = d.platformRoles.filter((x) => x.id !== id); })} />

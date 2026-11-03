@@ -5,7 +5,8 @@ import { dbOf } from "@sheetal/backend-core/lib/db";
 import { badRequest, conflict, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
 import { newToken, sha256 } from "@sheetal/backend-core/lib/secrets";
 import { requireUser, revokeAllSessions, type SessionUser } from "@sheetal/backend-core/modules/auth/sessions";
-import { hasPerm, PLATFORM_ROLES } from "@sheetal/backend-core/domain/permissions";
+import { BUSINESS_TYPES, hasPerm, PLATFORM_ROLES } from "@sheetal/backend-core/domain/permissions";
+import { createWorkspace } from "@sheetal/backend-core/modules/accounts/workspace";
 
 // Sheetal staff console: businesses, plan changes and suspensions, upgrade requests, staff, audit log.
 // Only people with a platform role get in, and each action checks that role's permissions
@@ -36,23 +37,65 @@ export async function adminRoutes(app: FastifyInstance) {
   // ───── Businesses ─────
   app.get("/admin/tenants", async (request) => {
     staffOf(request, "tenants.view");
-    const q = z.object({ q: z.string().trim().max(80).optional(), status: z.enum(STATUSES).optional(), type: z.string().max(20).optional(), page: z.coerce.number().int().min(1).default(1) }).parse(request.query);
+    const q = z.object({ q: z.string().trim().max(80).optional(), status: z.enum(STATUSES).optional(), type: z.string().max(20).optional(), page: z.coerce.number().int().min(1).default(1), per: z.coerce.number().int().min(1).max(500).default(50) }).parse(request.query);
     const where: Prisma.TenantWhereInput = {
       ...(q.status ? { status: q.status } : {}), ...(q.type ? { type: q.type } : {}),
       ...(q.q ? { OR: [{ name: { contains: q.q, mode: "insensitive" } }, { email: { contains: q.q, mode: "insensitive" } }, { city: { contains: q.q, mode: "insensitive" } }] } : {}),
     };
     const db = dbOf(app);
-    const per = 50;
+    const per = q.per;
     const [total, rows] = await Promise.all([
       db.tenant.count({ where }),
-      db.tenant.findMany({ where, include: { plan: { select: { id: true, name: true, price: true } }, _count: { select: { memberships: true } } }, orderBy: { createdAt: "desc" }, skip: (q.page - 1) * per, take: per }),
+      db.tenant.findMany({
+        where, orderBy: { createdAt: "desc" }, skip: (q.page - 1) * per, take: per,
+        include: {
+          plan: { select: { id: true, name: true, price: true } }, _count: { select: { memberships: { where: { status: "active" } } } },
+          memberships: { where: { role: { key: "owner" } }, take: 1, orderBy: { createdAt: "asc" }, select: { user: { select: { userName: true, email: true } } } },
+        },
+      }),
     ]);
     const listings = await db.listing.groupBy({ by: ["tenantId"], where: { tenantId: { in: rows.map((t) => t.id) }, status: { in: ["published", "pending", "sold", "rented"] } }, _count: true });
     const n = new Map(listings.map((l) => [l.tenantId, l._count]));
     return {
-      data: rows.map((t) => ({ id: t.id, name: t.name, type: t.type, city: t.city, email: t.email, phone: t.phone, status: t.status, plan: t.plan, period: t.period, renewsAt: t.renewsAt, autoRenew: t.autoRenew, createdAt: t.createdAt, members: t._count.memberships, listings: n.get(t.id) ?? 0 })),
+      data: rows.map((t) => ({
+        id: t.id, name: t.name, type: t.type, city: t.city, email: t.email, phone: t.phone, pan: t.pan, status: t.status, plan: t.plan, period: t.period, renewsAt: t.renewsAt,
+        autoRenew: t.autoRenew, createdAt: t.createdAt, logoUrl: t.logoUrl, members: t._count.memberships, listings: n.get(t.id) ?? 0,
+        owner: t.memberships[0] ? { name: t.memberships[0].user.userName, email: t.memberships[0].user.email } : null,
+      })),
       meta: { total, current_page: q.page, last_page: Math.max(1, Math.ceil(total / per)), per_page: per },
     };
+  });
+
+  /** Sets up a business for its owner. Someone new gets an account and a link to set their own password. */
+  app.post("/admin/tenants", { config: { rateLimit: { max: 30, timeWindow: "1 hour" } } }, async (request) => {
+    const s = staffOf(request, "tenants.manage");
+    const b = z.object({
+      name: z.string().trim().min(2, "Enter the business name.").max(80),
+      type: z.enum(BUSINESS_TYPES),
+      city: z.string().trim().max(60).optional(),
+      owner: z.string().trim().min(2, "Enter the owner's name.").max(60),
+      email: z.email("Enter a valid email address.").transform((x) => x.toLowerCase().trim()),
+      phone: z.string().trim().max(30).optional().transform((v) => v || undefined),
+      pan: z.string().trim().max(20).optional().transform((v) => v || undefined),
+    }).parse(request.body);
+    const db = dbOf(app);
+    const existing = await db.user.findUnique({ where: { email: b.email } });
+    const { tenant, user, isNew } = await db.$transaction(async (tx) => {
+      const user = existing ?? await tx.user.create({ data: { email: b.email, userName: b.owner, phone: b.phone } });
+      const tenant = await createWorkspace(tx, { ownerId: user.id, name: b.name, type: b.type, city: b.city, email: b.email, phone: b.phone });
+      if (b.pan) await tx.tenant.update({ where: { id: tenant.id }, data: { pan: b.pan } });
+      return { tenant, user, isNew: !existing };
+    });
+    const site = app.config.SITE_URL.replace(/\/$/, "");
+    if (isNew || !user.passwordHash) {
+      const token = newToken();
+      await db.emailToken.create({ data: { userId: user.id, purpose: "reset_password", tokenHash: sha256(token), expiresAt: new Date(Date.now() + 48 * 3600e3) } });
+      await app.mailer.send({ to: b.email, subject: `${b.name} is ready on Sheetal Property`, text: `Namaste ${b.owner},\n\nSheetal Property has set up ${b.name} for you on the free Starter plan.\n\nSet your password within 48 hours:\n${site}/reset-password/${token}\n\nThen open your business panel at ${site}/business\n\nSheetal Property` });
+    } else {
+      await app.mailer.send({ to: b.email, subject: `${b.name} is ready on Sheetal Property`, text: `Namaste ${user.userName},\n\nSheetal Property has set up ${b.name} for you on the free Starter plan. Sign in as usual and pick it in your business panel:\n${site}/business\n\nSheetal Property` });
+    }
+    await audit(s, request, "admin.tenant_created", b.name, tenant.id, { owner: b.email });
+    return { status: 200, message: `${b.name} is set up. ${b.email} has been emailed.`, data: { id: tenant.id } };
   });
 
   app.get<{ Params: { id: string } }>("/admin/tenants/:id", async (request) => {

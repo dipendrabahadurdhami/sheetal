@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { isStaffLive, liveAdmin } from "../live";
 import { DataActions } from "@sheetal/shared/components/DataIO";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
@@ -98,6 +99,7 @@ export function AdminTenants() {
   const toast = useToast();
   const [add, setAdd] = useState(null);
   const { navigate } = useRouter();
+  const live = isStaffLive() ? liveAdmin(toast) : null;
   const [type, setType] = useState("all");
   const [status, setStatus] = useState("all");
   const [q, setQ] = useState("");
@@ -110,7 +112,8 @@ export function AdminTenants() {
     <>
       <PageHead title={t("tenants.title")} sub={t("tenants.sub", { n: db.tenants.length })} actions={<><DataActions kind="tenants" /><Button icon="plus" onClick={() => setAdd({ name: "", type: "hotel", city: "Kathmandu", owner: "", email: "", phone: "", pan: "" })}>{t("tenants.add")}</Button></>} />
       <Drawer open={!!add} onClose={() => setAdd(null)} title={t("tenants.add")} sub={t("addb.sub")}
-        footer={<><Button variant="outline" onClick={() => setAdd(null)}>{t("common.cancel")}</Button><Button disabled={!add?.name || !add?.email} onClick={() => {
+        footer={<><Button variant="outline" onClick={() => setAdd(null)}>{t("common.cancel")}</Button><Button disabled={!add?.name || !add?.email || (live && !add?.owner)} onClick={() => {
+          if (live) { live.addTenant({ name: add.name, type: add.type, city: add.city, owner: add.owner, email: add.email, phone: add.phone, pan: add.pan }).then((r) => { setAdd(null); navigate(`/admin/tenants/${r.data.id}`); }).catch(() => {}); return; }
           const id = `t${db.tenants.length + 1}`; const plan = db.plans.find((p) => p.type === add.type);
           update((d) => { d.tenants.unshift({ id, ...add, planId: plan.id, status: "trial", since: TODAY.slice(0, 10), renews: inDays(14), usage: { seats: 1 }, scopes: [add.name] }); d.tenantRoles[id] = roleTemplatesFor(add.type).map((r) => ({ ...r, id: `${id}-${r.key}` })); d.members[id] = [{ id: "m1", name: add.owner || add.name, email: add.email, phone: add.phone, roleId: `${id}-owner`, status: "invited", lastActive: TODAY, scopes: "all", twofa: false }]; d.invites[id] = []; });
           setAdd(null); toast(t("addb.toast")); navigate(`/admin/tenants/${id}`); }}>{t("addb.create")}</Button></>}>

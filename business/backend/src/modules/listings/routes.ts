@@ -134,18 +134,57 @@ export async function listingRoutes(app: FastifyInstance) {
   };
 
   // ───── Read ─────
+  // Two shapes: with ?page, one page of the listings table (search, kind and status filters, counts per status);
+  // without it, a short summary of every listing for the screens that work across all of them (check-ups, search, menus).
   app.get("/listings", async (request) => {
     const ws = workspaceOf(request);
     if (!LISTING_PERMS.some(ws.can) && !ws.can("overview.view")) throw forbidden("Your role can't see listings.");
-    const rows = await db().listing.findMany({
-      where: { tenantId: ws.tenantId, status: { not: "removed" } },
-      include: { photos: { orderBy: { sort: "asc" }, take: 1 } }, orderBy: { updatedAt: "desc" },
-    });
-    const leads = await leadCounts(ws.tenantId, rows.map((r) => r.id));
+    const q = z.object({
+      page: z.coerce.number().int().min(1).optional(), per: z.coerce.number().int().min(10).max(500).default(100),
+      q: z.string().trim().max(80).optional(), kind: z.enum(LISTING_KINDS).optional(),
+      status: z.enum(["all", "published", "in_review", "draft", "paused", "rejected", "sold", "rented", "archived"]).default("all"),
+    }).parse(request.query);
     const plan = ws.member.tenant.plan;
+    const base: Prisma.ListingWhereInput = { tenantId: ws.tenantId, status: { not: "removed" } };
+    const [byStatus, byKind] = await Promise.all([
+      db().listing.groupBy({ by: ["status"], where: base, _count: true }),
+      db().listing.groupBy({ by: ["kind"], where: base, _count: true }),
+    ]);
+    const counts: Record<string, number> = Object.fromEntries(byStatus.map((g) => [g.status === "pending" ? "in_review" : g.status, g._count]));
+    counts.all = byStatus.filter((g) => g.status !== "archived").reduce((a, g) => a + g._count, 0);
+    const meta = {
+      cap: listingCap(plan), used: byStatus.filter((g) => COUNTED.includes(g.status)).reduce((a, g) => a + g._count, 0),
+      kinds: kindsFor(ws.member.tenant.type, plan), listedKinds: byKind.map((g) => g.kind), counts,
+    };
+
+    if (!q.page) {
+      const rows = await db().listing.findMany({
+        where: base, orderBy: { updatedAt: "desc" },
+        select: { code: true, tenantId: true, kind: true, title: true, status: true, price: true, updatedAt: true, checkDueAt: true, lastCheckedAt: true },
+      });
+      return {
+        data: rows.map((l) => ({
+          id: l.code, tenantId: l.tenantId, kind: l.kind, title: l.title, status: l.status === "pending" ? "in_review" : l.status,
+          price: l.price == null ? 0 : Number(l.price), updated: day(l.updatedAt), checkDue: day(l.checkDueAt), lastChecked: day(l.lastCheckedAt),
+        })),
+        meta,
+      };
+    }
+
+    const where: Prisma.ListingWhereInput = {
+      ...base,
+      ...(q.status === "all" ? { status: { notIn: ["removed", "archived"] } } : { status: q.status === "in_review" ? "pending" : q.status }),
+      ...(q.kind ? { kind: q.kind } : {}),
+      ...(q.q ? { OR: [{ title: { contains: q.q, mode: "insensitive" } }, { code: { equals: q.q.toUpperCase() } }, { area: { contains: q.q, mode: "insensitive" } }] } : {}),
+    };
+    const [total, rows] = await Promise.all([
+      db().listing.count({ where }),
+      db().listing.findMany({ where, include: { photos: { orderBy: { sort: "asc" }, take: 1 } }, orderBy: { updatedAt: "desc" }, skip: (q.page - 1) * q.per, take: q.per }),
+    ]);
+    const leads = await leadCounts(ws.tenantId, rows.map((r) => r.id));
     return {
       data: rows.map((l) => row(l, leads.get(l.id) ?? 0)),
-      meta: { cap: listingCap(plan), used: rows.filter((r) => COUNTED.includes(r.status)).length, kinds: kindsFor(ws.member.tenant.type, plan) },
+      meta: { ...meta, total, current_page: q.page, last_page: Math.max(1, Math.ceil(total / q.per)), per_page: q.per },
     };
   });
 

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { isStaffLive, liveAdmin, useLiveTenant } from "../live";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
 import { Link, useRouter } from "@sheetal/shared/core/router";
@@ -12,18 +13,23 @@ import { planOf, TenantName } from "./AdminDashboard";
 
 const FEATURES = PLAN_FEATURES;
 
+// Live (admin API): status, plan and auto-renew changes go to the API; the team comes from the business's detail.
 export function TenantDetail({ id, role }) {
   const t = useT();
   const { db, update } = useStore();
   const { navigate } = useRouter();
   const toast = useToast();
   const [confirm, setConfirm] = useState(null);
+  const live = isStaffLive() ? liveAdmin(toast) : null;
+  const [detail, reloadDetail] = useLiveTenant(live ? id : null);
   const x = db.tenants.find((r) => r.id === id);
-  if (!x) return <Empty title={t("tenants.notFound")} action={<Link to="/admin/tenants" className="btn btn-outline">{t("common.back")}</Link>} />;
+  if (!x) return live ? <p className="muted pf-pad">Loading the business…</p> : <Empty title={t("tenants.notFound")} action={<Link to="/admin/tenants" className="btn btn-outline">{t("common.back")}</Link>} />;
   const plan = planOf(db, x.planId);
-  const team = db.members[x.id] || [];
+  if (!plan) return <p className="muted pf-pad">Loading the business…</p>;
+  const team = live ? (detail?.members || []).map((m) => ({ id: m.id, name: m.name, email: m.email, status: m.status === "paused" ? "suspended" : m.status })) : db.members[x.id] || [];
   const plans = db.plans.filter((p) => p.type === x.type);
-  const setStatus = (status) => update((d) => { d.tenants.find((r) => r.id === id).status = status; d.platformActivity.unshift({ id: Math.random().toString(36), who: d.session.userName, what: `set ${x.name} to ${status}`, at: new Date().toISOString() }); });
+  const change = (patch, done) => live.updateTenant(id, patch).then(() => { reloadDetail(); done?.(); }).catch(() => {});
+  const setStatus = (status) => live ? change({ status: status === "rejected" ? "cancelled" : status }) : update((d) => { d.tenants.find((r) => r.id === id).status = status; d.platformActivity.unshift({ id: Math.random().toString(36), who: d.session.userName, what: `set ${x.name} to ${status}`, at: new Date().toISOString() }); });
   const open = () => {
     const reason = window.prompt("Why are you opening this business as support? This is saved in the audit log.");
     if (!reason || !reason.trim()) return;
@@ -40,7 +46,7 @@ export function TenantDetail({ id, role }) {
       <PageHead back={<Link to="/admin/tenants" className="pf-back"><Icon name="arrow-left" size={15} />{t("tenants.title")}</Link>}
         title={x.name} sub={`${t(`type.${x.type}`)} · ${x.city} · ${t("tenants.since")} ${fdate(x.since)}`}
         actions={<>
-          {can(role, "tenants.impersonate") && <Button variant="outline" icon="external-link" onClick={open}>{t("tenant.open")}</Button>}
+          {can(role, "tenants.impersonate") && !live && <Button variant="outline" icon="external-link" onClick={open}>{t("tenant.open")}</Button>}
           {can(role, "tenants.suspend") && (x.status === "suspended"
             ? <Button icon="rotate-ccw" onClick={() => setConfirm("active")}>{t("tenant.reactivate")}</Button>
             : <Button variant="outline" className="pf-danger" icon="ban" onClick={() => setConfirm("suspended")}>{t("tenant.suspend")}</Button>)}
@@ -50,7 +56,7 @@ export function TenantDetail({ id, role }) {
         <div className="pf-alert action">
           <Icon name="circle-alert" size={18} /><div><b>{t("tenant.kycTitle")}</b><span>{t("tenant.kycText")}</span></div>
           <Button variant="outline" size="sm" onClick={() => setStatus("rejected")}>{t("common.reject")}</Button>
-          <Button size="sm" onClick={() => { setStatus("active"); toast(t("tenant.toastApproved")); }}>{t("common.approve")}</Button>
+          <Button size="sm" onClick={() => { setStatus("active"); if (!live) toast(t("tenant.toastApproved")); }}>{t("common.approve")}</Button>
         </div>
       )}
 
@@ -64,7 +70,9 @@ export function TenantDetail({ id, role }) {
               <dt>{t("common.phone")}</dt><dd className="tnum">{x.phone}</dd>
               <dt>{t("tenant.pan")}</dt><dd className="tnum">{x.pan}</dd>
               <dt>{t("tenant.workspace")}</dt><dd className="tnum">{db.platformSettings.mainDomain}{db.platformSettings.businessPath}/{x.id}</dd>
-              <dt>{t("tenant.scopes")}</dt><dd>{x.scopes.join(", ")}</dd>
+              {!live && <><dt>{t("tenant.scopes")}</dt><dd>{x.scopes.join(", ")}</dd></>}
+              {detail && <><dt>{t("nav.listings")}</dt><dd className="tnum">{Object.entries(detail.listings).map(([k, n]) => `${n} ${k === "pending" ? "in review" : k}`).join(" · ") || "None"}</dd>
+                <dt>Enquiries</dt><dd className="tnum">{detail.leads}</dd></>}
             </dl>
           </Panel>
           <Panel title={t("tenant.usage")} sub={t("tenant.usageSub", { plan: plan.name })} pad>
@@ -93,11 +101,11 @@ export function TenantDetail({ id, role }) {
               {plan.price > 0 && (
                 <ToggleRow title="Auto-renew" sub={role.perms.includes("*") ? "Renew this plan automatically at the end of each period. Off by default." : "Only the super admin can change this."}
                   checked={!!x.autoRenew} disabled={!role.perms.includes("*")}
-                  onChange={(v) => { if (!role.perms.includes("*")) return; update((d) => { d.tenants.find((r) => r.id === id).autoRenew = v; }); toast(v ? "Auto-renew is on" : "Auto-renew is off"); }} />
+                  onChange={(v) => { if (!role.perms.includes("*")) return; if (live) { change({ autoRenew: v }); return; } update((d) => { d.tenants.find((r) => r.id === id).autoRenew = v; }); toast(v ? "Auto-renew is on" : "Auto-renew is off"); }} />
               )}
               {can(role, "tenants.manage") && (
                 <Field label={t("tenant.changePlan")}>
-                  <Select value={x.planId} onChange={(v) => { update((d) => { d.tenants.find((r) => r.id === id).planId = v; }); toast(t("tenant.toastPlan")); }}
+                  <Select value={x.planId} onChange={(v) => { if (live) { change({ planId: v }); return; } update((d) => { d.tenants.find((r) => r.id === id).planId = v; }); toast(t("tenant.toastPlan")); }}
                     options={plans.map((p) => ({ id: p.id, label: `${p.name} · ${rs(p.price)}` }))} />
                 </Field>
               )}
@@ -108,7 +116,7 @@ export function TenantDetail({ id, role }) {
           </Panel>
         </div>
       </div>
-      <Confirm open={!!confirm} onClose={() => setConfirm(null)} danger={confirm === "suspended"} onConfirm={() => { setStatus(confirm); toast(t(confirm === "suspended" ? "tenant.toastSuspended" : "tenant.toastReactivated")); }}
+      <Confirm open={!!confirm} onClose={() => setConfirm(null)} danger={confirm === "suspended"} onConfirm={() => { setStatus(confirm); if (!live) toast(t(confirm === "suspended" ? "tenant.toastSuspended" : "tenant.toastReactivated")); }}
         title={t(confirm === "suspended" ? "tenant.suspendTitle" : "tenant.reactivateTitle", { name: x.name })} confirmLabel={t(confirm === "suspended" ? "tenant.suspend" : "tenant.reactivate")}>
         {t(confirm === "suspended" ? "tenant.suspendText" : "tenant.reactivateText")}
       </Confirm>
@@ -123,9 +131,11 @@ export function AdminPlans() {
   const [type, setType] = useState("hotel");
   const [edit, setEdit] = useState(null);
   const plans = db.plans.filter((p) => p.type === type);
-  const tenantsOn = (pid) => db.tenants.filter((x) => x.planId === pid).length;
+  const tenantsOn = (pid) => db.tenants.filter((x) => x.planId === pid && x.status !== "cancelled").length;
 
+  const live = isStaffLive() ? liveAdmin(toast) : null;
   const save = () => {
+    if (live) { live.savePlan(edit, !db.plans.some((p) => p.id === edit.id)).then(() => setEdit(null)).catch(() => {}); return; }
     update((d) => {
       const i = d.plans.findIndex((p) => p.id === edit.id);
       if (i >= 0) d.plans[i] = edit; else d.plans.push(edit);
@@ -160,7 +170,9 @@ export function AdminPlans() {
             <Field label={t("plans.name")}><Input value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></Field>
             <div className="pf-grid-2 tight">
               <Field label={t("plans.monthly")}><Input className="input tnum" inputMode="numeric" value={edit.price} onChange={(e) => setEdit({ ...edit, price: Number(e.target.value.replace(/\D/g, "")) })} /></Field>
-              <Field label={t("plans.yearlyPrice")}><Input className="input tnum" inputMode="numeric" value={edit.yearly} onChange={(e) => setEdit({ ...edit, yearly: Number(e.target.value.replace(/\D/g, "")) })} /></Field>
+              {live
+                ? <Field label={t("plans.yearlyPrice")} hint="12 months with the 39% saving, worked out from the monthly price."><Input className="input tnum" disabled value={Math.round(edit.price * 12 * 0.61)} /></Field>
+                : <Field label={t("plans.yearlyPrice")}><Input className="input tnum" inputMode="numeric" value={edit.yearly} onChange={(e) => setEdit({ ...edit, yearly: Number(e.target.value.replace(/\D/g, "")) })} /></Field>}
             </div>
             <h4 className="pf-subhead">{t("plans.limits")}</h4>
             {limitKeysFor(type, edit).map((k) => (
