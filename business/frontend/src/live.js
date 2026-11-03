@@ -178,7 +178,7 @@ export function useBrand(colors) {
   useEffect(() => {
     const t = brandTheme(colors);
     const root = document.documentElement;
-    const vars = { "--brand-accent": t?.accent, "--brand-accent-text": t?.accentText, "--brand-accent-ink": t?.accentInk, "--brand-accent-soft": t?.accentSoft, "--brand-light-bar": t?.lightBar, "--brand-dark-bar": t?.darkBar, "--brand-deep": t?.deep, "--brand-base": t?.base, "--brand": t?.brand, "--brand-dark-page": t?.darkPage };
+    const vars = { "--brand-accent": t?.accent, "--brand-accent-text": t?.accentText, "--brand-accent-ink": t?.accentInk, "--brand-accent-soft": t?.accentSoft, "--brand-light-bar": t?.lightBar, "--brand-dark-bar": t?.darkBar, "--brand-deep": t?.deep, "--brand-base": t?.base, "--brand": t?.brand, "--brand-dark-page": t?.darkPage, "--brand-mist": t?.mist };
     root.classList.toggle("has-brand", !!t);
     for (const [k, v] of Object.entries(vars)) { if (v) root.style.setProperty(k, v); else root.style.removeProperty(k); }
     return () => { root.classList.remove("has-brand"); for (const k of Object.keys(vars)) root.style.removeProperty(k); };

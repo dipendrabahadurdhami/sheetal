@@ -6,7 +6,7 @@ import { brandTheme, cleanLogo, extractPalette } from "@sheetal/shared/core/pale
 import { fileToBase64 } from "../api";
 import { saveBranding } from "../live";
 
-// Upload the logo: its main colours (up to 4) are read in the browser, can be changed, and on saving the whole
+// Upload the logo: its main colours (up to 3) are read in the browser, can be changed, and on saving the whole
 // workspace (top bar, sidebar, buttons, active item) uses them for everyone in the business, on every device.
 
 const loadImage = (url) => new Promise((ok, bad) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => bad(new Error("That file isn't a picture we can read.")); i.src = url; });
@@ -41,7 +41,7 @@ function BrandEditor({ tenant, canEdit }) {
       const { blob, removed } = await cleanLogo(await loadImage(URL.createObjectURL(file)));
       const png = new File([blob], "logo.png", { type: "image/png" });
       const url = URL.createObjectURL(png);
-      const found = extractPalette(await loadImage(url), 4);
+      const found = extractPalette(await loadImage(url), 3);
       setLogo({ file: png, url });
       setColors(found);
       toast(`${removed ? "Background removed. " : ""}${found.length ? `Found ${found.length} colour${found.length > 1 ? "s" : ""} in your logo.` : "No clear colours found; pick them below."}`);
@@ -73,7 +73,7 @@ function BrandEditor({ tenant, canEdit }) {
         <div className="pf-two" style={{ flex: 1 }}><b>Logo and workspace colours</b><small className="muted">Upload your logo and your workspace takes its colours in every theme: light, dark and your own colour theme. Everyone in your team sees them.</small></div>
         {canEdit && <label className="btn btn-outline"><input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => pick(e.target.files[0])} /><Icon name="upload" size={16} />{tenant.logoUrl || logo ? "Change logo" : "Upload logo"}</label>}
       </div>
-      <Field label="Colours (up to 4)" hint="The most colourful one becomes your brand colour (buttons, and the third theme). Light and dark colours are used for the bars in light and dark themes. Text is always made readable.">
+      <Field label="Colours (up to 3)" hint="Up to 3: your brand colour (the most colourful: buttons and your colour themes), a dark one (dark themes) and a light one (light theme). Text is always made readable.">
         <div className="pf-row-actions" style={{ flexWrap: "wrap", justifyContent: "flex-start" }}>
           {colors.map((c, i) => (
             <span key={i} className="pf-swatch-custom" title={i === 0 ? "Colour 1: top bar and sidebar" : i === 1 ? "Colour 2: buttons" : `Colour ${i + 1}`}>
@@ -82,7 +82,7 @@ function BrandEditor({ tenant, canEdit }) {
               {canEdit && <button type="button" className="btn btn-ghost btn-icon btn-sm" aria-label={`Remove ${c}`} onClick={() => setColors(colors.filter((_, j) => j !== i))}><Icon name="x" size={14} /></button>}
             </span>
           ))}
-          {canEdit && colors.length < 4 && <Button size="sm" variant="ghost" icon="plus" onClick={() => setColors([...colors, colors[0] ? "#59595B" : "#9D1D21"])}>Add colour</Button>}
+          {canEdit && colors.length < 3 && <Button size="sm" variant="ghost" icon="plus" onClick={() => setColors([...colors, colors[0] ? "#59595B" : "#9D1D21"])}>Add colour</Button>}
         </div>
       </Field>
       {preview && (

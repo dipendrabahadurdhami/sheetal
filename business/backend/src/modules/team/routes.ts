@@ -50,7 +50,7 @@ export async function teamRoutes(app: FastifyInstance) {
     if (!ws.member.tenant.plan.price) throw new AppError(402, "plan_feature", "Your own logo and colours come with the Business and Pro plans.");
     const b = z.object({
       logo: z.string().max(3 * 1024 * 1024).nullable().optional(),
-      colors: z.array(z.string().regex(/^#[0-9a-fA-F]{6}$/, "Use colours like #9D1D21.")).max(4),
+      colors: z.array(z.string().regex(/^#[0-9a-fA-F]{6}$/, "Use colours like #9D1D21.")).max(3, "Up to 3 colours: brand, dark and light."),
     }).parse(request.body);
     let logoUrl: string | null | undefined;
     if (b.logo === null) logoUrl = null;

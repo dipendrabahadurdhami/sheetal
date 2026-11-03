@@ -14,6 +14,12 @@ export const contrast = (a, b) => { const [x, y] = [luminance(a), luminance(b)].
 /** White or near-black, whichever reads better on this colour. */
 export const textOn = (bg) => (contrast(bg, "#FFFFFF") >= contrast(bg, "#1F1F21") ? "#FFFFFF" : "#1F1F21");
 
+/** Mixes colour a with colour b: share 0 is all a, 1 is all b. */
+export function mix(a, b, share) {
+  const [x, y] = [toRgb(a), toRgb(b)];
+  return hex(x[0] + (y[0] - x[0]) * share, x[1] + (y[1] - x[1]) * share, x[2] + (y[2] - x[2]) * share);
+}
+
 /** Mixes a colour toward black (amount < 0) or white (amount > 0), -1…1. */
 export function shade(h, amount) {
   const [r, g, b] = toRgb(h);
@@ -80,8 +86,10 @@ export function extractPalette(img, max = 4) {
 export function brandTheme(colors) {
   if (!colors?.length) return null;
   const t = makeTheme(colors);
-  // Dark theme page: a little lighter than the dark bars (Sheetal's grey is replaced by it).
-  t.darkPage = shade(t.darkBar, 0.1);
+  // Dark theme page from the logo's own colours only: its dark colour with a touch of the brand colour (no grey).
+  t.darkPage = mix(t.darkBar, t.brand, 0.1);
+  // Replaces Sheetal's silver (cards, lines, muted text) in the dark themes: a pale tint of the brand colour.
+  t.mist = mix("#FFFFFF", t.brand, 0.22);
   return t;
 }
 

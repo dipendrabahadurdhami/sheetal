@@ -54,7 +54,7 @@ describe("branding", () => {
     const r = await call("owner", "PUT", "/workspace/branding", { logo: png, colors: ["#0a7d3b", "#F2A900", "#0A7D3B"] });
     expect(r.json().data).toMatchObject({ logoUrl: expect.stringContaining("/brand/main/"), brandColors: ["#0A7D3B", "#F2A900"] });
     expect((await call("owner", "PUT", "/workspace/branding", { colors: ["red"] })).statusCode).toBe(422);
-    expect((await call("owner", "PUT", "/workspace/branding", { colors: ["#111111", "#222222", "#333333", "#444444", "#555555"] })).statusCode).toBe(422);
+    expect((await call("owner", "PUT", "/workspace/branding", { colors: ["#111111", "#222222", "#333333", "#444444"] })).statusCode).toBe(422);
     const ws = (await call("owner", "GET", "/workspaces", undefined, "")).json().data.workspaces[0];
     expect(ws).toMatchObject({ brandColors: ["#0A7D3B", "#F2A900"], logoUrl: expect.stringContaining("/brand/") });
     // Starter keeps Sheetal's look.

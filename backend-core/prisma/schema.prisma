@@ -131,7 +131,7 @@ model Tenant {
   pan           String?
   /// Logo shown on the website and receipts (a website path or a photo address).
   logoUrl       String?      @map("logo_url")
-  /// Up to 4 colours read from the logo (or picked), "#RRGGBB": the workspace uses the first for its bars and the second for buttons.
+  /// Up to 3 colours read from the logo (or picked), "#RRGGBB": the workspace uses the first for its bars and the second for buttons.
   brandColors   String[]     @default([]) @map("brand_colors")
   planId        String       @map("plan_id")
   plan          Plan         @relation(fields: [planId], references: [id])
