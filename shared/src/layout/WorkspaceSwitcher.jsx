@@ -9,7 +9,7 @@ const initials = (name) => name.split(/\s+/).map((w) => w[0]).slice(0, 2).join("
 
 function Mark({ ws, size }) {
   return (
-    <span className="pf-wsx-mark" style={{ width: size, height: size, ...(ws.logoUrl ? {} : { background: ws.color || "var(--btn-bg)", color: "#fff" }) }}>
+    <span className={`pf-wsx-mark ${ws.logoUrl ? "has-logo" : ""}`} style={{ width: size, height: size, ...(ws.logoUrl ? {} : { background: ws.color || "var(--btn-bg)", color: "#fff" }) }}>
       {ws.logoUrl ? <img src={ws.logoUrl} alt="" /> : initials(ws.name)}
     </span>
   );

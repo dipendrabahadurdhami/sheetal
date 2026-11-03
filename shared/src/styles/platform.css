@@ -1530,3 +1530,7 @@ html.has-brand[data-theme] .pf-top .btn-primary { background: var(--brand-accent
 .pf-side-top .pf-menu { left: 0; right: 0; min-width: 0; }
 .pf-side-top .pf-menu button { display: flex; align-items: center; gap: 10px; width: 100%; }
 .pf-side-top .pf-menu button.on { font-weight: 600; }
+/* The logo as uploaded (no tile behind it); in the dark and red themes in one colour, white, like Sheetal's. */
+.pf-wsx-mark.has-logo { background: transparent; border-radius: 0; }
+.pf-wsx-mark.has-logo img { padding: 0; }
+[data-theme~="dark"] .pf-wsx-mark.has-logo img { filter: brightness(0) invert(1); }
