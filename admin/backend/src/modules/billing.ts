@@ -78,7 +78,7 @@ export async function adminBillingRoutes(app: FastifyInstance) {
       const owner = await db().membership.findFirst({ where: { tenantId: p.tenantId, role: { key: "owner" }, status: "active" }, select: { user: { select: { id: true, email: true } } } });
       if (owner) {
         await app.mailer.send({ to: owner.user.email, subject: `Bank transfer not confirmed: ${invoiceNumber(p.invoice)}`, text: `We couldn't confirm the bank transfer for ${invoiceNumber(p.invoice)}: ${b.note}\n\nPay again from your business panel, or reply to this email.\n${site.replace(/\/$/, "")}/business/billing\n\nSheetal Property` });
-        await notify(db(), [owner.user.id], { type: "billing", title: "Bank transfer not confirmed", message: b.note, link: "/business/billing" });
+        await notify(db(), [owner.user.id], { tenantId: p.tenantId, type: "billing", title: "Bank transfer not confirmed", message: b.note, link: "/business/billing" });
       }
       return { message: "Rejected; the business has been told." };
     }

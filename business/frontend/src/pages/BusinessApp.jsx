@@ -22,11 +22,11 @@ import { config } from "@sheetal/shared/core/config";
 import { BusinessBilling, BusinessData } from "./BusinessBilling";
 import { BillingReturn } from "./LiveBilling";
 import { Help, Tour } from "./Help";
-import { MyProfile, NotificationsPage, businessSeed, useNotifs } from "@sheetal/shared/components/Me";
+import { MyProfile, NotificationsPage, businessSeed, useNotifs, useServerNotifs } from "@sheetal/shared/components/Me";
 import { Domains } from "./Domains";
 import { Mail } from "./Mail";
 import { canAddBusiness, isLive, useBrand, useLiveWorkspace, workRefresh } from "../live";
-import { setActiveBranch } from "../api";
+import { bizApi, setActiveBranch } from "../api";
 import { AddBusiness } from "./AddBusiness";
 import { POS, Bookings } from "./POS";
 import { LiveBookings, LiveFrontDesk, LiveInvestors, LivePOS, LiveProjects } from "./LiveOps";
@@ -155,7 +155,10 @@ export default function BusinessApp() {
   const guard = (ok, el) => (ok ? el : <NoAccess />);
   const paid = (ok, el) => (free ? <UpgradeNeeded /> : guard(ok, el));
   const ended = ["suspended", "cancelled"].includes(tenant.status) && s.impersonating !== tenant.id;
-  const notifs = useNotifs(`b-${tenant.id}`, businessSeed(tenant));
+  // Signed in: the bell comes from the server (this business's notifications); otherwise the sample's.
+  const sampleNotifs = useNotifs(`b-${tenant.id}`, businessSeed(tenant));
+  const serverNotifs = useServerNotifs(bizApi, "/notifications", isLive(tenant.id), tenant.id);
+  const notifs = isLive(tenant.id) ? serverNotifs : sampleNotifs;
   const notifications = notifs.list.slice(0, 6).map((n) => ({ ...n, onOpen: () => notifs.read(n.id) }));
 
   // The business at the top of the sidebar. With its own branding (logo or colours) it takes Sheetal's logo spot;

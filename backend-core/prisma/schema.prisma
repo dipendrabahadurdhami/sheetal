@@ -701,6 +701,8 @@ model DemandMatch {
 model Notification {
   id        String    @id @default(cuid())
   userId    String    @map("user_id")
+  /// The business it is about (its panel bell shows it); null = the person's own (website) or Sheetal staff's (admin).
+  tenantId  String?   @map("tenant_id")
   type      String
   title     String
   message   String    @default("")
@@ -710,6 +712,7 @@ model Notification {
   createdAt DateTime  @default(now()) @map("created_at")
 
   @@index([userId, createdAt])
+  @@index([userId, tenantId, createdAt])
   @@map("notifications")
 }
 

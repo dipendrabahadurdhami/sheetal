@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useStore } from "../core/store";
 import { useRouter } from "../core/router";
 import { LANGS } from "../core/i18n";
@@ -25,6 +25,34 @@ export function adminLive(db) {
   (db.campaigns || []).filter((c) => c.status === "review").forEach((c) => out.push({ id: `ad-${c.id}`, kind: "system", title: `Ad ${c.id} waiting for review: ${c.title}`, to: "/admin/ads", at: `${c.from}T08:00`, unread: true }));
   (db.platformActivity || []).slice(0, 3).forEach((a) => out.push({ id: `act-${a.id}`, kind: "team", title: `${a.who} ${a.what}`, to: "/admin/audit", at: a.at, unread: false }));
   return out.sort((a, b) => (b.unread - a.unread) || String(b.at).localeCompare(String(a.at)));
+}
+
+/** The bell from the server (signed in): the panel's notifications, checked every minute; read and remove are saved
+ *  there. `call` is the panel's API function; `key` (e.g. the open business) reloads the list when it changes. */
+const KIND_OF = { lead: "message", demand_match: "message", requirement: "message", booking: "booking", billing: "payment", upgrade: "system", review: "system", listing_approved: "system", listing_rejected: "system", team: "team" };
+export function useServerNotifs(call, path, on, key) {
+  const [rows, setRows] = useState([]);
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    if (!on) return undefined;
+    let gone = false;
+    const load = () => call("GET", path).then((r) => !gone && setRows(r.data)).catch(() => {});
+    load();
+    const every = setInterval(load, 60_000);
+    return () => { gone = true; clearInterval(every); };
+  }, [on, path, key, tick]);
+  const list = useMemo(() => rows.map((n) => {
+    const kind = KIND_OF[n.type] || "system";
+    return { id: n.id, kind, icon: ICON[kind], title: n.title, message: n.message, to: n.link || "/", unread: !n.read, at: n.at, when: fdatetime(n.at) };
+  }), [rows]);
+  const after = (p) => p.then(() => setTick((x) => x + 1)).catch(() => {});
+  return {
+    list,
+    unread: list.filter((n) => n.unread).length,
+    read: (id) => { setRows((r) => r.map((x) => (x.id === id ? { ...x, read: true } : x))); after(call("POST", `${path}/${id}/read`)); },
+    readAll: () => { setRows((r) => r.map((x) => ({ ...x, read: true }))); after(call("POST", `${path}/read-all`)); },
+    clear: (id) => { setRows((r) => r.filter((x) => x.id !== id)); after(call("DELETE", `${path}/${id}`)); },
+  };
 }
 
 export function useNotifs(scope, base) {

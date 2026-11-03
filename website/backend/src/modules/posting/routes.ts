@@ -2,6 +2,8 @@ import type { FastifyInstance } from "fastify";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { dbOf } from "@sheetal/backend-core/lib/db";
+import { notifyStaff } from "@sheetal/backend-core/lib/notify";
+import { headOffice } from "@sheetal/backend-core/domain/branches";
 import { AppError, badRequest, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
 import { requireUser, type SessionUser } from "@sheetal/backend-core/modules/auth/sessions";
 import { createWorkspace } from "@sheetal/backend-core/modules/accounts/workspace";
@@ -86,7 +88,7 @@ export async function postingRoutes(app: FastifyInstance) {
     const created = await db.$transaction(async (tx) => {
       const l = await tx.listing.create({ data: {
         code: `TMP-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, slug: `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        tenantId: ws.tenantId, userId: user.id, kind: rent ? "rentout" : "sell", purpose: rent ? "rent" : "sale",
+        tenantId: ws.tenantId, branchId: await headOffice(db, ws.tenantId), userId: user.id, kind: rent ? "rentout" : "sell", purpose: rent ? "rent" : "sale",
         category: b.propertycategory ?? "House", propertyType: b.property_type ?? (b.propertytype_id ? opts.types[b.propertytype_id - 1] : undefined),
         title: b.name, description: strip(b.property_description), highlights: strip(b.property_highlights), status: "pending", submittedAt: new Date(),
         price: price ? BigInt(Math.round(price)) : null, pricePer: rent ? "month" : null,
@@ -100,6 +102,7 @@ export async function postingRoutes(app: FastifyInstance) {
       } });
       return tx.listing.update({ where: { id: l.id }, data: { code: `SP-${String(l.id).padStart(4, "0")}`, slug: `${slugify(b.name)}-${l.id}` }, include: { photos: true } });
     });
+    await notifyStaff(db, "moderation.listings", { type: "review", title: "Listing to review", message: `${created.title} · posted on the website`, link: "/admin/moderation" });
     return { status: 200, message: "Posted. Sheetal checks every listing before it goes live, usually within a day.", data: { ...listingCard(created, base), listing_status: created.status } };
   });
 
@@ -163,6 +166,7 @@ export async function postingRoutes(app: FastifyInstance) {
       to: app.config.SUPPORT_EMAIL, subject: `Upgrade request: ${plan.name} (${plan.type}) for ${b.months} months`,
       text: `${user.userName} <${user.email}>${user.phone ? `, ${user.phone}` : ""} asked for ${plan.name} (${plan.type}) for ${b.months} months: Rs. ${priceFor(plan.price, b.months).toLocaleString("en-IN")}.\nBusiness id: ${tenantId}`,
     });
+    await notifyStaff(db, "tenants.manage", { type: "upgrade", title: `Upgrade request: ${plan.name} (${plan.type})`, message: `${user.userName} · ${b.months} month${b.months > 1 ? "s" : ""}`, link: "/admin/requests" });
     return { status: 200, message: "Upgrade request sent. Our team will call you to finish it." };
   });
 }

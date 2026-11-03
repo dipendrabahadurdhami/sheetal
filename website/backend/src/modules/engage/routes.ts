@@ -6,7 +6,7 @@ import { badRequest, notFound } from "@sheetal/backend-core/lib/errors";
 import { requireUser } from "@sheetal/backend-core/modules/auth/sessions";
 import { savePrivateFile } from "@sheetal/backend-core/lib/files";
 import { headOffice } from "@sheetal/backend-core/domain/branches";
-import { leadPeople, notify } from "@sheetal/backend-core/lib/notify";
+import { leadPeople, notify, notifyStaff } from "@sheetal/backend-core/lib/notify";
 import { listingCard, mediaBase } from "../catalog/present.js";
 import { feeSettings } from "../board/routes.js";
 
@@ -100,7 +100,9 @@ export async function engageRoutes(app: FastifyInstance) {
       }
       const branchId = tenantId ? listing?.branchId ?? await headOffice(db, tenantId) : null;
       const lead = await db.lead.create({ data: { tenantId, branchId, listingId: listing?.id, userId: request.user?.id, kind, name: b.name, email: b.email || null, phone: contact, message, details, ip: request.ip, public: board && !fee?.enabled, ...feeData } });
-      if (tenantId) await notify(db, await leadPeople(db, tenantId, branchId), { type: "lead", title: `New enquiry from ${b.name}`, message: listing ? `${listing.title} (${listing.code})` : message.slice(0, 140), link: "/business/inbox" });
+      // A requirement fee proof waits for Sheetal's team.
+      if (feeData.feeStatus === "pending") await notifyStaff(db, "moderation.listings", { type: "requirement", title: "Requirement fee to check", message: `${b.name} · Rs. ${feeData.feeAmount}`, link: "/admin/demand" });
+      if (tenantId) await notify(db, await leadPeople(db, tenantId, branchId), { tenantId, type: "lead", title: `New enquiry from ${b.name}`, message: listing ? `${listing.title} (${listing.code})` : message.slice(0, 140), link: "/business/inbox" });
 
       // Let the business know by email (their Inbox shows it too).
       const to = tenantId ? (await db.tenant.findUnique({ where: { id: tenantId }, select: { email: true } }))?.email : null;

@@ -1,14 +1,24 @@
 import type { Db } from "./db.js";
 import { worksAt } from "../domain/branches.js";
+import { PLATFORM_ROLES, hasPerm } from "../domain/permissions.js";
 
 // In-app notifications (the bell on the website and in the panels). Emails are sent separately where needed.
+// A note about a business carries its id, so each business's bell shows only its own; notes without one are the
+// person's own (website bell) or, with an /admin link, for Sheetal staff (admin bell).
 
-export interface Note { type: string; title: string; message?: string; link?: string }
+export interface Note { type: string; title: string; message?: string; link?: string; tenantId?: string | null }
 
 export async function notify(db: Db, userIds: (string | null | undefined)[], note: Note) {
   const ids = [...new Set(userIds.filter((x): x is string => !!x))];
   if (!ids.length) return;
-  await db.notification.createMany({ data: ids.map((userId) => ({ userId, type: note.type, title: note.title.slice(0, 200), message: (note.message ?? "").slice(0, 1000), link: note.link })) });
+  await db.notification.createMany({ data: ids.map((userId) => ({ userId, tenantId: note.tenantId ?? null, type: note.type, title: note.title.slice(0, 200), message: (note.message ?? "").slice(0, 1000), link: note.link })) });
+}
+
+/** Sheetal staff whose platform role covers `perm` (super admins always). */
+export async function notifyStaff(db: Db, perm: string, note: Omit<Note, "tenantId">) {
+  const roles = Object.entries(PLATFORM_ROLES).filter(([, perms]) => hasPerm(perms, perm)).map(([r]) => r);
+  const staff = await db.user.findMany({ where: { platformRole: { in: roles } }, select: { id: true } });
+  await notify(db, staff.map((s) => s.id), { ...note, tenantId: null });
 }
 
 /** Everyone in a business whose role can see leads (owners always). */

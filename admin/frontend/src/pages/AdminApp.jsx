@@ -12,7 +12,7 @@ import { AdminCatalog } from "./AdminListingSetup";
 import { AdminAddons } from "@sheetal/shared/components/Addons";
 import { AdminCareers, AdminDemand, AdminEarnings, AdminLeads, AdminMessages, AdminRequests, AdminSocial, AdminVoice, Hub } from "./AdminGrowth";
 import { AdminAds, AdminAI, AdminAnalytics, AdminOrders } from "./AdminExtras";
-import { MyProfile, NotificationsPage, adminLive, useNotifs } from "@sheetal/shared/components/Me";
+import { MyProfile, NotificationsPage, adminLive, useNotifs, useServerNotifs } from "@sheetal/shared/components/Me";
 import { AdminAudit, AdminBilling, AdminContent, AdminInbox, AdminModeration } from "./AdminOps";
 import { AdminChannels } from "./AdminChannels";
 import { AdminIntegrations } from "./AdminIntegrations";
@@ -20,6 +20,7 @@ import { AdminStatus } from "./AdminStatus";
 import { otaOf } from "@sheetal/shared/data/ota";
 import { config } from "@sheetal/shared/core/config";
 import { isStaffLive, useLiveStaff, useReviewQueue } from "../live";
+import { adminApi } from "../api";
 import { LiveAnalytics, LiveOutbox, LiveSetup, LiveStatus } from "./LiveSetup";
 
 // Super admin: Sheetal staff control panel at /admin.
@@ -91,7 +92,10 @@ export default function AdminApp() {
   ]} />;
   const guard = (perm, el) => (perm === true || (Array.isArray(perm) ? canAny(role, perm) : can(role, perm)) ? el : <NoAccess />);
 
-  const notifs = useNotifs("admin", adminLive(db));
+  // Signed in as staff: the bell comes from the server (work waiting for Sheetal's team); otherwise the sample's.
+  const sampleNotifs = useNotifs("admin", adminLive(db));
+  const serverNotifs = useServerNotifs(adminApi, "/admin/notifications", isStaffLive());
+  const notifs = isStaffLive() ? serverNotifs : sampleNotifs;
   return (
     <Shell sub={t("brand.admin")} nav={nav} notifications={notifs.list.slice(0, 6).map((n) => ({ ...n, onOpen: () => notifs.read(n.id) }))} notifTo="/admin/notifications" onReadAll={notifs.readAll}
       quickCreate={[{ icon: "building-2", label: t("tenants.add"), to: "/admin/tenants" }, { icon: "layers", label: t("plans.new"), to: "/admin/plans" }, { icon: "user-plus", label: t("team.invite"), to: "/admin/staff" }, { icon: "newspaper", label: t("content.newPost"), to: "/admin/content" }]}

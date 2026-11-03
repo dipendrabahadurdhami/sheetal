@@ -229,3 +229,22 @@ describe("system emails", () => {
     expect(await db.outboundEmail.findUniqueOrThrow({ where: { id: bad.id } })).toMatchObject({ status: "queued", attempts: 0, error: null });
   });
 });
+
+describe("staff notifications", () => {
+  it("shows staff their work in the admin bell, never a business's notes", async () => {
+    const db = app.db!;
+    const boss = await db.user.findFirstOrThrow({ where: { email: "admin@sheetal.test" } });
+    await db.notification.deleteMany({ where: { userId: boss.id } });
+    await db.notification.createMany({ data: [
+      { userId: boss.id, type: "review", title: "Listing to review", link: "/admin/moderation" },
+      { userId: boss.id, tenantId: ids.tenant!, type: "lead", title: "A business note", link: "/business/inbox" },
+      { userId: boss.id, type: "demand_match", title: "A website note", link: "/property/x" },
+    ] });
+    const r = (await call("boss", "GET", "/admin/notifications")).json();
+    expect(r.data.map((n: { title: string }) => n.title)).toEqual(["Listing to review"]);
+    expect(r.meta.unread).toBe(1);
+    await call("boss", "POST", "/admin/notifications/read-all");
+    expect((await call("boss", "GET", "/admin/notifications")).json().meta.unread).toBe(0);
+    expect((await call("owner", "GET", "/admin/notifications")).statusCode).toBe(403);
+  });
+});

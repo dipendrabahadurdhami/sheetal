@@ -36,7 +36,7 @@ export async function syncOtaFeed(db: Db, id: string, fetchFn?: Fetch) {
     }
     const gone = await db.booking.updateMany({ where: { tenantId: f.tenantId, source: f.site, roomType: f.roomType, externalUid: { startsWith: `${f.site}:`, notIn: events.map((e) => `${f.site}:${e.uid}`) }, status: { in: ["confirmed", "requested"] }, checkOut: { gt: new Date() } }, data: { status: "cancelled" } });
     await db.otaFeed.update({ where: { id }, data: { lastSync: new Date(), lastError: null } });
-    if (added) await notify(db, await leadPeople(db, f.tenantId, branchId), { type: "booking", title: `${added} new ${f.site} booking${added > 1 ? "s" : ""}`, link: "/business/bookings" });
+    if (added) await notify(db, await leadPeople(db, f.tenantId, branchId), { tenantId: f.tenantId, type: "booking", title: `${added} new ${f.site} booking${added > 1 ? "s" : ""}`, link: "/business/bookings" });
     return { added, updated, cancelled: gone.count };
   } catch (e) {
     await db.otaFeed.update({ where: { id }, data: { lastSync: new Date(), lastError: e instanceof Error ? e.message.slice(0, 200) : "failed" } });

@@ -17,7 +17,7 @@ const tok: Record<string, string> = {};
 const ids: Record<string, string> = {};
 const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(32)]).toString("base64");
 
-const call = (who: string, method: "GET" | "POST" | "PATCH", url: string, body?: object, tenant = ids.agency) =>
+const call = (who: string, method: "GET" | "POST" | "PATCH" | "DELETE", url: string, body?: object, tenant = ids.agency) =>
   app.inject({ method, url: `/v1${url}`, payload: body, headers: { authorization: `Bearer ${tok[who]}`, ...(tenant ? { "x-tenant-id": tenant } : {}) } });
 
 async function person(key: string, email: string) {
@@ -174,5 +174,42 @@ describe("leads", () => {
     expect((await call("owner", "PATCH", `/leads/${gita.id}`, { assignee: ids.hotel })).statusCode).toBe(400);
     const l = (await call("agent2", "GET", "/leads")).json().data.find((x: { name: string }) => x.name === "Gita");
     expect(l).toMatchObject({ stage: "viewing", follow: "2026-11-10", tags: ["hot"], assigneeName: "agent2" });
+  });
+});
+
+describe("notifications", () => {
+  it("tells the staff who review listings, not other staff, when a listing is sent for review", async () => {
+    const db = app.db!;
+    const editor = await db.user.create({ data: { email: "editor@sheetal.test", userName: "Editor", platformRole: "content_editor" } });
+    const finance = await db.user.create({ data: { email: "finance@sheetal.test", userName: "Finance", platformRole: "finance" } });
+    await call("owner", "POST", "/listings", { kind: "sell", summary: await summary({ title: "Plot for review in Budhanilkantha" }) });
+    const toEditor = await db.notification.findMany({ where: { userId: editor.id } });
+    expect(toEditor.at(-1)).toMatchObject({ type: "review", title: "Listing to review", link: "/admin/moderation", tenantId: null });
+    expect(await db.notification.count({ where: { userId: finance.id } })).toBe(0);
+  });
+
+  it("shows each business's bell only its own notifications, and reads them per business", async () => {
+    const db = app.db!;
+    await db.notification.deleteMany({ where: { userId: ids.owner } });
+    await db.notification.createMany({ data: [
+      { userId: ids.owner!, tenantId: ids.agency!, type: "lead", title: "New enquiry from Sita", link: "/business/inbox" },
+      { userId: ids.owner!, tenantId: ids.agency!, type: "billing", title: "Payment received", link: "/business/billing" },
+      { userId: ids.owner!, tenantId: ids.hotel!, type: "booking", title: "2 new Booking.com bookings", link: "/business/bookings" },
+      { userId: ids.agent!, tenantId: ids.agency!, type: "lead", title: "Someone else's", link: "/business/inbox" },
+    ] });
+    const agency = (await call("owner", "GET", "/notifications")).json();
+    expect(agency.data.map((n: { title: string }) => n.title).sort()).toEqual(["New enquiry from Sita", "Payment received"]);
+    expect(agency.meta.unread).toBe(2);
+    expect((await call("owner", "GET", "/notifications", undefined, ids.hotel)).json().data.map((n: { title: string }) => n.title)).toEqual(["2 new Booking.com bookings"]);
+    // Reading one, then all, only in this business.
+    await call("owner", "POST", `/notifications/${agency.data[0].id}/read`);
+    expect((await call("owner", "GET", "/notifications")).json().meta.unread).toBe(1);
+    await call("owner", "POST", "/notifications/read-all");
+    expect((await call("owner", "GET", "/notifications")).json().meta.unread).toBe(0);
+    expect((await call("owner", "GET", "/notifications", undefined, ids.hotel)).json().meta.unread).toBe(1);
+    // Someone else's can't be touched.
+    const other = await db.notification.findFirstOrThrow({ where: { userId: ids.agent } });
+    expect((await call("owner", "DELETE", `/notifications/${other.id}`)).statusCode).toBe(404);
+    expect((await call("owner", "DELETE", `/notifications/${agency.data[1].id}`)).statusCode).toBe(200);
   });
 });

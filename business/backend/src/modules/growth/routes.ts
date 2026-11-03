@@ -209,7 +209,7 @@ export async function growthRoutes(app: FastifyInstance, opts: { ai?: Ai; fetch?
         } else {
           const branchId = await headOffice(db(), acct.tenantId);
           await db().lead.create({ data: { tenantId: acct.tenantId, branchId, kind: "chat", name: msg.name || "New contact", phone: msg.channel === "whatsapp" ? `+${msg.from}` : null, message: msg.text, contactKey: key, details: { channel: msg.channel, account: acct.externalId, contact: msg.from }, createdAt: msg.at, lastAt: msg.at } });
-          await notify(db(), await leadPeople(db(), acct.tenantId, branchId), { type: "lead", title: `New ${msg.channel} message from ${msg.name || "someone"}`, message: msg.text.slice(0, 140), link: "/business/inbox" });
+          await notify(db(), await leadPeople(db(), acct.tenantId, branchId), { tenantId: acct.tenantId, type: "lead", title: `New ${msg.channel} message from ${msg.name || "someone"}`, message: msg.text.slice(0, 140), link: "/business/inbox" });
         }
       }
       // Meta wants a quick 200, or it retries.

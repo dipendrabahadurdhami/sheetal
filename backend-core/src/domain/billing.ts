@@ -132,7 +132,7 @@ export async function applyPayment(db: Db, mailer: Mailer, o: { paymentId: strin
       text: `Namaste ${owner?.userName ?? done.tenant.name},\n\nWe received Rs. ${done.p.amount.toLocaleString("en-IN")} for ${plan?.name ?? "your plan"} (${done.p.invoice.months} month${done.p.invoice.months > 1 ? "s" : ""}). ${done.tenant.name} is paid until ${day(done.end)}.\n\nInvoice ${number}: ${o.siteUrl.replace(/\/$/, "")}/business/billing\n\nSheetal Property`,
     });
   }
-  await notify(db, [owner?.id], { type: "billing", title: `Payment received: ${number}`, message: `Paid until ${day(done.end)}`, link: "/business/billing" });
+  await notify(db, [owner?.id], { tenantId: done.tenant.id, type: "billing", title: `Payment received: ${number}`, message: `Paid until ${day(done.end)}`, link: "/business/billing" });
   return true;
 }
 
@@ -155,7 +155,7 @@ export async function runBillingCycle(db: Db, mailer: Mailer, o: { siteUrl: stri
     const to = owner?.email ?? t.email;
     const tell = async (subject: string, text: string, title: string) => {
       if (to) await mailer.send({ to, subject, text: `Namaste ${owner?.userName ?? t.name},\n\n${text}\n\n${site}/business/billing\n\nSheetal Property` });
-      await notify(db, [owner?.id], { type: "billing", title, link: "/business/billing" });
+      await notify(db, [owner?.id], { tenantId: t.id, type: "billing", title, link: "/business/billing" });
     };
 
     if (t.status !== "past_due" && renews > now) {
