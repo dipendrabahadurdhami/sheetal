@@ -24,6 +24,8 @@ const metres = (a: [number, number], b: [number, number]) => {
 beforeAll(async () => {
   mkdirSync(join(media, "property", "main"), { recursive: true });
   writeFileSync(join(media, "property", "main", "house1.jpg"), "jpeg-bytes");
+  mkdirSync(join(media, "brand", "main"), { recursive: true });
+  writeFileSync(join(media, "brand", "main", "_IuTep7QVfMV4Alo.png"), "png-bytes");
   app = await buildApp(loadConfig({ NODE_ENV: "test", LOG_LEVEL: "silent", DATABASE_URL: inject("databaseUrl"), API_URL: "https://api.test", MEDIA_DIR: media }));
   const db = app.db!;
   await db.$executeRawUnsafe(`TRUNCATE listings, tenants, plans RESTART IDENTITY CASCADE`);
@@ -156,8 +158,14 @@ describe("photos", () => {
     expect(res.headers["cache-control"]).toContain("immutable");
   });
 
+  it("serves logos whose random name starts with _ or -", async () => {
+    const res = await get("/media/brand/main/_IuTep7QVfMV4Alo.png");
+    expect(res.statusCode).toBe(200);
+    expect(res.headers["content-type"]).toBe("image/png");
+  });
+
   it("refuses anything outside the photo folders", async () => {
-    for (const url of ["/media/property/main/..%2F..%2Fsecret.jpg", "/media/property/original/house1.jpg", "/media/property/main/house1.php", "/media/property/main/missing.jpg"]) {
+    for (const url of ["/media/property/main/..%2F..%2Fsecret.jpg", "/media/property/original/house1.jpg", "/media/property/main/house1.php", "/media/property/main/missing.jpg", "/media/property/main/.hidden.jpg"]) {
       expect((await get(url)).statusCode).toBe(404);
     }
   });

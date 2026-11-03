@@ -228,7 +228,8 @@ export async function catalogRoutes(app: FastifyInstance) {
 
 // Photos from MEDIA_DIR (local development and small servers). Production serves them from object storage.
 const SIZES = new Set(["main", "thumbnail"]);
-const SAFE_FILE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,120}\.(jpe?g|png|webp)$/i;
+// Names savePhoto gives out are base64url, so they can start with "_" or "-" (never a dot, and no slashes).
+const SAFE_FILE = /^[A-Za-z0-9_-][A-Za-z0-9._-]{0,120}\.(jpe?g|png|webp)$/i;
 const TYPES: Record<string, string> = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp" };
 
 export async function mediaRoutes(app: FastifyInstance) {
