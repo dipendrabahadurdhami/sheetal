@@ -4,6 +4,7 @@ import { dbOf } from "@sheetal/backend-core/lib/db";
 import { AppError, badRequest, conflict, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
 import { newToken, sha256 } from "@sheetal/backend-core/lib/secrets";
 import { requireUser } from "@sheetal/backend-core/modules/auth/sessions";
+import { createWorkspace } from "@sheetal/backend-core/modules/accounts/workspace";
 import { mediaBase, photoUrl, savePhoto } from "@sheetal/backend-core/lib/photos";
 import { BUSINESS_TYPES, businessPermsFor, type BusinessType } from "@sheetal/backend-core/domain/permissions";
 import { branchesOf, workspaceOf, type Workspace } from "../access.js";
@@ -16,6 +17,8 @@ import { checkScopes } from "../branches/routes.js";
 // - People count against the plan's seats, pending invitations included.
 
 const INVITE_DAYS = 7;
+/** Businesses one person can own (more through Sheetal support). */
+const MAX_OWNED = 10;
 const email = z.email("Enter a valid email address.").transform((s) => s.trim().toLowerCase());
 const scopes = z.union([z.literal("all"), z.array(z.string().trim().min(1).max(60)).max(50)]).default("all");
 
@@ -41,6 +44,19 @@ export async function teamRoutes(app: FastifyInstance) {
         })),
       },
     };
+  });
+
+  // ───── Add another business: the person becomes its owner; it starts on the free Starter plan of its type ─────
+  app.post("/workspaces", async (request) => {
+    const user = requireUser(request);
+    const b = z.object({ name: z.string().trim().min(2, "Give the business a name.").max(80), type: z.enum(BUSINESS_TYPES), city: z.string().trim().max(60).optional() }).parse(request.body);
+    if (!user.emailVerifiedAt) throw forbidden("Confirm your email address first.");
+    const owned = user.memberships.filter((m) => m.role.perms.includes("*")).length;
+    if (owned >= MAX_OWNED) throw badRequest(`You can own up to ${MAX_OWNED} businesses. Ask Sheetal support for more.`);
+    if (user.memberships.some((m) => m.tenant.name.toLowerCase() === b.name.toLowerCase())) throw conflict(`You already have a business called ${b.name}.`);
+    const tenant = await dbOf(app).$transaction((tx) => createWorkspace(tx, { ownerId: user.id, name: b.name, type: b.type, city: b.city, email: user.email, phone: user.phone ?? undefined, emailVerified: true }));
+    await dbOf(app).auditLog.create({ data: { tenantId: tenant.id, actorId: user.id, action: "business.created", target: b.name, ip: request.ip } });
+    return { status: 201, message: `${b.name} is ready.`, data: { id: tenant.id } };
   });
 
   // ───── Branding (Business and Pro): the business's logo and its colours (read from the logo, or picked) ─────

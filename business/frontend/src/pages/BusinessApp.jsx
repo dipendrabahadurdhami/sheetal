@@ -25,7 +25,8 @@ import { Help, Tour } from "./Help";
 import { MyProfile, NotificationsPage, businessSeed, useNotifs } from "@sheetal/shared/components/Me";
 import { Domains } from "./Domains";
 import { Mail } from "./Mail";
-import { isLive, useBrand, useLiveWorkspace } from "../live";
+import { canAddBusiness, isLive, useBrand, useLiveWorkspace } from "../live";
+import { AddBusiness } from "./AddBusiness";
 import { POS, Bookings } from "./POS";
 import { LiveBookings, LiveFrontDesk, LiveInvestors, LivePOS, LiveProjects } from "./LiveOps";
 import { LiveAnalytics, LiveChannels } from "./LiveGrowth";
@@ -54,6 +55,7 @@ export default function BusinessApp() {
   const t = useT();
   const { db, update, reset } = useStore();
   const { navigate } = useRouter();
+  const [adding, setAdding] = React.useState(false);
   useLiveWorkspace(); // real businesses, role and team when signed in (../live.js)
   const s = db.session;
   // Sheetal staff support sessions end on their own after 30 minutes.
@@ -158,7 +160,8 @@ export default function BusinessApp() {
   }));
   // Switching business opens its overview, since the pages differ by type and role.
   const pickWs = (v) => { update((d) => { d.session.tenantId = v; d.session.previewRoleId = null; }); navigate("/business"); };
-  const wsSwitcher = <WorkspaceSwitcher current={wsList.find((w) => w.id === tenant.id) || { id: tenant.id, name: tenant.name, logoUrl: tenant.logoUrl }} list={wsList} onPick={pickWs} big={branded} sub={branded ? `${t(`type.${tenant.type}`)} · ${tenant.city || "Nepal"}` : undefined} label={t("ws.switch")} />;
+  const addWs = canAddBusiness() ? <MenuButton icon="plus" onClick={() => setAdding(true)}>Add a business</MenuButton> : null;
+  const wsSwitcher = <WorkspaceSwitcher footer={addWs} current={wsList.find((w) => w.id === tenant.id) || { id: tenant.id, name: tenant.name, logoUrl: tenant.logoUrl }} list={wsList} onPick={pickWs} big={branded} sub={branded ? `${t(`type.${tenant.type}`)} · ${tenant.city || "Nepal"}` : undefined} label={t("ws.switch")} />;
 
   return (
     <Shell sub={t("brand.business")} nav={nav} themes={hasColours ? PANEL_THEMES : THEMES} brandSlot={branded ? wsSwitcher : undefined} switcher={branded ? null : wsSwitcher} notifications={notifications} notifTo="/business/notifications" onReadAll={notifs.readAll}
@@ -204,6 +207,7 @@ export default function BusinessApp() {
         {config.demo && <MenuButton icon="rotate-ccw" onClick={reset}>{t("psettings.resetDemo")}</MenuButton>}
         <MenuButton icon="log-out" onClick={() => { try { localStorage.removeItem("sheetal_token"); } catch { /* storage off */ } window.location.href = "/"; }}>{t("menu.signOut")}</MenuButton>
       </>}>
+      <AddBusiness open={adding} onClose={() => setAdding(false)} onAdded={() => navigate("/business")} />
       <BranchProvider value={{ branch, allowed, canAll, first: openBranches[0] }}>
       {ended ? <BackupOnly tenant={tenant} /> : <Routes fallback={<Pending part={2} />} routes={[
         { path: "/business", render: () => <BusinessOverview tenant={tenant} role={role} /> },

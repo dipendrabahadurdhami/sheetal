@@ -16,7 +16,7 @@ function Mark({ ws, size }) {
   );
 }
 
-export function WorkspaceSwitcher({ current, list, onPick, sub, big = false, label = "Switch business" }) {
+export function WorkspaceSwitcher({ current, list, onPick, sub, footer, big = false, label = "Switch business" }) {
   const head = (toggle, open) => (
     <button type="button" className={`pf-wsx ${big ? "big" : ""}`} onClick={toggle} aria-haspopup="menu" aria-expanded={open} aria-label={`${current.name}. ${label}`}>
       <Mark ws={current} size={big ? 44 : 28} />
@@ -34,7 +34,7 @@ export function WorkspaceSwitcher({ current, list, onPick, sub, big = false, lab
           {w.id === current.id && <Icon name="check" size={15} />}
         </button>
       ))}
-      {list.length === 1 && <p className="pf-wsx-note">Other businesses you own or are invited to will show here, each with its own menu and your role in it.</p>}
+      {footer ? <><div className="pf-menu-sep" />{footer}</> : list.length === 1 && <p className="pf-wsx-note">Other businesses you own or are invited to will show here, each with its own menu and your role in it.</p>}
     </Menu>
   );
 }

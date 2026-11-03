@@ -33,15 +33,15 @@ export function useLiveWorkspace() {
   // Bumped once the businesses are known, so the loaders below run even when the open business stays the same.
   const [known, setKnown] = useState(0);
 
-  // 1 Who is signed in and which businesses they belong to.
-  useEffect(() => {
-    if (!bizApiReady() || !signedIn()) return;
-    bizApi("GET", "/workspaces").then(({ data }) => {
+  // 1 Who is signed in and which businesses they belong to (again after adding a business).
+  const loadWorkspaces = useCallback((open) => {
+    if (!bizApiReady() || !signedIn()) return Promise.resolve();
+    return bizApi("GET", "/workspaces").then(({ data }) => {
       if (!data.workspaces.length) return;
       data.workspaces.forEach((w) => liveIds.add(w.id));
       setKnown((n) => n + 1);
       update((d) => {
-        const keep = data.workspaces.some((w) => w.id === d.session.tenantId) ? d.session.tenantId : data.workspaces[0].id;
+        const keep = open && data.workspaces.some((w) => w.id === open) ? open : data.workspaces.some((w) => w.id === d.session.tenantId) ? d.session.tenantId : data.workspaces[0].id;
         d.tenants = [...data.workspaces.map((w) => toTenant(w, d.tenants.find((t) => t.id === w.id))), ...d.tenants.filter((t) => !liveIds.has(t.id) && t.id !== "t13")];
         d.session = { ...d.session, userName: data.user.name, userEmail: data.user.email, memberships: data.workspaces.map((w) => w.id), tenantId: keep, liveRoles: Object.fromEntries(data.workspaces.map((w) => [w.id, w.role.id])),
           // The branches the person works in, per business: "all" or a list of names (owners always "all").
@@ -55,6 +55,7 @@ export function useLiveWorkspace() {
       });
     }).catch(() => { /* not signed in on the API, or it's off: the panel keeps working on its own data */ });
   }, []);
+  useEffect(() => { wsReload = loadWorkspaces; loadWorkspaces(); return () => { if (wsReload === loadWorkspaces) wsReload = null; }; }, [loadWorkspaces]);
 
   // 2 The open business's team, roles and invitations.
   const loadTeam = useCallback(() => {
@@ -106,6 +107,16 @@ export function useLiveWorkspace() {
     return () => { clearInterval(every); if (workReload === loadWork) workReload = null; };
   }, [loadWork]);
 }
+
+let wsReload = null;
+/** Creates another business owned by the signed-in person, then opens it. */
+export const addBusiness = async (body) => {
+  const r = await bizApi("POST", "/workspaces", body);
+  await wsReload?.(r.data.id);
+  return r;
+};
+/** Whether the panel is signed in to the API (adding a business needs it). */
+export const canAddBusiness = () => bizApiReady() && signedIn();
 
 let branchReload = null;
 /** Branch actions for the open business; the branch list (and everyone's access) reloads after each. */

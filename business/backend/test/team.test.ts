@@ -49,6 +49,17 @@ describe("workspaces", () => {
 });
 
 describe("branding", () => {
+  it("lets a person add another business they own, on its Starter plan", async () => {
+    const r = await call("sita", "POST", "/workspaces", { name: "Sita Homestay", type: "host", city: "Bandipur" });
+    expect(r.statusCode).toBe(200);
+    const list = (await call("sita", "GET", "/workspaces")).json().data.workspaces;
+    const mine = list.find((w: { name: string }) => w.name === "Sita Homestay");
+    expect(mine).toMatchObject({ type: "host", city: "Bandipur", plan: { id: "host-starter" }, role: { key: "owner" }, scopes: "all" });
+    expect((await call("sita", "POST", "/workspaces", { name: "sita homestay", type: "host" })).statusCode).toBe(409);
+    expect((await call("sita", "POST", "/workspaces", { name: "X", type: "castle" })).statusCode).toBe(422);
+    expect(await app.db!.branch.count({ where: { tenantId: mine.id } })).toBe(1); // starts with Head office
+  });
+
   it("saves the logo and up to 4 colours for the whole business, for people who manage settings", async () => {
     const png = Buffer.from("89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d49444154789c6360000002000154a24f5d0000000049454e44ae426082", "hex").toString("base64");
     const r = await call("owner", "PUT", "/workspace/branding", { logo: png, colors: ["#0a7d3b", "#F2A900", "#0A7D3B"] });
