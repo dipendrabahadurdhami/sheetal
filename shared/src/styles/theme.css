@@ -2625,3 +2625,7 @@ main section:has(> .section-head), main section:has(> .container > .section-head
 
 /* Agency logos sit on the card as they are: no white oval or circle behind a business's own logo. */
 .agent-logo img.avatar { border-radius: 0 !important; background: transparent !important; padding: 0 !important; max-width: 200px; }
+
+/* Dark and red themes: every business logo in one colour, white, like Sheetal's own. */
+[data-theme~="dark"] .logo-mono img, [data-theme~="dark"] .agent-logo img { filter: brightness(0) invert(1); }
+.logo-mono { display: inline-flex; flex-shrink: 0; }

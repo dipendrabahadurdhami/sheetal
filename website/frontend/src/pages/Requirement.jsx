@@ -106,7 +106,7 @@ export function Requirement() {
     <PostLayout title="Post a requirement" intro="Tell us what you need. We match it with owners and agencies and call you with options." tabs={null}
       steps={STEPS_RQ} step={step} onStep={(i) => go(i)} section={HEADS[step][0]} sub={HEADS[step][1]} error={err}
       aside={<>
-        {agent.data && <div className="pl-sum"><span className="tiny muted">Sending to</span><div className="row" style={{ gap: 10 }}><Avatar src={agent.data.photo} name={agentName(agent.data)} size={40} /><b>{agentName(agent.data)}</b></div></div>}
+        {agent.data && <div className="pl-sum"><span className="tiny muted">Sending to</span><div className="row" style={{ gap: 10 }}><Avatar src={agent.data.photo} name={agentName(agent.data)} size={40} logo /><b>{agentName(agent.data)}</b></div></div>}
         <div className="pl-sum">
           <span className="tiny muted" style={{ textTransform: "uppercase", letterSpacing: ".08em" }}>Your request</span>
           <h4>{sentence}</h4>

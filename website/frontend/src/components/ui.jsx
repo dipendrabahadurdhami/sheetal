@@ -13,7 +13,11 @@ export const Logo = ({ small }) => (
 );
 
 // Same avatar as /admin and /business (shared/core/ui.jsx); the website only resolves the image URL.
-export const Avatar = ({ src, name, size }) => <BaseAvatar src={imgUrl(src)} name={name || "U"} size={size || 38} />;
+// `logo`: a business logo, shown as one white colour in the dark and red themes (people's photos never are).
+export const Avatar = ({ src, name, size, logo }) => {
+  const el = <BaseAvatar src={imgUrl(src)} name={name || "U"} size={size || 38} />;
+  return logo ? <span className="logo-mono">{el}</span> : el;
+};
 
 export const Stars = ({ value = 0, size = 14, onPick }) => (
   <span className="stars" role={onPick ? "radiogroup" : undefined}>

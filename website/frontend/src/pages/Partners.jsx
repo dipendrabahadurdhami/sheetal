@@ -19,7 +19,7 @@ const tenants = () => { let s = null; try { s = JSON.parse(localStorage.getItem(
 function PartnerCard({ p }) {
   return (
     <Link to={p.to} className="card card-hover agent-card fade-in" style={{ color: "var(--text)" }}>
-      <span className="agent-logo"><Avatar src={p.photo} name={p.name} /></span>
+      <span className="agent-logo"><Avatar src={p.photo} name={p.name} logo /></span>
       <span className="tier">{p.kicker}</span>
       <h3 style={{ fontSize: 20 }}>{p.name}</h3>
       <span className="small muted">{p.place}</span>

@@ -30,7 +30,7 @@ export function Messages() {
       <div className="chat-list">
         {threads.map((x) => (
           <button key={x.id} className={x.id === t?.id ? "on" : ""} onClick={() => setActive(x.id)}>
-            <Avatar src={x.agentPhoto} name={x.agentName} size={40} />
+            <Avatar src={x.agentPhoto} name={x.agentName} size={40} logo />
             <span style={{ minWidth: 0 }}>
               <b style={{ display: "block", fontWeight: 500, color: "var(--text-strong)" }}>{x.agentName}</b>
               <span className="tiny muted" style={{ display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{x.propertyName || "General enquiry"}</span>

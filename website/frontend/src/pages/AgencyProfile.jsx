@@ -50,7 +50,7 @@ export default function AgencyProfile() {
 }
 `}</style>
         <div className="container agent-hero" style={{ paddingTop: 40, paddingBottom: 32, display: "grid", gridTemplateColumns: "auto 1fr", gap: 32, alignItems: "center" }}>
-          <Avatar src={a.photo} name={name} size={140} />
+          <Avatar src={a.photo} name={name} size={140} logo />
           <div className="stack" style={{ gap: 10 }}>
             <span className="tier">{agencyTier(a.tier) ? `${agencyTier(a.tier)} agency` : "Agency"}</span>
             <h1 style={{ fontSize: "clamp(28px, 3.6vw, 42px)" }} className="row">{name}</h1>

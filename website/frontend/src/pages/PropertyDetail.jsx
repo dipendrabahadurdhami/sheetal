@@ -181,7 +181,7 @@ export default function PropertyDetail() {
             {side === "tour" ? <TourForm propertyId={p.id} /> : <ContactForm key={side} to={side === "owner" ? "owner" : "agent"} compact agentId={agent?.id || p.agent_id} agentName={agentName(agent)} agentPhoto={agent?.photo} propertyId={p.id} propertyName={titleOf(p)} />}
             <div className="hr" style={{ margin: 0 }} />
             <Link to={agent?.id ? `/agency/${agent.id}` : "#"} className="row" style={{ color: "var(--text)" }}>
-              <Avatar src={agent?.photo} name={agentName(agent)} size={52} />
+              <Avatar src={agent?.photo} name={agentName(agent)} size={52} logo />
               <div style={{ minWidth: 0 }}>
                 <b style={{ color: "var(--text-strong)", fontWeight: 500 }}>{agentName(agent)}</b>
                 <div className="tiny muted">{agent?.tier ? `${agencyTier(agent.tier)} agency` : agent?.designation || "Listing agency"}</div>
