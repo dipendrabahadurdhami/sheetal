@@ -2,6 +2,7 @@ import { inkFor, btnInkFor } from "@sheetal/shared/core/contrast";
 import { Rentals } from "./Rentals";
 import { SetupChip } from "./Setup";
 import React from "react";
+import { WorkspaceSwitcher } from "@sheetal/shared/layout/WorkspaceSwitcher";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
 import { Link, Routes, useRouter } from "@sheetal/shared/core/router";
@@ -133,16 +134,15 @@ export default function BusinessApp() {
   const notifs = useNotifs(`b-${tenant.id}`, businessSeed(tenant));
   const notifications = notifs.list.slice(0, 6).map((n) => ({ ...n, onOpen: () => notifs.read(n.id) }));
 
-  const switcher = (
-    <div className="pf-ws">
-      <span className="pf-ws-logo" style={tenant.logoUrl ? { background: "#fff" } : brand ? { background: brand } : undefined}>{tenant.logoUrl ? <img src={tenant.logoUrl} alt="" /> : ts.branding.logoText}</span>
-      <Select value={tenant.id} aria-label={t("ws.switch")} options={ids.map((id) => { const x = db.tenants.find((y) => y.id === id); return { id, label: x.name }; })}
-        onChange={(v) => update((d) => { d.session.tenantId = v; d.session.previewRoleId = null; })} />
-    </div>
-  );
+  // The business at the top of the sidebar. With its own branding (logo or colours) it takes Sheetal's logo spot;
+  // until then Sheetal's logo stays and the business sits just under it. Clicking the name switches business.
+  const branded = (tenant.brandColors || []).length > 0 || (!!tenant.logoUrl && !tenant.logoUrl.startsWith("/brand/"));
+  const wsList = ids.map((id) => db.tenants.find((y) => y.id === id)).filter(Boolean).map((x) => ({ id: x.id, name: x.name, logoUrl: x.logoUrl, color: x.id === tenant.id ? brand : undefined }));
+  const pickWs = (v) => update((d) => { d.session.tenantId = v; d.session.previewRoleId = null; });
+  const wsSwitcher = <WorkspaceSwitcher current={wsList.find((w) => w.id === tenant.id) || { id: tenant.id, name: tenant.name, logoUrl: tenant.logoUrl }} list={wsList} onPick={pickWs} big={branded} sub={branded ? `${t(`type.${tenant.type}`)} · ${tenant.city || "Nepal"}` : undefined} label={t("ws.switch")} />;
 
   return (
-    <Shell sub={t("brand.business")} nav={nav} switcher={switcher} notifications={notifications} notifTo="/business/notifications" onReadAll={notifs.readAll}
+    <Shell sub={t("brand.business")} nav={nav} brandSlot={branded ? wsSwitcher : undefined} switcher={branded ? null : wsSwitcher} notifications={notifications} notifTo="/business/notifications" onReadAll={notifs.readAll}
       quickCreate={[
         any("listings.manage", "projects.manage", "investments.manage", "calendar.edit") && { icon: "house-plus", label: t("listings.new"), to: "/business/listings/new" },
         stays && can(role, "bookings.create") && { icon: "calendar-plus", label: t("bk.manual"), to: "/business/bookings" },

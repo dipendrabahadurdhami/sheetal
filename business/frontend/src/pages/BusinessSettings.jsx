@@ -62,7 +62,7 @@ export function BusinessSettings({ tenant, tab: tabProp }) {
             </>}
 
             {tab === "branding" && <>
-              {isLive(tenant.id) && <BrandFromLogo tenant={tenant} canEdit />}
+              {isLive(tenant.id) ? <BrandFromLogo tenant={tenant} canEdit /> : <>
               <ToggleRow title={t("brand.use")} sub={t("brand.useSub")} checked={get("branding.useBrand")} onChange={(v) => set("branding.useBrand", v)} />
               <Field label={t("brand.color")}>
                 <div className="pf-swatches">
@@ -75,6 +75,8 @@ export function BusinessSettings({ tenant, tab: tabProp }) {
                 <Field label={t("brand.logo")}><label className="btn btn-outline"><input type="file" accept="image/*" hidden /><Icon name="upload" size={16} />{t("brand.uploadLogo")}</label></Field>
               </div>
               <BrandPreview s={s} tenant={tenant} />
+              </>}
+              <h4 className="pf-subhead">Receipts</h4>
               <Advanced open={adv} onToggle={() => setAdv(!adv)}>
                 <Field label={t("brand.receiptHeader")}><Input value={get("branding.receiptHeader")} onChange={(e) => set("branding.receiptHeader", e.target.value)} /></Field>
                 <Field label={t("brand.receiptFooter")}><Input value={get("branding.receiptFooter")} onChange={(e) => set("branding.receiptFooter", e.target.value)} /></Field>

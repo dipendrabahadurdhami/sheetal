@@ -1514,3 +1514,19 @@ html.has-brand[data-theme~="light"] { --accent-ink: var(--brand-accent-ink); --a
 html.has-brand[data-theme~="dark"] { --accent-soft: color-mix(in srgb, var(--brand-accent) 22%, var(--card)); }
 html.has-brand[data-theme] .pf-top .btn-primary { background: var(--brand-accent); color: var(--brand-accent-text); border-color: color-mix(in srgb, var(--brand-bar-text) 30%, var(--brand-accent)); }
 .pf-ws-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+
+/* Business switcher at the top of the sidebar: slim, the name opens the list. */
+.pf-side-top .pf-menu-wrap { position: relative; display: block; }
+.pf-wsx { display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px 8px; border: 0; border-radius: var(--r); background: transparent; color: var(--text-strong); text-align: left; cursor: pointer; font: inherit; }
+.pf-wsx:hover, .pf-wsx[aria-expanded="true"] { background: var(--surface); }
+.pf-wsx-name { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.25; }
+.pf-wsx-name b { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pf-wsx-name small { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pf-wsx-chev { flex-shrink: 0; color: var(--muted); }
+.pf-wsx-mark { flex-shrink: 0; border-radius: 8px; background: #fff; display: inline-flex; align-items: center; justify-content: center; overflow: hidden; font-weight: 600; font-size: 11px; }
+.pf-wsx-mark img { width: 100%; height: 100%; object-fit: contain; padding: 2px; }
+.pf-wsx.big { padding: 4px 6px; }
+.pf-wsx.big .pf-wsx-name b { font-size: 16px; }
+.pf-side-top .pf-menu { left: 0; right: 0; min-width: 0; }
+.pf-side-top .pf-menu button { display: flex; align-items: center; gap: 10px; width: 100%; }
+.pf-side-top .pf-menu button.on { font-weight: 600; }

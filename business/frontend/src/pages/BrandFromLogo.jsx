@@ -52,16 +52,16 @@ export function BrandFromLogo({ tenant, canEdit }) {
   };
 
   return (
-    <div className="card pf-pad pf-stack" style={{ marginBottom: 16 }}>
+    <div className="pf-stack" style={{ marginBottom: 8 }}>
       <div className="pf-row-actions" style={{ alignItems: "center", gap: 16 }}>
         <span className="pf-ws-logo" style={{ width: 64, height: 64, background: "#fff", border: "1px solid var(--line)" }}>{logo?.url || tenant.logoUrl ? <img src={logo?.url || tenant.logoUrl} alt="Logo" /> : <Icon name="image" size={22} />}</span>
         <div className="pf-two" style={{ flex: 1 }}><b>Logo and workspace colours</b><small className="muted">Upload your logo and your workspace takes its colours: top bar, sidebar and buttons. Everyone in your team sees them.</small></div>
         {canEdit && <label className="btn btn-outline"><input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => pick(e.target.files[0])} /><Icon name="upload" size={16} />{tenant.logoUrl || logo ? "Change logo" : "Upload logo"}</label>}
       </div>
-      <Field label="Colours (up to 4)" hint="The first colours the top bar and sidebar; the second, buttons. Text colour is chosen so it always reads.">
-        <div className="pf-row-actions" style={{ flexWrap: "wrap" }}>
+      <Field label="Colours (up to 4)" hint="Colour 1 is used for the top bar and sidebar, colour 2 for buttons and highlights. Text on them is always made readable.">
+        <div className="pf-row-actions" style={{ flexWrap: "wrap", justifyContent: "flex-start" }}>
           {colors.map((c, i) => (
-            <span key={i} className="pf-swatch-custom">
+            <span key={i} className="pf-swatch-custom" title={i === 0 ? "Colour 1: top bar and sidebar" : i === 1 ? "Colour 2: buttons" : `Colour ${i + 1}`}>
               <input type="color" value={c} disabled={!canEdit} aria-label={`Colour ${i + 1}`} onChange={(e) => setColors(colors.map((x, j) => (j === i ? e.target.value.toUpperCase() : x)))} />
               <span className="tnum">{c}</span>
               {canEdit && <button type="button" className="btn btn-ghost btn-icon btn-sm" aria-label={`Remove ${c}`} onClick={() => setColors(colors.filter((_, j) => j !== i))}><Icon name="x" size={14} /></button>}
@@ -79,7 +79,7 @@ export function BrandFromLogo({ tenant, canEdit }) {
           </div>
         </div>
       )}
-      {canEdit && <div className="pf-row-actions">
+      {canEdit && <div className="pf-row-actions" style={{ justifyContent: "flex-start" }}>
         <Button disabled={busy || !changed} onClick={save}>{busy ? "Saving…" : "Save branding"}</Button>
         {(tenant.brandColors || []).length > 0 && <Button variant="ghost" disabled={busy} onClick={reset}>Use Sheetal's colours</Button>}
       </div>}
