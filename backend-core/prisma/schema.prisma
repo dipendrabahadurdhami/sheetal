@@ -825,3 +825,259 @@ model Payment {
   @@index([status, createdAt])
   @@map("payments")
 }
+
+// ───────────── Hotels and stays ─────────────
+
+/// A room (or a whole unit for a host). `status` is the front desk's view: vacant, arriving, occupied, dirty, blocked.
+model Room {
+  id        String    @id @default(cuid())
+  tenantId  String    @map("tenant_id")
+  /// The stay listing it belongs to, when there is one.
+  listingId Int?      @map("listing_id")
+  branch    String?
+  no        String
+  type      String
+  /// Rs. a night.
+  rate      Int
+  maxGuests Int       @default(2) @map("max_guests")
+  floor     String?
+  status    String    @default("vacant")
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now()) @map("created_at")
+  bookings  Booking[]
+
+  @@unique([tenantId, no])
+  @@index([tenantId, type])
+  @@map("rooms")
+}
+
+/// A stay: requested (from the website or another site), confirmed, checked_in, completed, or cancelled.
+model Booking {
+  id         String         @id @default(cuid())
+  /// BK-0001
+  seq        Int            @unique @default(autoincrement())
+  tenantId   String         @map("tenant_id")
+  roomId     String?        @map("room_id")
+  roomType   String         @map("room_type")
+  guestName  String         @map("guest_name")
+  phone      String?
+  email      String?
+  adults     Int            @default(2)
+  children   Int            @default(0)
+  /// Dates only (check-in day and check-out day, midnight UTC).
+  checkIn    DateTime       @map("check_in")
+  checkOut   DateTime       @map("check_out")
+  /// Rs. a night agreed for this stay.
+  rate       Int
+  status     String         @default("confirmed")
+  /// shetal, direct, walkin, booking, airbnb, agoda, expedia
+  source     String         @default("direct")
+  /// The guest ID was seen at check-in (Nepal requires it).
+  idChecked  Boolean        @default(false) @map("id_checked")
+  notes      String?
+  createdBy  String?        @map("created_by")
+  createdAt  DateTime       @default(now()) @map("created_at")
+  checkedIn  DateTime?      @map("checked_in_at")
+  checkedOut DateTime?      @map("checked_out_at")
+  room       Room?          @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  folio      FolioLine[]
+  payments   GuestPayment[]
+
+  @@index([tenantId, status, checkIn])
+  @@index([roomId, checkIn])
+  @@map("bookings")
+}
+
+/// What a guest is charged during a stay: room nights, restaurant bills put on the room, extras, discounts (negative).
+model FolioLine {
+  id        String   @id @default(cuid())
+  bookingId String   @map("booking_id")
+  /// room, pos, extra, discount
+  kind      String
+  what      String
+  qty       Int      @default(1)
+  /// Rs. before service charge and VAT.
+  amount    Int
+  byUserId  String?  @map("by_user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@map("folio_lines")
+}
+
+model GuestPayment {
+  id        String   @id @default(cuid())
+  bookingId String   @map("booking_id")
+  /// cash, fonepay, card, esewa, khalti, bank
+  method    String
+  amount    Int
+  ref       String?
+  byUserId  String?  @map("by_user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@map("guest_payments")
+}
+
+// ───────────── Point of sale ─────────────
+
+model MenuItem {
+  id        String   @id @default(cuid())
+  tenantId  String   @map("tenant_id")
+  outlet    String   @default("Restaurant")
+  category  String   @default("Food")
+  name      String
+  price     Int
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, outlet])
+  @@map("menu_items")
+}
+
+/// A cashier shift: opened with a cash float, closed with the cash counted against what was sold in cash.
+model Shift {
+  id       String    @id @default(cuid())
+  tenantId String    @map("tenant_id")
+  openedBy String    @map("opened_by")
+  float    Int       @default(0)
+  openedAt DateTime  @default(now()) @map("opened_at")
+  closedBy String?   @map("closed_by")
+  closedAt DateTime? @map("closed_at")
+  /// Cash counted at close, and the difference from expected.
+  counted  Int?
+  diff     Int?
+  bills    PosBill[]
+
+  @@index([tenantId, closedAt])
+  @@map("shifts")
+}
+
+/// A restaurant or shop bill, paid on the spot or put on a guest room (then it is on their folio).
+model PosBill {
+  id        String   @id @default(cuid())
+  seq       Int      @unique @default(autoincrement())
+  tenantId  String   @map("tenant_id")
+  shiftId   String?  @map("shift_id")
+  outlet    String
+  /// [{ itemId?, name, qty, price }]
+  lines     Json
+  subtotal  Int
+  discount  Int      @default(0)
+  service   Int
+  vat       Int
+  total     Int
+  /// cash, fonepay, card, esewa, khalti, room
+  method    String
+  bookingId String?  @map("booking_id")
+  /// paid, void
+  status    String   @default("paid")
+  voidNote  String?  @map("void_note")
+  byUserId  String?  @map("by_user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  shift     Shift?   @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt])
+  @@map("pos_bills")
+}
+
+// ───────────── Developer projects ─────────────
+
+/// A unit in a project (a flat, a plot, a shop): available, held (a few days), reserved, sold.
+model Unit {
+  id           String        @id @default(cuid())
+  tenantId     String        @map("tenant_id")
+  /// The project listing.
+  listingId    Int           @map("listing_id")
+  block        String        @default("")
+  no           String
+  type         String
+  sizeSqft     Int?          @map("size_sqft")
+  price        BigInt
+  status       String        @default("available")
+  holdUntil    DateTime?     @map("hold_until")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  reservations Reservation[]
+
+  @@unique([listingId, block, no])
+  @@index([tenantId, status])
+  @@map("units")
+}
+
+/// A buyer reservation of a unit, with its payment plan (instalments) and what has been collected.
+model Reservation {
+  id          String       @id @default(cuid())
+  seq         Int          @unique @default(autoincrement())
+  tenantId    String       @map("tenant_id")
+  unitId      String       @map("unit_id")
+  buyerName   String       @map("buyer_name")
+  phone       String?
+  email       String?
+  price       BigInt
+  /// reserved, sold, cancelled
+  status      String       @default("reserved")
+  /// [{ label, due (YYYY-MM-DD), amount }]
+  plan        Json         @default("[]")
+  notes       String?
+  createdBy   String?      @map("created_by")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  unit        Unit         @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  collections Collection[]
+
+  @@index([tenantId, status])
+  @@map("reservations")
+}
+
+/// Money received on a reservation. A refund is a negative amount.
+model Collection {
+  id            String      @id @default(cuid())
+  reservationId String      @map("reservation_id")
+  tenantId      String      @map("tenant_id")
+  amount        BigInt
+  method        String
+  ref           String?
+  note          String?
+  byUserId      String?     @map("by_user_id")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@map("collections")
+}
+
+// ───────────── Investments (sponsors) ─────────────
+
+/// An investor commitment to an investment listing: pledged, then paid (or refunded).
+model Commitment {
+  id        String    @id @default(cuid())
+  tenantId  String    @map("tenant_id")
+  listingId Int       @map("listing_id")
+  name      String
+  email     String?
+  phone     String?
+  amount    BigInt
+  /// pledged, paid, refunded
+  status    String    @default("pledged")
+  paidAt    DateTime? @map("paid_at")
+  ref       String?
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([tenantId, listingId])
+  @@map("commitments")
+}
+
+/// News for the investors in one investment, emailed to everyone who committed.
+model InvestmentUpdate {
+  id        String   @id @default(cuid())
+  tenantId  String   @map("tenant_id")
+  listingId Int      @map("listing_id")
+  title     String
+  body      String
+  byUserId  String?  @map("by_user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([listingId, createdAt])
+  @@map("investment_updates")
+}
