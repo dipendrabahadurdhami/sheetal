@@ -16,14 +16,15 @@ const KINDS: [string, (b: Buffer) => boolean][] = [
 
 export const photoKind = (b: Buffer) => KINDS.find(([, test]) => b.length > 12 && test(b))?.[0] ?? null;
 
-export async function savePhoto(mediaDir: string | undefined, data: Buffer): Promise<string> {
+/** `area` is the folder under MEDIA_DIR: property (listings) or blog. */
+export async function savePhoto(mediaDir: string | undefined, data: Buffer, area: "property" | "blog" = "property"): Promise<string> {
   if (!mediaDir) throw new AppError(503, "storage_off", "Photo uploads aren't set up on this server yet.");
   if (data.length > MAX_PHOTO_BYTES) throw badRequest("Each photo can be up to 8 MB.");
   const ext = photoKind(data);
   if (!ext) throw badRequest("Photos must be JPG, PNG or WebP images.");
   const name = `${randomBytes(12).toString("base64url")}.${ext}`;
   for (const size of ["main", "thumbnail"]) {
-    const dir = join(mediaDir, "property", size);
+    const dir = join(mediaDir, area, size);
     await mkdir(dir, { recursive: true });
     await writeFile(join(dir, name), data);
   }
@@ -35,7 +36,7 @@ export function mediaBase(config: { MEDIA_URL?: string; API_URL: string }) {
   return (config.MEDIA_URL ?? `${config.API_URL.replace(/\/$/, "")}/media`).replace(/\/$/, "");
 }
 
-export const photoUrl = (base: string, size: "main" | "thumbnail", file: string) => `${base}/property/${size}/${encodeURIComponent(file)}`;
+export const photoUrl = (base: string, size: "main" | "thumbnail", file: string, area: "property" | "blog" = "property") => `${base}/${area}/${size}/${encodeURIComponent(file)}`;
 
 /** A name savePhoto gave out (random, with an image extension), so listings can only point at uploaded photos. */
 export const isPhotoName = (s: string) => /^[A-Za-z0-9_-]{16}\.(jpg|png|webp)$/.test(s);

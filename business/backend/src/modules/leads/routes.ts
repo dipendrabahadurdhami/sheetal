@@ -46,7 +46,7 @@ export async function leadRoutes(app: FastifyInstance) {
         const listing = l.listingId ? byId.get(l.listingId) : undefined;
         const msgs = [["in", l.message || "(no message)", time(l.createdAt)], ...l.messages.map((m) => [m.direction, m.body, time(m.createdAt)])];
         return {
-          id: l.id, channel: "website", kind: l.kind, name: l.name, email: l.email, phone: l.phone,
+          id: l.id, channel: ((l.details as { channel?: string } | null)?.channel) ?? "website", kind: l.kind, name: l.name, email: l.email, phone: l.phone,
           stage: l.status, assignee: l.assigneeId, assigneeName: l.assigneeId ? names.get(l.assigneeId) ?? null : null,
           follow: l.followAt ? l.followAt.toISOString().slice(0, 10) : null, tags: l.tags,
           value: l.value != null ? Number(l.value) : listing?.price != null ? Number(listing.price) : null,

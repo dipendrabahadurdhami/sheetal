@@ -232,11 +232,12 @@ const SAFE_FILE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,120}\.(jpe?g|png|webp)$/i;
 const TYPES: Record<string, string> = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp" };
 
 export async function mediaRoutes(app: FastifyInstance) {
-  app.get<{ Params: { size: string; file: string } }>("/media/property/:size/:file", { config: { rateLimit: false } }, async (request, reply) => {
-    const { size, file } = request.params;
+  app.get<{ Params: { area: string; size: string; file: string } }>("/media/:area/:size/:file", { config: { rateLimit: false } }, async (request, reply) => {
+    const { area, size, file } = request.params;
+    if (area !== "property" && area !== "blog") throw notFound("Photo not found.");
     const dir = app.config.MEDIA_DIR;
     if (!dir || !SIZES.has(size) || !SAFE_FILE.test(file)) throw notFound("Photo not found.");
-    const path = join(dir, "property", size, file);
+    const path = join(dir, area, size, file);
     const info = await stat(path).catch(() => null);
     if (!info?.isFile()) throw notFound("Photo not found.");
     const ext = file.split(".").pop()!.toLowerCase();

@@ -4,7 +4,10 @@ import { z } from "zod";
 import { dbOf } from "@sheetal/backend-core/lib/db";
 import { badRequest, notFound } from "@sheetal/backend-core/lib/errors";
 import { requireUser } from "@sheetal/backend-core/modules/auth/sessions";
+import { savePrivateFile } from "@sheetal/backend-core/lib/files";
+import { leadPeople, notify } from "@sheetal/backend-core/lib/notify";
 import { listingCard, mediaBase } from "../catalog/present.js";
+import { feeSettings } from "../board/routes.js";
 
 // What visitors do on a listing: save it, ask about it, book a visit, post a buyer requirement, review it.
 // Paths and fields match the website (api/endpoints.js, components/Forms.jsx, pages/Requirement.jsx).
@@ -82,7 +85,20 @@ export async function engageRoutes(app: FastifyInstance) {
         bedrooms: b.bedrooms, vehicles: b.vehicles, facilities: b.facilities,
       }).filter(([, v]) => (Array.isArray(v) ? v.length : v)));
 
-      await db.lead.create({ data: { tenantId, listingId: listing?.id, userId: request.user?.id, kind, name: b.name, email: b.email || null, phone: contact, message, details, ip: request.ip } });
+      // Buyer requirements sent to Sheetal (not to one agency) go on the requirement board; with a fee switched on,
+      // only after Sheetal confirms the payment proof.
+      const board = kind === "requirement" && !tenantId;
+      const fee = board ? await feeSettings(app) : null;
+      let feeData: Partial<Prisma.LeadUncheckedCreateInput> = {};
+      if (fee?.enabled) {
+        const rawBody = (request.body ?? {}) as Record<string, unknown>;
+        const proof = [rawBody.payment_proof].flat().find((x): x is Buffer => Buffer.isBuffer(x));
+        if (!proof) throw badRequest("Please upload the payment screenshot.", { payment_proof: ["Upload the payment screenshot."] });
+        const ref = typeof rawBody.payment_reference === "string" ? rawBody.payment_reference.trim().slice(0, 80) : undefined;
+        feeData = { feeStatus: "pending", feeAmount: fee.amount, feeRef: ref || null, feeProof: await savePrivateFile(app.config.MEDIA_DIR, "proofs", proof) };
+      }
+      const lead = await db.lead.create({ data: { tenantId, listingId: listing?.id, userId: request.user?.id, kind, name: b.name, email: b.email || null, phone: contact, message, details, ip: request.ip, public: board && !fee?.enabled, ...feeData } });
+      if (tenantId) await notify(db, await leadPeople(db, tenantId), { type: "lead", title: `New enquiry from ${b.name}`, message: listing ? `${listing.title} (${listing.code})` : message.slice(0, 140), link: "/business/inbox" });
 
       // Let the business know by email (their Inbox shows it too).
       const to = tenantId ? (await db.tenant.findUnique({ where: { id: tenantId }, select: { email: true } }))?.email : null;
@@ -93,7 +109,8 @@ export async function engageRoutes(app: FastifyInstance) {
           text: [`${what} came in on Sheetal Property.`, "", `Name: ${b.name}`, contact ? `Phone: ${contact}` : "", b.email ? `Email: ${b.email}` : "", listing ? `Property: ${listing.title} (${listing.code})` : "", b.date ? `Visit: ${b.date} ${b.time}` : "", message ? `\n${message}` : "", "", "Reply from your Inbox in Sheetal Business."].filter((x) => x !== "").join("\n"),
         });
       }
-      return { status: 200, message: kind === "site_visit" ? "Visit requested. They will confirm the time with you." : "Sent. We will get back to you soon." };
+      if (fee?.enabled) return { status: 200, message: `Thanks. Your requirement shows to agents once Sheetal confirms your payment (REQ-${String(lead.ref).padStart(4, "0")}).` };
+      return { status: 200, message: kind === "site_visit" ? "Visit requested. They will confirm the time with you." : board ? `Thanks. Agents can now offer you properties (REQ-${String(lead.ref).padStart(4, "0")}).` : "Sent. We will get back to you soon." };
     });
   }
 

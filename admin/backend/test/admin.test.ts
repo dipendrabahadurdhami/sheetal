@@ -11,7 +11,7 @@ import { buildApp } from "../src/app.js";
 let app: FastifyInstance;
 const tok: Record<string, string> = {};
 const ids: Record<string, string> = {};
-const call = (who: string, method: "GET" | "POST" | "PATCH", url: string, body?: object) =>
+const call = (who: string, method: "GET" | "POST" | "PATCH" | "PUT", url: string, body?: object) =>
   app.inject({ method, url: `/v1${url}`, payload: body, headers: { authorization: `Bearer ${tok[who]}` } });
 
 async function person(key: string, email: string, platformRole: string | null = null) {
@@ -152,6 +152,47 @@ describe("listing review", () => {
     expect(l.checkDueAt!.getTime()).toBeGreaterThan(Date.now() + 29 * 864e5);
     // Decided already.
     expect((await call("ops", "POST", "/admin/listings/2/review", { decision: "reject", note: "x" })).statusCode).toBe(400);
+  });
+});
+
+describe("content", () => {
+  it("cleans blog HTML; only publishers make posts live", async () => {
+    await app.db!.$executeRawUnsafe(`TRUNCATE blog_categories, blog_posts, job_posts, notifications RESTART IDENTITY CASCADE`);
+    await person("editor", "editor@sheetal.test", "content_editor");
+    const body = { title: "Buying land in Kathmandu", content: `<p onclick="x()">${"Check the lalpurja and the road. ".repeat(5)}</p><script>alert(1)</script>`, status: "published" };
+    expect((await call("help", "POST", "/admin/blog/posts", body)).statusCode).toBe(403);
+    const r = await call("editor", "POST", "/admin/blog/posts", body);
+    expect(r.statusCode).toBe(200); // content editors have content.publish
+    const p = await app.db!.blogPost.findUniqueOrThrow({ where: { id: r.json().data.id } });
+    expect(p).toMatchObject({ slug: "buying-land-in-kathmandu", status: "published" });
+    expect(p.content).not.toMatch(/script|onclick/);
+    expect(p.publishedAt).not.toBeNull();
+    const again = await call("editor", "POST", "/admin/blog/posts", { ...body, status: "draft" });
+    expect((await app.db!.blogPost.findUniqueOrThrow({ where: { id: again.json().data.id } })).slug).toBe("buying-land-in-kathmandu-2");
+  });
+
+  it("posts jobs and keeps CVs behind staff sign-in", async () => {
+    const j = await call("editor", "POST", "/admin/jobs", { title: "Field agent", description: "<p>Show homes.</p>", status: "open" });
+    expect(j.statusCode).toBe(200);
+    expect((await call("editor", "GET", "/admin/jobs")).json().data[0]).toMatchObject({ slug: "field-agent", applications: 0 });
+    expect((await call("owner", "GET", "/admin/jobs")).statusCode).toBe(403);
+  });
+
+  it("confirms a requirement fee, putting it on the board and telling the buyer", async () => {
+    const l = await app.db!.lead.create({ data: { kind: "requirement", name: "Hari", email: "hari@buyer.test", userId: ids.owner, feeStatus: "pending", feeAmount: 500, public: false } });
+    expect((await call("ops", "GET", "/admin/requirements")).json()).toMatchObject({ meta: { waiting: 1 }, data: [expect.objectContaining({ id: l.id, code: expect.stringMatching(/^REQ-/) })] });
+    expect((await call("ops", "PATCH", `/admin/requirements/${l.id}`, { fee: "rejected" })).statusCode).toBe(400);
+    expect((await call("ops", "PATCH", `/admin/requirements/${l.id}`, { fee: "confirmed" })).statusCode).toBe(200);
+    expect(await app.db!.lead.findUniqueOrThrow({ where: { id: l.id } })).toMatchObject({ public: true, feeStatus: "confirmed" });
+    expect((await app.db!.outboundEmail.findFirstOrThrow({ where: { to: "hari@buyer.test" } })).subject).toContain("is live");
+    expect(await app.db!.notification.count({ where: { userId: ids.owner, type: "requirement" } })).toBe(1);
+  });
+
+  it("leaves the requirement fee setting to platform settings", async () => {
+    expect((await call("ops", "PUT", "/admin/settings/requirement-fee", { enabled: true, amount: 500 })).statusCode).toBe(403);
+    expect((await call("boss", "PUT", "/admin/settings/requirement-fee", { enabled: true, amount: 0 })).statusCode).toBe(400);
+    expect((await call("boss", "PUT", "/admin/settings/requirement-fee", { enabled: true, amount: 500, note: "eSewa" })).statusCode).toBe(200);
+    expect((await call("boss", "GET", "/admin/settings/requirement-fee")).json().data).toMatchObject({ enabled: true, amount: 500 });
   });
 });
 

@@ -90,10 +90,10 @@ export function AdminAnalytics() {
     <>
       <PageHead title={t("an.traffic")} sub={t("an.trafficSub")} actions={<Badge tone="done" icon="radio">{t("an.liveNow", { n: 38 })}</Badge>} />
       <div className="pf-stats">
-        <Stat label={t("an.visitors")} value="24,810" note={t("an.vsLw", { p: "+9%" })} noteIcon="trending-up" />
-        <Stat label={t("an.signups")} value="312" note={t("an.vsLw", { p: "+14%" })} noteIcon="trending-up" />
-        <Stat label={t("an.enquiries")} value="1,946" note={t("an.vsLw", { p: "+6%" })} noteIcon="trending-up" />
-        <Stat label={t("an.bounce")} value="41%" note={t("an.vsLw", { p: "−3 pts" })} noteIcon="trending-down" />
+        <Stat label={t("an.visitors")} value="—" note="Starts once visits are tracked" />
+        <Stat label={t("an.signups")} value="—" note="Starts once visits are tracked" />
+        <Stat label={t("an.enquiries")} value="—" note="Starts once visits are tracked" />
+        <Stat label={t("an.bounce")} value="—" note="Starts once visits are tracked" />
       </div>
       <div className="pf-split">
         <Panel title={t("an.visitsByDay")} className="grow" pad><Line labels={days} series={[{ name: t("an.visitors"), data: [3120, 3340, 2980, 3610, 4020, 3870, 3870] }, { name: t("an.enquiries"), data: [240, 262, 230, 301, 344, 298, 271] }]} /></Panel>
@@ -121,7 +121,7 @@ export function AdminAI({ embedded }) {
       {!embedded && <PageHead title={t("ai.adminTitle")} sub={t("ai.adminSub")} />}
       <div className="pf-stats">
         <Stat label={t("ai.usedMonth")} value={usage.reduce((s, u) => s + u.used, 0).toLocaleString("en-IN")} note={t("ai.creditsWord")} />
-        <Stat label={t("ai.voiceMin")} value="3,410" note={rs(3410 * cfg.voiceRate)} to="/admin/voice" />
+        <Stat label={t("ai.voiceMin")} value="—" note="Voice isn't connected yet" to="/admin/voice" />
         <Stat label={t("ai.topups")} value={rs(18 * cfg.topupPrice)} note={t("ai.topupsNote", { n: 18 })} to="/admin/billing" />
       </div>
       <div className="pf-split">

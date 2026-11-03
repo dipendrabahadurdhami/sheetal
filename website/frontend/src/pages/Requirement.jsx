@@ -370,7 +370,7 @@ export function Demands() {
   // matches can come back as an array [{requirement_form_id, matches_count}] or an object keyed by id
   const count = (id) => {
     const raw = matches.data?.data ?? matches.data;
-    if (Array.isArray(raw)) return Number(raw.find((m) => Number(m.requirement_form_id) === Number(id))?.matches_count) || 0;
+    if (Array.isArray(raw)) return Number(raw.find((m) => String(m.requirement_form_id) === String(id))?.matches_count) || 0;
     const v = raw && typeof raw === "object" ? raw[id] : null;
     return Array.isArray(v) ? v.length : Number(v?.matches_count ?? v) || 0;
   };

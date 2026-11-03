@@ -9,7 +9,8 @@ import { DeleteConfirm, restoreAt } from "@sheetal/shared/components/Crud";
 import { Badge, Button, Drawer, Empty, Field, Input, PageHead, Panel, Select, Stat, StatusBadge, Table, Tabs, Textarea, ToggleRow, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { planOf, TenantName } from "./AdminDashboard";
-import { decideListing, reviewListing } from "../live";
+import { decideListing, isStaffLive, reviewListing } from "../live";
+import { LiveBlog } from "./LiveContent";
 
 /* ───────── Moderation: listing review + business verification (KYC) ───────── */
 const REJECT = ["blurry", "wrong_price", "duplicate", "missing_docs", "contact_in_photo", "other"];
@@ -194,7 +195,8 @@ export function AdminContent() {
         { key: "upd", label: t("content.updated"), num: true, render: (r) => fdate(r.updated || r.upd) },
         { key: "act", label: "", align: "right", render: (r) => <div className="pf-row-actions"><ViewLink to={r.id === "about" ? "/about" : `/legal/${r.id.replace("_", "-")}`} label="View" /><Button variant="ghost" size="sm" icon="pencil" onClick={(e) => { e.stopPropagation(); openPage(r); }}>{t("common.edit")}</Button></div> },
       ]} /></section>}
-      {tab === "blog" && <section className="card pf-panel">
+      {tab === "blog" && isStaffLive() && <LiveBlog />}
+      {tab === "blog" && !isStaffLive() && <section className="card pf-panel">
         <div className="pf-panel-head"><div className="pf-panel-title"><h2>{t("content.blog")}</h2></div><div className="pf-panel-actions"><DataActions kind="blog" size="sm" rows={posts.map((p) => ({ ...p, status: p.status[0].toUpperCase() + p.status.slice(1) }))} onImport={importPosts} /><Button variant="outline" size="sm" icon="sparkles" onClick={() => setAi("")}>{t("content.aiDraft")}</Button><Button size="sm" icon="plus" onClick={() => setPost(blankPost())}>{t("content.newPost")}</Button></div></div>
         <Table rows={posts} minWidth={640} onRowClick={(r) => setPost({ ...r })}
           empty={<Empty icon="newspaper" title="No posts yet" action={<Button icon="plus" onClick={() => setPost(blankPost())}>{t("content.newPost")}</Button>}>Write a guide or news post for the Journal.</Empty>} columns={[

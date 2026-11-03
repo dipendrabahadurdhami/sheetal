@@ -13,7 +13,8 @@
     "start": "node dist/server.js",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "import:old": "tsx scripts/import-old-site.ts"
+    "import:old": "tsx scripts/import-old-site.ts",
+    "import:old-content": "tsx scripts/import-old-content.ts"
   },
   "dependencies": {
     "@sheetal/backend-core": "*",

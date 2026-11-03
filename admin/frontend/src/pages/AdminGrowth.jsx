@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { isStaffLive, usePublishedPosts } from "../live";
+import { LiveCareers, LiveRequirements } from "./LiveContent";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
 import { fdate, fdatetime, inDays, rs } from "@sheetal/shared/core/format";
@@ -49,7 +51,7 @@ export function AdminLeads() {
       <div className="pf-stats">
         <Stat label={t("gl.total")} value={leads.length * 412} note={t("gl.week", { n: 1284 })} />
         <Stat label={t("gl.new")} value={leads.filter((l) => l.status === "new").length} note={t("gl.toAssign")} tone="action" noteIcon="circle-alert" />
-        <Stat label={t("gl.matched")} value="38%" note={t("gl.matchedNote")} />
+        <Stat label={t("gl.matched")} value="—" note="Starts once leads are matched" />
         <Stat label={t("gl.sold")} value={rs(184000)} note={t("gl.soldNote")} to="/admin/billing" />
       </div>
       <Tabs value={tab} onChange={setTab} tabs={[{ id: "master", label: t("gl.master"), icon: "users", count: leads.length }, { id: "extract", label: t("gl.extractor"), icon: "radar", count: jobs.length }, { id: "rules", label: t("gl.rules"), icon: "sliders-horizontal" }]} />
@@ -97,10 +99,10 @@ export function AdminVoice() {
     <>
       <PageHead title={t("gv.title")} sub={t("gv.sub")} />
       <div className="pf-stats">
-        <Stat label={t("gv.calls")} value="1,204" note={t("gv.month")} />
-        <Stat label={t("gv.answered")} value="96%" note={t("gv.answeredNote")} />
-        <Stat label={t("gv.leads")} value="312" note={t("gv.leadsNote")} to="/admin/leads" />
-        <Stat label={t("gv.minutes")} value="3,410" note={rs(3410 * 4)} />
+        <Stat label={t("gv.calls")} value="—" note="Voice isn't connected yet" />
+        <Stat label={t("gv.answered")} value="—" note="Voice isn't connected yet" />
+        <Stat label={t("gv.leads")} value="—" note="Voice isn't connected yet" to="/admin/leads" />
+        <Stat label={t("gv.minutes")} value="—" note="Voice isn't connected yet" />
       </div>
       <div className="pf-split">
         <Panel title={t("gv.recent")} className="grow"><Table rows={calls} minWidth={720} columns={[
@@ -133,14 +135,15 @@ export function AdminSocial() {
   const [tab, setTab] = useState("queue");
   const [f, setF] = useState(null);
   const [blog, setBlog] = useState({ topic: "Best areas to buy land in Lalitpur in 2027", tone: "helpful", length: "800", out: "" });
+  const blogCount = usePublishedPosts();
   return (
     <>
       <PageHead title={t("gso.title")} sub={t("gso.sub")} actions={<Button icon="plus" onClick={() => setF({ text: "", ch: ["fb", "ig"], when: `${inDays(1)}T09:00` })}>{t("gso.new")}</Button>} />
       <div className="pf-stats">
         <Stat label={t("gso.scheduled")} value={posts.filter((p) => p.status === "scheduled").length} note={t("gso.next", { at: fdatetime(posts.find((p) => p.status === "scheduled")?.at) })} />
         <Stat label={t("gso.reach")} value={posts.reduce((s, p) => s + p.reach, 0).toLocaleString("en-IN")} note={t("gso.last30")} />
-        <Stat label={t("gso.waSubs")} value="6,214" note={t("gso.waNote")} />
-        <Stat label={t("gso.blogs")} value="42" note={t("gso.blogsNote")} to="/admin/content" />
+        <Stat label={t("gso.waSubs")} value="—" note="Connect WhatsApp in Setup to see subscribers" to="/admin/integrations" />
+        <Stat label={t("gso.blogs")} value={blogCount ?? "—"} note={blogCount == null ? "Sign in as staff to see the count" : "Published on the website"} to="/admin/content" />
       </div>
       <Tabs value={tab} onChange={setTab} tabs={[{ id: "queue", label: t("gso.queue"), icon: "calendar-clock" }, { id: "blog", label: t("gso.aiBlog"), icon: "sparkles" }, { id: "accounts", label: t("gso.accounts"), icon: "link" }]} />
       {tab === "queue" && <section className="card pf-panel"><Table rows={posts} minWidth={820} columns={[
@@ -180,7 +183,12 @@ export function AdminSocial() {
 /* Demand board + requirement fees */
 const DEMANDS = [];
 const FEES = [{ id: "rent", fee: 500 }, { id: "buy", fee: 2000 }, { id: "commercial", fee: 1000 }, { id: "stay", fee: 0 }];
+// Signed in as staff: the real screen on the admin API; otherwise the sample one.
 export function AdminDemand() {
+  return isStaffLive() ? <LiveRequirements /> : <SampleDemand />;
+}
+
+function SampleDemand() {
   const t = useT();
   const toast = useToast();
   const [list, setList] = useList("demands", DEMANDS);
@@ -215,7 +223,12 @@ export function AdminDemand() {
 /* Careers */
 const JOBSP = [];
 const APPS = [];
+// Signed in as staff: the real screen on the admin API; otherwise the sample one.
 export function AdminCareers() {
+  return isStaffLive() ? <LiveCareers /> : <SampleCareers />;
+}
+
+function SampleCareers() {
   const t = useT();
   const [jobs, setJobs] = useList("careers", JOBSP);
   const [apps, setApps] = useList("apps", APPS);

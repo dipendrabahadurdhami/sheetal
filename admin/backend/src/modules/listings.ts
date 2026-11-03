@@ -5,6 +5,7 @@ import { dbOf } from "@sheetal/backend-core/lib/db";
 import { badRequest, notFound } from "@sheetal/backend-core/lib/errors";
 import { mediaBase, photoUrl } from "@sheetal/backend-core/lib/photos";
 import { FIRST_CHECKUP_DAYS } from "@sheetal/backend-core/domain/listings";
+import { notify } from "@sheetal/backend-core/lib/notify";
 import { staffOf } from "./routes.js";
 
 // The review queue: every listing a business (or a website poster) sends goes live only after a Sheetal moderator
@@ -104,6 +105,9 @@ export async function adminListingRoutes(app: FastifyInstance) {
       : `${hello}"${l.title}" (${l.code}) needs a few changes before it can go live:\n\n${b.note}\n\nEdit it in your business panel and send it again:\n${site}/business/listings\n\nSheetal Property`;
     const subject = b.decision === "approve" ? `Your listing is live: ${l.title}` : `Changes needed: ${l.title}`;
     for (const addr of to) await app.mailer.send({ to: addr, subject, text });
+    await notify(db(), [l.userId], b.decision === "approve"
+      ? { type: "listing_approved", title: `Your listing is live: ${l.title}`, link: `/property/${l.slug}` }
+      : { type: "listing_rejected", title: `Changes needed: ${l.title}`, message: b.note, link: "/business/listings" });
     return { message: b.decision === "approve" ? "Approved. It's live on the website." : "Sent back with your note." };
   });
 }

@@ -518,11 +518,24 @@ model Lead {
   value      BigInt?
   /// When the business last opened it; newer messages count as unread.
   readAt     DateTime?     @map("read_at")
+  /// Buyer requirements: shown on the website's requirement board (never with contact details) once any fee is confirmed.
+  public     Boolean       @default(false)
+  /// Requirement fee: pending (proof sent), confirmed or rejected by Sheetal; the amount in Rs., the payment
+  /// reference and the proof image (a private file, never served publicly).
+  feeStatus  String?       @map("fee_status")
+  feeAmount  Int?          @map("fee_amount")
+  feeRef     String?       @map("fee_ref")
+  feeProof   String?       @map("fee_proof")
+  legacyId   Int?          @unique @map("legacy_id")
+  /// Short public number: REQ-0042 on the requirement board.
+  ref        Int           @unique @default(autoincrement())
   lastAt     DateTime      @default(now()) @map("last_at")
   ip         String?
   createdAt  DateTime      @default(now()) @map("created_at")
   messages   LeadMessage[]
+  matches    DemandMatch[]
 
+  @@index([kind, public, createdAt])
   @@index([tenantId, status, createdAt])
   @@index([tenantId, lastAt])
   @@index([listingId])
@@ -600,4 +613,150 @@ model Invite {
   @@index([tenantId, status])
   @@index([email])
   @@map("invites")
+}
+
+// ───────────── Requirement board, notifications ─────────────
+
+/// An agent or owner offering one of their listings for a buyer's requirement. The buyer is told by email and notification.
+model DemandMatch {
+  id        String   @id @default(cuid())
+  leadId    String   @map("lead_id")
+  listingId Int      @map("listing_id")
+  userId    String   @map("user_id")
+  message   String   @default("")
+  /// sent, seen, interested, declined
+  status    String   @default("sent")
+  createdAt DateTime @default(now()) @map("created_at")
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@unique([leadId, listingId])
+  @@index([userId])
+  @@map("demand_matches")
+}
+
+/// Something a person should know: listing approved, new offer on their requirement, new enquiry…
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  type      String
+  title     String
+  message   String    @default("")
+  /// Where it leads in the website or a panel, e.g. /property/… or /business/inbox.
+  link      String?
+  readAt    DateTime? @map("read_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+// ───────────── Blog and careers ─────────────
+
+model BlogCategory {
+  id          Int        @id @default(autoincrement())
+  name        String
+  slug        String     @unique
+  description String?
+  active      Boolean    @default(true)
+  legacyId    Int?       @unique @map("legacy_id")
+  posts       BlogPost[]
+
+  @@map("blog_categories")
+}
+
+model BlogPost {
+  id              Int           @id @default(autoincrement())
+  categoryId      Int?          @map("category_id")
+  authorId        String?       @map("author_id")
+  title           String
+  slug            String        @unique
+  /// Sanitised HTML.
+  content         String
+  excerpt         String?
+  /// A file in MEDIA_DIR/blog, or a full URL.
+  image           String?
+  metaTitle       String?       @map("meta_title")
+  metaDescription String?       @map("meta_description")
+  tags            String[]      @default([])
+  /// draft, published
+  status          String        @default("draft")
+  allowComments   Boolean       @default(true) @map("allow_comments")
+  publishedAt     DateTime?     @map("published_at")
+  views           Int           @default(0)
+  legacyId        Int?          @unique @map("legacy_id")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  category        BlogCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  comments        BlogComment[]
+
+  @@index([status, publishedAt])
+  @@map("blog_posts")
+}
+
+/// Comments wait for Sheetal to approve them before they show.
+model BlogComment {
+  id        String   @id @default(cuid())
+  postId    Int      @map("post_id")
+  userId    String?  @map("user_id")
+  name      String
+  email     String?
+  comment   String
+  /// pending, approved, rejected
+  status    String   @default("pending")
+  ip        String?
+  createdAt DateTime @default(now()) @map("created_at")
+  post      BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId, status])
+  @@index([status, createdAt])
+  @@map("blog_comments")
+}
+
+model JobPost {
+  id               Int              @id @default(autoincrement())
+  title            String
+  slug             String           @unique
+  department       String?
+  /// full_time, part_time, contract, internship
+  jobType          String           @default("full_time") @map("job_type")
+  location         String?
+  remote           Boolean          @default(false)
+  experience       String?
+  salaryMin        Int?             @map("salary_min")
+  salaryMax        Int?             @map("salary_max")
+  showSalary       Boolean          @default(false) @map("show_salary")
+  vacancies        Int              @default(1)
+  description      String
+  responsibilities String?
+  requirements     String?
+  benefits         String?
+  deadline         DateTime?
+  /// open, closed, draft
+  status           String           @default("draft")
+  views            Int              @default(0)
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+  applications     JobApplication[]
+
+  @@index([status, createdAt])
+  @@map("job_posts")
+}
+
+/// The CV is a private file (MEDIA_DIR/private/cv), only opened by staff through the admin API.
+model JobApplication {
+  id          String   @id @default(cuid())
+  jobId       Int      @map("job_id")
+  name        String
+  email       String
+  phone       String?
+  coverLetter String?  @map("cover_letter")
+  cvFile      String?  @map("cv_file")
+  /// new, shortlisted, rejected, hired
+  status      String   @default("new")
+  ip          String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  job         JobPost  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId, createdAt])
+  @@map("job_applications")
 }

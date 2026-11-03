@@ -121,5 +121,15 @@ export function useReviewQueue(enabled) {
   return { ...state, reload: () => setTick((n) => n + 1) };
 }
 
+/** How many blog posts are published (null when not signed in as staff). */
+export function usePublishedPosts() {
+  const [n, setN] = useState(null);
+  useEffect(() => {
+    if (!staffLive) return;
+    adminApi("GET", "/admin/blog/posts?status=published").then((r) => setN(r.data.length)).catch(() => {});
+  }, []);
+  return n;
+}
+
 export const reviewListing = (id) => adminApi("GET", `/admin/listings/${id}`).then((r) => r.data);
 export const decideListing = (id, decision, note) => adminApi("POST", `/admin/listings/${id}/review`, { decision, note });

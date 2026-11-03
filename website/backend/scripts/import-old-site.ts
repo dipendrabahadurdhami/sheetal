@@ -8,13 +8,13 @@
 //   Missing details are filled from the title and description; what was filled is kept in `suggest` for review.
 //   Owner details, lalpurja numbers and commission go to `private`, which the website never receives.
 // - Photos: the cover first, then the gallery, only files that exist in MEDIA_DIR/property/main.
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { Prisma } from "@prisma/client";
 import { loadConfig, loadEnvFiles } from "@sheetal/backend-core/config";
 import { createDb } from "@sheetal/backend-core/lib/db";
 
-type Row = Record<string, string | number | null>;
+import { readTables, type Row } from "./old-dump.js";
 
 const args = process.argv.slice(2);
 const arg = (name: string) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
@@ -23,64 +23,6 @@ const dumpPath = arg("--dump");
 if (!dumpPath || !existsSync(dumpPath)) {
   console.error("Usage: npm run import:old -w @sheetal/website-api -- --dump <database-full.sql> [--dry-run]");
   process.exit(1);
-}
-
-// ───────────── Reading the MySQL dump ─────────────
-
-/** Column names of every table, from its CREATE TABLE. */
-function columnsOf(sql: string) {
-  const out = new Map<string, string[]>();
-  for (const m of sql.matchAll(/CREATE TABLE `(\w+)` \(\n([\s\S]*?)\n\)/g)) {
-    out.set(m[1]!, [...m[2]!.matchAll(/^\s+`(\w+)`/gm)].map((c) => c[1]!));
-  }
-  return out;
-}
-
-/** Values of one INSERT statement: (a,'b',NULL),(…) → arrays, handling quotes and backslash escapes. */
-function tuples(values: string): (string | number | null)[][] {
-  const rows: (string | number | null)[][] = [];
-  let row: (string | number | null)[] = [];
-  let i = 0;
-  const ESC: Record<string, string> = { n: "\n", r: "\r", t: "\t", "0": "\0", Z: "\x1a" };
-  while (i < values.length) {
-    const c = values[i]!;
-    if (c === "(") { row = []; i++; continue; }
-    if (c === ")") { rows.push(row); i++; continue; }
-    if (c === "," || c === ";" || c === " " || c === "\n") { i++; continue; }
-    if (c === "'") {
-      let s = "";
-      i++;
-      while (i < values.length) {
-        const d = values[i]!;
-        if (d === "\\") { const e = values[i + 1]!; s += ESC[e] ?? e; i += 2; continue; }
-        if (d === "'") { if (values[i + 1] === "'") { s += "'"; i += 2; continue; } i++; break; }
-        s += d; i++;
-      }
-      row.push(s);
-      continue;
-    }
-    let j = i;
-    while (j < values.length && values[j] !== "," && values[j] !== ")") j++;
-    const raw = values.slice(i, j).trim();
-    row.push(raw === "NULL" ? null : Number.isFinite(Number(raw)) ? Number(raw) : raw);
-    i = j;
-  }
-  return rows;
-}
-
-function readTables(path: string, wanted: string[]) {
-  const sql = readFileSync(path, "utf8");
-  const cols = columnsOf(sql);
-  const out: Record<string, Row[]> = {};
-  for (const t of wanted) {
-    const names = cols.get(t);
-    if (!names) throw new Error(`Table ${t} is not in the dump`);
-    out[t] = [];
-    for (const m of sql.matchAll(new RegExp(`^INSERT INTO \`${t}\` VALUES (.*);$`, "gm"))) {
-      for (const v of tuples(m[1]!)) out[t]!.push(Object.fromEntries(names.map((n, k) => [n, v[k] ?? null])));
-    }
-  }
-  return out;
 }
 
 // ───────────── Cleaning values ─────────────
