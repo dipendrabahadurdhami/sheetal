@@ -1483,3 +1483,19 @@ select.pform-in { cursor: pointer; }
 .pf-choice.on { border-color: var(--accent); background: var(--accent-soft); }
 .pf-choice.off { opacity: .55; cursor: not-allowed; }
 .pf-choice input { accent-color: var(--accent); }
+
+/* Top bar and sidebar, as on the website: light stays as designed, dark theme makes them red, red theme makes
+   them dark. Their own colour tokens change so menus, hovers and the active item read on them. */
+[data-theme~="dark"] :is(.pf-top, .pf-side, .pf-side-top) {
+  --card: var(--c-crimson); --surface: color-mix(in srgb, var(--c-white) 12%, var(--c-crimson)); --surface-2: color-mix(in srgb, var(--c-white) 18%, var(--c-crimson));
+  --line: color-mix(in srgb, var(--c-white) 18%, var(--c-crimson)); --line-strong: color-mix(in srgb, var(--c-white) 28%, var(--c-crimson));
+  --accent-soft: color-mix(in srgb, var(--c-white) 16%, var(--c-crimson)); --accent-ink: var(--c-white); --muted: color-mix(in srgb, var(--c-white) 75%, var(--c-crimson));
+  background: var(--c-crimson); border-color: color-mix(in srgb, var(--c-white) 18%, var(--c-crimson));
+}
+[data-theme~="red"] :is(.pf-top, .pf-side, .pf-side-top) {
+  --card: color-mix(in srgb, var(--c-silver) 14%, var(--c-slate)); --surface: color-mix(in srgb, var(--c-white) 12%, var(--c-slate)); --surface-2: color-mix(in srgb, var(--c-white) 18%, var(--c-slate));
+  --line: color-mix(in srgb, var(--c-white) 16%, var(--c-slate)); --line-strong: color-mix(in srgb, var(--c-white) 26%, var(--c-slate));
+  --accent-soft: color-mix(in srgb, var(--c-white) 14%, var(--c-slate)); --accent-ink: var(--c-white); --muted: color-mix(in srgb, var(--c-white) 72%, var(--c-slate));
+  background: color-mix(in srgb, var(--c-silver) 14%, var(--c-slate)); border-color: color-mix(in srgb, var(--c-white) 16%, var(--c-slate));
+}
+[data-theme~="dark"]:not([data-theme~="red"]) .pf-top .btn-primary { background: var(--c-white); color: var(--c-crimson); border-color: var(--c-white); }
