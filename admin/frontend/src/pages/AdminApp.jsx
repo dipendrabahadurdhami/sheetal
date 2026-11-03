@@ -20,7 +20,7 @@ import { AdminStatus } from "./AdminStatus";
 import { otaOf } from "@sheetal/shared/data/ota";
 import { config } from "@sheetal/shared/core/config";
 import { isStaffLive, useLiveStaff, useReviewQueue } from "../live";
-import { LiveAnalytics, LiveSetup, LiveStatus } from "./LiveSetup";
+import { LiveAnalytics, LiveOutbox, LiveSetup, LiveStatus } from "./LiveSetup";
 
 // Super admin: Sheetal staff control panel at /admin.
 export default function AdminApp() {
@@ -136,7 +136,7 @@ export default function AdminApp() {
         { path: "/admin/inbox", render: () => guard("tenants.view", inboxHub()) },
         { path: "/admin/staff", render: () => guard("staff.view", <AdminStaff role={role} />) },
         { path: "/admin/settings", render: () => guard("settings.platform", <AdminSettings />) },
-        { path: "/admin/status", render: () => guard("settings.platform", isStaffLive() ? <LiveStatus /> : <AdminStatus />) },
+        { path: "/admin/status", render: () => guard("settings.platform", isStaffLive() ? <><LiveStatus /><LiveOutbox /></> : <AdminStatus />) },
         { path: "/admin/integrations", render: () => guard("settings.platform", <>{isStaffLive() && <LiveSetup />}<AdminIntegrations /></>) },
         { path: "/admin/integrations/:id", render: ({ id }) => guard("settings.platform", <AdminIntegrations key={id} id={id} />) },
         { path: "/admin/me", render: () => <MyProfile scope="admin" roleLabel={roleName(role, t)} access="Sheetal staff" /> },

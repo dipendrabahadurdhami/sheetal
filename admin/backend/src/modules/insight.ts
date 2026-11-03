@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { dbOf } from "@sheetal/backend-core/lib/db";
-import { badRequest } from "@sheetal/backend-core/lib/errors";
+import { badRequest, notFound } from "@sheetal/backend-core/lib/errors";
 import { Vault } from "@sheetal/backend-core/lib/vault";
 import { AI_CREDITS, DEFAULT_MODEL, type AiSettings } from "@sheetal/backend-core/lib/ai";
 import { syncOtaFeed } from "@sheetal/backend-core/domain/ota";
@@ -44,6 +44,34 @@ export async function adminInsightRoutes(app: FastifyInstance) {
   });
 
   /** Health of each part, for the super admin. Nothing here reveals a secret. */
+  // ───── System emails (the outbox the mail server sends) ─────
+  // Their text holds one-time links (password reset, invitations), so it is only shown in development, where emails
+  // are saved instead of sent; in production staff see who, what, when and the outcome.
+  const showText = () => app.config.NODE_ENV !== "production";
+  app.get("/admin/email/outbox", async (request) => {
+    staffOf(request, "settings.platform");
+    const q = z.object({ status: z.enum(["all", "queued", "sending", "deferred", "sent", "failed"]).default("all"), q: z.string().trim().max(120).optional() }).parse(request.query);
+    const where: Prisma.OutboundEmailWhereInput = { ...(q.status === "all" ? {} : { status: q.status }), ...(q.q ? { OR: [{ to: { contains: q.q, mode: "insensitive" } }, { subject: { contains: q.q, mode: "insensitive" } }] } : {}) };
+    const [rows, counts] = await Promise.all([
+      dbOf(app).outboundEmail.findMany({ where, orderBy: { createdAt: "desc" }, take: 200, select: { id: true, to: true, subject: true, status: true, attempts: true, error: true, response: true, createdAt: true, sentAt: true, nextAttemptAt: true } }),
+      dbOf(app).outboundEmail.groupBy({ by: ["status"], _count: true }),
+    ]);
+    return { data: rows, meta: { counts: Object.fromEntries(counts.map((c) => [c.status, c._count])), showText: showText() } };
+  });
+  app.get<{ Params: { id: string } }>("/admin/email/outbox/:id", async (request) => {
+    staffOf(request, "settings.platform");
+    const e = await dbOf(app).outboundEmail.findUnique({ where: { id: request.params.id } });
+    if (!e) throw notFound("Email not found.");
+    return { data: { ...e, text: showText() ? e.text : null, html: showText() ? e.html : null } };
+  });
+  app.post<{ Params: { id: string } }>("/admin/email/outbox/:id/resend", async (request) => {
+    const s = staffOf(request, "settings.platform");
+    const r = await dbOf(app).outboundEmail.updateMany({ where: { id: request.params.id, status: { in: ["failed", "deferred", "sent"] } }, data: { status: "queued", attempts: 0, nextAttemptAt: new Date(), lockedUntil: null, error: null } });
+    if (!r.count) throw notFound("Email not found, or it is being sent right now.");
+    await dbOf(app).auditLog.create({ data: { actorId: s.user.id, action: "email.resend", target: request.params.id, ip: request.ip } });
+    return { message: "It will be sent again within a minute." };
+  });
+
   app.get("/admin/system/status", async (request) => {
     staffOf(request, "settings.platform");
     const t0 = Date.now();
@@ -51,7 +79,7 @@ export async function adminInsightRoutes(app: FastifyInstance) {
     const dbMs = Date.now() - t0;
     const day = new Date(Date.now() - 864e5);
     const [queued, failedMail, deliveries, ai, aiSet, meta, feeds, feedErrors, bots, lastCycle] = await Promise.all([
-      db().outboundEmail.count({ where: { status: "queued" } }), db().outboundEmail.count({ where: { status: "failed", createdAt: { gte: day } } }),
+      db().outboundEmail.count({ where: { status: { in: ["queued", "deferred", "sending"] } } }), db().outboundEmail.count({ where: { status: "failed", createdAt: { gte: day } } }),
       db().mailDelivery.count({ where: { status: { in: ["queued", "retry"] } } }).catch(() => 0),
       db().aiUsage.aggregate({ where: { createdAt: { gte: day } }, _count: true, _sum: { inputTok: true, outputTok: true } }),
       db().appSetting.findUnique({ where: { key: "ai" } }), db().appSetting.findUnique({ where: { key: "meta" } }),

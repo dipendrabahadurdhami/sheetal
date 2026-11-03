@@ -227,18 +227,26 @@ model Membership {
 // ───────────── Email outbox and audit ─────────────
 
 /// Every email the platform sends, queued here first; the mail sender (Cloudflare setup) delivers them.
+/// System emails (verify, reset, invites, invoices, reminders). The mail server sends them: queued → sending →
+/// sent, or deferred (tried again later) → failed. In development they are saved as files instead of sent.
 model OutboundEmail {
-  id        String    @id @default(cuid())
-  to        String
-  subject   String
-  text      String
-  html      String?
-  status    String    @default("queued")
-  error     String?
-  createdAt DateTime  @default(now()) @map("created_at")
-  sentAt    DateTime? @map("sent_at")
+  id            String    @id @default(cuid())
+  to            String
+  subject       String
+  text          String
+  html          String?
+  status        String    @default("queued")
+  error         String?
+  attempts      Int       @default(0)
+  nextAttemptAt DateTime  @default(now()) @map("next_attempt_at")
+  lockedUntil   DateTime? @map("locked_until")
+  /// The receiving server's answer, or where the file was saved in development.
+  response      String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  sentAt        DateTime? @map("sent_at")
 
   @@index([status, createdAt])
+  @@index([status, nextAttemptAt])
   @@map("outbound_emails")
 }
 

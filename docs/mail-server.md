@@ -52,6 +52,14 @@ and restart the mail server after each renewal (`certbot` deploy hook: `systemct
 | `SMTP_PORT` | `25` | |
 | `MAX_MESSAGE_MB` | `40` | Biggest email accepted |
 | `OUTBOUND_EVERY`, `OUTBOUND_BATCH` | `10`, `20` | How often (seconds) and how many to send per pass |
+| `SYSTEM_MAIL_FROM` | `Sheetal Property <no-reply@sheetalproperty.com>` | Sender of system emails (verify, reset, invites, invoices, reminders) |
+| `SYSTEM_MAIL_MODE` | `direct` | `direct` (default in production), `relay` (through `SMTP_RELAY_URL`) or `file` (development: saved, not sent) |
+| `SMTP_RELAY_URL` | `smtp://user:pass@smtp.example.com:587` | Only for `relay` |
+| `MAIL_DROP_DIR` | `mail-outbox` | Where `file` mode saves emails |
+
+**System emails** are DKIM-signed with the sending domain's key. Add `sheetalproperty.com` once in the business panel
+(Sheetal Property → Settings → Domain and email) and publish its DNS records; until then, system emails wait in the
+outbox with the reason shown in Admin → System status → System emails.
 
 Make random values with `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"`.
 

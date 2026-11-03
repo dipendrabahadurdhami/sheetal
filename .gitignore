@@ -12,5 +12,8 @@ coverage
 website/frontend/public/sitemap.xml
 .env.local.api
 
+# Development copies of system emails (mail-server, SYSTEM_MAIL_MODE=file)
+mail-outbox/
+
 # Local editor and tool settings
 .claude/

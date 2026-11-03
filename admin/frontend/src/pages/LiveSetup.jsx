@@ -98,3 +98,56 @@ export function LiveAnalytics() {
     </>
   );
 }
+
+/** System emails (verify, reset, invites, invoices, reminders) and what happened to each; failed ones can be sent again.
+ *  On this computer they are saved instead of sent, and each one can be opened to click its link. */
+export function LiveOutbox() {
+  const toast = useToast();
+  const [status, setStatus] = useState("all");
+  const [q, setQ] = useState("");
+  const [list, setList] = useState(null);
+  const [open, setOpen] = useState(null);
+  const load = () => adminApi("GET", `/admin/email/outbox?status=${status}${q.trim() ? `&q=${encodeURIComponent(q.trim())}` : ""}`).then(setList).catch((e) => toast(e.message));
+  useEffect(() => { const t = setTimeout(load, q ? 300 : 0); return () => clearTimeout(t); }, [status, q]);
+  const view = (id) => adminApi("GET", `/admin/email/outbox/${id}`).then((r) => setOpen(r.data)).catch((e) => toast(e.message));
+  const resend = (id) => adminApi("POST", `/admin/email/outbox/${id}/resend`).then((r) => { toast(r.message); load(); }).catch((e) => toast(e.message));
+  const tone = { sent: "done", failed: "action", deferred: "progress", queued: "neutral", sending: "progress" };
+  const c = list?.meta.counts || {};
+  return (
+    <Panel title="System emails" sub={list?.meta.showText ? "On this computer emails are saved, not sent. Open one to use its link." : "Sent by the mail server. Their text isn't shown, because it holds one-time links."}
+      actions={<Button variant="outline" size="sm" onClick={load}>Refresh</Button>} pad>
+      <div className="pf-row-actions" style={{ justifyContent: "flex-start", flexWrap: "wrap", marginBottom: 10 }}>
+        {["all", "queued", "deferred", "sent", "failed"].map((s) => (
+          <button key={s} type="button" className={`chip ${status === s ? "active" : ""}`} aria-pressed={status === s} onClick={() => setStatus(s)}>
+            {s === "all" ? "All" : s === "deferred" ? "Trying again" : s[0].toUpperCase() + s.slice(1)}{s !== "all" && c[s] ? ` · ${c[s]}` : ""}
+          </button>
+        ))}
+        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by email or subject" style={{ maxWidth: 260 }} aria-label="Search system emails" />
+      </div>
+      {!list ? <p className="muted">Loading…</p> : !list.data.length ? <p className="muted">No emails here.</p> : (
+        <div className="pf-table-wrap"><table className="table">
+          <thead><tr><th>To</th><th>Subject</th><th>Status</th><th>When</th><th /></tr></thead>
+          <tbody>{list.data.map((e) => (
+            <tr key={e.id}>
+              <td>{e.to}</td><td>{e.subject}</td>
+              <td><Badge tone={tone[e.status] || "neutral"}>{e.status === "deferred" ? `Trying again (${e.attempts})` : e.status}</Badge>{e.error && <div className="small muted" style={{ maxWidth: 320 }}>{e.error}</div>}</td>
+              <td className="tnum small">{fdatetime(e.sentAt || e.createdAt)}</td>
+              <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                {list.meta.showText && <Button size="sm" variant="ghost" onClick={() => view(e.id)}>Open</Button>}
+                {["failed", "deferred"].includes(e.status) && <Button size="sm" variant="outline" onClick={() => resend(e.id)}>Send again</Button>}
+              </td>
+            </tr>
+          ))}</tbody>
+        </table></div>
+      )}
+      {open && (
+        <div className="card pf-pad" style={{ marginTop: 12 }}>
+          <div className="pf-row-actions" style={{ justifyContent: "space-between" }}><b>{open.subject}</b><Button size="sm" variant="ghost" onClick={() => setOpen(null)}>Close</Button></div>
+          <p className="small muted">To {open.to} · {fdatetime(open.createdAt)}{open.response ? ` · ${open.response}` : ""}</p>
+          {/* Links in the text are clickable, so a verify or reset link can be used while testing. */}
+          <pre style={{ whiteSpace: "pre-wrap", font: "inherit", margin: 0 }}>{open.text.split(/(https?:\/\/\S+)/g).map((part, i) => (/^https?:\/\//.test(part) ? <a key={i} href={part} target="_blank" rel="noreferrer">{part}</a> : part))}</pre>
+        </div>
+      )}
+    </Panel>
+  );
+}

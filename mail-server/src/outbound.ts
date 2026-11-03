@@ -18,9 +18,22 @@ export const systemMx: MxResolver = { resolveMx: (d) => nodeDns.resolveMx(d) };
 export const RETRY_MINUTES = [5, 15, 30, 60, 120, 240, 480, 720, 1440, 1440];
 const LOCK_MS = 5 * 60 * 1000;
 
+/** The recipient domain's mail servers, best first; the domain itself when it has no MX (as the standard says). */
+export async function mailServersFor(mx: MxResolver, address: string) {
+  const domain = address.split("@")[1]!;
+  const rows = await mx.resolveMx(domain).catch((e: SmtpError) => {
+    // The domain doesn't exist at all: no point trying again.
+    if (e.code === "ENOTFOUND") throw Object.assign(new Error(`The domain ${domain} doesn't exist`), { responseCode: 550 });
+    if (e.code === "ENODATA") return []; // exists but has no MX: use the domain itself
+    throw e;
+  });
+  const hosts = rows.filter((r) => r.exchange && r.exchange !== ".").sort((a, b) => a.priority - b.priority).map((r) => r.exchange.replace(/\.$/, ""));
+  return hosts.length ? hosts : [domain];
+}
+
 export interface OutboundDeps { db: Db; config: MailConfig; mx?: MxResolver; now?: () => Date; log?: (msg: string, extra?: object) => void }
 
-type SmtpError = Error & { responseCode?: number; response?: string; code?: string };
+export type SmtpError = Error & { responseCode?: number; response?: string; code?: string };
 
 export class OutboundWorker {
   private readonly vault: Vault;
@@ -114,18 +127,7 @@ export class OutboundWorker {
     }
   }
 
-  /** The recipient domain's mail servers, best first; the domain itself when it has no MX (as the standard says). */
-  private async mailServersFor(address: string) {
-    const domain = address.split("@")[1]!;
-    const mx = await this.mx.resolveMx(domain).catch((e: SmtpError) => {
-      // The domain doesn't exist at all: no point trying again.
-      if (e.code === "ENOTFOUND") throw Object.assign(new Error(`The domain ${domain} doesn't exist`), { responseCode: 550 });
-      if (e.code === "ENODATA") return []; // exists but has no MX: use the domain itself
-      throw e;
-    });
-    const hosts = mx.filter((r) => r.exchange && r.exchange !== ".").sort((a, b) => a.priority - b.priority).map((r) => r.exchange.replace(/\.$/, ""));
-    return hosts.length ? hosts : [domain];
-  }
+  private mailServersFor(address: string) { return mailServersFor(this.mx, address); }
 
   /** When every outside recipient of a message is done: mark it sent or failed, and tell the sender about failures. */
   private async settle(messageId: string) {

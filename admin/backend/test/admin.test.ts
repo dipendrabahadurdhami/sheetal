@@ -212,3 +212,20 @@ describe("staff", () => {
     expect((await call("help", "GET", "/admin/me")).statusCode).toBe(401);
   });
 });
+
+describe("system emails", () => {
+  it("lists the outbox, opens an email (not in production), and sends a failed one again", async () => {
+    const db = app.db!;
+    await db.outboundEmail.deleteMany();
+    const ok = await db.outboundEmail.create({ data: { to: "sita@gmail.test", subject: "Confirm your email", text: "Open https://sheetal.test/verify/abc", status: "sent", sentAt: new Date() } });
+    const bad = await db.outboundEmail.create({ data: { to: "nobody@nowhere.test", subject: "Set a new password", text: "Open https://sheetal.test/reset/xyz", status: "failed", attempts: 1, error: "550 No such user" } });
+    expect((await call("owner", "GET", "/admin/email/outbox")).statusCode).toBe(403);
+    const list = (await call("boss", "GET", "/admin/email/outbox")).json();
+    expect(list.data.map((e: { to: string }) => e.to).sort()).toEqual(["nobody@nowhere.test", "sita@gmail.test"]);
+    expect(list.meta).toMatchObject({ counts: { sent: 1, failed: 1 }, showText: true });
+    expect((await call("boss", "GET", "/admin/email/outbox?status=failed")).json().data).toHaveLength(1);
+    expect((await call("boss", "GET", `/admin/email/outbox/${ok.id}`)).json().data.text).toContain("/verify/abc");
+    expect((await call("boss", "POST", `/admin/email/outbox/${bad.id}/resend`)).statusCode).toBe(200);
+    expect(await db.outboundEmail.findUniqueOrThrow({ where: { id: bad.id } })).toMatchObject({ status: "queued", attempts: 0, error: null });
+  });
+});
