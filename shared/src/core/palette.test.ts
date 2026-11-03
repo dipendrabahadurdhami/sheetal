@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { brandTheme, contrast, darkEnough, fillRoles, luminance, rolesFrom, savedRoles, textOn } from "./palette.js";
+import { brandTheme, contrast, darkEnough, fillRoles, rolesFrom, savedRoles, textOn } from "./palette.js";
 
 describe("brand colours", () => {
   it("keeps text readable on any brand colour", () => {
@@ -21,7 +21,7 @@ describe("brand colours", () => {
     const r = fillRoles({ brand: "#FFD400", dark: null, light: null });
     expect(r.made).toEqual({ dark: true, light: true });
     expect(contrast(r.dark, "#FFFFFF")).toBeGreaterThanOrEqual(14);
-    expect(luminance(r.light)).toBeGreaterThan(0.85);
+    expect(r.light).toBe("#FFFFFF");
   });
 
   it("reads saved colours as brand, dark, light, and sorts older saves", () => {

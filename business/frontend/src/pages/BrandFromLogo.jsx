@@ -37,7 +37,6 @@ function BrandEditor({ tenant, canEdit }) {
   const [roles, setRoles] = useState(() => savedRoles(saved)); // { brand, dark, light } or null
   const [made, setMade] = useState({ dark: false, light: false }); // roles made from the brand colour
   const [found, setFound] = useState([]); // every main colour found in the uploaded logo
-  const [slot, setSlot] = useState("brand"); // where a tapped found colour goes
   const [busy, setBusy] = useState(false);
   const colors = roles ? [roles.brand, roles.dark, roles.light] : [];
   const preview = brandTheme(colors);
@@ -103,31 +102,27 @@ function BrandEditor({ tenant, canEdit }) {
         {canEdit && <label className="btn btn-outline"><input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => pick(e.target.files[0])} /><Icon name="upload" size={16} />{tenant.logoUrl || logo ? "Change logo" : "Upload logo"}</label>}
       </div>
 
-      {found.length > 0 && (
-        <div className="pf-two">
-          <b style={{ fontSize: 13 }}>Found in your logo</b>
-          <small className="muted">{found.length > 3 ? `Your logo has ${found.length} colours; the workspace uses three. ` : ""}{canEdit ? `To swap one, tap a colour here: it goes into the ${SLOTS.find(([k]) => k === slot)[1].toLowerCase()} (choose the slot below).` : ""}</small>
-          <div className="pf-row-actions" style={{ flexWrap: "wrap", justifyContent: "flex-start", marginTop: 6 }}>
-            {found.map((c) => (
-              <button key={c} type="button" className="pf-swatch-custom" disabled={!canEdit} title={`Use ${c} as the ${SLOTS.find(([k]) => k === slot)[1].toLowerCase()}`} onClick={() => setRole(slot, c)} style={{ cursor: canEdit ? "pointer" : "default", background: "none", font: "inherit" }}>
-                <span style={{ width: 22, height: 22, borderRadius: 6, background: c, border: "1px solid var(--line-strong)" }} /><span className="tnum">{c}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      {found.length > 0 && <small className="muted">Found in your logo: {found.length} colour{found.length > 1 ? "s" : ""}{found.length > 3 ? "; the workspace uses three" : ""}. Each was sorted into the slot it fits; change any slot below.</small>}
 
       {roles ? (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 10 }} role="radiogroup" aria-label="Your three colours">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 10 }} aria-label="Your three colours">
           {SLOTS.map(([key, name, hint]) => (
-            <div key={key} role="radio" aria-checked={slot === key} tabIndex={0} onClick={() => setSlot(key)} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setSlot(key)}
-              style={{ border: slot === key && canEdit ? "2px solid var(--accent)" : "1px solid var(--line)", borderRadius: 10, padding: 10, display: "flex", gap: 10, alignItems: "flex-start", cursor: canEdit ? "pointer" : "default" }}>
-              <input type="color" value={roles[key]} disabled={!canEdit} aria-label={name} onClick={(e) => e.stopPropagation()} onChange={(e) => setRole(key, e.target.value)}
+            <div key={key} style={{ border: "1px solid var(--line)", borderRadius: 10, padding: 10, display: "flex", gap: 10, alignItems: "flex-start" }}>
+              <input type="color" value={roles[key]} disabled={!canEdit} aria-label={`${name}: choose by hand`} title="Choose any colour by hand" onChange={(e) => setRole(key, e.target.value)}
                 style={{ width: 40, height: 40, border: 0, padding: 0, background: "none", cursor: canEdit ? "pointer" : "default", flex: "none" }} />
               <div className="pf-two" style={{ minWidth: 0 }}>
                 <b style={{ fontSize: 13 }}>{name} <span className="tnum muted" style={{ fontWeight: 400 }}>{roles[key]}</span></b>
                 <small className="muted">{hint}</small>
-                {key !== "brand" && made[key] && <small className="muted"><Icon name="info" size={12} /> Your logo has no {key} colour, so this one is made from your brand colour.</small>}
+                {made[key] && <small className="muted"><Icon name="info" size={12} /> {key === "dark" ? "Your logo has no dark colour, so this one is made from your brand colour." : "Your logo has no light colour, so this is plain white."}</small>}
+                {canEdit && found.length > 1 && (
+                  <span style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", marginTop: 4 }}>
+                    <small className="muted">From your logo:</small>
+                    {found.map((c) => (
+                      <button key={c} type="button" title={`Use ${c} as the ${name.toLowerCase()}`} aria-label={`Use ${c} as the ${name.toLowerCase()}`} aria-pressed={roles[key] === c} onClick={() => setRole(key, c)}
+                        style={{ width: 20, height: 20, borderRadius: 999, background: c, padding: 0, cursor: "pointer", border: roles[key] === c ? "2px solid var(--accent)" : "1px solid var(--line-strong)", outline: roles[key] === c ? "2px solid color-mix(in srgb, var(--accent) 30%, transparent)" : "none" }} />
+                    ))}
+                  </span>
+                )}
               </div>
             </div>
           ))}
@@ -137,7 +132,7 @@ function BrandEditor({ tenant, canEdit }) {
           <Button size="sm" variant="ghost" icon="palette" onClick={() => fromColours(["#9D1D21"])}>Pick colours by hand</Button>
         </div>
       )}
-      {roles && canEdit && <small className="muted">Click the colour square in a slot to choose any colour by hand. Text on every colour is kept readable automatically.</small>}
+      {roles && canEdit && <small className="muted">To change a slot, tap a colour from your logo in it, or click its colour square to choose any colour by hand. Text on every colour is kept readable automatically.</small>}
 
       {preview && (
         <div aria-label="Preview of the themes" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>

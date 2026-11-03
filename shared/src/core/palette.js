@@ -98,13 +98,14 @@ export function rolesFrom(colors) {
   };
 }
 
-/** The three roles always filled: a missing dark or light colour is made from the brand colour. */
+/** The three roles always filled: a missing dark colour is made from the brand colour, a missing light one is white. */
 export function fillRoles({ brand, dark, light }) {
   const b = brand || "#9D1D21";
   return {
     brand: b,
     dark: dark || darkEnough(shade(b, -0.8), 14),
-    light: light || shade(b, 0.94),
+    // No light colour in the logo: plain white (the light theme stays neutral, no made-up tint).
+    light: light || "#FFFFFF",
     made: { dark: !dark, light: !light },
   };
 }
