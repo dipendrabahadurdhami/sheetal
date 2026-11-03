@@ -190,6 +190,8 @@ model Branch {
   menuItems MenuItem[]
   shifts    Shift[]
   posBills  PosBill[]
+  rateDays  RateDay[]
+  roomRules RoomRule[]
 
   @@unique([tenantId, name])
   @@map("branches")
@@ -889,6 +891,39 @@ model Payment {
 }
 
 // ───────────── Hotels and stays ─────────────
+
+/// One night's price or closing for a room type at a branch (the calendar). No row = the normal price, open.
+model RateDay {
+  id       String   @id @default(cuid())
+  tenantId String   @map("tenant_id")
+  branchId String   @map("branch_id")
+  roomType String   @map("room_type")
+  /// The night (date only, midnight UTC), as booking check-in days.
+  day      DateTime
+  /// Rs. for that night; null = the normal price (with the weekend rule).
+  rate     Int?
+  /// Closed to new bookings that night.
+  closed   Boolean  @default(false)
+  branch   Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([branchId, roomType, day])
+  @@index([tenantId, branchId, roomType, day])
+  @@map("rate_days")
+}
+
+/// Pricing rules of a room type at a branch: a weekend markup (Friday and Saturday nights) and the shortest stay.
+model RoomRule {
+  id         String @id @default(cuid())
+  tenantId   String @map("tenant_id")
+  branchId   String @map("branch_id")
+  roomType   String @map("room_type")
+  weekendPct Int    @default(0) @map("weekend_pct")
+  minNights  Int    @default(1) @map("min_nights")
+  branch     Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([branchId, roomType])
+  @@map("room_rules")
+}
 
 /// A room (or a whole unit for a host). `status` is the front desk's view: vacant, arriving, occupied, dirty, blocked.
 model Room {

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { dbOf } from "@sheetal/backend-core/lib/db";
 import { badRequest, conflict, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
 import { dayOf, hotelBill, nightsBetween, ymd } from "@sheetal/backend-core/domain/money";
+import { nightsOf, quoteStay } from "@sheetal/backend-core/domain/rates";
 import { branchFor, branchView, inView, workspaceOf, type Workspace } from "../access.js";
 
 // Hotels and hosts: rooms, availability, bookings, the front desk (check-in with the guest's ID, the room bill,
@@ -113,8 +114,71 @@ export async function hotelRoutes(app: FastifyInstance) {
     if (to <= from) throw badRequest("Check-out must be after check-in.");
     // Availability is per branch: the one asked for, else the branch open in the panel.
     const branchId = branchFor(await view(ws, request), q.branchId);
-    const [rooms, taken] = await Promise.all([db().room.groupBy({ by: ["type"], where: { tenantId: ws.tenantId, branchId, active: true }, _count: true, _min: { rate: true } }), takenRooms(ws.tenantId, branchId, from, to)]);
-    return { data: rooms.map((r) => { const booked = peak(taken, r.type, from, to); return { type: r.type, rooms: r._count, booked, free: Math.max(0, r._count - booked), rate: r._min.rate }; }) };
+    const [rooms, taken] = await Promise.all([db().room.groupBy({ by: ["type"], where: { tenantId: ws.tenantId, branchId, active: true }, _count: true }), takenRooms(ws.tenantId, branchId, from, to)]);
+    // Prices come from the calendar; a closed night or too short a stay leaves nothing free.
+    return { data: await Promise.all(rooms.map(async (r) => {
+      const booked = peak(taken, r.type, from, to);
+      const q = await quoteStay(db(), { tenantId: ws.tenantId, branchId, type: r.type, from, to });
+      const open = !q.closed.length && !q.tooShort;
+      return { type: r.type, rooms: r._count, booked, free: open ? Math.max(0, r._count - booked) : 0, rate: q.rate, total: q.total, closed: q.closed, minNights: q.tooShort };
+    })) };
+  });
+
+  // ───── Calendar: night prices, closed dates and rules per room type, at one branch ─────
+  const calendarBranch = async (ws: Workspace, request: FastifyRequest, asked?: string) => branchFor(await view(ws, request), asked);
+  app.get("/calendar", async (request) => {
+    const ws = workspaceOf(request);
+    need(ws, "calendar.view", "calendar.edit", "bookings.view");
+    const q = z.object({ type: z.string().max(60).optional(), month: z.string().regex(/^\d{4}-\d{2}$/), branchId: z.string().max(40).optional() }).parse(request.query);
+    const branchId = await calendarBranch(ws, request, q.branchId);
+    const types = (await db().room.groupBy({ by: ["type"], where: { tenantId: ws.tenantId, branchId, active: true }, _count: true, orderBy: { type: "asc" } })).map((t) => ({ type: t.type, rooms: t._count }));
+    const type = q.type && types.some((t) => t.type === q.type) ? q.type : types[0]?.type;
+    if (!type) return { data: { branchId, types, type: null, days: [] } };
+    const from = dayOf(`${q.month}-01`);
+    const to = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth() + 1, 1));
+    const [cal, taken] = await Promise.all([nightsOf(db(), { tenantId: ws.tenantId, branchId, type, from, to }), takenRooms(ws.tenantId, branchId, from, to)]);
+    return {
+      data: {
+        branchId, types, type, base: cal.base, rooms: cal.rooms, rule: cal.rule,
+        days: cal.nights.map((n) => { const t = dayOf(n.day).getTime(); const sold = taken.filter((b) => b.roomType === type && b.checkIn.getTime() <= t && b.checkOut.getTime() > t).length; return { ...n, sold, left: Math.max(0, cal.rooms - sold) }; }),
+      },
+    };
+  });
+
+  app.put("/calendar/days", async (request) => {
+    const ws = workspaceOf(request);
+    need(ws, "calendar.edit");
+    const b = z.object({
+      type: z.string().trim().min(1).max(60), days: z.array(date).min(1).max(370), branchId: z.string().max(40).optional(),
+      // A price for those nights (null = back to the normal price); and/or closed or open.
+      rate: z.number().int().min(0).max(10_000_000).nullable().optional(), closed: z.boolean().optional(),
+    }).refine((x) => x.rate !== undefined || x.closed !== undefined, "Set a price, or close or open the dates.").parse(request.body);
+    const branchId = await calendarBranch(ws, request, b.branchId);
+    if (!(await db().room.count({ where: { tenantId: ws.tenantId, branchId, type: b.type, active: true } }))) throw badRequest(`This branch has no ${b.type} rooms.`);
+    await db().$transaction(async (tx) => {
+      for (const d of [...new Set(b.days)]) {
+        const day = dayOf(d);
+        const key = { branchId_roomType_day: { branchId, roomType: b.type, day } };
+        const cur = await tx.rateDay.findUnique({ where: key });
+        const next = { rate: b.rate !== undefined ? b.rate : cur?.rate ?? null, closed: b.closed ?? cur?.closed ?? false };
+        // Back to normal and open: no row needed.
+        if (next.rate === null && !next.closed) { if (cur) await tx.rateDay.delete({ where: key }); continue; }
+        await tx.rateDay.upsert({ where: key, create: { tenantId: ws.tenantId, branchId, roomType: b.type, day, ...next }, update: next });
+      }
+    });
+    await audit(ws, request.ip, b.closed === true ? "calendar.closed" : b.closed === false ? "calendar.opened" : "calendar.priced", `${b.type}: ${b.days.length} night${b.days.length > 1 ? "s" : ""}${b.rate != null ? ` at Rs. ${b.rate}` : ""}`);
+    const n = b.days.length;
+    return { message: b.closed === true ? `${n} night${n > 1 ? "s" : ""} closed.` : b.closed === false ? `${n} night${n > 1 ? "s" : ""} open again.` : b.rate === null ? `${n} night${n > 1 ? "s" : ""} back to the normal price.` : `Price set for ${n} night${n > 1 ? "s" : ""}.` };
+  });
+
+  app.put("/calendar/rules", async (request) => {
+    const ws = workspaceOf(request);
+    need(ws, "calendar.edit");
+    const b = z.object({ type: z.string().trim().min(1).max(60), weekendPct: z.number().int().min(0).max(200), minNights: z.number().int().min(1).max(60), branchId: z.string().max(40).optional() }).parse(request.body);
+    const branchId = await calendarBranch(ws, request, b.branchId);
+    await db().roomRule.upsert({ where: { branchId_roomType: { branchId, roomType: b.type } }, create: { tenantId: ws.tenantId, branchId, roomType: b.type, weekendPct: b.weekendPct, minNights: b.minNights }, update: { weekendPct: b.weekendPct, minNights: b.minNights } });
+    await audit(ws, request.ip, "calendar.rules", `${b.type}: weekend +${b.weekendPct}%, at least ${b.minNights} night${b.minNights > 1 ? "s" : ""}`);
+    return { message: "Rules saved." };
   });
 
   // ───── Bookings ─────
@@ -154,8 +218,12 @@ export async function hotelRoutes(app: FastifyInstance) {
     if (room && b.adults + b.children > room.maxGuests) throw badRequest(`Room ${room.no} takes up to ${room.maxGuests} guests.`);
     // The booking's branch: its room's, else the one asked for or open in the panel.
     const branchId = room?.branchId ?? branchFor(v, b.branchId);
+    const q = await quoteStay(db(), { tenantId: ws.tenantId, branchId, type: b.type, from, to });
+    if (q.closed.length) throw conflict(`${b.type} is closed on ${q.closed.join(", ")}. Open those dates in the calendar first.`);
+    if (q.tooShort) throw badRequest(`${b.type} stays are at least ${q.tooShort} nights.`);
     await checkFree(ws.tenantId, branchId, b.type, room?.id ?? null, from, to);
-    const rate = b.rate ?? room?.rate ?? (await db().room.findFirst({ where: { tenantId: ws.tenantId, branchId, type: b.type, active: true }, orderBy: { rate: "asc" } }))?.rate ?? 0;
+    // The night price from the calendar (average over the stay), unless one is agreed and typed in.
+    const rate = b.rate ?? q.rate;
     const created = await db().booking.create({
       data: { tenantId: ws.tenantId, branchId, roomId: room?.id, roomType: b.type, guestName: b.guest, phone: b.phone, email: b.email || null, adults: b.adults, children: b.children, checkIn: from, checkOut: to, rate, source: b.source, notes: b.notes, createdBy: ws.user.id },
       include: { branch: { select: { name: true } }, room: true, folio: true, payments: true },

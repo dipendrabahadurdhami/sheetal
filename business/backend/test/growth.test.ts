@@ -31,7 +31,7 @@ const fakeAi = { model: "claude-opus-5-5", credits: { Starter: 3, Business: 2000
   beta: { messages: { create: async () => ({}) } },
 } as unknown as AiClient };
 
-const call = (who: string, method: "GET" | "POST", url: string, body?: object) =>
+const call = (who: string, method: "GET" | "POST" | "PUT", url: string, body?: object) =>
   app.inject({ method, url: `/v1${url}`, payload: body, headers: { authorization: `Bearer ${tok[who]}`, "x-tenant-id": ids.tenant! } });
 const day = (n: number) => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10).replace(/-/g, "");
 
@@ -44,7 +44,8 @@ beforeAll(async () => {
   ids.owner = u.id;
   tok.owner = await createSession(app, u.id, { ip: "127.0.0.1", headers: {} } as never);
   ids.tenant = (await db.$transaction((tx) => createWorkspace(tx, { ownerId: u.id, name: "Lakeside Inn", type: "hotel", planId: "hotel-business" }))).id;
-  await db.room.createMany({ data: [{ tenantId: ids.tenant, no: "101", type: "Deluxe", rate: 6000 }] });
+  const head = await db.branch.findFirstOrThrow({ where: { tenantId: ids.tenant } });
+  await db.room.createMany({ data: [{ tenantId: ids.tenant, branchId: head.id, no: "101", type: "Deluxe", rate: 6000 }] });
 });
 afterAll(async () => { await app.close(); });
 
@@ -80,6 +81,11 @@ describe("calendar sync", () => {
     expect(ics.headers["content-type"]).toContain("text/calendar");
     expect(ics.body).toContain(`DTSTART;VALUE=DATE:${day(5)}\r\nDTEND;VALUE=DATE:${day(8)}`);
     expect((await app.inject({ method: "GET", url: url.pathname.replace(/[^/]+\.ics$/, "forged.ics") })).statusCode).toBe(404);
+    // A night closed in the calendar shows as not available too.
+    const d30 = day(30);
+    const iso = `${d30.slice(0, 4)}-${d30.slice(4, 6)}-${d30.slice(6)}`;
+    expect((await call("owner", "PUT", "/calendar/days", { type: "Deluxe", days: [iso], closed: true })).statusCode).toBe(200);
+    expect((await app.inject({ method: "GET", url: url.pathname })).body).toContain(`DTSTART;VALUE=DATE:${day(30)}`);
   });
 });
 

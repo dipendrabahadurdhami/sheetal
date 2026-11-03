@@ -29,7 +29,7 @@ import { canAddBusiness, isLive, useBrand, useLiveWorkspace, workRefresh } from 
 import { bizApi, setActiveBranch } from "../api";
 import { AddBusiness } from "./AddBusiness";
 import { POS, Bookings } from "./POS";
-import { LiveBookings, LiveFrontDesk, LiveInvestors, LivePOS, LiveProjects } from "./LiveOps";
+import { LiveBookings, LiveFrontDesk, LiveInvestors, LivePOS, LiveProjects, LiveCalendar } from "./LiveOps";
 import { LiveAnalytics, LiveChannels } from "./LiveGrowth";
 import { Inbox } from "./Inbox";
 import { Forms } from "./Forms";
@@ -53,7 +53,7 @@ import { opsOf } from "@sheetal/shared/demo/ops";
 // Pages that still show sample data when signed in (nothing on them is saved on the server yet). They stay visible
 // as a preview, tagged in the menu and with a note on the page; remove a path here once its page is on the server.
 const PREVIEW = [
-  "/business/calendar", "/business/agreements", "/business/forms", "/business/invoices", "/business/payouts", "/business/expenses",
+  "/business/agreements", "/business/forms", "/business/invoices", "/business/payouts", "/business/expenses",
   "/business/rentals", "/business/stock", "/business/promote", "/business/social", "/business/voice", "/business/reviews",
   "/business/people", "/business/ai-accounts", "/business/developers", "/business/data",
   "/business/settings/payments", "/business/settings/notifications", "/business/settings/listings", "/business/settings/documents",
@@ -269,7 +269,7 @@ export default function BusinessApp() {
         { path: "/business/stock", render: () => paid(any("pos.restaurant", "pos.extras", "settings.business"), <Stock key={tenant.id} tenant={tenant} />) },
         { path: "/business/promote", render: () => guard(any("listings.manage", "projects.manage", "investments.manage", "calendar.edit", "billing.manage"), <Promote tenant={tenant} />) },
         { path: "/business/branches", render: () => guard(can(role, "settings.business"), <SettingsShell role={role}>{isLive(tenant.id) ? <LiveBranches tenant={tenant} role={role} /> : <Branches tenant={tenant} role={role} />}</SettingsShell>) },
-        { path: "/business/calendar", render: () => guard(can(role, "calendar.view"), <Calendar key={tenant.id} tenant={tenant} role={role} />) },
+        { path: "/business/calendar", render: () => guard(can(role, "calendar.view"), (isLive(tenant.id) ? <LiveCalendar key={tenant.id} tenant={tenant} role={role} /> : <Calendar key={tenant.id} tenant={tenant} role={role} />)) },
         { path: "/business/analytics", render: () => guard(can(role, "overview.view"), (isLive(tenant.id) ? <LiveAnalytics key={tenant.id} tenant={tenant} /> : <Analytics tenant={tenant} />)) },
         { path: "/business/people", render: () => <TeamHub key={tenant.id + "a"} tenant={tenant} role={role} start="attendance" /> },
         { path: "/business/developers", render: () => guard(can(role, "settings.business"), <SettingsShell role={role}><Developers tenant={tenant} /></SettingsShell>) },

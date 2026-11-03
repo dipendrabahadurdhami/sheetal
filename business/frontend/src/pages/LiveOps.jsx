@@ -4,6 +4,7 @@ import { can } from "@sheetal/shared/core/rbac";
 import { Badge, Button, Drawer, Empty, Field, Input, PageHead, Panel, Select, Stat, Table, Tabs, Textarea, ToggleRow, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { bizApi } from "../api";
+import { useBranch } from "@sheetal/shared/core/branch";
 
 // Hotels, POS, developer projects and sponsor investments on the business API (shown instead of the sample
 // screens when signed in). The API keeps the rules: no double bookings, ID before check-in, settle before
@@ -284,6 +285,96 @@ export function LiveInvestors({ tenant, role }) {
       <Drawer open={!!post} onClose={() => setPost(null)} title="Update for investors" sub="Emailed to every investor with an email address." footer={post && <><Button variant="ghost" onClick={() => setPost(null)}>Cancel</Button><Button disabled={post.title.length < 3 || post.body.length < 10} onClick={() => run(toast, bizApi("POST", `/investments/${post.id}/updates`, { title: post.title, body: post.body }), () => { setPost(null); reload(); }).catch(() => {})}>Send</Button></>}>
         {post && <div className="pf-stack"><Field label="Title"><Input value={post.title} onChange={(e) => setPost({ ...post, title: e.target.value })} /></Field><Field label="Update"><Textarea rows={8} value={post.body} onChange={(e) => setPost({ ...post, body: e.target.value })} /></Field></div>}
       </Drawer>
+    </>
+  );
+}
+
+// ───── Calendar: night prices, closed dates and rules (per room type, at the branch picked at the top) ─────
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+export function LiveCalendar(props) {
+  // Prices and closed dates belong to one branch: with several branches, pick one at the top first.
+  const br = useBranch();
+  if (br.branch === "all" && br.allowed.length > 1) {
+    return <><PageHead title="Calendar and prices" sub="Night prices, closed dates and stay rules for each branch." /><Empty icon="map-pin" title="Pick a branch" sub="Choose a branch at the top of the page to see and change its calendar." /></>;
+  }
+  return <BranchCalendar {...props} />;
+}
+
+function BranchCalendar({ tenant, role }) {
+  const toast = useToast();
+  const now = new Date();
+  const [ym, setYm] = useState([now.getFullYear(), now.getMonth()]);
+  const [type, setType] = useState(null);
+  const [sel, setSel] = useState([]);
+  const [price, setPrice] = useState("");
+  const [busy, setBusy] = useState(false);
+  const month = `${ym[0]}-${String(ym[1] + 1).padStart(2, "0")}`;
+  const [cal, reload] = useApi(`/calendar?month=${month}${type ? `&type=${encodeURIComponent(type)}` : ""}`, [tenant.id]);
+  const [rule, setRule] = useState(null);
+  useEffect(() => { if (cal?.rule) setRule(cal.rule); }, [cal?.type, cal?.rule?.weekendPct, cal?.rule?.minNights]);
+  const edit = can(role, "calendar.edit");
+  const act = (p) => { setBusy(true); run(toast, p, () => { setSel([]); setPrice(""); reload(); }).catch(() => {}).finally(() => setBusy(false)); };
+  const setDays = (body) => act(bizApi("PUT", "/calendar/days", { type: cal.type, days: sel, ...body }));
+  const go = (d) => { const m = ym[1] + d; setYm([ym[0] + Math.floor(m / 12), ((m % 12) + 12) % 12]); setSel([]); };
+  if (!cal) return <p className="muted pf-pad">Loading the calendar…</p>;
+  const first = new Date(`${month}-01T00:00:00Z`).getUTCDay();
+  const past = (d) => d < today();
+  return (
+    <>
+      <PageHead title="Calendar and prices" sub="Set prices for any night, close dates, and the weekend and minimum-stay rules. Bookings, availability and Booking.com / Airbnb calendars follow them." />
+      {!cal.type ? <Empty icon="calendar-days" title="No rooms at this branch yet" sub="Add rooms on the front desk first, then set their prices here." /> : <>
+        <div className="pf-toolbar card" style={{ borderRadius: "var(--r)" }}>
+          <Select value={cal.type} onChange={(v) => { setType(v); setSel([]); }} options={cal.types.map((x) => ({ id: x.type, label: `${x.type} · ${x.rooms} room${x.rooms > 1 ? "s" : ""}` }))} style={{ width: 240, height: 38 }} aria-label="Room type" />
+          <span className="small muted">Normal price {rs(cal.base)} a night{rule?.weekendPct ? ` · weekends +${rule.weekendPct}%` : ""}{rule?.minNights > 1 ? ` · at least ${rule.minNights} nights` : ""}</span>
+          <div className="pf-row-actions" style={{ marginLeft: "auto" }}>
+            <button className="btn btn-ghost btn-icon" aria-label="Previous month" onClick={() => go(-1)}><Icon name="chevron-left" size={18} /></button>
+            <b className="tnum" style={{ minWidth: 130, textAlign: "center" }}>{MONTHS[ym[1]]} {ym[0]}</b>
+            <button className="btn btn-ghost btn-icon" aria-label="Next month" onClick={() => go(1)}><Icon name="chevron-right" size={18} /></button>
+          </div>
+        </div>
+        <div className="pf-split">
+          <section className="card pf-panel grow"><div className="pf-pad">
+            <div className="pf-cal-head">{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => <span key={d}>{d}</span>)}</div>
+            <div className="pf-cal">
+              {Array.from({ length: first }, (_, i) => <span key={`e${i}`} />)}
+              {cal.days.map((n) => {
+                const on = sel.includes(n.day);
+                return (
+                  <button key={n.day} type="button" disabled={!edit || past(n.day)} aria-pressed={on}
+                    className={`pf-cal-day ${n.closed ? "blocked" : ""} ${on ? "on" : ""} ${n.left === 0 ? "full" : ""} ${n.override != null ? "set" : ""}`}
+                    aria-label={`${n.day}: ${n.closed ? "closed" : `${rs(n.price)}, ${n.left} left`}`}
+                    onClick={() => setSel(on ? sel.filter((x) => x !== n.day) : [...sel, n.day])}>
+                    <b className="tnum">{Number(n.day.slice(8))}</b>
+                    {n.closed ? <small>Closed</small> : <><span className="tnum">{(n.price / 1000).toFixed(1)}k</span><small className="tnum">{n.left ? `${n.left} left` : "Full"}</small></>}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="small muted" style={{ marginTop: 10 }}>Tap nights to select them. A price you set is underlined; striped nights are closed.</p>
+          </div></section>
+          {edit && <div className="side pf-stack">
+            <Panel title={sel.length ? `${sel.length} night${sel.length > 1 ? "s" : ""} selected` : "Change nights"} pad>
+              {!sel.length ? <p className="small muted">Select nights in the calendar to set a price or close them.</p> : <div className="pf-stack">
+                <Field label="Price a night (Rs.)"><Input className="input tnum" inputMode="numeric" value={price} onChange={(e) => setPrice(e.target.value.replace(/\D/g, ""))} placeholder={String(cal.base)} /></Field>
+                <Button disabled={busy || !price} onClick={() => setDays({ rate: Number(price) })}>Set price</Button>
+                <Button variant="outline" disabled={busy} onClick={() => setDays({ rate: null })}>Back to normal price</Button>
+                <div className="pf-row-actions" style={{ justifyContent: "flex-start" }}>
+                  <Button variant="outline" icon="ban" disabled={busy} onClick={() => setDays({ closed: true })}>Close</Button>
+                  <Button variant="ghost" disabled={busy} onClick={() => setDays({ closed: false })}>Open</Button>
+                  <Button variant="ghost" disabled={busy} onClick={() => setSel([])}>Clear</Button>
+                </div>
+              </div>}
+            </Panel>
+            {rule && <Panel title={`${cal.type} rules`} pad><div className="pf-stack">
+              <Field label="Weekend markup (Friday and Saturday nights)">
+                <div className="pf-chips">{[0, 10, 20, 30].map((x) => <button key={x} type="button" className={`chip ${rule.weekendPct === x ? "active" : ""}`} aria-pressed={rule.weekendPct === x} onClick={() => setRule({ ...rule, weekendPct: x })}>{x ? `+${x}%` : "None"}</button>)}</div>
+              </Field>
+              <Field label="Shortest stay (nights)"><Input className="input tnum" type="number" min={1} max={60} value={rule.minNights} onChange={(e) => setRule({ ...rule, minNights: Math.max(1, Math.min(60, Number(e.target.value) || 1)) })} /></Field>
+              <Button variant="outline" disabled={busy || (rule.weekendPct === cal.rule.weekendPct && rule.minNights === cal.rule.minNights)} onClick={() => act(bizApi("PUT", "/calendar/rules", { type: cal.type, ...rule }))}>Save rules</Button>
+            </div></Panel>}
+          </div>}
+        </div>
+      </>}
     </>
   );
 }

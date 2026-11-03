@@ -128,12 +128,16 @@ export async function growthRoutes(app: FastifyInstance, opts: { ai?: Ai; fetch?
     const sig = request.params.sig.replace(/\.ics$/, "");
     const want = sign(tenant, type);
     if (sig.length !== want.length || !timingSafeEqual(Buffer.from(sig), Buffer.from(want))) throw notFound("Calendar not found.");
-    const rooms = await db().room.count({ where: { tenantId: tenant, type, active: true } });
+    // Rooms of the type per branch, and the nights a branch closed for it: a closed branch's rooms don't count.
+    const perBranch = await db().room.groupBy({ by: ["branchId"], where: { tenantId: tenant, type, active: true }, _count: true });
+    const rooms = perBranch.reduce((n, b) => n + b._count, 0);
+    const closedDays = await db().rateDay.findMany({ where: { tenantId: tenant, roomType: type, closed: true, day: { gte: dayOf(ymd(new Date())) } }, select: { branchId: true, day: true } });
     const stays = await db().booking.findMany({ where: { tenantId: tenant, roomType: type, status: { in: ["requested", "confirmed", "checked_in"] }, checkOut: { gt: new Date() } }, select: { checkIn: true, checkOut: true } });
     const full: string[] = [];
     for (let d = dayOf(ymd(new Date())).getTime(); d < Date.now() + 365 * 864e5; d += 864e5) {
       const taken = stays.filter((s) => s.checkIn.getTime() <= d && s.checkOut.getTime() > d).length;
-      if (rooms > 0 && taken >= rooms) full.push(ymd(new Date(d)));
+      const open = perBranch.reduce((n, b) => n + (closedDays.some((c) => c.branchId === b.branchId && c.day.getTime() === d) ? 0 : b._count), 0);
+      if (rooms > 0 && taken >= open) full.push(ymd(new Date(d)));
     }
     // Consecutive full days become one event.
     const events: { uid: string; start: string; end: string }[] = [];

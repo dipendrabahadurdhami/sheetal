@@ -11,7 +11,7 @@ import { buildApp } from "../src/app.js";
 let app: FastifyInstance;
 const tok: Record<string, string> = {};
 const ids: Record<string, string> = {};
-const call = (who: string, method: "GET" | "POST" | "PATCH", url: string, body?: object, tenant = ids.hotel) =>
+const call = (who: string, method: "GET" | "POST" | "PATCH" | "PUT", url: string, body?: object, tenant = ids.hotel) =>
   app.inject({ method, url: `/v1${url}`, payload: body, headers: { authorization: `Bearer ${tok[who]}`, "x-tenant-id": tenant! } });
 async function person(key: string, email: string) {
   const u = await app.db!.user.create({ data: { email, userName: key, emailVerifiedAt: new Date() } });
@@ -126,5 +126,51 @@ describe("investments", () => {
     const u = await call("dev", "POST", `/investments/${ids.invest}/updates`, { title: "Foundation done", body: "The foundation is finished and the first floor starts next week." }, ids.sponsor);
     expect(u.json().message).toContain("1 investor");
     expect(await app.db!.outboundEmail.count({ where: { to: "anita@x.test" } })).toBe(1);
+  });
+});
+
+describe("calendar", () => {
+  // A night's day of the week, n days from today (UTC dates, as the calendar uses).
+  const dow = (n: number) => new Date(`${day(n)}T00:00:00Z`).getUTCDay();
+  const nextWeekday = (from: number, want: number[]) => { let n = from; while (!want.includes(dow(n))) n++; return n; };
+  const month = (n: number) => day(n).slice(0, 7);
+
+  it("shows the month's nights at the normal price, and only people with calendar rights change it", async () => {
+    const cal = (await call("desk", "GET", `/calendar?month=${month(40)}&type=Deluxe`)).json().data;
+    expect(cal).toMatchObject({ type: "Deluxe", base: 6000, rooms: 2, rule: { weekendPct: 0, minNights: 1 } });
+    expect(cal.days.every((d: { price: number }) => d.price === 6000)).toBe(true);
+    expect((await call("desk", "PUT", "/calendar/days", { type: "Deluxe", days: [day(40)], rate: 1 })).statusCode).toBe(403);
+  });
+
+  it("charges the night prices set in the calendar, with the weekend markup", async () => {
+    const mon = nextWeekday(40, [1]);
+    expect((await call("owner", "PUT", "/calendar/days", { type: "Deluxe", days: [day(mon)], rate: 9000 })).statusCode).toBe(200);
+    expect((await call("owner", "PUT", "/calendar/rules", { type: "Deluxe", weekendPct: 20, minNights: 1 })).statusCode).toBe(200);
+    const fri = nextWeekday(mon, [5]);
+    const cal = (await call("owner", "GET", `/calendar?month=${month(fri)}&type=Deluxe`)).json().data;
+    expect(cal.days.find((d: { day: string }) => d.day === day(fri))).toMatchObject({ price: 7200, weekend: true, override: null });
+    // Monday at 9000 plus Tuesday at 6000: 7500 a night on average.
+    const b = await call("owner", "POST", "/bookings", { type: "Deluxe", guest: "Price Test", from: day(mon), to: day(mon + 2) });
+    expect(b.json().data).toMatchObject({ rate: 7500, amount: 15000 });
+    // Back to the normal price.
+    await call("owner", "PUT", "/calendar/days", { type: "Deluxe", days: [day(mon)], rate: null });
+    expect((await call("owner", "GET", `/calendar?month=${month(mon)}&type=Deluxe`)).json().data.days.find((d: { day: string }) => d.day === day(mon)).override).toBeNull();
+    await call("owner", "PUT", "/calendar/rules", { type: "Deluxe", weekendPct: 0, minNights: 1 });
+  });
+
+  it("refuses bookings on closed nights and shorter than the shortest stay, and shows them as not free", async () => {
+    await call("owner", "PUT", "/calendar/days", { type: "Deluxe", days: [day(60)], closed: true });
+    const c = await call("owner", "POST", "/bookings", { type: "Deluxe", guest: "Closed Test", from: day(59), to: day(61) });
+    expect(c.statusCode).toBe(409);
+    expect(c.json().message).toContain(`closed on ${day(60)}`);
+    expect((await call("desk", "GET", `/availability?from=${day(60)}&to=${day(61)}`)).json().data).toEqual([expect.objectContaining({ type: "Deluxe", free: 0, closed: [day(60)] })]);
+    await call("owner", "PUT", "/calendar/days", { type: "Deluxe", days: [day(60)], closed: false });
+    expect((await call("owner", "POST", "/bookings", { type: "Deluxe", guest: "Open Again", from: day(60), to: day(61) })).statusCode).toBe(200);
+    await call("owner", "PUT", "/calendar/rules", { type: "Deluxe", weekendPct: 0, minNights: 3 });
+    const short = await call("owner", "POST", "/bookings", { type: "Deluxe", guest: "Short Stay", from: day(70), to: day(71) });
+    expect(short.statusCode).toBe(400);
+    expect(short.json().message).toContain("at least 3 nights");
+    await call("owner", "PUT", "/calendar/rules", { type: "Deluxe", weekendPct: 0, minNights: 1 });
+    expect((await call("owner", "PUT", "/calendar/days", { type: "Penthouse", days: [day(60)], closed: true })).statusCode).toBe(400);
   });
 });
