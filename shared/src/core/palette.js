@@ -121,7 +121,7 @@ export function savedRoles(colors) {
  * The workspace theme from a business's three colours (brand, dark, light; see savedRoles). Only those colours
  * are used, plus lighter or darker versions of them where text must stay readable:
  *  - light theme: bars in the light colour, text in the dark colour, buttons in the brand colour;
- *  - dark theme: bars in the dark colour, the page the dark colour with a touch of the brand colour;
+ *  - dark theme: bars and page in the dark colour;
  *  - colour theme: the page in the brand colour, bars in the dark colour;
  *  - colour bars: bars in the brand colour, the page dark.
  */
@@ -136,17 +136,19 @@ export function brandTheme(colors) {
     accent, accentText: textOn(accent),
     // Text in the brand colour on white (links, the selected tab).
     accentInk: darkEnough(brand, 4.5),
-    accentSoft: mix(light, brand, 0.12),
+    // Selected items: a light grey between the logo's light and dark colours (no tint of the brand colour).
+    accentSoft: mix(light, dark, 0.07),
     lightBar: light,
     // Light theme text and lines from the dark colour (no Sheetal grey).
-    lightText: darkEnough(mix(dark, "#FFFFFF", 0.18), 7),
+    lightText: darkEnough(dark, 7),
     lightLine: mix("#FFFFFF", dark, 0.22),
     darkBar,
-    darkPage: mix(darkBar, brand, 0.1),
-    // Cards, lines and muted text in the dark themes: a pale tint of the brand colour.
-    mist: mix(light, brand, 0.22),
+    // The dark page is the logo's dark colour itself.
+    darkPage: darkBar,
+    // Muted text and lines in the dark themes: between the logo's light and dark colours.
+    mist: mix(light, dark, 0.28),
     // The colour theme: the brand colour as the page (deep) and highlights (base).
-    deep: darkEnough(brand, 7), base: darkEnough(brand, 3.2),
+    deep: darkEnough(brand, 4.5), base: darkEnough(brand, 3.2),
     colors: [brand, dark, light],
   };
 }

@@ -1498,13 +1498,13 @@ select.pform-in { cursor: pointer; }
    brand colour takes the place of Sheetal's red everywhere (page, highlights), with dark bars. */
 html.has-brand { --accent: var(--brand-accent); --btn-bg: var(--brand-accent); --btn-bg-hover: color-mix(in srgb, var(--brand-accent) 85%, #000); --btn-ink: var(--brand-accent-text); }
 html.has-brand[data-theme~="light"] { --accent-ink: var(--brand-accent-ink); --accent-soft: var(--brand-accent-soft); }
-html.has-brand[data-theme~="light"] :is(.pf-top, .pf-side, .pf-side-top) { --card: var(--brand-light-bar); background: var(--brand-light-bar); border-color: color-mix(in srgb, var(--brand-accent) 18%, var(--brand-light-bar)); }
+html.has-brand[data-theme~="light"] :is(.pf-top, .pf-side, .pf-side-top) { --card: var(--brand-light-bar); background: var(--brand-light-bar); border-color: var(--brand-light-line); }
 html.has-brand[data-theme~="dark"]:not([data-theme~="red"]) :is(.pf-top, .pf-side, .pf-side-top) {
   --card: var(--brand-dark-bar); --surface: color-mix(in srgb, #fff 10%, var(--brand-dark-bar)); --surface-2: color-mix(in srgb, #fff 16%, var(--brand-dark-bar));
-  --line: color-mix(in srgb, #fff 14%, var(--brand-dark-bar)); --accent-soft: color-mix(in srgb, var(--brand-accent) 30%, var(--brand-dark-bar));
+  --line: color-mix(in srgb, #fff 14%, var(--brand-dark-bar)); --accent-soft: color-mix(in srgb, #fff 14%, var(--brand-dark-bar));
   background: var(--brand-dark-bar); border-color: color-mix(in srgb, #fff 12%, var(--brand-dark-bar));
 }
-html.has-brand[data-theme~="dark"]:not([data-theme~="red"]) { --accent-soft: color-mix(in srgb, var(--brand-accent) 22%, var(--card)); }
+html.has-brand[data-theme~="dark"]:not([data-theme~="red"]) { --accent-soft: color-mix(in srgb, #fff 10%, var(--card)); }
 /* The third theme in the business's colour: Sheetal's crimson and red are swapped for theirs. */
 /* Sheetal's three base colours are swapped for the business's, so every page, card and icon follows its brand:
    red and crimson in every theme, and in the dark theme the grey too (from its dark colour). */

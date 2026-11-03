@@ -36,7 +36,8 @@ describe("brand colours", () => {
     expect(t.lightBar).toBe("#F4FBF6");
     expect(t.darkBar).toBe("#000000");
     expect(contrast(t.lightText, "#FFFFFF")).toBeGreaterThanOrEqual(7);
-    expect(contrast(t.deep, "#FFFFFF")).toBeGreaterThanOrEqual(7);
+    expect(contrast(t.deep, "#FFFFFF")).toBeGreaterThanOrEqual(4.5);
+    expect(t.darkPage).toBe("#000000");
     expect(contrast(t.accentInk, "#FFFFFF")).toBeGreaterThanOrEqual(4.5);
     expect(brandTheme([])).toBeNull();
   });
