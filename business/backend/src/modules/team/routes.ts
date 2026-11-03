@@ -4,6 +4,7 @@ import { dbOf } from "@sheetal/backend-core/lib/db";
 import { AppError, badRequest, conflict, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
 import { newToken, sha256 } from "@sheetal/backend-core/lib/secrets";
 import { requireUser } from "@sheetal/backend-core/modules/auth/sessions";
+import { mediaBase, photoUrl, savePhoto } from "@sheetal/backend-core/lib/photos";
 import { BUSINESS_TYPES, businessPermsFor, type BusinessType } from "@sheetal/backend-core/domain/permissions";
 import { workspaceOf, type Workspace } from "../access.js";
 
@@ -32,13 +33,33 @@ export async function teamRoutes(app: FastifyInstance) {
       data: {
         user: { id: user.id, name: user.userName, email: user.email, phone: user.phone, emailVerified: !!user.emailVerifiedAt, platformRole: user.platformRole },
         workspaces: user.memberships.map((m) => ({
-          id: m.tenant.id, name: m.tenant.name, type: m.tenant.type, city: m.tenant.city, email: m.tenant.email, phone: m.tenant.phone, logoUrl: m.tenant.logoUrl,
+          id: m.tenant.id, name: m.tenant.name, type: m.tenant.type, city: m.tenant.city, email: m.tenant.email, phone: m.tenant.phone, logoUrl: m.tenant.logoUrl, brandColors: m.tenant.brandColors,
           status: m.tenant.status, period: m.tenant.period, renewsAt: m.tenant.renewsAt, autoRenew: m.tenant.autoRenew, createdAt: m.tenant.createdAt,
           plan: { id: m.tenant.plan.id, name: m.tenant.plan.name, price: m.tenant.plan.price, limits: m.tenant.plan.limits, features: m.tenant.plan.features },
           role: { id: m.role.id, key: m.role.key, name: m.role.name, perms: m.role.perms }, scopes: m.scopes,
         })),
       },
     };
+  });
+
+  // ───── Branding: the business's logo and its colours (read from the logo in the browser, or picked) ─────
+  app.put("/workspace/branding", { bodyLimit: 4 * 1024 * 1024 }, async (request) => {
+    const ws = workspaceOf(request);
+    if (!ws.can("settings.business")) throw forbidden("Your role can't change the branding.");
+    const b = z.object({
+      logo: z.string().max(3 * 1024 * 1024).nullable().optional(),
+      colors: z.array(z.string().regex(/^#[0-9a-fA-F]{6}$/, "Use colours like #9D1D21.")).max(4),
+    }).parse(request.body);
+    let logoUrl: string | null | undefined;
+    if (b.logo === null) logoUrl = null;
+    else if (b.logo) {
+      const file = await savePhoto(app.config.MEDIA_DIR, Buffer.from(b.logo, "base64"), "brand");
+      logoUrl = photoUrl(mediaBase(app.config), "main", file, "brand");
+    }
+    const colors = [...new Set(b.colors.map((c) => c.toUpperCase()))];
+    await dbOf(app).tenant.update({ where: { id: ws.tenantId }, data: { brandColors: colors, ...(logoUrl !== undefined ? { logoUrl } : {}) } });
+    await audit(ws, request.ip, "settings.branding", colors.join(" "));
+    return { message: "Branding saved. Your workspace uses these colours now.", data: { logoUrl: logoUrl === undefined ? ws.member.tenant.logoUrl : logoUrl, brandColors: colors } };
   });
 
   // ───── Team ─────

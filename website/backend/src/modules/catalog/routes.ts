@@ -234,7 +234,7 @@ const TYPES: Record<string, string> = { jpg: "image/jpeg", jpeg: "image/jpeg", p
 export async function mediaRoutes(app: FastifyInstance) {
   app.get<{ Params: { area: string; size: string; file: string } }>("/media/:area/:size/:file", { config: { rateLimit: false } }, async (request, reply) => {
     const { area, size, file } = request.params;
-    if (area !== "property" && area !== "blog") throw notFound("Photo not found.");
+    if (area !== "property" && area !== "blog" && area !== "brand") throw notFound("Photo not found.");
     const dir = app.config.MEDIA_DIR;
     if (!dir || !SIZES.has(size) || !SAFE_FILE.test(file)) throw notFound("Photo not found.");
     const path = join(dir, area, size, file);

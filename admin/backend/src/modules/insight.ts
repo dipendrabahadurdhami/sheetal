@@ -22,9 +22,10 @@ export async function adminInsightRoutes(app: FastifyInstance) {
     const { days } = z.object({ days: z.coerce.number().int().min(1).max(365).default(30) }).parse(request.query);
     const since = new Date(Date.now() - days * 864e5);
     const prev = new Date(since.getTime() - days * 864e5);
-    const visitors = (from: Date, to: Date) => db().pageView.groupBy({ by: ["session"], where: { createdAt: { gte: from, lt: to } } }).then((r) => r.length);
+    // The current period has no upper limit: visits are stamped by the database clock, which may run a little ahead.
+    const visitors = (from: Date, to?: Date) => db().pageView.groupBy({ by: ["session"], where: { createdAt: { gte: from, ...(to ? { lt: to } : {}) } } }).then((r) => r.length);
     const [now, before, views, signups, enquiries, byDay, topListings, topPages, referrers, bots] = await Promise.all([
-      visitors(since, new Date()), visitors(prev, since), db().pageView.count({ where: { createdAt: { gte: since } } }),
+      visitors(since), visitors(prev, since), db().pageView.count({ where: { createdAt: { gte: since } } }),
       db().user.count({ where: { createdAt: { gte: since } } }), db().lead.count({ where: { createdAt: { gte: since } } }),
       db().$queryRaw<{ day: string; views: number; visitors: number }[]>`SELECT to_char(created_at AT TIME ZONE 'Asia/Kathmandu', 'YYYY-MM-DD') AS day, count(*)::int AS views, count(DISTINCT session)::int AS visitors FROM page_views WHERE created_at >= ${since} GROUP BY 1 ORDER BY 1`,
       db().pageView.groupBy({ by: ["listingId"], where: { createdAt: { gte: since }, listingId: { not: null } }, _count: true, orderBy: { _count: { listingId: "desc" } }, take: 10 }),

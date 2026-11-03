@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { isLive } from "../live";
+import { BrandFromLogo } from "./BrandFromLogo";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
 import { Badge, Field, Input, PageHead, Panel, SaveBar, Select, Seg, ToggleRow, useToast } from "@sheetal/shared/core/ui";
@@ -60,6 +62,7 @@ export function BusinessSettings({ tenant, tab: tabProp }) {
             </>}
 
             {tab === "branding" && <>
+              {isLive(tenant.id) && <BrandFromLogo tenant={tenant} canEdit />}
               <ToggleRow title={t("brand.use")} sub={t("brand.useSub")} checked={get("branding.useBrand")} onChange={(v) => set("branding.useBrand", v)} />
               <Field label={t("brand.color")}>
                 <div className="pf-swatches">

@@ -49,7 +49,8 @@ export async function buildBaseApp(config: Config, deps: AppDeps = {}): Promise<
   app.setNotFoundHandler(notFoundHandler);
 
   await app.register(helmet, { contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: "cross-origin" } });
-  await app.register(cors, { origin: config.CORS_ORIGINS, credentials: true, maxAge: 86400 });
+  // Every method the panels use; the browser blocks the rest (the default is only GET, HEAD and POST).
+  await app.register(cors, { origin: config.CORS_ORIGINS, credentials: true, maxAge: 86400, methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"] });
   await app.register(rateLimit, { max: config.RATE_LIMIT_PER_MINUTE, timeWindow: "1 minute" });
   // Website forms send FormData; text fields arrive as a plain object. Files are handled by the files module.
   await app.register(multipart, { attachFieldsToBody: "keyValues", limits: { fileSize: 8 * 1024 * 1024, files: 20 } });

@@ -22,7 +22,7 @@ import { Help, Tour } from "./Help";
 import { MyProfile, NotificationsPage, businessSeed, useNotifs } from "@sheetal/shared/components/Me";
 import { Domains } from "./Domains";
 import { Mail } from "./Mail";
-import { isLive, useLiveWorkspace } from "../live";
+import { isLive, useBrand, useLiveWorkspace } from "../live";
 import { POS, Bookings } from "./POS";
 import { LiveBookings, LiveFrontDesk, LiveInvestors, LivePOS, LiveProjects } from "./LiveOps";
 import { LiveAnalytics, LiveChannels } from "./LiveGrowth";
@@ -62,6 +62,7 @@ export default function BusinessApp() {
   }, [s.impersonating, s.impersonatingUntil]);
   const ids = [...new Set([...s.memberships, ...(s.impersonating ? [s.impersonating] : [])])];
   const tenant = db.tenants.find((x) => x.id === s.tenantId) || db.tenants.find((x) => x.id === ids[0]);
+  useBrand(tenant?.brandColors); // the business's own colours, when it has set them
   const roles = db.tenantRoles[tenant.id];
   const owner = roles.find((r) => r.perms.includes("*"));
   // Previewing a role (owners checking what someone sees) wins; then the person's own role in this business.
@@ -134,7 +135,7 @@ export default function BusinessApp() {
 
   const switcher = (
     <div className="pf-ws">
-      <span className="pf-ws-logo" style={brand ? { background: brand } : undefined}>{ts.branding.logoText}</span>
+      <span className="pf-ws-logo" style={tenant.logoUrl ? { background: "#fff" } : brand ? { background: brand } : undefined}>{tenant.logoUrl ? <img src={tenant.logoUrl} alt="" /> : ts.branding.logoText}</span>
       <Select value={tenant.id} aria-label={t("ws.switch")} options={ids.map((id) => { const x = db.tenants.find((y) => y.id === id); return { id, label: x.name }; })}
         onChange={(v) => update((d) => { d.session.tenantId = v; d.session.previewRoleId = null; })} />
     </div>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useStore } from "@sheetal/shared/core/store";
 import { emptyOps } from "@sheetal/shared/demo/ops";
+import { brandTheme } from "@sheetal/shared/core/palette";
 import { bizApi, bizApiReady, fileToBase64, setActiveTenant, signedIn } from "./api";
 
 // When someone is signed in, the panel shows their real businesses, their own role, and the team, roles and
@@ -19,7 +20,7 @@ const day = (d) => (d ? String(d).slice(0, 10) : null);
 const toTenant = (w, prev = {}) => ({
   ...prev, id: w.id, name: w.name, type: w.type, city: w.city || "", owner: prev.owner || w.name, email: w.email || "", phone: w.phone || "", pan: prev.pan || "",
   planId: w.plan.id, status: w.status, emailVerified: true, period: w.period, since: day(w.createdAt), renews: day(w.renewsAt), autoRenew: w.autoRenew,
-  usage: prev.usage || { listings: 0, seats: 1, featured: 0 }, scopes: prev.scopes || ["Head office"], logoUrl: w.logoUrl,
+  usage: prev.usage || { listings: 0, seats: 1, featured: 0 }, scopes: prev.scopes || ["Head office"], logoUrl: w.logoUrl, brandColors: w.brandColors || [],
 });
 const toMember = (m) => ({ id: m.id, name: m.name, email: m.email, phone: m.phone || "", roleId: m.roleId, status: m.status === "paused" ? "suspended" : m.status, lastActive: m.lastActive, scopes: m.scopes, twofa: false });
 const toInvite = (i) => ({ id: i.id, email: i.email, roleId: i.roleId, scopes: i.scopes, status: i.status, sent: i.sent, expires: i.expires, by: i.by || "" });
@@ -167,3 +168,19 @@ export const liveTeam = (toast) => {
     onDeleteRole: (id) => run(bizApi("DELETE", `/team/roles/${id}`)),
   };
 };
+
+/** Saves the logo (base64, or null to remove) and brand colours, then updates the open business. */
+export const saveBranding = (tenantId, body) => bizApi("PUT", "/workspace/branding", body);
+
+/** Paints the workspace in the open business's own colours (see html.has-brand in platform.css). */
+export function useBrand(colors) {
+  const key = (colors || []).join(",");
+  useEffect(() => {
+    const t = brandTheme(colors);
+    const root = document.documentElement;
+    const vars = { "--brand-bar": t?.bar, "--brand-bar-text": t?.barText, "--brand-accent": t?.accent, "--brand-accent-text": t?.accentText, "--brand-accent-ink": t?.accentInk, "--brand-accent-soft": t?.accentSoft };
+    root.classList.toggle("has-brand", !!t);
+    for (const [k, v] of Object.entries(vars)) { if (v) root.style.setProperty(k, v); else root.style.removeProperty(k); }
+    return () => { root.classList.remove("has-brand"); for (const k of Object.keys(vars)) root.style.removeProperty(k); };
+  }, [key]);
+}

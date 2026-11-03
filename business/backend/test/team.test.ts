@@ -2,6 +2,9 @@ import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 // Brings in the test database declaration (inject("databaseUrl")).
 import type {} from "@sheetal/backend-core/test/setup-db";
 import type { FastifyInstance } from "fastify";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { loadConfig } from "@sheetal/backend-core/config";
 import { PLANS } from "@sheetal/backend-core/domain/plans";
 import { createWorkspace } from "@sheetal/backend-core/modules/accounts/workspace";
@@ -12,7 +15,7 @@ let app: FastifyInstance;
 const tok: Record<string, string> = {};
 const ids: Record<string, string> = {};
 
-const call = (who: string | null, method: "GET" | "POST" | "PATCH" | "DELETE", url: string, body?: object, tenant = ids.tenant) =>
+const call = (who: string | null, method: "GET" | "POST" | "PATCH" | "DELETE" | "PUT", url: string, body?: object, tenant = ids.tenant) =>
   app.inject({ method, url: `/v1${url}`, payload: body, headers: { ...(who ? { authorization: `Bearer ${tok[who]}` } : {}), ...(tenant ? { "x-tenant-id": tenant } : {}) } });
 
 async function person(key: string, email: string) {
@@ -27,7 +30,7 @@ const lastLink = async (to: string) => {
 const roleId = async (key: string, tenant = ids.tenant) => (await app.db!.role.findFirstOrThrow({ where: { tenantId: tenant, key } })).id;
 
 beforeAll(async () => {
-  app = await buildApp(loadConfig({ NODE_ENV: "test", LOG_LEVEL: "silent", DATABASE_URL: inject("databaseUrl"), SITE_URL: "https://sheetal.test" }, "business"));
+  app = await buildApp(loadConfig({ NODE_ENV: "test", LOG_LEVEL: "silent", DATABASE_URL: inject("databaseUrl"), SITE_URL: "https://sheetal.test", MEDIA_DIR: mkdtempSync(join(tmpdir(), "sheetal-brand-")) }, "business"));
   const db = app.db!;
   await db.$executeRawUnsafe(`TRUNCATE users, tenants, plans, outbound_emails, audit_logs RESTART IDENTITY CASCADE`);
   for (const p of PLANS) await db.plan.create({ data: { id: p.id, type: p.type, name: p.name, price: p.price, limits: p.limits, features: p.features, sort: p.sort } });
@@ -42,6 +45,18 @@ describe("workspaces", () => {
     const d = (await call("owner", "GET", "/workspaces", undefined, "")).json().data;
     expect(d.user).toMatchObject({ email: "owner@everest.test" });
     expect(d.workspaces).toEqual([expect.objectContaining({ id: ids.tenant, name: "Everest Realty", plan: expect.objectContaining({ name: "Business" }), role: expect.objectContaining({ key: "owner", perms: ["*"] }) })]);
+  });
+});
+
+describe("branding", () => {
+  it("saves the logo and up to 4 colours for the whole business, for people who manage settings", async () => {
+    const png = Buffer.from("89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d49444154789c6360000002000154a24f5d0000000049454e44ae426082", "hex").toString("base64");
+    const r = await call("owner", "PUT", "/workspace/branding", { logo: png, colors: ["#0a7d3b", "#F2A900", "#0A7D3B"] });
+    expect(r.json().data).toMatchObject({ logoUrl: expect.stringContaining("/brand/main/"), brandColors: ["#0A7D3B", "#F2A900"] });
+    expect((await call("owner", "PUT", "/workspace/branding", { colors: ["red"] })).statusCode).toBe(422);
+    expect((await call("owner", "PUT", "/workspace/branding", { colors: ["#111111", "#222222", "#333333", "#444444", "#555555"] })).statusCode).toBe(422);
+    const ws = (await call("owner", "GET", "/workspaces", undefined, "")).json().data.workspaces[0];
+    expect(ws).toMatchObject({ brandColors: ["#0A7D3B", "#F2A900"], logoUrl: expect.stringContaining("/brand/") });
   });
 });
 

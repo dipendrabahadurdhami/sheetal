@@ -1499,3 +1499,18 @@ select.pform-in { cursor: pointer; }
   background: color-mix(in srgb, var(--c-silver) 14%, var(--c-slate)); border-color: color-mix(in srgb, var(--c-white) 16%, var(--c-slate));
 }
 [data-theme~="dark"]:not([data-theme~="red"]) .pf-top .btn-primary { background: var(--c-white); color: var(--c-crimson); border-color: var(--c-white); }
+
+/* A business's own colours (read from its logo in Settings -> Branding): top bar and sidebar in its first
+   colour, buttons and the active item in its second, in every theme. Set by applyBrand() in the business app. */
+html.has-brand :is(.pf-top, .pf-side, .pf-side-top) {
+  --card: var(--brand-bar); --surface: color-mix(in srgb, var(--brand-bar-text) 12%, var(--brand-bar)); --surface-2: color-mix(in srgb, var(--brand-bar-text) 18%, var(--brand-bar));
+  --line: color-mix(in srgb, var(--brand-bar-text) 18%, var(--brand-bar)); --line-strong: color-mix(in srgb, var(--brand-bar-text) 28%, var(--brand-bar));
+  --text: var(--brand-bar-text); --text-strong: var(--brand-bar-text); --muted: color-mix(in srgb, var(--brand-bar-text) 75%, var(--brand-bar));
+  --accent-soft: color-mix(in srgb, var(--brand-bar-text) 16%, var(--brand-bar)); --accent-ink: var(--brand-bar-text);
+  background: var(--brand-bar); border-color: color-mix(in srgb, var(--brand-bar-text) 18%, var(--brand-bar)); color: var(--brand-bar-text);
+}
+html.has-brand { --accent: var(--brand-accent); --btn-bg: var(--brand-accent); --btn-bg-hover: color-mix(in srgb, var(--brand-accent) 85%, #000); --btn-ink: var(--brand-accent-text); }
+html.has-brand[data-theme~="light"] { --accent-ink: var(--brand-accent-ink); --accent-soft: var(--brand-accent-soft); }
+html.has-brand[data-theme~="dark"] { --accent-soft: color-mix(in srgb, var(--brand-accent) 22%, var(--card)); }
+html.has-brand[data-theme] .pf-top .btn-primary { background: var(--brand-accent); color: var(--brand-accent-text); border-color: color-mix(in srgb, var(--brand-bar-text) 30%, var(--brand-accent)); }
+.pf-ws-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
