@@ -14,12 +14,16 @@ export const THEMES = [
   { id: "red", attr: "dark red", icon: "droplet", meta: "#9D1D21" },
 ];
 
-export const normaliseTheme = (v) => (THEMES.some((t) => t.id === v) ? v : "light");
-export const themeAttr = (id) => THEMES.find((t) => t.id === normaliseTheme(id)).attr;
+/** /business and /admin only: a dark page with the top bar and sidebar in the colour (Sheetal's crimson, or the
+ *  business's own brand colour). Applied as "dark bars" so every dark-mode rule applies to the page. */
+export const PANEL_THEMES = [...THEMES, { id: "bars", attr: "dark bars", icon: "panels-top-left", meta: "#9D1D21" }];
+
+export const normaliseTheme = (v) => (PANEL_THEMES.some((t) => t.id === v) ? v : "light");
+export const themeAttr = (id) => PANEL_THEMES.find((t) => t.id === normaliseTheme(id)).attr;
 
 export function readTheme() {
   const v = document.documentElement.dataset.theme || "";
-  return v.includes("red") ? "red" : v.includes("dark") ? "dark" : "light";
+  return v.includes("bars") ? "bars" : v.includes("red") ? "red" : v.includes("dark") ? "dark" : "light";
 }
 
 export function storedTheme() {
@@ -27,7 +31,7 @@ export function storedTheme() {
 }
 
 export function applyTheme(id) {
-  const t = THEMES.find((x) => x.id === normaliseTheme(id));
+  const t = PANEL_THEMES.find((x) => x.id === normaliseTheme(id));
   const html = document.documentElement;
   if (html.dataset.theme !== t.attr) html.dataset.theme = t.attr;
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content", t.meta);

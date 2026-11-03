@@ -5,7 +5,7 @@ export default {
   "landing.admin": "Super admin", "landing.adminSub": "Businesses, plans, listing setup, staff, platform settings", "landing.business": "Business workspace", "landing.businessSub": "Team, roles, listings, agreements, payments, branding",
   // a11y
   "a11y.mainNav": "Main navigation", "a11y.openMenu": "Open menu", "a11y.language": "Language", "a11y.notifications": "Notifications", "a11y.account": "Account",
-  "theme.light": "Light theme", "theme.dark": "Dark theme", "theme.red": "Red theme",
+  "theme.light": "Light theme", "theme.dark": "Dark theme", "theme.red": "Red theme", "theme.bars": "Colour bars, dark page",
   // groups + nav
   "group.customers": "Customers", "group.marketplace": "Marketplace", "group.system": "System", "group.operate": "Operations", "group.sell": "Sell", "group.money": "Money", "group.admin": "Team and settings",
   "nav.mail": "Email", "nav.dashboard": "Dashboard", "nav.tenants": "Businesses", "nav.plans": "Plans", "nav.billing": "Billing", "nav.catalog": "Listing setup", "nav.content": "Site content", "nav.moderation": "Moderation", "nav.inbox": "Inbox and leads", "nav.forms": "Forms",

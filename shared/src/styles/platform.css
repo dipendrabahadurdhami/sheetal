@@ -1542,3 +1542,24 @@ html.has-brand[data-theme~="red"] :is(.pf-top, .pf-side, .pf-side-top) { --card:
 .pf-side-top:has(> :only-child) { border-bottom: 0; box-shadow: 0 1px 0 color-mix(in srgb, var(--c-slate) 6%, transparent); }
 .pf-side-top:has(> :only-child) { padding-bottom: 0; }
 @media (min-width: 961px) { .pf-top > .pf-top-title { display: none; } }
+
+/* Fourth theme, panels only: dark page, top bar and sidebar in the colour (Sheetal's crimson; a business's own
+   brand colour when it has one, dark enough for white text). */
+[data-theme~="bars"] :is(.pf-top, .pf-side, .pf-side-top) {
+  --card: var(--c-crimson); --surface: color-mix(in srgb, #fff 12%, var(--c-crimson)); --surface-2: color-mix(in srgb, #fff 18%, var(--c-crimson));
+  --line: color-mix(in srgb, #fff 18%, var(--c-crimson)); --line-strong: color-mix(in srgb, #fff 28%, var(--c-crimson));
+  --accent-soft: color-mix(in srgb, #fff 16%, var(--c-crimson)); --accent-ink: #fff; --text: #fff; --text-strong: #fff; --muted: color-mix(in srgb, #fff 75%, var(--c-crimson));
+  background: var(--c-crimson); border-color: color-mix(in srgb, #fff 18%, var(--c-crimson)); color: #fff;
+}
+html.has-brand[data-theme~="dark"][data-theme~="bars"] :is(.pf-top, .pf-side, .pf-side-top) {
+  --card: var(--brand-accent-ink); --surface: color-mix(in srgb, #fff 12%, var(--brand-accent-ink)); --line: color-mix(in srgb, #fff 18%, var(--brand-accent-ink));
+  --accent-soft: color-mix(in srgb, #fff 16%, var(--brand-accent-ink)); --muted: color-mix(in srgb, #fff 75%, var(--brand-accent-ink));
+  background: var(--brand-accent-ink); border-color: color-mix(in srgb, #fff 18%, var(--brand-accent-ink));
+}
+/* The New button on coloured bars: white, so it doesn't vanish into them. */
+[data-theme~="bars"] .pf-top .btn-primary { background: #fff; color: var(--c-crimson); border-color: #fff; }
+html.has-brand[data-theme~="bars"] .pf-top .btn-primary { color: var(--brand-accent-ink); }
+/* Logos on coloured bars: white, as in the dark theme. */
+[data-theme~="bars"] .pf-brand img { filter: brightness(0) invert(1); }
+/* Logo preview on a light checkerboard, so a transparent background is visible as such. */
+.pf-logo-check { background: repeating-conic-gradient(#f1f1f1 0 25%, #fff 0 50%) 0 0 / 12px 12px; }

@@ -27,7 +27,7 @@ export default {
   "landing.title": "एउटै प्लेटफर्म, दुई प्यानल", "landing.sub": "Sheetal टोलीले /admin बाट बजार चलाउँछ। होटल, होस्ट, डेभलपर, एजेन्सी र लगानी प्रायोजकले /business बाट आफ्नो व्यवसाय चलाउँछन्।",
   "landing.admin": "सुपर एडमिन", "landing.adminSub": "व्यवसाय, योजना, सूची सेटअप, कर्मचारी, सेटिङ", "landing.business": "व्यवसाय कार्यक्षेत्र", "landing.businessSub": "टोली, भूमिका, सूची, सम्झौता, भुक्तानी, ब्रान्डिङ",
   "a11y.mainNav": "मुख्य मेनु", "a11y.openMenu": "मेनु खोल्नुहोस्", "a11y.language": "भाषा", "a11y.notifications": "सूचनाहरू", "a11y.account": "खाता",
-  "theme.light": "उज्यालो थिम", "theme.dark": "अँध्यारो थिम", "theme.red": "रातो थिम",
+  "theme.light": "उज्यालो थिम", "theme.dark": "अँध्यारो थिम", "theme.red": "रातो थिम", "theme.bars": "रंगीन बार, अँध्यारो पेज",
   "group.customers": "ग्राहक", "group.marketplace": "बजार", "group.system": "प्रणाली", "group.operate": "सञ्चालन", "group.sell": "बिक्री", "group.money": "पैसा", "group.admin": "व्यवस्थापन",
   "nav.mail": "इमेल", "nav.dashboard": "ड्यासबोर्ड", "nav.tenants": "व्यवसायहरू", "nav.plans": "योजनाहरू", "nav.billing": "बिलिङ", "nav.catalog": "सूची सेटअप", "nav.content": "साइट सामग्री", "nav.moderation": "जाँच", "nav.inbox": "इनबक्स र लिड",
   "nav.staff": "कर्मचारी र भूमिका", "nav.settings": "सेटिङ", "nav.audit": "गतिविधि लग", "nav.overview": "सारांश", "nav.pos": "बिक्री काउन्टर (POS)", "nav.bookings": "बुकिङ", "nav.calendar": "पात्रो",

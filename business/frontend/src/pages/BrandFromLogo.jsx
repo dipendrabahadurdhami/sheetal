@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useStore } from "@sheetal/shared/core/store";
 import { Button, Field, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
-import { brandTheme, extractPalette } from "@sheetal/shared/core/palette";
+import { brandTheme, cleanLogo, extractPalette } from "@sheetal/shared/core/palette";
 import { fileToBase64 } from "../api";
 import { saveBranding } from "../live";
 
@@ -34,13 +34,16 @@ function BrandEditor({ tenant, canEdit }) {
   const pick = async (file) => {
     if (!file) return;
     if (!/^image\/(png|jpeg|webp)$/.test(file.type)) return toast("Use a PNG, JPG or WebP logo.");
-    if (file.size > 2 * 1024 * 1024) return toast("Logos can be up to 2 MB.");
-    const url = URL.createObjectURL(file);
+    if (file.size > 8 * 1024 * 1024) return toast("Logos can be up to 8 MB.");
     try {
+      // Any upload becomes a clean PNG: plain background removed, margin trimmed.
+      const { blob, removed } = await cleanLogo(await loadImage(URL.createObjectURL(file)));
+      const png = new File([blob], "logo.png", { type: "image/png" });
+      const url = URL.createObjectURL(png);
       const found = extractPalette(await loadImage(url), 4);
-      setLogo({ file, url });
+      setLogo({ file: png, url });
       setColors(found);
-      toast(found.length ? `Found ${found.length} colour${found.length > 1 ? "s" : ""} in your logo.` : "No clear colours found; pick them below.");
+      toast(`${removed ? "Background removed. " : ""}${found.length ? `Found ${found.length} colour${found.length > 1 ? "s" : ""} in your logo.` : "No clear colours found; pick them below."}`);
     } catch (e) { toast(e.message); }
   };
   const save = async () => {
@@ -65,7 +68,7 @@ function BrandEditor({ tenant, canEdit }) {
   return (
     <div className="pf-stack" style={{ marginBottom: 8 }}>
       <div className="pf-row-actions" style={{ alignItems: "center", gap: 16 }}>
-        <span className="pf-ws-logo" style={{ width: 64, height: 64, background: "#fff", border: "1px solid var(--line)" }}>{logo?.url || tenant.logoUrl ? <img src={logo?.url || tenant.logoUrl} alt="Logo" /> : <Icon name="image" size={22} />}</span>
+        <span className="pf-ws-logo pf-logo-check" style={{ width: 64, height: 64, border: "1px solid var(--line)" }}>{logo?.url || tenant.logoUrl ? <img src={logo?.url || tenant.logoUrl} alt="Logo" /> : <Icon name="image" size={22} />}</span>
         <div className="pf-two" style={{ flex: 1 }}><b>Logo and workspace colours</b><small className="muted">Upload your logo and your workspace takes its colours in every theme: light, dark and your own colour theme. Everyone in your team sees them.</small></div>
         {canEdit && <label className="btn btn-outline"><input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => pick(e.target.files[0])} /><Icon name="upload" size={16} />{tenant.logoUrl || logo ? "Change logo" : "Upload logo"}</label>}
       </div>

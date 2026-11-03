@@ -11,9 +11,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <script>
       try {
-        var t = localStorage.getItem("sheetal_theme_business"); t = t === "dark" || t === "red" ? t : "light";
-        document.documentElement.dataset.theme = t === "red" ? "dark red" : t;
-        document.querySelector('meta[name="theme-color"]').setAttribute("content", t === "red" ? "#9D1D21" : t === "dark" ? "#59595B" : "#FFFFFF");
+        var t = localStorage.getItem("sheetal_theme_business"); t = t === "dark" || t === "red" || t === "bars" ? t : "light";
+        document.documentElement.dataset.theme = t === "red" ? "dark red" : t === "bars" ? "dark bars" : t;
+        document.querySelector('meta[name="theme-color"]').setAttribute("content", t === "red" || t === "bars" ? "#9D1D21" : t === "dark" ? "#59595B" : "#FFFFFF");
       } catch (e) {}
     </script>
   </head>

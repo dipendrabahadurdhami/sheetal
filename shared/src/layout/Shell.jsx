@@ -6,10 +6,10 @@ import { useStore } from "../core/store";
 import { Avatar, Menu } from "../core/ui";
 import { config } from "../core/config";
 import { CommandPalette, openPalette } from "./CommandPalette";
-import { THEMES } from "../core/theme";
+import { PANEL_THEMES } from "../core/theme";
 
 // Shared frame for /admin and /business. Each app passes its own nav and slots.
-export function Shell({ sub, nav, switcher, sideFooter, topLeft, topExtra, userMenu, banner, notifications = [], notifTo, onReadAll, brandSlot, style, quickCreate = [], records = [], children }) {
+export function Shell({ sub, nav, switcher, sideFooter, topLeft, topExtra, userMenu, banner, notifications = [], notifTo, onReadAll, brandSlot, style, quickCreate = [], records = [], themes = PANEL_THEMES, children }) {
   const { path } = useRouter();
   const t = useT();
   const lang = useLang();
@@ -63,9 +63,9 @@ export function Shell({ sub, nav, switcher, sideFooter, topLeft, topExtra, userM
               ))}
             </div>
             <Menu trigger={({ toggle, open: o }) => (
-              <button className="btn btn-ghost btn-icon" onClick={toggle} aria-haspopup="menu" aria-expanded={o} aria-label={t(`theme.${theme}`)} title={t(`theme.${theme}`)}><Icon name={(THEMES.find((x) => x.id === theme) || THEMES[0]).icon} size={18} /></button>
+              <button className="btn btn-ghost btn-icon" onClick={toggle} aria-haspopup="menu" aria-expanded={o} aria-label={t(`theme.${theme}`)} title={t(`theme.${theme}`)}><Icon name={(PANEL_THEMES.find((x) => x.id === theme) || PANEL_THEMES[0]).icon} size={18} /></button>
             )}>
-              {THEMES.map((x) => (
+              {themes.map((x) => (
                 <button key={x.id} type="button" data-close="" role="menuitemradio" aria-checked={theme === x.id} onClick={() => update((d) => { d.session.theme = x.id; })}>
                   <Icon name={x.icon} size={16} />{t(`theme.${x.id}`)}{theme === x.id && <Icon name="check" size={15} className="menu-check" />}
                 </button>
