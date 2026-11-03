@@ -11,9 +11,9 @@ import { hasPerm, PLATFORM_ROLES } from "@sheetal/backend-core/domain/permission
 // Only people with a platform role get in, and each action checks that role's permissions
 // (backend-core/src/domain/permissions.ts PLATFORM_ROLES). Auto-renew is the super admin's alone.
 
-interface Staff { user: SessionUser; role: string; can: (perm: string) => boolean }
+export interface Staff { user: SessionUser; role: string; can: (perm: string) => boolean }
 
-function staffOf(request: FastifyRequest, perm?: string): Staff {
+export function staffOf(request: FastifyRequest, perm?: string): Staff {
   const user = requireUser(request);
   const role = user.platformRole;
   if (!role || !PLATFORM_ROLES[role]) throw forbidden("This is for Sheetal staff only.");

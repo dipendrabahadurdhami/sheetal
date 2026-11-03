@@ -82,6 +82,44 @@ describe("upgrade requests", () => {
   });
 });
 
+describe("listing review", () => {
+  it("queues pending listings oldest first, for moderators only", async () => {
+    const db = app.db!;
+    await db.$executeRawUnsafe(`TRUNCATE listings RESTART IDENTITY CASCADE`);
+    const mk = (code: string, mins: number, p: object = {}) => db.listing.create({ data: {
+      code, slug: code.toLowerCase(), tenantId: ids.tenant, userId: ids.owner, purpose: "sale", category: "House", title: `House ${code}`, status: "pending",
+      submittedAt: new Date(Date.now() - mins * 60e3), private: { owner: "Ram Thapa", owner_phone: "9800000001" }, ...p,
+    } });
+    await mk("SP-0001", 5);
+    await mk("SP-0002", 60);
+    await mk("SP-0003", 0, { status: "published" });
+    expect((await call("help", "GET", "/admin/listings")).statusCode).toBe(403);
+    const r = (await call("ops", "GET", "/admin/listings")).json();
+    expect(r.data.map((l: { code: string }) => l.code)).toEqual(["SP-0002", "SP-0001"]);
+    expect(r.data[0]).toMatchObject({ tenant: { name: "Everest Realty" }, poster: { email: "owner@everest.test" } });
+    expect(r.meta.waiting).toBe(2);
+    const d = (await call("ops", "GET", `/admin/listings/${r.data[0].id}`)).json().data;
+    expect(d).toMatchObject({ code: "SP-0002", owner: { name: "Ram Thapa", phone: "9800000001" } });
+  });
+
+  it("approves into the website, or sends back with a note; both are emailed", async () => {
+    await app.db!.tenant.update({ where: { id: ids.tenant }, data: { email: "hello@everest.test" } });
+    expect((await call("ops", "POST", "/admin/listings/1/review", { decision: "reject" })).statusCode).toBe(400);
+    expect((await call("ops", "POST", "/admin/listings/1/review", { decision: "reject", note: "Add a photo of the road." })).statusCode).toBe(200);
+    expect(await app.db!.listing.findUniqueOrThrow({ where: { id: 1 } })).toMatchObject({ status: "rejected", reviewNote: "Add a photo of the road.", reviewedBy: ids.ops });
+    const mails = await app.db!.outboundEmail.findMany({ where: { subject: "Changes needed: House SP-0001" } });
+    expect(mails.map((m) => m.to).sort()).toEqual(["hello@everest.test", "owner@everest.test"]);
+
+    expect((await call("ops", "POST", "/admin/listings/2/review", { decision: "approve" })).json().message).toContain("live");
+    const l = await app.db!.listing.findUniqueOrThrow({ where: { id: 2 } });
+    expect(l.status).toBe("published");
+    expect(l.publishedAt).not.toBeNull();
+    expect(l.checkDueAt!.getTime()).toBeGreaterThan(Date.now() + 29 * 864e5);
+    // Decided already.
+    expect((await call("ops", "POST", "/admin/listings/2/review", { decision: "reject", note: "x" })).statusCode).toBe(400);
+  });
+});
+
 describe("staff", () => {
   it("adds staff with a set-password link, never a password", async () => {
     expect((await call("ops", "POST", "/admin/staff", { email: "new@sheetal.test", name: "New Person", role: "support" })).statusCode).toBe(403);

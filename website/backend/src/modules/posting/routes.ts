@@ -7,15 +7,16 @@ import { requireUser, type SessionUser } from "@sheetal/backend-core/modules/aut
 import { createWorkspace } from "@sheetal/backend-core/modules/accounts/workspace";
 import { PERIODS, priceFor } from "@sheetal/backend-core/domain/plans";
 import { hasPerm } from "@sheetal/backend-core/domain/permissions";
+import { COUNTED, listingCap } from "@sheetal/backend-core/domain/listings";
 import { listingCard, mediaBase } from "../catalog/present.js";
-import { savePhoto } from "./photos.js";
+import { savePhoto } from "@sheetal/backend-core/lib/photos";
 
 // Posting from the website. A listing always belongs to a business workspace (the person's own; anyone without
 // one gets a free Starter workspace), is checked by Sheetal before it goes live, and counts against the plan.
 // Also: the person's own listings, mark sold, remove, plans and upgrade requests.
 
 const LIVE: Prisma.ListingWhereInput = { status: { in: ["published", "sold", "rented"] } };
-const OPEN: Prisma.ListingWhereInput = { status: { notIn: ["removed", "expired"] } };
+const OPEN: Prisma.ListingWhereInput = { status: { in: COUNTED } };
 const num = z.union([z.coerce.number().min(0), z.literal("").transform(() => undefined)]).optional();
 const str = (max: number) => z.string().trim().max(max).optional().transform((v) => v || undefined);
 const files = (v: unknown) => (Array.isArray(v) ? v : v ? [v] : []).filter((x): x is Buffer => Buffer.isBuffer(x));
@@ -68,7 +69,7 @@ export async function postingRoutes(app: FastifyInstance) {
 
     const db = dbOf(app);
     const ws = await workspaceFor(user);
-    const cap = ws.plan.price > 0 ? ((ws.plan.limits as Record<string, number>).listings ?? -1) : 1;
+    const cap = listingCap(ws.plan);
     if (cap !== -1 && (await db.listing.count({ where: { tenantId: ws.tenantId, ...OPEN } })) >= cap) {
       throw new AppError(402, "listing_limit", cap === 1 ? "The free Starter plan has room for one listing. Mark it sold or upgrade to post more." : `Your plan has room for ${cap} listings. Upgrade to post more.`);
     }
@@ -87,7 +88,7 @@ export async function postingRoutes(app: FastifyInstance) {
         code: `TMP-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, slug: `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         tenantId: ws.tenantId, userId: user.id, kind: rent ? "rentout" : "sell", purpose: rent ? "rent" : "sale",
         category: b.propertycategory ?? "House", propertyType: b.property_type ?? (b.propertytype_id ? opts.types[b.propertytype_id - 1] : undefined),
-        title: b.name, description: strip(b.property_description), highlights: strip(b.property_highlights), status: "pending",
+        title: b.name, description: strip(b.property_description), highlights: strip(b.property_highlights), status: "pending", submittedAt: new Date(),
         price: price ? BigInt(Math.round(price)) : null, pricePer: rent ? "month" : null,
         district: b.district, city: b.town, area: b.tol ?? b.property_location, ward: b.ward_no, ...ll,
         bedrooms: b.bedrooms, bathrooms: b.bathrooms, kitchens: b.kitchens, livingRooms: b.living_room, floors: b.floors, parking: b.parking,

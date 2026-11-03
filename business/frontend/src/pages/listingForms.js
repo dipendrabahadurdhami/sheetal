@@ -3,6 +3,8 @@
 // photos, docs, toggle, repeat, story. Labels are [English, Nepali].
 // `src` = catalog key, or (values, catalog) => items. `when` = (values) => show?
 
+import { areaToSqft, sqftToHill } from "@sheetal/shared/data/catalog";
+
 const choice = (name, label, src, o = {}) => ({ type: "choice", name, label, src, ...o });
 const multi = (name, label, src, o = {}) => ({ type: "multi", name, label, src, ...o });
 const counter = (name, label, min = 0, max = 20, o = {}) => ({ type: "counter", name, label, min, max, ...o });
@@ -240,3 +242,45 @@ export const HIGHLIGHTS = {
   project: ["Earthquake resistant", "Bank finance", "Handover on time", "Gated community", "Club house"],
   invest: ["Experienced operator", "Land already owned", "Approved plans", "Quarterly updates"],
 };
+
+// The readable fields the website shows, from the wizard's values (ids → English names). The business API keeps the
+// values themselves privately, so the listing opens again in the wizard exactly as it was filled in.
+export function summaryOf(kind, v, C) {
+  const en = (id, key, sub) => { if (!id) return undefined; const list = sub ? C[key]?.[sub] : C[key]; return list?.find?.((x) => x.id === id)?.en; };
+  const ens = (ids, key) => (ids || []).map((id) => en(id, key)).filter(Boolean);
+  const loc = v.location || {};
+  const sqft = v.landArea ? areaToSqft(v.landArea.sys || "hill", v.landArea) : 0;
+  const hill = sqft ? sqftToHill(sqft) : null;
+  const land = hill ? [["ropani", "Ropani"], ["aana", "Aana"], ["paisa", "Paisa"], ["daam", "Daam"]].filter(([k]) => hill[k]).map(([k, w]) => `${hill[k]} ${w}`).join(" ") : undefined;
+  const lowest = (rows) => { const p = (rows || []).map((r) => Number(r.price) || 0).filter(Boolean); return p.length ? Math.min(...p) : undefined; };
+  const stay = kind.startsWith("stay_");
+  const nights = v.nightly || lowest(v.rooms);
+  return {
+    title: v.title || "",
+    category: en(v.category, "categories") || (stay ? "Stay" : kind === "project" ? "Project" : kind === "invest" ? "Investment" : undefined),
+    propertyType: en(v.propertyType, "propertyTypes", v.category) || en(v.stayType, stay && kind === "stay_hotel" ? "stayTypesHotel" : "stayTypesUnit") || en(v.projectType, "projectTypes") || en(v.investType, "investTypes"),
+    price: v.price || v.rent || nights || v.target || lowest(v.units) || undefined,
+    pricePer: kind === "rentout" ? "month" : stay ? "night" : undefined,
+    negotiable: !!v.negotiable,
+    district: loc.custom ? loc.district : en(loc.district, "districts") || loc.district,
+    area: loc.area || undefined, street: v.tole || undefined, ward: v.ward ? String(v.ward) : undefined,
+    lat: v.pin?.lat ? Number(v.pin.lat) : undefined, lng: v.pin?.lng ? Number(v.pin.lng) : undefined,
+    bedrooms: v.bedrooms, bathrooms: v.bathrooms, kitchens: v.kitchens, livingRooms: v.living, floors: v.floors,
+    parking: v.parking ? `${v.parking} car${v.parking > 1 ? "s" : ""}` : undefined,
+    landArea: land, landSqft: sqft || undefined, builtArea: v.builtUp ? `${v.builtUp} sq ft` : v.size ? `${v.size} sq ft` : undefined,
+    roadAccess: en(v.roadWidth, "roadWidth"), roadType: en(v.roadType, "roadType"), facing: en(v.facing, "facing"), furnishing: en(v.furnishing, "furnishing"),
+    facilities: [...ens(v.facilities, "facilities"), ...ens(v.amenities, stay ? "stayAmenities" : "projectAmenities")].slice(0, 80),
+    highlights: (v.highlights || []).join(", ") || undefined,
+    youtubeUrl: /^https?:\/\//.test(v.video || "") ? v.video : undefined,
+    // Public extras for the property page.
+    details: Object.fromEntries(Object.entries({
+      nearby: ens(v.nearby, "nearby"), house_rules: ens(v.rules, "houseRules"),
+      check_in: v.checkIn ? `${v.checkIn}:00` : undefined, check_out: v.checkOut ? `${v.checkOut}:00` : undefined,
+      min_nights: v.minNights, max_guests: v.maxGuests, beds: v.beds,
+      rooms: (v.rooms || []).map((r) => ({ type: en(r.type, "roomTypes") || r.type, bed: en(r.bed, "bedTypes") || r.bed, count: r.count, guests: r.guests, price: r.price })),
+      units: (v.units || []).map((u) => ({ type: en(u.type, "unitTypes") || u.type, count: u.count, size: u.size, price: u.price })),
+      towers: v.towers, handover: v.possession,
+    }).filter(([, x]) => x !== undefined && !(Array.isArray(x) && !x.length))),
+    photos: (v.photos || []).map((p) => p.file).filter(Boolean),
+  };
+}

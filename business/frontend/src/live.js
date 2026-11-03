@@ -1,11 +1,12 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useStore } from "@sheetal/shared/core/store";
-import { bizApi, bizApiReady, setActiveTenant, signedIn } from "./api";
+import { emptyOps } from "@sheetal/shared/demo/ops";
+import { bizApi, bizApiReady, fileToBase64, setActiveTenant, signedIn } from "./api";
 
 // When someone is signed in, the panel shows their real businesses, their own role, and the team, roles and
 // invitations of the business they have open, from the business API. Screens still read the same store, so
 // nothing else changes for them; team actions call the API and then reload (see liveRefresh).
-// Modules not on the API yet (listings, bookings…) keep their current data until their phase.
+// Listings and leads come from the API too. Modules not on the API yet (bookings…) keep their current data until their phase.
 
 const liveIds = new Set();
 let reload = null;
@@ -27,6 +28,8 @@ const toRole = (r) => ({ id: r.id, key: r.key, name: r.name || undefined, perms:
 export function useLiveWorkspace() {
   const { db, update } = useStore();
   const current = db.session.tenantId;
+  // Bumped once the businesses are known, so the loaders below run even when the open business stays the same.
+  const [known, setKnown] = useState(0);
 
   // 1 Who is signed in and which businesses they belong to.
   useEffect(() => {
@@ -34,6 +37,7 @@ export function useLiveWorkspace() {
     bizApi("GET", "/workspaces").then(({ data }) => {
       if (!data.workspaces.length) return;
       data.workspaces.forEach((w) => liveIds.add(w.id));
+      setKnown((n) => n + 1);
       update((d) => {
         const keep = data.workspaces.some((w) => w.id === d.session.tenantId) ? d.session.tenantId : data.workspaces[0].id;
         d.tenants = [...data.workspaces.map((w) => toTenant(w, d.tenants.find((t) => t.id === w.id))), ...d.tenants.filter((t) => !liveIds.has(t.id) && t.id !== "t13")];
@@ -60,9 +64,65 @@ export function useLiveWorkspace() {
       const t = d.tenants.find((x) => x.id === current);
       if (t) t.usage = { ...t.usage, seats: data.seats.used };
     })).catch(() => {});
-  }, [current]);
+  }, [current, known]);
   useEffect(() => { reload = loadTeam; loadTeam(); return () => { if (reload === loadTeam) reload = null; }; }, [loadTeam]);
+
+  // 3 The open business's listings and leads (website enquiries), refreshed after every change and every minute.
+  const loadWork = useCallback(() => {
+    if (!isLive(current)) return;
+    setActiveTenant(current);
+    bizApi("GET", "/listings").then(({ data, meta }) => update((d) => {
+      d.listings = [...d.listings.filter((l) => l.tenantId !== current), ...data];
+      const t = d.tenants.find((x) => x.id === current);
+      if (t) t.usage = { ...t.usage, listings: meta.used };
+    })).catch(() => {});
+    bizApi("GET", "/leads").then(({ data }) => update((d) => {
+      if (!d.ops[current]) d.ops[current] = emptyOps();
+      d.ops[current].conversations = data.map((c) => ({ ...c, assignee: c.assignee || null }));
+    })).catch(() => { /* this role doesn't see leads */ });
+  }, [current, known]);
+  useEffect(() => {
+    workReload = loadWork;
+    loadWork();
+    const every = setInterval(loadWork, 60_000);
+    return () => { clearInterval(every); if (workReload === loadWork) workReload = null; };
+  }, [loadWork]);
 }
+
+let workReload = null;
+/** Reloads listings and leads of the open business after a change. */
+export const workRefresh = () => workReload?.();
+
+const runWith = (toast) => (p) => p.then((r) => { if (r?.message) toast(r.message); workRefresh(); return r; }).catch((e) => { toast(e.message); workRefresh(); throw e; });
+
+/** Listing actions for a business from the API (ids are listing codes, e.g. SP-0006). */
+export const liveListings = (toast) => {
+  const run = runWith(toast);
+  return {
+    setStatus: (ids, status) => run(bizApi("POST", "/listings/status", { ids, status })).catch(() => {}),
+    remove: (ids) => run(bizApi("POST", "/listings/delete", { ids })).catch(() => {}),
+    duplicate: (id) => run(bizApi("POST", `/listings/${id}/duplicate`)).catch(() => {}),
+    open: (id) => bizApi("GET", `/listings/${id}`).then((r) => r.data),
+    moveTargets: (id) => bizApi("GET", `/listings/${id}/move-targets`).then((r) => r.data),
+    move: (id, tenantId) => run(bizApi("POST", `/listings/${id}/move`, { tenantId })),
+    /** Creates or updates from the wizard. Throws with field errors, so the wizard can show them. */
+    save: (editId, body) => run(editId ? bizApi("PATCH", `/listings/${editId}`, body) : bizApi("POST", "/listings", body)),
+  };
+};
+
+/** Uploads one photo for a listing; returns { file, url }. */
+export const uploadListingPhoto = async (file) =>
+  (await bizApi("POST", "/listing-photos", { data: await fileToBase64(file) })).data;
+
+/** Lead actions from the Inbox. */
+export const liveLeads = (toast) => {
+  const run = runWith(toast);
+  return {
+    update: (id, patch) => run(bizApi("PATCH", `/leads/${id}`, patch)).catch(() => {}),
+    read: (id) => bizApi("PATCH", `/leads/${id}`, { read: true }).catch(() => {}),
+    reply: (id, text) => run(bizApi("POST", `/leads/${id}/reply`, { text })),
+  };
+};
 
 /** Team actions for a business from the API, with the same shape the team screens already use. */
 export const liveTeam = (toast) => {

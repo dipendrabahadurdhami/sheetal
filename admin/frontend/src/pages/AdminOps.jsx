@@ -9,10 +9,78 @@ import { DeleteConfirm, restoreAt } from "@sheetal/shared/components/Crud";
 import { Badge, Button, Drawer, Empty, Field, Input, PageHead, Panel, Select, Stat, StatusBadge, Table, Tabs, Textarea, ToggleRow, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { planOf, TenantName } from "./AdminDashboard";
+import { decideListing, reviewListing } from "../live";
 
 /* ───────── Moderation: listing review + business verification (KYC) ───────── */
 const REJECT = ["blurry", "wrong_price", "duplicate", "missing_docs", "contact_in_photo", "other"];
-export function AdminModeration({ role }) {
+const KIND = { sell: "For sale", rentout: "For rent", stay_hotel: "Hotel", stay_unit: "Stay", project: "Project", invest: "Investment" };
+
+/** The real review queue: open a listing, look at everything (photos, owner, papers), approve or send back with a note. */
+function LiveQueue({ queue }) {
+  const t = useT();
+  const toast = useToast();
+  const [open, setOpen] = useState(null);
+  const [l, setL] = useState(null);
+  const [reasons, setReasons] = useState([]);
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  React.useEffect(() => {
+    setL(null); setReasons([]); setNote("");
+    if (open) reviewListing(open).then(setL).catch((e) => { toast(e.message); setOpen(null); });
+  }, [open]);
+  const why = [...reasons.filter((r) => r !== "other").map((r) => t(`mod.rr_${r}`)), note.trim()].filter(Boolean).join(". ");
+  const decide = (decision) => {
+    setBusy(true);
+    decideListing(open, decision, decision === "reject" ? why : undefined)
+      .then((r) => { toast(r.message); setOpen(null); queue.reload(); })
+      .catch((e) => toast(e.message)).finally(() => setBusy(false));
+  };
+  const rows = queue.rows;
+  return (
+    <>
+      {queue.error && <div className="pf-alert action"><Icon name="circle-alert" size={18} /><div><b>Couldn&apos;t load the queue</b><span>{queue.error}</span></div><Button size="sm" onClick={queue.reload}>Try again</Button></div>}
+      <section className="card pf-panel">
+        {!rows ? <p className="muted pf-pad">Loading the queue…</p> : <Table rows={rows} onRowClick={(r) => setOpen(r.id)} minWidth={760} empty={<Empty icon="circle-check" title={t("mod.clear")}>{t("mod.clearText")}</Empty>} columns={[
+          { key: "title", label: t("listings.listing"), render: (r) => <span className="pf-person">{r.cover ? <img src={r.cover} alt="" width={48} height={36} style={{ objectFit: "cover", borderRadius: 6 }} /> : <Icon name="image" size={18} />}<span className="pf-two"><b>{r.title}</b><small className="tnum">{r.code} · {KIND[r.kind] || r.kind}{r.district ? ` · ${r.district}` : ""}</small></span></span> },
+          { key: "by", label: t("tenants.business"), render: (r) => <span className="pf-two"><b>{r.tenant?.name || "—"}</b><small>{r.poster?.email || ""}</small></span> },
+          { key: "price", label: t("listings.price"), num: true, align: "right", render: (r) => (r.price ? rsShort(r.price) + (r.pricePer === "month" ? "/mo" : r.pricePer === "night" ? "/night" : "") : "—") },
+          { key: "at", label: t("mod.submitted"), num: true, render: (r) => fdatetime(r.submittedAt) },
+          { key: "act", label: "", align: "right", render: (r) => <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); setOpen(r.id); }}>{t("common.review")}</Button> },
+        ]} />}
+      </section>
+      <Drawer open={!!open} onClose={() => setOpen(null)} title={l?.title || "Loading…"} sub={l ? `${l.code} · ${KIND[l.kind] || l.kind}` : ""}
+        footer={l && <><Button variant="outline" className="pf-danger" disabled={busy || !why} onClick={() => decide("reject")}>Send back</Button><Button icon="check" disabled={busy} onClick={() => decide("approve")}>{t("mod.approve")}</Button></>}>
+        {l && <div className="pf-stack">
+          {l.photos.length ? <div className="pf-thumbs">{l.photos.map((p, i) => <figure key={i}><a href={p.main} target="_blank" rel="noreferrer"><img src={p.thumbnail} alt={`Photo ${i + 1}`} /></a>{i === 0 && <span className="tag tag-white">Cover</span>}</figure>)}</div>
+            : <div className="pf-alert action"><Icon name="image" size={18} /><div><b>No photos</b></div></div>}
+          <dl className="pf-kv">
+            <dt>{t("tenants.business")}</dt><dd>{l.tenant ? `${l.tenant.name} · ${l.tenant.type} · ${l.tenant.plan?.name}` : "—"}</dd>
+            <dt>Sent by</dt><dd>{l.poster ? `${l.poster.userName} · ${l.poster.email}${l.poster.phone ? ` · ${l.poster.phone}` : ""}` : "—"}</dd>
+            <dt>{t("listings.price")}</dt><dd className="tnum">{l.price ? rs(l.price) + (l.pricePer ? ` / ${l.pricePer}` : "") : "—"}{l.negotiable ? " · negotiable" : ""}</dd>
+            <dt>Where</dt><dd>{[l.area, l.city, l.district].filter(Boolean).join(", ") || "—"}{l.ward ? `, ward ${l.ward}` : ""}{l.lat ? " · pin set" : ""}</dd>
+            <dt>Type</dt><dd>{[l.category, l.propertyType].filter(Boolean).join(" · ")}</dd>
+            {(l.bedrooms || l.bathrooms) ? <><dt>Rooms</dt><dd className="tnum">{l.bedrooms || 0} bed · {l.bathrooms || 0} bath{l.floors ? ` · ${l.floors} floors` : ""}</dd></> : null}
+            {(l.landArea || l.builtArea) && <><dt>Size</dt><dd>{[l.landArea, l.builtArea].filter(Boolean).join(" · ")}</dd></>}
+            {l.roadAccess && <><dt>Road</dt><dd>{[l.roadAccess, l.roadType].filter(Boolean).join(" · ")}</dd></>}
+            <dt>Owner (private)</dt><dd>{[l.owner.name, l.owner.phone, l.owner.email].filter(Boolean).join(" · ") || "—"}</dd>
+            {l.papers && <><dt>Papers (private)</dt><dd>{Object.entries(l.papers).map(([k, v]) => `${k}: ${v}`).join(", ") || "—"}</dd></>}
+            <dt>{t("mod.submitted")}</dt><dd className="tnum">{fdatetime(l.submittedAt || l.createdAt)}</dd>
+          </dl>
+          {l.facilities?.length > 0 && <p className="small" style={{ margin: 0 }}>{l.facilities.join(" · ")}</p>}
+          {l.description && <p className="small muted" style={{ margin: 0, whiteSpace: "pre-wrap" }}>{l.description.replace(/<[^>]*>/g, "").slice(0, 1500)}</p>}
+          <Field label={t("mod.rejectReason")}>
+            <div className="pf-chips">{REJECT.map((r) => { const on = reasons.includes(r); return <button key={r} type="button" className={`chip ${on ? "active" : ""}`} aria-pressed={on} onClick={() => setReasons(on ? reasons.filter((x) => x !== r) : [...reasons, r])}>{t(`mod.rr_${r}`)}</button>; })}</div>
+          </Field>
+          <Field label="Note to the business" hint="Sent with “Send back”, and shown on the listing in their panel."><Textarea rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Please add a photo of the access road." /></Field>
+          {l.history?.length > 0 && <details><summary className="small">History</summary><ul className="pf-list small">{l.history.map((h, i) => <li key={i}><span className="tnum">{fdatetime(h.createdAt)}</span> · {h.action.replace(/^listing\./, "").replace(/_/g, " ")}</li>)}</ul></details>}
+        </div>}
+      </Drawer>
+    </>
+  );
+}
+
+// With `queue` (from the admin API, see ../live.js) the listings tab is the real review queue.
+export function AdminModeration({ role, queue }) {
   const t = useT();
   const { db, update } = useStore();
   const toast = useToast();
@@ -20,16 +88,17 @@ export function AdminModeration({ role }) {
   const [tab, setTab] = useState(can(role, "moderation.listings") ? "listings" : "kyc");
   const [open, setOpen] = useState(null);
   const [reason, setReason] = useState("blurry");
-  const queue = db.listings.filter((l) => l.status === "in_review");
+  const pendingLocal = db.listings.filter((l) => l.status === "in_review");
   const kyc = db.tenants.filter((x) => x.status === "pending_verification");
   const l = db.listings.find((x) => x.id === open);
   const decide = (id, status) => { update((d) => { const x = d.listings.find((y) => y.id === id); x.status = status; if (status === "rejected") x.reason = reason; audit(d, `${status === "published" ? "approved" : "rejected"} listing ${id}`); }); setOpen(null); toast(t(status === "published" ? "mod.toastApproved" : "mod.toastRejected")); };
-  const tabs = [can(role, "moderation.listings") && { id: "listings", label: t("mod.listings"), count: queue.length, icon: "house" }, can(role, "moderation.kyc") && { id: "kyc", label: t("mod.kyc"), count: kyc.length, icon: "badge-check" }, { id: "reports", label: t("mod.reports"), count: 2, icon: "flag" }].filter(Boolean);
+  const tabs = [can(role, "moderation.listings") && { id: "listings", label: t("mod.listings"), count: queue ? queue.waiting : pendingLocal.length, icon: "house" }, can(role, "moderation.kyc") && { id: "kyc", label: t("mod.kyc"), count: kyc.length, icon: "badge-check" }, !queue && { id: "reports", label: t("mod.reports"), count: 2, icon: "flag" }].filter(Boolean);
   return (
     <>
       <PageHead title={t("nav.moderation")} sub={t("mod.sub")} />
       <Tabs value={tab} onChange={setTab} tabs={tabs} />
-      {tab === "listings" && <section className="card pf-panel"><Table rows={queue} onRowClick={(r) => setOpen(r.id)} minWidth={720} empty={<Empty icon="circle-check" title={t("mod.clear")}>{t("mod.clearText")}</Empty>} columns={[
+      {tab === "listings" && queue && <LiveQueue queue={queue} />}
+      {tab === "listings" && !queue && <section className="card pf-panel"><Table rows={pendingLocal} onRowClick={(r) => setOpen(r.id)} minWidth={720} empty={<Empty icon="circle-check" title={t("mod.clear")}>{t("mod.clearText")}</Empty>} columns={[
         { key: "title", label: t("listings.listing"), render: (r) => <span className="pf-two"><b>{r.title}</b><small className="tnum">{r.id}</small></span> },
         { key: "by", label: t("tenants.business"), render: (r) => db.tenants.find((x) => x.id === r.tenantId)?.name },
         { key: "price", label: t("listings.price"), num: true, align: "right", render: (r) => rsShort(r.price) },

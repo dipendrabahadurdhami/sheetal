@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { AppError, badRequest } from "@sheetal/backend-core/lib/errors";
+import { AppError, badRequest } from "./errors.js";
 
 // Photos people upload with a listing. Only real JPEG, PNG or WebP images are kept (checked by their first bytes,
 // not by the name the browser gives), under a random name, in MEDIA_DIR/property/{main,thumbnail}.
@@ -29,3 +29,13 @@ export async function savePhoto(mediaDir: string | undefined, data: Buffer): Pro
   }
   return name;
 }
+
+/** Where photos are served from: MEDIA_URL, or the API's own /media. */
+export function mediaBase(config: { MEDIA_URL?: string; API_URL: string }) {
+  return (config.MEDIA_URL ?? `${config.API_URL.replace(/\/$/, "")}/media`).replace(/\/$/, "");
+}
+
+export const photoUrl = (base: string, size: "main" | "thumbnail", file: string) => `${base}/property/${size}/${encodeURIComponent(file)}`;
+
+/** A name savePhoto gave out (random, with an image extension), so listings can only point at uploaded photos. */
+export const isPhotoName = (s: string) => /^[A-Za-z0-9_-]{16}\.(jpg|png|webp)$/.test(s);

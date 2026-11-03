@@ -8,9 +8,10 @@ import { Badge, Button, Drawer, Empty, PageHead, Toggle, useToast } from "@sheet
 import { AIStudio } from "./AI";
 import { Icon } from "@sheetal/shared/core/icons";
 import { AREA, areaToSqft, sqftToHill } from "@sheetal/shared/data/catalog";
-import { FORMS, HIGHLIGHTS, suggestTitle } from "./listingForms";
+import { FORMS, HIGHLIGHTS, suggestTitle, summaryOf } from "./listingForms";
 import { PinPicker } from "./PinPicker";
 import { kindsFor, planOf } from "@sheetal/shared/core/plans";
+import { isLive, liveListings, uploadListingPhoto } from "../live";
 
 // One wizard renders every listing kind from listingForms.js.
 // Almost everything is a tap: chips with icons, counters, segments, quick prices.
@@ -32,13 +33,17 @@ export function ListingWizard({ tenant }) {
   const [preview, setPreview] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [fillTick, setFillTick] = useState(0);
+  const [busy, setBusy] = useState(false);
+  // On the API, photos upload as they are picked and the listing is sent to Sheetal for review.
+  const live = isLive(tenant.id) ? liveListings(toast) : null;
+  const editId = draft?.editId;
   React.useEffect(() => { if (!fillTick) return; const d2 = db.drafts[tenant.id]; if (d2 && FORMS[d2.kind]) { setKind(d2.kind); setStep(0); setV(d2.values || {}); } }, [fillTick, db.drafts, tenant.id]);
   const aiDrawer = <Drawer open={aiOpen} onClose={() => setAiOpen(false)} title={t("ai.listingTitle")} sub={t("ai.listingSub")}><AIStudio tenant={tenant} only="listing" onFill={() => { setAiOpen(false); setFillTick((n) => n + 1); }} /></Drawer>;
 
   const steps = (kind && FORMS[kind]) || [];
   const visible = (f) => !f.when || f.when(v);
   const val = (f) => (v[f.name] !== undefined ? v[f.name] : f.def);
-  const set = (name, x) => { setV((o) => ({ ...o, [name]: x })); setErr((e) => ({ ...e, [name]: null })); };
+  const set = (name, x) => { setV((o) => ({ ...o, [name]: typeof x === "function" ? x(o[name]) : x })); setErr((e) => ({ ...e, [name]: null })); };
   const optsOf = (f) => (typeof f.src === "function" ? f.src(v, C) : typeof f.src === "string" ? C[f.src] || [] : []);
   const label = (id, key, sub) => { if (!id) return ""; const list = sub ? C[key]?.[sub] : C[key]; const o = list?.find?.((x) => x.id === id); return o ? it(o) : ""; };
 
@@ -60,9 +65,18 @@ export function ListingWizard({ tenant }) {
     return !Object.keys(e).length;
   };
   const go = (i) => { if (i > step && !validate(step)) return; setStep(i); window.scrollTo(0, 0); };
-  const saveDraft = () => { update((d) => { d.drafts[tenant.id] = { kind, step, values: v }; }); toast(t("wiz.toastDraft")); };
+  const send = (submit) => {
+    const title = v.title || suggestTitle(kind, v, label);
+    setBusy(true);
+    live.save(editId, { kind, values: { ...v, title }, summary: summaryOf(kind, { ...v, title }, C), submit })
+      .then(() => { update((d) => { delete d.drafts[tenant.id]; }); navigate("/business/listings"); })
+      .catch((e) => { if (e.errors) setErr(Object.fromEntries(Object.entries(e.errors).map(([k, m]) => [k, [].concat(m)[0]]))); })
+      .finally(() => setBusy(false));
+  };
+  const saveDraft = () => { if (live && !editId) { send(false); return; } update((d) => { d.drafts[tenant.id] = { kind, step, values: v }; }); toast(t("wiz.toastDraft")); };
   const publish = () => {
     for (let i = 0; i < steps.length; i++) if (!validate(i)) { setStep(i); return; }
+    if (live) { send(true); return; }
     const title = v.title || suggestTitle(kind, v, label);
     update((d) => {
       const _ed = d.drafts?.[tenant.id]?.editId; const _rec = { id: _ed || `L-${1100 + d.listings.length}`, tenantId: tenant.id, kind, title, values: v, status: "in_review", price: v.price || v.rent || v.nightly || v.target || v.rooms?.[0]?.price || v.units?.[0]?.price || 0, views: 0, leads: 0, updated: TODAY.slice(0, 10) }; if (_ed) { const _k = d.listings.findIndex((x) => x.id === _ed); if (_k >= 0) d.listings[_k] = { ...d.listings[_k], ..._rec, views: d.listings[_k].views, leads: d.listings[_k].leads }; else d.listings.unshift(_rec); } else d.listings.unshift(_rec);
@@ -114,7 +128,7 @@ export function ListingWizard({ tenant }) {
           <div className="pf-wiz-fields">
             {cur.fields.filter(visible).map((f) => (
               <FieldBlock key={f.name} f={f} L={L} err={err[f.name]} optional={f.optional}>
-                <Control f={f} value={val(f)} set={(x) => set(f.name, x)} opts={optsOf(f)} it={it} L={L} t={t} C={C} kind={kind} v={v} titleSuggest={title} />
+                <Control f={f} value={val(f)} set={(x) => set(f.name, x)} opts={optsOf(f)} it={it} L={L} t={t} C={C} kind={kind} v={v} titleSuggest={title} upload={live ? uploadListingPhoto : null} />
               </FieldBlock>
             ))}
           </div>
@@ -122,7 +136,7 @@ export function ListingWizard({ tenant }) {
             <Button variant="outline" icon="arrow-left" disabled={step === 0} onClick={() => go(step - 1)}>{t("common.back")}</Button>
             {step < steps.length - 1
               ? <Button onClick={() => go(step + 1)}>{t("common.continue")}<Icon name="arrow-right" size={16} /></Button>
-              : <Button icon="send" onClick={publish}>{t("wiz.submit")}</Button>}
+              : <Button icon="send" disabled={busy} onClick={publish}>{busy ? "Sending…" : t("wiz.submit")}</Button>}
           </div>
         </section>
 
@@ -161,7 +175,7 @@ function FieldBlock({ f, L, err, optional, children }) {
 
 const segOpts = (f, C) => (typeof f.options === "string" ? C[f.options].map((o) => [o.id, o.en, o.ne]) : f.options);
 
-function Control({ f, value, set, opts, it, L, t, C, kind, v, titleSuggest }) {
+function Control({ f, value, set, opts, it, L, t, C, kind, v, titleSuggest, upload }) {
   const lang = useLang();
   switch (f.type) {
     case "choice":
@@ -209,7 +223,7 @@ function Control({ f, value, set, opts, it, L, t, C, kind, v, titleSuggest }) {
     case "land":
       return <LandArea value={value || { sys: "hill" }} onChange={set} t={t} />;
     case "photos":
-      return <Photos value={value || []} onChange={set} min={f.min} t={t} />;
+      return <Photos value={value || []} onChange={set} min={f.min} t={t} upload={upload} />;
     case "docs":
       return <Docs items={f.items} value={value || {}} onChange={set} t={t} lang={lang} />;
     case "repeat":
@@ -296,9 +310,17 @@ function LandArea({ value, onChange, t }) {
   );
 }
 
-function Photos({ value, onChange, min, t }) {
+function Photos({ value, onChange, min, t, upload }) {
   const ref = useRef(null);
-  const add = (files) => onChange([...value, ...[...files].filter((f) => f.type.startsWith("image/")).map((f) => ({ id: Math.random().toString(36).slice(2), url: URL.createObjectURL(f), name: f.name }))]);
+  const toast = useToast();
+  const [sending, setSending] = useState(0);
+  const add = async (list) => {
+    const files = [...list].filter((f) => f.type.startsWith("image/"));
+    if (!upload) { onChange([...value, ...files.map((f) => ({ id: Math.random().toString(36).slice(2), url: URL.createObjectURL(f), name: f.name }))]); return; }
+    setSending((n) => n + files.length);
+    const done = await Promise.all(files.map((f) => upload(f).then((r) => ({ id: r.file, file: r.file, url: r.url, name: f.name })).catch((e) => { toast(`${f.name}: ${e.message}`); return null; }).finally(() => setSending((n) => n - 1))));
+    onChange((prev) => [...(prev || []), ...done.filter(Boolean)]);
+  };
   const move = (i, d) => { const a = [...value]; [a[i], a[i + d]] = [a[i + d], a[i]]; onChange(a); };
   return (
     <div className="pf-stack tight">
@@ -321,7 +343,7 @@ function Photos({ value, onChange, min, t }) {
           ))}
         </div>
       )}
-      <span className="pf-hint tnum">{t("wiz.photoCount", { n: value.length, min })}</span>
+      <span className="pf-hint tnum">{t("wiz.photoCount", { n: value.length, min })}{sending > 0 ? ` · uploading ${sending}…` : ""}</span>
     </div>
   );
 }

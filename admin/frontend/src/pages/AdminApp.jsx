@@ -19,13 +19,17 @@ import { AdminIntegrations } from "./AdminIntegrations";
 import { AdminStatus } from "./AdminStatus";
 import { otaOf } from "@sheetal/shared/data/ota";
 import { config } from "@sheetal/shared/core/config";
+import { isStaffLive, useLiveStaff, useReviewQueue } from "../live";
 
 // Super admin: Sheetal staff control panel at /admin.
 export default function AdminApp() {
   const t = useT();
   const { db, update, reset } = useStore();
   const role = db.platformRoles.find((r) => r.id === db.session.platformRoleId) || db.platformRoles[0];
-  const pending = db.tenants.filter((x) => x.status === "pending_verification").length;
+  useLiveStaff(); // the real staff role when signed in (../live.js)
+  const liveQueue = useReviewQueue(isStaffLive() && can(role, "moderation.listings"));
+  const queue = isStaffLive() && can(role, "moderation.listings") ? liveQueue : null;
+  const pending = db.tenants.filter((x) => x.status === "pending_verification").length + (queue ? queue.waiting : 0);
 
   const nav = filterNav([
     { items: [{ to: "/admin", exact: true, icon: "layout-grid", key: "nav.dashboard", perm: "dashboard.view" }, { to: "/admin/analytics", icon: "chart-column", key: "nav.traffic", perm: "dashboard.view" }] },
@@ -124,7 +128,7 @@ export default function AdminApp() {
         { path: "/admin/channels", render: () => guard("tenants.view", <AdminChannels />) },
         { path: "/admin/analytics", render: () => guard("dashboard.view", analyticsHub()) },
         { path: "/admin/addons", render: () => guard("plans.manage", <AdminAddons />) },
-        { path: "/admin/moderation", render: () => guard(["moderation.listings", "moderation.kyc"], <AdminModeration role={role} />) },
+        { path: "/admin/moderation", render: () => guard(["moderation.listings", "moderation.kyc"], <AdminModeration role={role} queue={queue} />) },
         { path: "/admin/content", render: () => guard("content.edit", contentHub()) },
         { path: "/admin/billing", render: () => guard("billing.view", billingHub()) },
         { path: "/admin/audit", render: () => guard("audit.view", <AdminAudit />) },

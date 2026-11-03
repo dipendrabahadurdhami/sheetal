@@ -1,5 +1,5 @@
 import type { Listing, ListingPhoto, Tenant } from "@prisma/client";
-import type { Config } from "@sheetal/backend-core/config";
+import { mediaBase, photoUrl } from "@sheetal/backend-core/lib/photos";
 import { approx, validLatLng } from "./geo.js";
 
 // Listing → the JSON the website already reads (field names from the old site's API, see website/frontend/src/utils/format.js).
@@ -10,11 +10,7 @@ export type AgencyRow = Pick<Tenant, "id" | "name" | "city" | "email" | "phone" 
 
 const STATUS_LABEL: Record<string, string> = { sold: "SOLD OUT", rented: "RENTED OUT" };
 
-export function mediaBase(config: Config) {
-  return (config.MEDIA_URL ?? `${config.API_URL.replace(/\/$/, "")}/media`).replace(/\/$/, "");
-}
-
-const photoUrl = (base: string, size: "main" | "thumbnail", file: string) => `${base}/property/${size}/${encodeURIComponent(file)}`;
+export { mediaBase };
 const num = (v: bigint | number | null | undefined) => (v == null ? null : Number(v));
 
 /** What a card, list or map needs. */

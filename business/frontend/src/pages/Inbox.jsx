@@ -8,11 +8,14 @@ import { fdate, fdatetime, inDays, rsShort } from "@sheetal/shared/core/format";
 import { Badge, Button, Empty, Field, PageHead, Seg, Select, ToggleRow, useToast , Drawer } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { useOps } from "./POS";
+import { isLive, liveLeads } from "../live";
 
 // One inbox for every channel; every conversation is also a lead in the pipeline.
+// For a business on the API (../live.js) the conversations are its website enquiries, and stage, assignee and
+// follow-up changes and replies (sent by email) go to the business API.
 export const CHANNELS = {
   whatsapp: { icon: "message-circle", label: "WhatsApp" }, messenger: { icon: "facebook", label: "Messenger" }, instagram: { icon: "instagram", label: "Instagram" },
-  web: { icon: "globe", label: "Web chat" }, sms: { icon: "smartphone", label: "SMS" }, email: { icon: "mail", label: "Email" },
+  website: { icon: "house", label: "Website enquiry" }, web: { icon: "globe", label: "Web chat" }, sms: { icon: "smartphone", label: "SMS" }, email: { icon: "mail", label: "Email" },
 };
 const STAGES = ["new", "contacted", "viewing", "negotiating", "won", "lost"];
 const QUICK = ["qr_thanks", "qr_visit", "qr_price", "qr_location", "qr_payment"];
@@ -30,11 +33,14 @@ export function Inbox({ tenant }) {
   const [sel, setSel] = useState(ops.conversations[0]?.id);
   const [draft, setDraft] = useState("");
   const team = db.members[tenant.id] || [];
+  const live = isLive(tenant.id) ? liveLeads(toast) : null;
   const list = ops.conversations.filter((c) => ch === "all" || (ch === "unread" ? c.unread : c.channel === ch));
   const c = ops.conversations.find((x) => x.id === sel);
-  const upd = (patch) => set((o) => { Object.assign(o.conversations.find((x) => x.id === sel), patch); });
+  const upd = (patch) => { set((o) => { Object.assign(o.conversations.find((x) => x.id === sel), patch); }); if (live) live.update(sel, patch); };
+  const open = (x) => { setSel(x.id); if (x.unread && live) live.read(x.id); set((o) => { o.conversations.find((y) => y.id === x.id).unread = 0; }); };
   const send = (text) => {
     if (!text.trim()) return;
+    if (live) { live.reply(sel, text).then(() => setDraft("")).catch(() => {}); return; }
     set((o) => { const x = o.conversations.find((y) => y.id === sel); x.msgs.push(["out", text, new Date().toTimeString().slice(0, 5)]); x.last = text; x.unread = 0; if (x.stage === "new") x.stage = "contacted"; });
     setDraft("");
   };
@@ -54,7 +60,7 @@ export function Inbox({ tenant }) {
               ))}
             </div>
             {list.length ? list.map((x) => (
-              <button key={x.id} className={x.id === sel ? "on" : ""} onClick={() => { setSel(x.id); set((o) => { o.conversations.find((y) => y.id === x.id).unread = 0; }); }}>
+              <button key={x.id} className={x.id === sel ? "on" : ""} onClick={() => open(x)}>
                 <span className="pf-ch-ico"><Icon name={CHANNELS[x.channel].icon} size={16} /></span>
                 <span className="pf-two" style={{ flex: 1 }}><b>{x.name}</b><small className="pf-ellipsis">{x.last}</small></span>
                 <span className="pf-inbox-meta"><small className="tnum">{fdatetime(x.at).split(", ")[1]}</small>{x.unread ? <span className="pf-count solid">{x.unread}</span> : null}</span>
@@ -66,7 +72,7 @@ export function Inbox({ tenant }) {
               <header><span className="pf-ch-ico"><Icon name={CHANNELS[c.channel].icon} size={16} /></span><span className="pf-two"><b>{c.name}</b><small>{CHANNELS[c.channel].label}{c.phone ? ` · ${c.phone}` : ""}</small></span>
                 <Badge tone={c.stage === "won" ? "done" : c.stage === "lost" ? "neutral" : c.stage === "new" ? "action" : "progress"}>{t(`stage.${c.stage}`)}</Badge></header>
               <div className="pf-msgs">
-                {c.msgs.map(([dir, text, at], i) => <div key={i} className={`pf-msg ${dir}`}><p>{text}</p><small className="tnum">{at}</small></div>)}
+                {c.msgs.map(([dir, text, at], i) => <div key={i} className={`pf-msg ${dir}`}><p>{text}</p><small className="tnum">{String(at).length > 5 ? fdatetime(at) : at}</small></div>)}
               </div>
               <div className="pf-compose">
                 <div className="pf-chips">{QUICK.map((k) => <button key={k} className="chip" onClick={() => setDraft(t(`inbox.${k}`))}>{t(`inbox.${k}Label`)}</button>)}</div>
@@ -82,13 +88,15 @@ export function Inbox({ tenant }) {
             <aside className="pf-lead">
               <b className="pf-subhead" style={{ margin: 0 }}>{t("inbox.lead")}</b>
               <Field label={t("inbox.stage")}><Select value={c.stage} onChange={(v) => upd({ stage: v })} options={STAGES.map((s) => ({ id: s, label: t(`stage.${s}`) }))} /></Field>
-              <Field label={t("inbox.assign")}><Select value={c.assignee || ""} onChange={(v) => upd({ assignee: v || null })} options={[{ id: "", label: t("inbox.unassigned") }, ...team.map((m) => ({ id: m.name, label: m.name }))]} /></Field>
+              <Field label={t("inbox.assign")}><Select value={c.assignee || ""} onChange={(v) => upd({ assignee: v || null })} options={[{ id: "", label: t("inbox.unassigned") }, ...team.map((m) => ({ id: live ? m.id : m.name, label: m.name }))]} /></Field>
               <Field label={t("inbox.follow")}><div className="pf-chips">{[["today", inDays(0)], ["tomorrow", inDays(1)], ["week", inDays(7)]].map(([k, d]) => <button key={k} className={`chip ${c.follow === d ? "active" : ""}`} onClick={() => upd({ follow: d })}>{t(`inbox.f_${k}`)}</button>)}</div>
                 {c.follow && <span className="pf-hint tnum"><Icon name="bell" size={13} />{t("inbox.remind", { d: fdate(c.follow) })}</span>}</Field>
               <dl className="pf-kv">
                 <dt>{t("inbox.value")}</dt><dd className="tnum">{c.value ? rsShort(c.value) : "—"}</dd>
                 <dt>{t("inbox.listing")}</dt><dd className="tnum">{c.listing ? <a href="#" onClick={(e) => { e.preventDefault(); navigate("/business/listings"); }}>{c.listing}</a> : "—"}</dd>
-                <dt>{t("inbox.tags")}</dt><dd>{c.tags.length ? c.tags.join(", ") : "—"}</dd>
+                <dt>{t("inbox.tags")}</dt><dd>{c.tags?.length ? c.tags.join(", ") : "—"}</dd>
+                {c.email && <><dt>Email</dt><dd><a href={`mailto:${c.email}`}>{c.email}</a></dd></>}
+                {c.phone && <><dt>Phone</dt><dd className="tnum"><a href={`tel:${c.phone}`}>{c.phone}</a></dd></>}
               </dl>
               <div className="pf-stack tight">
                 <Button variant="outline" icon="calendar-plus" onClick={() => { toast(t("inbox.toastVisit")); navigate(tenant.type === "hotel" || tenant.type === "host" ? "/business/bookings" : "/business/agreements"); }}>{t("inbox.bookVisit")}</Button>
@@ -110,7 +118,7 @@ export function Inbox({ tenant }) {
                   <button key={x.id} className="card pf-board-card" onClick={() => { setSel(x.id); setView("inbox"); }}>
                     <span className="pf-person"><span className="pf-ch-ico"><Icon name={CHANNELS[x.channel].icon} size={14} /></span><b>{x.name}</b></span>
                     <span className="small pf-ellipsis">{x.last}</span>
-                    <span className="pf-board-foot"><span className="tnum small">{x.value ? rsShort(x.value) : "—"}</span><span className="small muted">{x.assignee || t("inbox.unassigned")}</span></span>
+                    <span className="pf-board-foot"><span className="tnum small">{x.value ? rsShort(x.value) : "—"}</span><span className="small muted">{(live ? team.find((m) => m.id === x.assignee)?.name || x.assigneeName : x.assignee) || t("inbox.unassigned")}</span></span>
                   </button>
                 ))}
               </section>
@@ -132,7 +140,7 @@ function Channels() {
       <section className="card pf-panel grow">
         <div className="pf-panel-head"><div className="pf-panel-title"><h2>{t("inbox.channels")}</h2><span>{t("inbox.channelsSub")}</span></div></div>
         <div className="pf-pad">
-          {Object.entries(CHANNELS).map(([k, c]) => (
+          {Object.entries(CHANNELS).filter(([k]) => k !== "website").map(([k, c]) => (
             <div key={k} className="pf-gateway"><div className="pf-toggle-row">
               <span className="pf-person"><span className="pf-ch-ico"><Icon name={c.icon} size={16} /></span><span className="pf-two"><b>{c.label}</b><small>{t(`inbox.ch_${k}`)}</small></span></span>
               <div className="pf-row-actions">{db.channels[k] ? <Badge tone="done">{t("pay.connected")}</Badge> : <Badge tone="neutral">{t("pay.notConnected")}</Badge>}

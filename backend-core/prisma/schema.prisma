@@ -225,6 +225,8 @@ enum ListingPurpose {
   rent
 }
 
+/// draft → pending (Sheetal checks it) → published, or rejected with a note. A business can pause or archive its own
+/// listings; removed ones are kept only so leads and history still point somewhere.
 enum ListingStatus {
   draft
   pending
@@ -233,6 +235,9 @@ enum ListingStatus {
   rented
   expired
   removed
+  paused
+  rejected
+  archived
 }
 
 /// One table for every property, posted from /business and shown on the website.
@@ -300,6 +305,11 @@ model Listing {
   checkDueAt    DateTime?      @map("check_due_at")
   lastCheckedAt DateTime?      @map("last_checked_at")
   lastCheckedBy String?        @map("last_checked_by")
+  /// Sheetal's review: when it was sent for review, who decided, and the note sent back when changes are needed.
+  submittedAt   DateTime?      @map("submitted_at")
+  reviewedAt    DateTime?      @map("reviewed_at")
+  reviewedBy    String?        @map("reviewed_by")
+  reviewNote    String?        @map("review_note")
   legacyId      Int?           @unique @map("legacy_id")
   publishedAt   DateTime?      @map("published_at")
   createdAt     DateTime       @default(now()) @map("created_at")
@@ -313,6 +323,7 @@ model Listing {
   @@index([category])
   @@index([tenantId, status])
   @@index([userId])
+  @@index([status, submittedAt])
   @@map("listings")
 }
 
@@ -485,27 +496,51 @@ model Favourite {
 /// An enquiry from the website: contact the agency or owner, a site visit, a buyer requirement, a service request.
 /// It goes to the business that owns the listing (or to Sheetal when there is none) and shows in its Inbox.
 model Lead {
-  id        String   @id @default(cuid())
+  id         String        @id @default(cuid())
   /// The business it is for; null = Sheetal itself.
-  tenantId  String?  @map("tenant_id")
-  listingId Int?     @map("listing_id")
-  userId    String?  @map("user_id")
+  tenantId   String?       @map("tenant_id")
+  listingId  Int?          @map("listing_id")
+  userId     String?       @map("user_id")
   /// contact_agent, contact_owner, site_visit, requirement, service
-  kind      String
-  name      String
-  email     String?
-  phone     String?
-  message   String   @default("")
+  kind       String
+  name       String
+  email      String?
+  phone      String?
+  message    String        @default("")
   /// Everything else the form sent (reasons, budget, preferred time…).
-  details   Json     @default("{}")
-  /// new, contacted, closed
-  status    String   @default("new")
-  ip        String?
-  createdAt DateTime @default(now()) @map("created_at")
+  details    Json          @default("{}")
+  /// Pipeline stage: new, contacted, viewing, negotiating, won, lost
+  status     String        @default("new")
+  /// The team member following it up (a user id), the next follow-up date, tags and the deal value in Rs.
+  assigneeId String?       @map("assignee_id")
+  followAt   DateTime?     @map("follow_at")
+  tags       String[]      @default([])
+  value      BigInt?
+  /// When the business last opened it; newer messages count as unread.
+  readAt     DateTime?     @map("read_at")
+  lastAt     DateTime      @default(now()) @map("last_at")
+  ip         String?
+  createdAt  DateTime      @default(now()) @map("created_at")
+  messages   LeadMessage[]
 
   @@index([tenantId, status, createdAt])
+  @@index([tenantId, lastAt])
   @@index([listingId])
   @@map("leads")
+}
+
+/// Replies on a lead: "in" from the person (the first message is the lead itself), "out" from the business (sent by email).
+model LeadMessage {
+  id        String   @id @default(cuid())
+  leadId    String   @map("lead_id")
+  direction String
+  body      String
+  userId    String?  @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId, createdAt])
+  @@map("lead_messages")
 }
 
 /// A star rating with a comment, for a listing or for a business. One per person per listing or business.
