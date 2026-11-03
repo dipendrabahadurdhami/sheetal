@@ -1532,3 +1532,13 @@ html.has-brand[data-theme~="red"] :is(.pf-top, .pf-side, .pf-side-top) { --card:
 .pf-wsx-mark.has-logo { background: transparent; border-radius: 0; }
 .pf-wsx-mark.has-logo img { padding: 0; }
 [data-theme~="dark"] .pf-wsx-mark.has-logo img { filter: brightness(0) invert(1); }
+
+/* The sidebar's logo row lines up with the top bar (same height, same line under it), so the two read as one
+   bar across the screen; the name isn't repeated in the top bar while the sidebar shows it. On phones the
+   sidebar folds away, so the top bar keeps the name there. */
+.pf-side-top { padding-top: 0; }
+.pf-side-top > :first-child { box-sizing: border-box; height: 64px; display: flex; align-items: center; margin: 0 -14px; padding: 0 14px; box-shadow: 0 1px 0 color-mix(in srgb, var(--c-slate) 6%, transparent); }
+.pf-side-top > :first-child > .pf-wsx { height: 100%; padding-top: 0; padding-bottom: 0; border-radius: 0; }
+.pf-side-top:has(> :only-child) { border-bottom: 0; box-shadow: 0 1px 0 color-mix(in srgb, var(--c-slate) 6%, transparent); }
+.pf-side-top:has(> :only-child) { padding-bottom: 0; }
+@media (min-width: 961px) { .pf-top > .pf-top-title { display: none; } }
