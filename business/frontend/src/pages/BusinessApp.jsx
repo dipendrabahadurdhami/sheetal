@@ -3,6 +3,7 @@ import { Rentals } from "./Rentals";
 import { SetupChip } from "./Setup";
 import React from "react";
 import { PANEL_THEMES, THEMES } from "@sheetal/shared/core/theme";
+import { BranchPicker } from "@sheetal/shared/layout/BranchPicker";
 import { WorkspaceSwitcher } from "@sheetal/shared/layout/WorkspaceSwitcher";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
@@ -34,7 +35,7 @@ import { formsOf } from "@sheetal/shared/core/forms";
 import { Invoices, Payouts } from "./Money";
 import { Analytics, Developers } from "./Workspace";
 import { BackupOnly } from "./BusinessBilling";
-import { Branches, Calendar, branchesOf } from "./Branches";
+import { Branches, Calendar, LiveBranches, branchesOf } from "./Branches";
 import { Promote } from "./Promote";
 import { BranchProvider } from "@sheetal/shared/core/branch";
 import { Collections, Expenses, Investors, Projects, Reviews, Stock } from "./Sector";
@@ -47,6 +48,8 @@ import { TODAY } from "@sheetal/shared/core/format";
 import { opsOf } from "@sheetal/shared/demo/ops";
 
 // Business workspace at /business (later its own domain). One account can belong to several businesses.
+const TYPE_ICON = { hotel: "hotel", host: "bed-double", developer: "building-2", agency: "briefcase", sponsor: "hand-coins" };
+
 export default function BusinessApp() {
   const t = useT();
   const { db, update, reset } = useStore();
@@ -77,9 +80,12 @@ export default function BusinessApp() {
   const role = roles.find((r) => r.id === s.previewRoleId) || roles.find((r) => r.id === s.liveRoles?.[tenant.id]) || owner || roles[0];
   const ts = db.tenantSettings[tenant.id] || defaultTenantSettings(tenant);
   const openBranches = branchesOf(db, tenant).filter((b) => b.status === "open").map((b) => b.name);
+  // Signed in: the person's own branch access from the server (owners always all). Samples and role previews use a
+  // sample member of that role.
+  const mine = isLive(tenant.id) && !s.previewRoleId ? s.liveScopes?.[tenant.id] : undefined;
   const sample = (db.members[tenant.id] || []).find((m) => m.roleId === role.id);
-  const canAll = role.perms.includes("*") || role.key === "manager" || !sample || sample.scopes === "all";
-  const allowed = canAll ? openBranches : openBranches.filter((b) => sample.scopes.includes(b));
+  const canAll = mine !== undefined ? mine === "all" : role.perms.includes("*") || role.key === "manager" || !sample || sample.scopes === "all";
+  const allowed = canAll ? openBranches : openBranches.filter((b) => (mine ?? sample.scopes).includes(b));
   const picked = s.branchOf?.[tenant.id] || "all";
   const branch = canAll ? (picked === "all" || allowed.includes(picked) ? picked : "all") : (allowed.includes(picked) ? picked : allowed[0] || "all");
   const brand = ts.branding.useBrand ? ts.branding.color : null;
@@ -144,8 +150,14 @@ export default function BusinessApp() {
   // The business at the top of the sidebar. With its own branding (logo or colours) it takes Sheetal's logo spot;
   // until then Sheetal's logo stays and the business sits just under it. Clicking the name switches business.
   const branded = ownBrand && ((tenant.brandColors || []).length > 0 || (!!tenant.logoUrl && !tenant.logoUrl.startsWith("/brand/")));
-  const wsList = ids.map((id) => db.tenants.find((y) => y.id === id)).filter(Boolean).map((x) => ({ id: x.id, name: x.name, logoUrl: x.logoUrl, color: x.id === tenant.id ? brand : undefined }));
-  const pickWs = (v) => update((d) => { d.session.tenantId = v; d.session.previewRoleId = null; });
+  // Each business with its type and the person's role there (the menu and access follow both).
+  const roleIn = (id) => { const rs = db.tenantRoles[id] || []; return rs.find((r) => r.id === s.liveRoles?.[id]) || rs.find((r) => r.perms.includes("*")) || rs[0]; };
+  const wsList = ids.map((id) => db.tenants.find((y) => y.id === id)).filter(Boolean).map((x) => ({
+    id: x.id, name: x.name, logoUrl: x.logoUrl, color: x.id === tenant.id ? brand : undefined,
+    typeLabel: t(`type.${x.type}`), typeIcon: TYPE_ICON[x.type], role: roleIn(x.id) ? roleName(roleIn(x.id), t) : undefined,
+  }));
+  // Switching business opens its overview, since the pages differ by type and role.
+  const pickWs = (v) => { update((d) => { d.session.tenantId = v; d.session.previewRoleId = null; }); navigate("/business"); };
   const wsSwitcher = <WorkspaceSwitcher current={wsList.find((w) => w.id === tenant.id) || { id: tenant.id, name: tenant.name, logoUrl: tenant.logoUrl }} list={wsList} onPick={pickWs} big={branded} sub={branded ? `${t(`type.${tenant.type}`)} · ${tenant.city || "Nepal"}` : undefined} label={t("ws.switch")} />;
 
   return (
@@ -174,8 +186,8 @@ export default function BusinessApp() {
           <Button size="sm" variant="light" onClick={() => { update((d) => { d.session.impersonating = null; d.session.tenantId = d.session.memberships[0]; }); navigate(`/admin/tenants/${tenant.id}`); }}>{t("ws.backToAdmin")}</Button></div>
       )}</>}
       topLeft={<div className="pf-top-title"><b>{tenant.name}</b><span className="small muted">{t(`type.${T}`)} · {tenant.city}</span></div>}
-      topExtra={allowed.length > 1 || (canAll && openBranches.length > 1) ? <select className="select pf-branch-pick" aria-label={t("br.filter")} value={branch} onChange={(e) => update((d) => { d.session.branchOf = { ...(d.session.branchOf || {}), [tenant.id]: e.target.value }; })}>
-        {canAll && <option value="all">{t("br.all")}</option>}{allowed.map((b) => <option key={b} value={b}>{b}</option>)}</select> : allowed.length === 1 ? <span className="pf-branch-fixed"><span className="pf-ws-dot" />{allowed[0]}</span> : null}
+      topExtra={openBranches.length > 1 || allowed.length === 1 ? <BranchPicker branch={branch} allowed={allowed} canAll={canAll} allLabel={t("br.all")} label={t("br.filter")}
+        onPick={(v) => update((d) => { d.session.branchOf = { ...(d.session.branchOf || {}), [tenant.id]: v }; })} /> : null}
       sideFooter={<><SetupChip tenant={tenant} /><Link to="/business/billing" className="pf-plan-chip"><Icon name="layers" size={15} /><span>{(db.plans.find((p) => p.id === tenant.planId) || {}).name} plan</span><Icon name="chevron-right" size={14} /></Link>{(config.demo || role !== owner) && <div className="pf-side-foot"><span className="small muted">{t("preview.viewAs")}</span>
         <Select value={role.id} onChange={(v) => update((d) => { d.session.previewRoleId = v; })} options={roles.map((r) => ({ id: r.id, label: roleName(r, t) }))} aria-label={t("preview.role")} />
         <span className="tiny muted">{t("preview.viewAsHint")}</span></div>}</>}
@@ -223,7 +235,7 @@ export default function BusinessApp() {
         { path: "/business/rentals/:tab", render: ({ tab }) => guard(any("listings.manage", "customers.view", "collect.payments"), <Rentals key={tenant.id} tenant={tenant} tab={tab} />) },
         { path: "/business/stock", render: () => paid(any("pos.restaurant", "pos.extras", "settings.business"), <Stock key={tenant.id} tenant={tenant} />) },
         { path: "/business/promote", render: () => guard(any("listings.manage", "projects.manage", "investments.manage", "calendar.edit", "billing.manage"), <Promote tenant={tenant} />) },
-        { path: "/business/branches", render: () => guard(can(role, "settings.business"), <SettingsShell role={role}><Branches tenant={tenant} role={role} /></SettingsShell>) },
+        { path: "/business/branches", render: () => guard(can(role, "settings.business"), <SettingsShell role={role}>{isLive(tenant.id) ? <LiveBranches tenant={tenant} role={role} /> : <Branches tenant={tenant} role={role} />}</SettingsShell>) },
         { path: "/business/calendar", render: () => guard(can(role, "calendar.view"), <Calendar key={tenant.id} tenant={tenant} role={role} />) },
         { path: "/business/analytics", render: () => guard(can(role, "overview.view"), (isLive(tenant.id) ? <LiveAnalytics key={tenant.id} tenant={tenant} /> : <Analytics tenant={tenant} />)) },
         { path: "/business/people", render: () => <TeamHub key={tenant.id + "a"} tenant={tenant} role={role} start="attendance" /> },

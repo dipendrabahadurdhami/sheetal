@@ -6,7 +6,8 @@ import { newToken, sha256 } from "@sheetal/backend-core/lib/secrets";
 import { requireUser } from "@sheetal/backend-core/modules/auth/sessions";
 import { mediaBase, photoUrl, savePhoto } from "@sheetal/backend-core/lib/photos";
 import { BUSINESS_TYPES, businessPermsFor, type BusinessType } from "@sheetal/backend-core/domain/permissions";
-import { workspaceOf, type Workspace } from "../access.js";
+import { branchesOf, workspaceOf, type Workspace } from "../access.js";
+import { checkScopes } from "../branches/routes.js";
 
 // The signed-in person's businesses, and each business's team: members, invitations, roles, activity.
 // - Anyone in the business sees the team; "team.manage" invites, changes and removes people;
@@ -36,7 +37,7 @@ export async function teamRoutes(app: FastifyInstance) {
           id: m.tenant.id, name: m.tenant.name, type: m.tenant.type, city: m.tenant.city, email: m.tenant.email, phone: m.tenant.phone, logoUrl: m.tenant.logoUrl, brandColors: m.tenant.brandColors,
           status: m.tenant.status, period: m.tenant.period, renewsAt: m.tenant.renewsAt, autoRenew: m.tenant.autoRenew, createdAt: m.tenant.createdAt,
           plan: { id: m.tenant.plan.id, name: m.tenant.plan.name, price: m.tenant.plan.price, limits: m.tenant.plan.limits, features: m.tenant.plan.features },
-          role: { id: m.role.id, key: m.role.key, name: m.role.name, perms: m.role.perms }, scopes: m.scopes,
+          role: { id: m.role.id, key: m.role.key, name: m.role.name, perms: m.role.perms }, scopes: branchesOf(m),
         })),
       },
     };
@@ -101,6 +102,7 @@ export async function teamRoutes(app: FastifyInstance) {
   app.post("/team/invites", { config: { rateLimit: { max: 20, timeWindow: "1 hour" } } }, async (request) => {
     const ws = workspaceOf(request); manage(ws);
     const b = z.object({ invites: z.array(z.object({ email, roleId: z.string(), scopes })).min(1).max(20) }).parse(request.body);
+    for (const inv of b.invites) inv.scopes = (await checkScopes(app, ws.tenantId, inv.scopes))!;
     const db = dbOf(app);
     const pending = await db.invite.count({ where: { tenantId: ws.tenantId, status: "pending", expiresAt: { gt: new Date() } } });
     const active = await db.membership.count({ where: { tenantId: ws.tenantId, status: "active" } });
@@ -185,6 +187,7 @@ export async function teamRoutes(app: FastifyInstance) {
   app.patch<{ Params: { userId: string } }>("/team/members/:userId", async (request) => {
     const ws = workspaceOf(request); manage(ws);
     const b = z.object({ roleId: z.string().optional(), status: z.enum(["active", "paused"]).optional(), scopes: scopes.optional() }).parse(request.body);
+    b.scopes = await checkScopes(app, ws.tenantId, b.scopes);
     const m = await memberFor(ws, request.params.userId);
     if (m.role.key === "owner" && ws.member.role.key !== "owner") throw forbidden("Only an owner can change an owner.");
     const role = b.roleId ? await roleOf(ws, b.roleId) : null;

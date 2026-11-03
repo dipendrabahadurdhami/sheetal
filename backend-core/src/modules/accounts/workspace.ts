@@ -2,7 +2,9 @@ import type { Prisma } from "@prisma/client";
 import { roleTemplatesFor, type BusinessType } from "../../domain/permissions.js";
 import { starterPlanId } from "../../domain/plans.js";
 
-// Every account gets its own business workspace from day one, on the free Starter plan.
+// Every account gets its own business workspace from day one, on the free Starter plan, with one branch.
+
+export const HEAD_OFFICE = "Head office";
 
 type Tx = Prisma.TransactionClient;
 
@@ -22,6 +24,7 @@ export async function createWorkspace(tx: Tx, opts: { ownerId: string; name: str
     },
   });
   const roles = await createRoles(tx, tenant.id, opts.type);
+  await tx.branch.create({ data: { tenantId: tenant.id, name: HEAD_OFFICE } });
   await tx.membership.create({ data: { userId: opts.ownerId, tenantId: tenant.id, roleId: roles.owner!.id } });
   return tenant;
 }

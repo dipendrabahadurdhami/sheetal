@@ -131,9 +131,9 @@ function MemberDetail({ m, roles, byId, groups, scopes, canEdit, onUpdate }) {
       {scopes && (
         <Field label={scopes.label}>
           <div className="pf-checks">
-            <Checkbox label={t("team.allAccess")} checked={m.scopes === "all"} disabled={!canEdit} onChange={(v) => onUpdate(m.id, { scopes: v ? "all" : [] })} />
+            <Checkbox label={t("team.allAccess")} checked={m.scopes === "all"} disabled={!canEdit} onChange={(v) => onUpdate(m.id, { scopes: v ? "all" : scopes.options.slice(0, 1) })} />
             {m.scopes !== "all" && scopes.options.map((s) => (
-              <Checkbox key={s} label={s} checked={m.scopes.includes(s)} disabled={!canEdit}
+              <Checkbox key={s} label={s} checked={m.scopes.includes(s)} disabled={!canEdit || (m.scopes.length === 1 && m.scopes[0] === s)}
                 onChange={(v) => onUpdate(m.id, { scopes: v ? [...m.scopes, s] : m.scopes.filter((x) => x !== s) })} />
             ))}
           </div>
@@ -206,7 +206,7 @@ function InviteModal({ open, onClose, roles, groups, scopes, seatsLeft, existing
               {scopes.options.map((s) => {
                 const on = scope !== "all" && scope.includes(s);
                 return <button key={s} type="button" className={`chip ${on ? "active" : ""}`} aria-pressed={on}
-                  onClick={() => setScope(scope === "all" ? [s] : on ? scope.filter((x) => x !== s) : [...scope, s])}>{s}</button>;
+                  onClick={() => { const next = scope === "all" ? [s] : on ? scope.filter((x) => x !== s) : [...scope, s]; setScope(next.length ? next : "all"); }}>{s}</button>;
               })}
             </div>
           </Field>

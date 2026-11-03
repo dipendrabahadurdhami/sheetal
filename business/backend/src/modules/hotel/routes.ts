@@ -5,6 +5,7 @@ import { dbOf } from "@sheetal/backend-core/lib/db";
 import { badRequest, conflict, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
 import { dayOf, hotelBill, nightsBetween, ymd } from "@sheetal/backend-core/domain/money";
 import { workspaceOf, type Workspace } from "../access.js";
+import { checkScopes } from "../branches/routes.js";
 
 // Hotels and hosts: rooms, availability, bookings, the front desk (check-in with the guest's ID, the room bill,
 // payments, check-out once settled). A room can't be booked twice for the same night.
@@ -27,6 +28,9 @@ export function folioOf(b: Pick<Full, "folio" | "payments">) {
 export async function hotelRoutes(app: FastifyInstance) {
   const db = () => dbOf(app);
   const need = (ws: Workspace, ...perms: string[]) => { if (!perms.some(ws.can)) throw forbidden("Your role can't do this."); };
+  // Staff limited to some branches see only those branches' rooms, and bookings for them (or not yet given a room).
+  const roomScope = (ws: Workspace): Prisma.RoomWhereInput => (ws.branches === "all" ? {} : { OR: [{ branch: null }, { branch: { in: ws.branches } }] });
+  const bookingScope = (ws: Workspace): Prisma.BookingWhereInput => (ws.branches === "all" ? {} : { OR: [{ roomId: null }, { room: roomScope(ws) }] });
   const audit = (ws: Workspace, ip: string, action: string, target: string) => db().auditLog.create({ data: { actorId: ws.user.id, tenantId: ws.tenantId, action, target, ip } });
 
   /** Rooms of this type that are taken on at least one of the nights [from, to), other than `except`. */
@@ -46,7 +50,7 @@ export async function hotelRoutes(app: FastifyInstance) {
     if (peak(taken, type, from, to) >= rooms) throw conflict(`No ${type} room is free for all of those nights.`);
   }
   async function full(ws: Workspace, id: string) {
-    const b = await db().booking.findFirst({ where: { id, tenantId: ws.tenantId }, include: { room: true, folio: { orderBy: { createdAt: "asc" } }, payments: { orderBy: { createdAt: "asc" } } } });
+    const b = await db().booking.findFirst({ where: { id, tenantId: ws.tenantId, ...bookingScope(ws) }, include: { room: true, folio: { orderBy: { createdAt: "asc" } }, payments: { orderBy: { createdAt: "asc" } } } });
     if (!b) throw notFound("Booking not found.");
     return b;
   }
@@ -64,7 +68,7 @@ export async function hotelRoutes(app: FastifyInstance) {
     need(ws, "bookings.view", "calendar.view", "pos.frontdesk", "settings.business");
     const today = dayOf(ymd(new Date()));
     const [rooms, current] = await Promise.all([
-      db().room.findMany({ where: { tenantId: ws.tenantId }, orderBy: [{ type: "asc" }, { no: "asc" }] }),
+      db().room.findMany({ where: { tenantId: ws.tenantId, ...roomScope(ws) }, orderBy: [{ type: "asc" }, { no: "asc" }] }),
       db().booking.findMany({ where: { tenantId: ws.tenantId, roomId: { not: null }, OR: [{ status: "checked_in" }, { status: "confirmed", checkIn: today }] }, include: { room: true, folio: true, payments: true } }),
     ]);
     return {
@@ -80,6 +84,8 @@ export async function hotelRoutes(app: FastifyInstance) {
     const ws = workspaceOf(request);
     need(ws, "settings.business", "calendar.edit");
     const b = z.object({ type: z.string().trim().min(2).max(60), rate: z.number().int().min(0).max(10_000_000), nos: z.array(z.string().trim().min(1).max(20)).min(1).max(200), maxGuests: z.number().int().min(1).max(60).default(2), floor: z.string().max(20).optional(), branch: z.string().max(60).optional(), listingId: z.number().int().optional() }).parse(request.body);
+    if (b.branch) await checkScopes(app, ws.tenantId, [b.branch]);
+    if (b.branch && !ws.inBranch(b.branch)) throw forbidden("You can only add rooms to your own branches.");
     const t = ws.member.tenant;
     const cap = (t.plan.limits as Record<string, number>)[t.type === "host" ? "units" : "rooms"];
     const count = await db().room.count({ where: { tenantId: ws.tenantId, active: true } });
@@ -96,7 +102,7 @@ export async function hotelRoutes(app: FastifyInstance) {
     const b = z.object({ rate: z.number().int().min(0).optional(), type: z.string().trim().min(2).max(60).optional(), status: z.enum(["vacant", "dirty", "blocked"]).optional(), active: z.boolean().optional() }).parse(request.body);
     // Housekeeping marks rooms clean; changing rates or types is setup.
     need(ws, ...(b.rate !== undefined || b.type || b.active !== undefined ? ["settings.business", "calendar.edit"] : ["calendar.view", "pos.frontdesk", "bookings.edit"]));
-    const r = await db().room.updateMany({ where: { id: request.params.id, tenantId: ws.tenantId }, data: b });
+    const r = await db().room.updateMany({ where: { id: request.params.id, tenantId: ws.tenantId, ...roomScope(ws) }, data: b });
     if (!r.count) throw notFound("Room not found.");
     return { message: b.status === "vacant" ? "Room is ready." : "Saved." };
   });
@@ -115,7 +121,7 @@ export async function hotelRoutes(app: FastifyInstance) {
     const ws = workspaceOf(request);
     need(ws, "bookings.view", "calendar.view");
     const q = z.object({ from: date.optional(), to: date.optional() }).parse(request.query);
-    const where: Prisma.BookingWhereInput = { tenantId: ws.tenantId, ...(q.from && q.to ? { checkIn: { lt: dayOf(q.to) }, checkOut: { gt: dayOf(q.from) } } : { checkOut: { gte: new Date(Date.now() - 60 * 864e5) } }) };
+    const where: Prisma.BookingWhereInput = { tenantId: ws.tenantId, ...bookingScope(ws), ...(q.from && q.to ? { checkIn: { lt: dayOf(q.to) }, checkOut: { gt: dayOf(q.from) } } : { checkOut: { gte: new Date(Date.now() - 60 * 864e5) } }) };
     const rows = await db().booking.findMany({ where, include: { room: true, folio: true, payments: true }, orderBy: { checkIn: "asc" }, take: 2000 });
     return { data: rows.map(json) };
   });
@@ -139,7 +145,7 @@ export async function hotelRoutes(app: FastifyInstance) {
     if (nights < 1) throw badRequest("Check-out must be after check-in.");
     if (nights > 365) throw badRequest("A booking can be up to a year.");
     if (from < dayOf(ymd(new Date(Date.now() - 864e5)))) throw badRequest("Check-in can't be in the past.");
-    const room = b.roomId ? await db().room.findFirst({ where: { id: b.roomId, tenantId: ws.tenantId, active: true } }) : null;
+    const room = b.roomId ? await db().room.findFirst({ where: { id: b.roomId, tenantId: ws.tenantId, active: true, ...roomScope(ws) } }) : null;
     if (b.roomId && !room) throw notFound("Room not found.");
     if (room && room.type !== b.type) throw badRequest(`Room ${room.no} is a ${room.type}.`);
     if (room && b.adults + b.children > room.maxGuests) throw badRequest(`Room ${room.no} takes up to ${room.maxGuests} guests.`);
@@ -164,7 +170,7 @@ export async function hotelRoutes(app: FastifyInstance) {
     if (nightsBetween(from, to) < 1) throw badRequest("Check-out must be after check-in.");
     const roomId = b.roomId === undefined ? cur.roomId : b.roomId;
     if (b.status !== "cancelled" && (b.from || b.to || b.roomId)) {
-      if (roomId) { const r = await db().room.findFirst({ where: { id: roomId, tenantId: ws.tenantId } }); if (!r || r.type !== cur.roomType) throw badRequest("Pick a room of the booked type."); }
+      if (roomId) { const r = await db().room.findFirst({ where: { id: roomId, tenantId: ws.tenantId, ...roomScope(ws) } }); if (!r || r.type !== cur.roomType) throw badRequest("Pick a room of the booked type."); }
       await checkFree(ws.tenantId, cur.roomType, roomId, from, to, cur.id);
     }
     await db().booking.update({ where: { id: cur.id }, data: { status: b.status, roomId, checkIn: from, checkOut: to, notes: b.notes } });
@@ -180,7 +186,7 @@ export async function hotelRoutes(app: FastifyInstance) {
     if (cur.status !== "confirmed" && cur.status !== "requested") throw badRequest(cur.status === "checked_in" ? "Already checked in." : "This booking is closed.");
     const roomId = b.roomId ?? cur.roomId;
     if (!roomId) throw badRequest("Pick a room.");
-    const room = await db().room.findFirst({ where: { id: roomId, tenantId: ws.tenantId, active: true } });
+    const room = await db().room.findFirst({ where: { id: roomId, tenantId: ws.tenantId, active: true, ...roomScope(ws) } });
     if (!room || room.type !== cur.roomType) throw badRequest("Pick a room of the booked type.");
     if (room.status === "dirty" || room.status === "blocked") throw badRequest(`Room ${room.no} isn't ready (${room.status}).`);
     await checkFree(ws.tenantId, cur.roomType, room.id, cur.checkIn, cur.checkOut, cur.id);

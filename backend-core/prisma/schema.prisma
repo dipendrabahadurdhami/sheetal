@@ -152,9 +152,32 @@ model Tenant {
   roles       Role[]
   memberships Membership[]
   invites     Invite[]
+  branches    Branch[]
 
   @@index([type])
   @@map("tenants")
+}
+
+/// A branch (outlet, office, site) of a business. Team members can be limited to some branches (Membership.scopes
+/// holds branch names); data such as rooms carries its branch name. Every business starts with "Head office".
+model Branch {
+  id        String   @id @default(cuid())
+  tenantId  String   @map("tenant_id")
+  name      String
+  address   String?
+  phone     String?
+  /// The person in charge (a name, shown on the Branches page).
+  manager   String?
+  /// The name printed on this branch's receipts.
+  receipt   String?
+  /// open or closed (closed branches keep their history but can't be picked).
+  status    String   @default("open")
+  sort      Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+  @@map("branches")
 }
 
 /// A role inside one business: a named set of permission ids (see src/domain/permissions.ts).

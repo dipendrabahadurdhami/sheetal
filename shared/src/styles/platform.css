@@ -1566,3 +1566,16 @@ html.has-brand[data-theme~="bars"] .pf-top .btn-primary { color: var(--brand-acc
 [data-theme~="bars"] .pf-brand img { filter: brightness(0) invert(1); }
 /* Logo preview on a light checkerboard, so a transparent background is visible as such. */
 .pf-logo-check { background: repeating-conic-gradient(#f1f1f1 0 25%, #fff 0 50%) 0 0 / 12px 12px; }
+
+/* Business switcher list: logo, name, then type and role; the open one marked. */
+.pf-wsx-head { padding: 8px 12px 6px; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.pf-menu .pf-wsx-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border-radius: 8px; text-align: left; }
+.pf-menu .pf-wsx-item .pf-wsx-name small { display: inline-flex; align-items: center; gap: 4px; }
+.pf-menu .pf-wsx-item.on { background: var(--accent-soft); }
+.pf-menu .pf-wsx-item.on .pf-wsx-name b { color: var(--accent-ink); }
+.pf-menu .pf-wsx-item > svg:last-child { color: var(--accent-ink); flex-shrink: 0; }
+/* Branch picker in the top bar. */
+.pf-branch-btn { display: inline-flex; align-items: center; gap: 8px; height: 38px; max-width: 240px; margin-left: 12px; padding: 0 12px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); color: var(--text-strong); font: inherit; font-size: 13.5px; font-weight: 500; cursor: pointer; }
+.pf-branch-btn:hover, .pf-branch-btn[aria-expanded="true"] { border-color: var(--line-strong); }
+.pf-top .pf-menu-wrap:has(> .pf-branch-btn) { position: relative; }
+.pf-top .pf-menu-wrap:has(> .pf-branch-btn) > .pf-menu { left: 12px; right: auto; min-width: 240px; }

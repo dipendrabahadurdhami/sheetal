@@ -24,6 +24,7 @@ const toTenant = (w, prev = {}) => ({
 });
 const toMember = (m) => ({ id: m.id, name: m.name, email: m.email, phone: m.phone || "", roleId: m.roleId, status: m.status === "paused" ? "suspended" : m.status, lastActive: m.lastActive, scopes: m.scopes, twofa: false });
 const toInvite = (i) => ({ id: i.id, email: i.email, roleId: i.roleId, scopes: i.scopes, status: i.status, sent: i.sent, expires: i.expires, by: i.by || "" });
+const toBranch = (b) => ({ id: b.id, name: b.name, address: b.address || "", phone: b.phone || "", manager: b.manager || "", receipt: b.receipt || "", status: b.status, rooms: b.rooms, staff: b.staff, live: true });
 const toRole = (r) => ({ id: r.id, key: r.key, name: r.name || undefined, perms: r.perms, system: r.system });
 
 export function useLiveWorkspace() {
@@ -42,7 +43,9 @@ export function useLiveWorkspace() {
       update((d) => {
         const keep = data.workspaces.some((w) => w.id === d.session.tenantId) ? d.session.tenantId : data.workspaces[0].id;
         d.tenants = [...data.workspaces.map((w) => toTenant(w, d.tenants.find((t) => t.id === w.id))), ...d.tenants.filter((t) => !liveIds.has(t.id) && t.id !== "t13")];
-        d.session = { ...d.session, userName: data.user.name, userEmail: data.user.email, memberships: data.workspaces.map((w) => w.id), tenantId: keep, liveRoles: Object.fromEntries(data.workspaces.map((w) => [w.id, w.role.id])) };
+        d.session = { ...d.session, userName: data.user.name, userEmail: data.user.email, memberships: data.workspaces.map((w) => w.id), tenantId: keep, liveRoles: Object.fromEntries(data.workspaces.map((w) => [w.id, w.role.id])),
+          // The branches the person works in, per business: "all" or a list of names (owners always "all").
+          liveScopes: Object.fromEntries(data.workspaces.map((w) => [w.id, w.scopes])) };
         for (const w of data.workspaces) {
           d.tenantRoles[w.id] = d.tenantRoles[w.id] || [toRole(w.role)];
           d.members[w.id] = d.members[w.id] || [];
@@ -68,6 +71,20 @@ export function useLiveWorkspace() {
   }, [current, known]);
   useEffect(() => { reload = loadTeam; loadTeam(); return () => { if (reload === loadTeam) reload = null; }; }, [loadTeam]);
 
+  // 2b The open business's branches (only the ones this person works in).
+  const loadBranches = useCallback(() => {
+    if (!isLive(current)) return;
+    setActiveTenant(current);
+    bizApi("GET", "/branches").then(({ data }) => update((d) => {
+      d.branches = d.branches || {};
+      d.branches[current] = data.branches.map(toBranch);
+      const t = d.tenants.find((x) => x.id === current);
+      if (t) t.scopes = data.branches.filter((b) => b.status === "open").map((b) => b.name);
+      d.session.liveScopes = { ...(d.session.liveScopes || {}), [current]: data.access };
+    })).catch(() => {});
+  }, [current, known]);
+  useEffect(() => { branchReload = loadBranches; loadBranches(); return () => { if (branchReload === loadBranches) branchReload = null; }; }, [loadBranches]);
+
   // 3 The open business's listings and leads (website enquiries), refreshed after every change and every minute.
   const loadWork = useCallback(() => {
     if (!isLive(current)) return;
@@ -89,6 +106,19 @@ export function useLiveWorkspace() {
     return () => { clearInterval(every); if (workReload === loadWork) workReload = null; };
   }, [loadWork]);
 }
+
+let branchReload = null;
+/** Branch actions for the open business; the branch list (and everyone's access) reloads after each. */
+export const liveBranches = (toast) => {
+  const run = (p) => p.then((r) => { if (r?.message) toast(r.message); branchReload?.(); reload?.(); return r; }).catch((e) => { toast(e.message); throw e; });
+  const body = (b) => ({ name: b.name?.trim(), address: b.address || null, phone: b.phone || null, manager: b.manager || null, receipt: b.receipt || null });
+  return {
+    add: (b) => run(bizApi("POST", "/branches", body(b))),
+    save: (b) => run(bizApi("PATCH", `/branches/${b.id}`, body(b))),
+    setOpen: (b, open) => run(bizApi("PATCH", `/branches/${b.id}`, { status: open ? "open" : "closed" })),
+    remove: (b) => run(bizApi("DELETE", `/branches/${b.id}`)),
+  };
+};
 
 let workReload = null;
 /** Reloads listings and leads of the open business after a change. */
