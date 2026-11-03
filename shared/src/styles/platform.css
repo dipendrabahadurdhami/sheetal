@@ -1579,3 +1579,4 @@ html.has-brand[data-theme~="bars"] .pf-top .btn-primary { color: var(--brand-acc
 .pf-branch-btn:hover, .pf-branch-btn[aria-expanded="true"] { border-color: var(--line-strong); }
 .pf-top .pf-menu-wrap:has(> .pf-branch-btn) { position: relative; }
 .pf-top .pf-menu-wrap:has(> .pf-branch-btn) > .pf-menu { left: 12px; right: auto; min-width: 240px; }
+.pf-wsx-note { margin: 4px 12px 8px; font-size: 12px; line-height: 1.4; color: var(--muted); }

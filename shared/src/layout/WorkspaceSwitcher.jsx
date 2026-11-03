@@ -17,15 +17,13 @@ function Mark({ ws, size }) {
 }
 
 export function WorkspaceSwitcher({ current, list, onPick, sub, big = false, label = "Switch business" }) {
-  const others = list.filter((w) => w.id !== current.id);
   const head = (toggle, open) => (
-    <button type="button" className={`pf-wsx ${big ? "big" : ""}`} onClick={others.length ? toggle : undefined} aria-haspopup={others.length ? "menu" : undefined} aria-expanded={others.length ? open : undefined} aria-label={others.length ? `${current.name}. ${label}` : current.name}>
+    <button type="button" className={`pf-wsx ${big ? "big" : ""}`} onClick={toggle} aria-haspopup="menu" aria-expanded={open} aria-label={`${current.name}. ${label}`}>
       <Mark ws={current} size={big ? 44 : 28} />
       <span className="pf-wsx-name"><b>{current.name}</b>{sub && <small>{sub}</small>}</span>
-      {others.length > 0 && <Icon name="chevron-down" size={15} className="pf-wsx-chev" />}
+      <Icon name="chevron-down" size={15} className="pf-wsx-chev" />
     </button>
   );
-  if (!others.length) return head(() => {}, false);
   return (
     <Menu align="left" trigger={({ toggle, open }) => head(toggle, open)}>
       <div className="pf-wsx-head">Your businesses · {list.length}</div>
@@ -36,6 +34,7 @@ export function WorkspaceSwitcher({ current, list, onPick, sub, big = false, lab
           {w.id === current.id && <Icon name="check" size={15} />}
         </button>
       ))}
+      {list.length === 1 && <p className="pf-wsx-note">Other businesses you own or are invited to will show here, each with its own menu and your role in it.</p>}
     </Menu>
   );
 }

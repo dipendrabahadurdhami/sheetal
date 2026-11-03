@@ -186,8 +186,9 @@ export default function BusinessApp() {
           <Button size="sm" variant="light" onClick={() => { update((d) => { d.session.impersonating = null; d.session.tenantId = d.session.memberships[0]; }); navigate(`/admin/tenants/${tenant.id}`); }}>{t("ws.backToAdmin")}</Button></div>
       )}</>}
       topLeft={<div className="pf-top-title"><b>{tenant.name}</b><span className="small muted">{t(`type.${T}`)} · {tenant.city}</span></div>}
-      topExtra={openBranches.length > 1 || allowed.length === 1 ? <BranchPicker branch={branch} allowed={allowed} canAll={canAll} allLabel={t("br.all")} label={t("br.filter")}
-        onPick={(v) => update((d) => { d.session.branchOf = { ...(d.session.branchOf || {}), [tenant.id]: v }; })} /> : null}
+      topExtra={<BranchPicker branch={branch} allowed={allowed} canAll={canAll} allLabel={t("br.all")} label={t("br.filter")}
+        footer={can(role, "settings.business") ? <MenuLink to="/business/branches" icon={openBranches.length > 1 ? "settings" : "plus"}>{openBranches.length > 1 ? "Manage branches" : "Add a branch"}</MenuLink> : null}
+        onPick={(v) => update((d) => { d.session.branchOf = { ...(d.session.branchOf || {}), [tenant.id]: v }; })} />}
       sideFooter={<><SetupChip tenant={tenant} /><Link to="/business/billing" className="pf-plan-chip"><Icon name="layers" size={15} /><span>{(db.plans.find((p) => p.id === tenant.planId) || {}).name} plan</span><Icon name="chevron-right" size={14} /></Link>{(config.demo || role !== owner) && <div className="pf-side-foot"><span className="small muted">{t("preview.viewAs")}</span>
         <Select value={role.id} onChange={(v) => update((d) => { d.session.previewRoleId = v; })} options={roles.map((r) => ({ id: r.id, label: roleName(r, t) }))} aria-label={t("preview.role")} />
         <span className="tiny muted">{t("preview.viewAsHint")}</span></div>}</>}
