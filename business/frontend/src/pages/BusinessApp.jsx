@@ -34,6 +34,7 @@ import { MyProfile, NotificationsPage, businessSeed, useNotifs, useServerNotifs 
 import { Domains } from "./Domains";
 import { Mail } from "./Mail";
 import { canAddBusiness, isLive, useBrand, useLiveWorkspace, workRefresh } from "../live";
+import { useLiveSettings } from "../liveSettings";
 import { bizApi, setActiveBranch } from "../api";
 import { AddBusiness } from "./AddBusiness";
 import { POS, Bookings } from "./POS";
@@ -62,8 +63,7 @@ import { opsOf } from "@sheetal/shared/demo/ops";
 const PREVIEW = [
   "/business/agreements", "/business/forms", "/business/invoices", "/business/payouts", "/business/expenses",
   "/business/rentals", "/business/stock", "/business/promote", "/business/social", "/business/voice",
-  "/business/people", "/business/ai-accounts", "/business/developers", "/business/data",
-  "/business/settings/payments", "/business/settings/notifications", "/business/settings/listings", "/business/settings/documents",
+  "/business/people", "/business/ai-accounts", "/business/developers",
 ];
 
 const TYPE_ICON = { hotel: "hotel", host: "bed-double", developer: "building-2", agency: "briefcase", sponsor: "hand-coins" };
@@ -74,6 +74,7 @@ export default function BusinessApp() {
   const { navigate } = useRouter();
   const [adding, setAdding] = React.useState(false);
   useLiveWorkspace(); // real businesses, role and team when signed in (../live.js)
+  useLiveSettings(); // settings, check-ups, listing options and import/export on the server (../liveSettings.js)
   const s = db.session;
   // Sheetal staff support sessions end on their own after 30 minutes.
   React.useEffect(() => {

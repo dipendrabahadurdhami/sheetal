@@ -17,3 +17,6 @@ mail-outbox/
 
 # Local editor and tool settings
 .claude/
+
+# Copies kept by foundation-1/apply.mjs
+.foundation-1-backup/

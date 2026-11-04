@@ -30,7 +30,7 @@ import { isStaffLive, useLiveStaff, useReviewQueue } from "../live";
 import { adminApi } from "../api";
 import { LiveAnalytics, LiveOutbox, LiveSetup, LiveStatus } from "./LiveSetup";
 
-const PREVIEW = ["/admin/catalog", "/admin/ai", "/admin/voice", "/admin/messages", "/admin/leads", "/admin/social", "/admin/earnings", "/admin/ads", "/admin/channels", "/admin/addons", "/admin/settings"];
+const PREVIEW = ["/admin/ai", "/admin/voice", "/admin/messages", "/admin/leads", "/admin/social", "/admin/earnings", "/admin/ads", "/admin/channels", "/admin/addons", "/admin/settings"];
 
 export default function AdminApp() {
   const t = useT();

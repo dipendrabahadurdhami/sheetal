@@ -2,7 +2,8 @@
 // Where it fits: server.ts starts it; tests build it with buildApp(); the business panel calls it under /v1.
 // How it works: the shared base app (backend-core) plus one module per area: team and businesses, branches,
 // listings, leads, email, billing, hotel and calendar, point of sale, projects and investments, growth (AI,
-// analytics, channels, calendar sync), reviews and verification, and the notification bell.
+// analytics, channels, calendar sync), reviews and verification, settings and check-ups, import and export, and the
+// notification bell.
 // Rules: every route starts from workspaceOf() (modules/access.ts), so it always acts inside one business the
 // person belongs to, with their role, and only on the branches they work at.
 
@@ -21,6 +22,8 @@ import { growthRoutes } from "./modules/growth/routes.js";
 import { branchRoutes } from "./modules/branches/routes.js";
 import { reviewRoutes } from "./modules/reviews/routes.js";
 import { verificationRoutes } from "./modules/verification/routes.js";
+import { settingsRoutes } from "./modules/settings/routes.js";
+import { dataRoutes } from "./modules/data/routes.js";
 import { notificationRoutes } from "@sheetal/backend-core/modules/notifications";
 import { workspaceOf } from "./modules/access.js";
 import type { AiClient } from "@sheetal/backend-core/lib/ai";
@@ -33,6 +36,8 @@ export async function buildApp(config: Config, deps: AppDeps & { resolver?: Reso
   await app.register(branchRoutes, { prefix: "/v1" });
   await app.register(reviewRoutes, { prefix: "/v1" });
   await app.register(verificationRoutes, { prefix: "/v1" });
+  await app.register(settingsRoutes, { prefix: "/v1" });
+  await app.register(dataRoutes, { prefix: "/v1" });
   // The bell: the person's notifications about the open business.
   await app.register(async (a) => notificationRoutes(a, "/notifications", (request) => { const ws = workspaceOf(request); return { userId: ws.user.id, tenantId: ws.tenantId }; }), { prefix: "/v1" });
   await app.register(mailRoutes, { prefix: "/v1", resolver: deps.resolver });

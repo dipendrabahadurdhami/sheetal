@@ -18,6 +18,7 @@ import { errorHandler, notFoundHandler } from "./lib/errors.js";
 import { healthRoutes } from "./routes/health.js";
 import { Mailer } from "./lib/mailer.js";
 import { registerAuth } from "./modules/auth/sessions.js";
+import { configureStorage } from "./lib/storage.js";
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -44,6 +45,7 @@ export async function buildBaseApp(config: Config, deps: AppDeps = {}): Promise<
   });
 
   app.decorate("config", config);
+  configureStorage(config); // photos also go to object storage when S3_BUCKET is set (lib/storage.ts)
   app.decorate("db", deps.db ?? createDb(config.DATABASE_URL, config.LOG_LEVEL === "debug"));
   app.decorate("cache", deps.cache ?? createCache(config.REDIS_URL));
   app.decorate("mailer", new Mailer(app.db, app.log, config.NODE_ENV !== "production"));
@@ -57,7 +59,7 @@ export async function buildBaseApp(config: Config, deps: AppDeps = {}): Promise<
   await app.register(cors, { origin: config.CORS_ORIGINS, credentials: true, maxAge: 86400, methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"] });
   await app.register(rateLimit, { max: config.RATE_LIMIT_PER_MINUTE, timeWindow: "1 minute" });
   // Website forms send FormData; text fields arrive as a plain object. Files are handled by the files module.
-  await app.register(multipart, { attachFieldsToBody: "keyValues", limits: { fileSize: 8 * 1024 * 1024, files: 20 } });
+  await app.register(multipart, { attachFieldsToBody: "keyValues", limits: { fileSize: 20 * 1024 * 1024, files: 21 } });
   registerAuth(app);
 
   await app.register(healthRoutes);

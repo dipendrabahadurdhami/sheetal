@@ -32,6 +32,7 @@ const GROUPS = [
     ["db:seed", "Adds the starting data: plans, the super admin and the Sheetal Property business (first setup)."],
     ["backup", "Exports the database to OneDrive\\Sheetal-Backups and copies new photos. Add -- --no-photos for the database only."],
     ["restore", "Lists database backups; `npm run restore -- <name> --yes` puts one back (replaces all data)."],
+    ["photos:resize", "Makes every photo in MEDIA_DIR the new sizes (main 1920 px, thumbnail 800 px). Try -- --dry-run first."],
   ]],
   ["Build and release", [
     ["build", "Builds the website and both panels into dist/ (with the sitemap)."],

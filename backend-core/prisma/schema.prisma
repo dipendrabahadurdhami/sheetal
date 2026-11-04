@@ -156,6 +156,9 @@ model Tenant {
   /// The last renewal reminder sent ("<renewsAt date>:<days before>"), so each is sent once.
   remindedFor      String?      @map("reminded_for")
   emailVerified    Boolean      @default(false) @map("email_verified")
+  /// The business's own settings by section (payments, notifications, listings, documents, branding, checkups);
+  /// secrets inside are sealed with SECRETS_KEY (business/backend/src/modules/settings).
+  settings         Json         @default("{}")
   createdAt        DateTime     @default(now()) @map("created_at")
   updatedAt        DateTime     @updatedAt @map("updated_at")
 

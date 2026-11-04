@@ -8,7 +8,7 @@ import tseslint from "typescript-eslint";
 const API = ["backend-core/**", "website/backend/**", "business/backend/**", "admin/backend/**", "mail-server/**"];
 
 export default [
-  { ignores: ["**/dist/**", "**/node_modules/**", "backend-core/.pgdata/**"] },
+  { ignores: ["**/dist/**", "**/node_modules/**", "backend-core/.pgdata/**", ".foundation-*-backup/**", "foundation-1*/**"] },
   {
     files: ["**/*.{js,jsx,ts,tsx}"],
     ignores: API,

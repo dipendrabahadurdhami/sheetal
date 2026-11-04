@@ -28,6 +28,13 @@ const schema = z.object({
   MEDIA_DIR: z.string().optional(),
   // Public address of the photos; defaults to this API's /media.
   MEDIA_URL: z.url().optional(),
+  // Object storage for photos (S3-compatible: Cloudflare R2, Backblaze B2, AWS S3). Optional: without it photos
+  // stay in MEDIA_DIR. With it, every new photo size is also uploaded; set MEDIA_URL to the bucket's public address.
+  S3_BUCKET: z.string().optional(),
+  S3_ENDPOINT: z.url().optional(),
+  S3_REGION: z.string().default("auto"),
+  S3_ACCESS_KEY_ID: z.string().optional(),
+  S3_SECRET_ACCESS_KEY: z.string().optional(),
   // Key that encrypts secrets stored in the database (src/lib/vault.ts). Required in production.
   SECRETS_KEY: z.string().min(32).optional(),
   // Mail: the host name of Sheetal's mail server (the MX every business domain points to), and the shared

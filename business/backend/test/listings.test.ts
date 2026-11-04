@@ -15,7 +15,8 @@ let app: FastifyInstance;
 const media = mkdtempSync(join(tmpdir(), "sheetal-media-"));
 const tok: Record<string, string> = {};
 const ids: Record<string, string> = {};
-const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(32)]).toString("base64");
+// The smallest real PNG (1×1 pixel): uploads are opened and saved as WebP sizes, so fake bytes are refused.
+const PNG = Buffer.from("89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d49444154789c6360000002000154a24f5d0000000049454e44ae426082", "hex").toString("base64");
 
 const call = (who: string, method: "GET" | "POST" | "PATCH" | "DELETE", url: string, body?: object, tenant = ids.agency) =>
   app.inject({ method, url: `/v1${url}`, payload: body, headers: { authorization: `Bearer ${tok[who]}`, ...(tenant ? { "x-tenant-id": tenant } : {}) } });
@@ -50,7 +51,7 @@ afterAll(async () => { await app.close(); rmSync(media, { recursive: true, force
 describe("listings", () => {
   it("only takes real photos", async () => {
     expect((await call("owner", "POST", "/listing-photos", { data: Buffer.from("<script>alert(1)</script>.....").toString("base64") })).statusCode).toBe(400);
-    expect(await photo()).toMatch(/^[A-Za-z0-9_-]{16}\.png$/);
+    expect(await photo()).toMatch(/^[A-Za-z0-9_-]{16}\.webp$/);
   });
 
   it("sends a new listing to Sheetal for review, keeping the form private", async () => {

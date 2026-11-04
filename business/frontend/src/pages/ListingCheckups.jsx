@@ -8,6 +8,7 @@ import { useT } from "@sheetal/shared/core/i18n";
 import { TODAY, fdate, fdatetime } from "@sheetal/shared/core/format";
 import { Badge, Checkbox, Empty, Field, PageHead, Panel, Seg, Stat, Table, Tabs, ToggleRow, useToast, Button } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
+import { isLive, saveSettings } from "../live";
 import { CheckupCard, dueLabel, useCheckups } from "@sheetal/shared/components/CheckupCard";
 import { ACTIONS, checkupQueue, daysBetween, todaysList } from "@sheetal/shared/data/checkups";
 
@@ -110,7 +111,13 @@ function CheckupSettings({ tenant, settings, t }) {
   const toast = useToast();
   const members = db.members[tenant.id] || [];
   const roles = db.tenantRoles[tenant.id] || [];
-  const set = (patch) => { update((d) => { d.checkups = d.checkups || {}; d.checkups[tenant.id] = d.checkups[tenant.id] || { log: [] }; d.checkups[tenant.id].settings = { ...settings, ...patch }; }); toast("Saved"); };
+  const set = (patch) => {
+    const next = { ...settings, ...patch };
+    update((d) => { d.checkups = d.checkups || {}; d.checkups[tenant.id] = d.checkups[tenant.id] || { log: [] }; d.checkups[tenant.id].settings = next; });
+    // Signed in, the settings are saved on the server (the same on every device and for the whole team).
+    if (isLive(tenant.id)) saveSettings("checkups", next).then((r) => toast(r.message)).catch((e) => toast(e.message));
+    else toast("Saved");
+  };
   const chosen = settings.reviewers === "all" ? members.map((m) => m.id) : settings.reviewers;
   return (
     <Panel title="Check-up settings" sub="Only owners and managers can change these." pad>

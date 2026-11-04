@@ -1,7 +1,8 @@
 // Listing options: every choice a listing form can offer (kinds, categories, facilities, areas and units).
 // Where it fits: the listing wizard, filters and the website's listing pages.
 // How it works: each item is { id, en, ne, icon }; land areas convert between ropani-aana and bigha-kattha and sq ft.
-// Rules: the admin Catalog page doesn't change this list yet (marked Preview); edit it here.
+// Rules: these are the built-in options. Admin → Listing setup saves changes on the server, and the panels lay them
+// over this list with mergeCatalog() (the server sends only the lists staff changed).
 
 const o = (id, en, ne, icon) => ({ id, en, ne, icon });
 
@@ -154,4 +155,13 @@ export function sqftToHill(sq) {
   let a = Math.floor(sq / AREA.aana); sq -= a * AREA.aana;
   let p = Math.floor(sq / AREA.paisa); sq -= p * AREA.paisa;
   return { ropani: r, aana: a, paisa: p, daam: Math.round(sq / AREA.daam) };
+}
+
+/** The options staff changed in Admin → Listing setup (GET /catalog) laid over the built-in list. */
+export function mergeCatalog(base, stored) {
+  if (!stored) return base;
+  const out = { ...base };
+  for (const [k, items] of Object.entries(stored.lists || {})) if (Array.isArray(items)) out[k] = items;
+  if (stored.kindsByType) out.kindsByType = { ...base.kindsByType, ...stored.kindsByType };
+  return out;
 }
