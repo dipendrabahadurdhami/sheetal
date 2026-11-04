@@ -7,7 +7,9 @@ import { Search, MapPin, CalendarDays, Users, Home, Wallet, Building2, Building,
 
 const TABS = [["stay", "Stay"], ["sale", "Buy"], ["rent", "Rent"], ["project", "Projects"], ["invest", "Invest"]];
 const PLACES = ["Pokhara", "Kathmandu", "Lalitpur", "Bhaktapur", "Chitwan", "Nagarkot", "Lumbini", "Bandipur"];
-const TYPES = ["House", "Land", "Apartment", "Flat", "Commercial Space", "Office Space", "Bungalow"];
+import { PROPERTY_TYPE_NAMES } from "../utils/listingOptions";
+// Every category and property type from Listing setup, plus the names old listings use (utils/listingOptions.js).
+const TYPES = PROPERTY_TYPE_NAMES;
 const BUY = [["", "Any budget"], ["5000000", "Up to 50 Lakh"], ["10000000", "Up to 1 Cr"], ["30000000", "Up to 3 Cr"], ["50000000", "Up to 5 Cr"]];
 const RENT = [["", "Any budget"], ["20000", "Up to Rs. 20,000"], ["40000", "Up to Rs. 40,000"], ["80000", "Up to Rs. 80,000"]];
 const PTYPE = ["Any project", "Apartment building", "Colony", "Villa project", "Commercial"];

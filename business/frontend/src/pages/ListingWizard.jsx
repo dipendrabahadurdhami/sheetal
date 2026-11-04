@@ -270,26 +270,48 @@ function PriceInput({ value, onChange, quick = [], per }) {
 }
 
 function LocationPick({ value, onChange, C, it, t }) {
-  // Pick a district from the list, or type one that is not listed yet.
+  // One search over all of Nepal: type an area or a district and pick it; or pick a district, then its area.
+  // A district or area that isn't listed can still be typed (Sheetal adds it to Listing setup).
   const [q, setQ] = React.useState("");
+  const [all, setAll] = React.useState(false);
   const known = C.districts.find((d) => d.id === value.district);
   const areas = known ? C.areas[value.district] || [] : [];
   const ql = q.trim().toLowerCase();
-  const list = ql ? C.districts.filter((d) => ((d.en || "") + " " + (d.ne || "")).toLowerCase().includes(ql)) : C.districts;
-  const exact = C.districts.some((d) => (d.en || "").toLowerCase() === ql);
+  const has = (s) => String(s || "").toLowerCase().includes(ql);
+  const starts = (s) => String(s || "").toLowerCase().startsWith(ql);
+  const hits = ql.length < 2 ? [] : [
+    ...C.districts.filter((d) => has(d.en) || has(d.ne)).map((d) => ({ d, a: null, rank: starts(d.en) ? 0 : 2 })),
+    ...C.districts.flatMap((d) => (C.areas[d.id] || []).filter(has).map((a) => ({ d, a, rank: starts(a) ? 1 : 3 }))),
+  ].sort((x, y) => x.rank - y.rank).slice(0, 14);
+  const exact = C.districts.some((d) => (d.en || "").toLowerCase() === ql) || hits.some((h) => h.a && h.a.toLowerCase() === ql);
+  const popular = C.districts.slice(0, 8);
+  const districts = all ? C.districts : known && !popular.includes(known) ? [...popular, known] : popular;
+  const typed = areas.includes(value.area) ? "" : value.area || "";
+  const shownAreas = typed ? areas.filter((a) => a.toLowerCase().includes(typed.toLowerCase())).slice(0, 30) : areas.slice(0, 18);
   return (
     <div className="pf-stack tight">
-      <label className="loc-find"><Icon name="search" size={16} /><input className="input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find or type a district, e.g. Kaski" aria-label="Find or type a district" /></label>
-      <div className="pf-chips">
-        {list.map((d) => <button key={d.id} type="button" className={`chip ${value.district === d.id ? "active" : ""}`} aria-pressed={value.district === d.id} onClick={() => { onChange({ district: d.id }); setQ(""); }}>{it(d)}</button>)}
-        {ql && !exact && <button type="button" className={`chip ${value.custom && value.district === q.trim() ? "active" : ""}`} onClick={() => onChange({ district: q.trim(), custom: true })}><Icon name="plus" size={14} />Use “{q.trim()}”</button>}
-        {!list.length && !ql && <span className="small muted">No districts in the list yet.</span>}
-      </div>
+      <label className="loc-find"><Icon name="search" size={16} /><input className="input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Type an area or district, e.g. Dhapasi, Lakeside or Pokhara" aria-label="Find an area or district" /></label>
+      {ql.length >= 2 ? (
+        <div className="pf-chips">
+          {hits.map((h) => { const on = value.district === h.d.id && (h.a ? value.area === h.a : !value.area); return (
+            <button key={h.d.id + (h.a || "")} type="button" className={`chip ${on ? "active" : ""}`} onClick={() => { onChange(h.a ? { district: h.d.id, area: h.a } : { district: h.d.id }); setQ(""); }}>
+              <Icon name="map-pin" size={14} />{h.a ? `${h.a}, ${it(h.d)}` : it(h.d)}
+            </button>); })}
+          {!exact && <button type="button" className={`chip ${value.custom && value.district === q.trim() ? "active" : ""}`} onClick={() => { onChange({ district: q.trim(), custom: true }); setQ(""); }}><Icon name="plus" size={14} />Use “{q.trim()}” as the district</button>}
+          {!hits.length && <span className="small muted">Not in the list yet. Pick the district, then type the area.</span>}
+        </div>
+      ) : (
+        <div className="pf-chips">
+          {districts.map((d) => <button key={d.id} type="button" className={`chip ${value.district === d.id ? "active" : ""}`} aria-pressed={value.district === d.id} onClick={() => onChange({ district: d.id })}>{it(d)}</button>)}
+          {C.districts.length > popular.length && <button type="button" className="chip" onClick={() => setAll(!all)}><Icon name={all ? "minus" : "plus"} size={14} />{all ? "Fewer districts" : `All ${C.districts.length} districts`}</button>}
+        </div>
+      )}
       {value.custom && value.district && <span className="pf-hint"><Icon name="info" size={13} />“{value.district}” will be checked by the Sheetal team and added to the list.</span>}
       {value.district && (
         <div className="pf-chips sub">
-          {areas.map((a) => <button key={a} type="button" className={`chip ${value.area === a ? "active" : ""}`} aria-pressed={value.area === a} onClick={() => onChange({ ...value, area: a })}><Icon name="map-pin" size={14} />{a}</button>)}
-          <input className="input pf-chip-input" placeholder={t("wiz.otherArea")} value={areas.includes(value.area) ? "" : value.area || ""} onChange={(e) => onChange({ ...value, area: e.target.value })} />
+          {shownAreas.map((a) => <button key={a} type="button" className={`chip ${value.area === a ? "active" : ""}`} aria-pressed={value.area === a} onClick={() => onChange({ ...value, area: a })}><Icon name="map-pin" size={14} />{a}</button>)}
+          {!typed && areas.length > shownAreas.length && <span className="small muted">+{areas.length - shownAreas.length} more: type to find</span>}
+          <input className="input pf-chip-input" placeholder={t("wiz.otherArea")} value={typed} onChange={(e) => onChange({ ...value, area: e.target.value })} />
         </div>
       )}
     </div>
@@ -390,6 +412,8 @@ function Repeat({ f, value, onChange, C, it, L, t }) {
               <span className="small">{L(sf.label)}</span>
               {sf.type === "choice" ? (
                 <div className="pf-chips">{(C[sf.src] || []).map((o) => <button key={o.id} type="button" className={`chip ${row[sf.name] === o.id ? "active" : ""}`} onClick={() => setRow(i, sf.name, o.id)}><Icon name={o.icon} size={14} />{it(o)}</button>)}</div>
+              ) : sf.type === "multi" ? (
+                <div className="pf-chips">{(C[sf.src] || []).map((o) => { const cur = row[sf.name] || []; const on = cur.includes(o.id); return <button key={o.id} type="button" aria-pressed={on} className={`chip ${on ? "active" : ""}`} onClick={() => setRow(i, sf.name, on ? cur.filter((x) => x !== o.id) : [...cur, o.id])}><Icon name={on ? "check" : o.icon} size={14} />{it(o)}</button>; })}</div>
               ) : sf.type === "counter" ? <Counter value={row[sf.name] ?? sf.def ?? sf.min} min={sf.min} max={sf.max} onChange={(x) => setRow(i, sf.name, x)} label={L(sf.label)} />
                 : sf.type === "price" ? <PriceInput value={row[sf.name]} onChange={(x) => setRow(i, sf.name, x)} quick={sf.quick} per={sf.per && L(sf.per)} />
                 : <div className="pf-unit"><input className="input tnum" inputMode="numeric" value={row[sf.name] || ""} onChange={(e) => setRow(i, sf.name, Number(e.target.value.replace(/\D/g, "")) || "")} /><span>{sf.unit}</span></div>}

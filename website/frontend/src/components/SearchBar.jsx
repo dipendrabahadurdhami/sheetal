@@ -6,7 +6,9 @@ import { Search, MapPin, Building2, Landmark, Home } from "lucide-react";
 import { api } from "../api/endpoints";
 import { Dropdown } from "./Dropdown";
 
-const TYPES = ["House", "Land", "Apartment", "Flat", "Commercial Space", "Office Space", "Bungalow"];
+import { PROPERTY_TYPE_NAMES } from "../utils/listingOptions";
+// Every category and property type from Listing setup, plus the names old listings use (utils/listingOptions.js).
+const TYPES = PROPERTY_TYPE_NAMES;
 const BUDGETS = {
   sale: [["", "Any budget"], ["2500000", "Up to 25 Lakh"], ["5000000", "Up to 50 Lakh"], ["7500000", "Up to 75 Lakh"], ["10000000", "Up to 1 Cr"], ["15000000", "Up to 1.5 Cr"], ["20000000", "Up to 2 Cr"], ["30000000", "Up to 3 Cr"], ["50000000", "Up to 5 Cr"], ["100000000", "Up to 10 Cr"], ["200000000", "Up to 20 Cr"]],
   rent: [["", "Any budget"], ["10000", "Up to 10K / mo"], ["15000", "Up to 15K / mo"], ["25000", "Up to 25K / mo"], ["35000", "Up to 35K / mo"], ["50000", "Up to 50K / mo"], ["75000", "Up to 75K / mo"], ["100000", "Up to 1 Lakh / mo"], ["200000", "Up to 2 Lakh / mo"], ["500000", "Up to 5 Lakh / mo"]],

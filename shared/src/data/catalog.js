@@ -161,7 +161,21 @@ export function sqftToHill(sq) {
 export function mergeCatalog(base, stored) {
   if (!stored) return base;
   const out = { ...base };
-  for (const [k, items] of Object.entries(stored.lists || {})) if (Array.isArray(items)) out[k] = items;
+  for (const [k, items] of Object.entries(stored.lists || {})) {
+    if (Array.isArray(items)) out[k] = items;
+    // Grouped lists (property types per category, areas per district) change group by group.
+    else if (items && typeof items === "object") out[k] = { ...(base[k] || {}), ...items };
+  }
   if (stored.kindsByType) out.kindsByType = { ...base.kindsByType, ...stored.kindsByType };
   return out;
 }
+
+// ── Fuller built-in lists (catalogMore.js): every district and its areas, more property types, room, bed, bathroom
+// and amenity choices. They are added here once, so everything works with no setup. ──
+import { MORE_AREAS, MORE_OPTIONS, MORE_TYPES } from "./catalogMore";
+// Icons the platform's icon set has (core/icons.jsx); others become the closest one it has.
+const ICON_FIX = { "door-closed": "door-open", package: "archive", "plug-zap": "zap", "shopping-basket": "shopping-bag", pill: "hospital", factory: "warehouse", tent: "tent-tree", tractor: "sprout", fan: "air-vent", refrigerator: "cooking-pot", footprints: "users", "washing-machine": "shirt", toilet: "droplets", "shower-head": "droplets", bath: "droplets", wind: "air-vent", "glass-water": "droplet", microwave: "cooking-pot", luggage: "briefcase", presentation: "users", siren: "bell-ring", "fire-extinguisher": "flame", cross: "hospital", accessibility: "users", "wine-off": "ban", salad: "leaf", fuel: "car", home: "house" };
+const addTo = (list, rows) => { for (const [id, en, ne, icon] of rows) if (!list.some((x) => x.id === id)) list.push(o(id, en, ne, ICON_FIX[icon] || icon || "circle-check")); return list; };
+for (const [key, rows] of Object.entries(MORE_OPTIONS)) CATALOG[key] = addTo(CATALOG[key] || [], rows);
+for (const [cat, rows] of Object.entries(MORE_TYPES)) CATALOG.propertyTypes[cat] = addTo(CATALOG.propertyTypes[cat] || [], rows);
+for (const [d, names] of Object.entries(MORE_AREAS)) CATALOG.areas[d] = [...new Set([...(CATALOG.areas[d] || []), ...names])];

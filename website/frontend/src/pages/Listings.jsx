@@ -21,7 +21,9 @@ const META = {
   rent: { kicker: "Rent", title: "Property for rent", text: "Flats, houses and commercial spaces ready to move in.", api: "rent" },
   search: { kicker: "Explore", title: "All listings", text: "Search every listing on Sheetal Property." },
 };
-const TYPES = ["House", "Land", "Apartment", "Flat", "Commercial Space", "Office Space", "Bungalow"];
+import { PROPERTY_TYPE_NAMES } from "../utils/listingOptions";
+// Every category and property type from Listing setup, plus the names old listings use (utils/listingOptions.js).
+const TYPES = PROPERTY_TYPE_NAMES;
 const CATS = ["Residential", "Commercial", "Semi-Commercial", "Agricultural"];
 const FILTER_KEYS = ["keyword", "property_type", "category", "min_price", "max_price", "bedrooms", "property_status", "price_order"];
 

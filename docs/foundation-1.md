@@ -81,3 +81,17 @@ leads, rooms, bookings and the team export from it. Other kinds still work in th
 
 `node foundation-1/apply.mjs --undo` puts back every file as it was before (from `.foundation-1-backup/`). The
 database column stays; it is harmless.
+
+## Foundation 1b: full built-in lists, location search, stay rooms
+
+- **Listing setup shows all 49 lists** the forms use, including two grouped ones: property types per category and
+  areas per district. Everything has a full built-in list, so nothing needs adding by hand.
+- **Built-in lists** (`shared/src/data/catalogMore.js`): all 77 districts; areas for every main town, the Kathmandu
+  valley tol by tol (about 120 in Kathmandu, Lalitpur and Bhaktapur); more property types; 15 more banks.
+- **Location in the listing form**: one search box for all of Nepal. Typing "dhap" suggests "Dhapasi, Kathmandu";
+  one tap fills district and area. Areas that aren't listed can still be typed.
+- **Stays, like the big booking sites**: per room type the beds, bathroom (attached, private, shared), view, size and
+  in-room amenities; for homes, where guests sleep (room by room, with beds and bathroom), bathroom items, kitchen,
+  views, safety and accessibility. The website's property page shows them under "Rooms".
+- **Website filters** (home, search bar, listings page) offer every category and property type from Listing setup,
+  plus the names old listings use, so filters match real listings. New website API: `GET /v1/catalog`.

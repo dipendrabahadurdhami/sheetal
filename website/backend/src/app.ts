@@ -9,6 +9,7 @@ import type { Config } from "@sheetal/backend-core/config";
 import { buildBaseApp, type AppDeps } from "@sheetal/backend-core/app";
 import { authRoutes } from "./modules/auth/routes.js";
 import { catalogRoutes, mediaRoutes } from "./modules/catalog/routes.js";
+import { catalogOptionRoutes } from "./modules/catalog/options.js";
 import { engageRoutes } from "./modules/engage/routes.js";
 import { postingRoutes } from "./modules/posting/routes.js";
 import { contentRoutes } from "./modules/content/routes.js";
@@ -20,6 +21,7 @@ export async function buildApp(config: Config, deps: AppDeps & { ai?: { client: 
   const app = await buildBaseApp(config, deps);
   await app.register(authRoutes, { prefix: "/v1" });
   await app.register(catalogRoutes, { prefix: "/v1" });
+  await app.register(catalogOptionRoutes, { prefix: "/v1" });
   await app.register(engageRoutes, { prefix: "/v1" });
   await app.register(postingRoutes, { prefix: "/v1" });
   await app.register(boardRoutes, { prefix: "/v1" });
