@@ -1,11 +1,12 @@
+// Listing, blog and logo photos.
+// Where it fits: uploads from the business panel, the website and the admin panel; photoUrl() builds their addresses.
+// How it works: only real JPEG, PNG or WebP files are kept (checked by their first bytes), under a random name, in
+// MEDIA_DIR/<area>/{main,thumbnail}. The thumbnail is the same file until resizing and object storage arrive.
+
 import { randomBytes } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { AppError, badRequest } from "./errors.js";
-
-// Photos people upload with a listing. Only real JPEG, PNG or WebP images are kept (checked by their first bytes,
-// not by the name the browser gives), under a random name, in MEDIA_DIR/property/{main,thumbnail}.
-// The thumbnail is the same file for now; resizing comes with object storage.
 
 export const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
 const KINDS: [string, (b: Buffer) => boolean][] = [

@@ -1,9 +1,11 @@
+// Meta channels (WhatsApp Cloud API, Messenger, Instagram): webhook checks, reading messages, sending replies.
+// Where it fits: the business API's webhook and Inbox replies.
+// How it works: one Meta app (Sheetal's) serves every business; each business connects its own number or page,
+// whose token is stored encrypted.
+// Rules: a webhook body is only trusted after its X-Hub-Signature-256 matches the app secret.
+
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { Fetch } from "./payments.js";
-
-// Meta (WhatsApp Cloud API, Messenger, Instagram): checking that a webhook really comes from Meta, reading the
-// messages in it, and sending a reply. One Meta app (Sheetal's) serves every business; each business connects
-// its own WhatsApp number or page, whose token is stored encrypted.
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 

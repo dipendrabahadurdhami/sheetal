@@ -1,8 +1,8 @@
+// Health of an API's own parts, for /health/ready and Admin → System status.
+// How it works: checks the database and the cache and reports their state and speed.
+
 import type { Cache } from "./cache.js";
 import { pingDb, type Db } from "./db.js";
-
-// Health of the API's own parts, for /health/ready and the super admin's System status page.
-// Outside services (email worker, WhatsApp, voice, AI) are added by their modules as they are built.
 
 export type ServiceState = "up" | "down" | "off";
 export interface ServiceStatus { id: string; name: string; state: ServiceState; ms: number | null; detail?: string }

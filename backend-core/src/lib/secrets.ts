@@ -1,3 +1,9 @@
+// Password hashing and one-time tokens.
+// Where it fits: sign-up, sign-in, sessions, email and invitation links.
+// How it works: passwords use Argon2id (salted, memory-hard); a random token goes to the person and only its SHA-256
+// is stored.
+// Rules: never store or log a password or token in plain text; a copy of the database can't be used to sign in.
+
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { hash, verify } from "@node-rs/argon2";
 

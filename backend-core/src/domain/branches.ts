@@ -1,7 +1,10 @@
-import type { Db } from "../lib/db.js";
+// Branch helpers for work that arrives from outside the panels (website enquiries, chat messages, calendar feeds).
+// Where it fits: used by the website API, the chat webhook and calendar sync to file new work under a branch, and by
+// notifications to reach only the people who work at that branch.
+// How it works: work goes to the listing's or room's branch when known, else to the business's head office (its
+// first open branch).
 
-// Branches of a business, for work that arrives from outside the panel (website enquiries, chat channels, calendar
-// feeds): it goes to the listing's or room's branch when there is one, else to the business's head office.
+import type { Db } from "../lib/db.js";
 
 /** The business's first open branch (its head office), or null for a business without one. */
 export async function headOffice(db: Db, tenantId: string): Promise<string | null> {

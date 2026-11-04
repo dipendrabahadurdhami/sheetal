@@ -1,8 +1,10 @@
+// DNS records a business adds at its domain provider for email, and the check that reads them back.
+// Where it fits: Settings → Domain and email.
+// How it works: lists the MX, SPF, DKIM, DMARC and verification records for the domain, and checks each one is
+// published. The DNS resolver can be swapped in tests.
+
 import { generateKeyPairSync } from "node:crypto";
 import { promises as nodeDns } from "node:dns";
-
-// DNS records a business adds at its domain provider so Sheetal's mail server can receive and send its mail,
-// and the check that reads them back. The resolver can be swapped in tests.
 
 export interface Resolver {
   resolveMx(name: string): Promise<{ exchange: string; priority: number }[]>;

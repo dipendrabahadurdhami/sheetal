@@ -1,3 +1,11 @@
+// Hotels and hosts: rooms, the calendar (night prices, closed dates, rules), availability, bookings and the front desk.
+// Where it fits: the panel's Front desk, Bookings and Calendar pages.
+// How it works: rooms and bookings belong to a branch; prices come from the calendar (domain/rates.ts); check-in needs
+// the guest's ID seen; the room bill collects nights, extras and restaurant bills with service and VAT; check-out
+// only once the bill is paid.
+// Rules: a room is never booked twice for one night, nor a type beyond its rooms; closed nights and stays shorter
+// than the minimum are refused; staff only touch their branches' rooms and bookings.
+
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Booking, FolioLine, GuestPayment, Prisma, Room } from "@prisma/client";
 import { z } from "zod";
@@ -6,9 +14,6 @@ import { badRequest, conflict, forbidden, notFound } from "@sheetal/backend-core
 import { dayOf, hotelBill, nightsBetween, ymd } from "@sheetal/backend-core/domain/money";
 import { nightsOf, quoteStay } from "@sheetal/backend-core/domain/rates";
 import { branchFor, branchView, inView, workspaceOf, type Workspace } from "../access.js";
-
-// Hotels and hosts: rooms, availability, bookings, the front desk (check-in with the guest's ID, the room bill,
-// payments, check-out once settled). A room can't be booked twice for the same night.
 
 const ACTIVE = ["requested", "confirmed", "checked_in"];
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use a date like 2026-11-20.");

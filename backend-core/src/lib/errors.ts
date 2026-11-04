@@ -1,9 +1,10 @@
+// One error format for every API: { message, code, errors?, requestId }.
+// Where it fits: routes throw badRequest, forbidden, notFound, conflict or AppError; the base app turns them into replies.
+// How it works: expected problems keep their status and message; invalid input (zod) becomes 422 with field errors;
+// anything else becomes a 500 with a safe message and is logged in full with its request id.
+
 import type { FastifyError, FastifyReply, FastifyRequest } from "fastify";
 import { ZodError } from "zod";
-
-// One error shape for the whole API, matching what the frontends already read:
-//   { message, code, errors?, requestId }
-// Expected problems use AppError; anything else becomes a 500 with a safe message and is logged in full.
 
 export class AppError extends Error {
   constructor(

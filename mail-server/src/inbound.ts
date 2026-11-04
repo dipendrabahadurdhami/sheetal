@@ -1,16 +1,16 @@
+// Receiving mail for business domains (SMTP, port 25).
+// Where it fits: other mail servers connect here; accepted mail is handed to the business API (POST /v1/mail/inbound).
+// How it works: only addresses of active Sheetal mailboxes are accepted (others are refused at once, so the sender is
+// told); each message is checked with SPF, DKIM and DMARC: forged mail whose domain asks for rejection is refused,
+// other failures go to Spam.
+// Rules: this server never relays: it only takes mail for Sheetal mailboxes and has no login for sending.
+
 import { readFileSync } from "node:fs";
 import { SMTPServer, type SMTPServerAddress, type SMTPServerSession } from "smtp-server";
 import { simpleParser, type AddressObject } from "mailparser";
 import mailauth from "mailauth";
 import type { Db } from "@sheetal/backend-core/lib/db";
 import type { MailConfig } from "./config.js";
-
-// Receiving: other mail servers connect on port 25 and hand over mail for business domains.
-// 1 Only addresses of active Sheetal mailboxes are accepted (others are refused at once, so the sender is told).
-// 2 Each message is checked with SPF, DKIM and DMARC: forged mail whose domain asks for rejection is refused,
-//   other failures go to Spam.
-// 3 The parsed message goes to the business API (POST /v1/mail/inbound), which files it and counts storage.
-// This server never relays: it only takes mail for Sheetal mailboxes and has no login for sending.
 
 export interface InboundPayload {
   to: string[]; from: string; fromName?: string; cc: string[]; subject: string; text: string; html?: string;

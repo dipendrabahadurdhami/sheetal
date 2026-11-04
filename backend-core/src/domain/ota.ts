@@ -1,12 +1,15 @@
+// Calendar sync with Booking.com, Airbnb, Agoda and Expedia (iCal feeds), for hotel and host businesses.
+// Where it fits: the business API syncs a feed when it is added or on request; the admin API syncs every feed every
+// 2 hours.
+// How it works: each stay in the other site's feed becomes a booking of that room type (no room yet) at the branch
+// whose rooms it fills; stays that disappear from the feed are cancelled; the people at that branch are notified.
+
 import type { Db } from "../lib/db.js";
 import type { Fetch } from "../lib/payments.js";
 import { parseIcal } from "../lib/ical.js";
 import { leadPeople, notify } from "../lib/notify.js";
 import { dayOf, ymd } from "./money.js";
 import { headOffice } from "./branches.js";
-
-// Keeping rooms in step with Booking.com, Airbnb, Agoda and Expedia through their calendar (iCal) feeds.
-// The business API syncs a feed when it is added or on request; the admin API syncs every feed every 2 hours.
 
 /** Imports a site's stays as bookings of that room type (unassigned); stays removed from the feed are cancelled. */
 export async function syncOtaFeed(db: Db, id: string, fetchFn?: Fetch) {

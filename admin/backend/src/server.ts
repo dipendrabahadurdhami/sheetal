@@ -1,7 +1,9 @@
+// Starts the admin API on ADMIN_API_PORT (4002 by default), with its background jobs.
+// How it works: loads backend-core/.env, builds the app and listens; stops cleanly on Ctrl+C.
+
 import { loadConfig, loadEnvFiles } from "@sheetal/backend-core/config";
 import { buildApp } from "./app.js";
 
-// Start the admin API (port 4002 unless ADMIN_API_PORT says otherwise).
 loadEnvFiles();
 
 const config = loadConfig(process.env, "admin");

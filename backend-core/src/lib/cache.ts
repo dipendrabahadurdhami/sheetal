@@ -1,7 +1,9 @@
-import { Redis } from "ioredis";
+// Cache for pages, search results, settings and rate limits.
+// Where it fits: app.cache in every API; cached() wraps slow public lists.
+// How it works: Redis when REDIS_URL is set (shared by all API processes), otherwise an in-memory map (one process).
+// Rules: clear the matching prefix when the underlying data changes (e.g. "catalog:" after a listing changes).
 
-// Cache used for pages, search results, settings and rate limits.
-// Redis in production (shared by every API process); an in-memory map when REDIS_URL is not set (local dev, tests).
+import { Redis } from "ioredis";
 
 export interface Cache {
   readonly kind: "redis" | "memory";

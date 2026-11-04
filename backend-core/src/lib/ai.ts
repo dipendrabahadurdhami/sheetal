@@ -1,13 +1,16 @@
+// AI features (Ask AI on the website, the lead finder in the business panel), run on the server only.
+// Where it fits: called by the website API (ask-ai) and the business API (extract-leads); settings come from
+// Admin → AI.
+// How it works: the AI key is saved encrypted from the admin panel (or ANTHROPIC_API_KEY); every request is
+// recorded and counted against the business's monthly AI credits (1 credit per 1,000 tokens, at least 1).
+// Rules: the key never reaches a browser; answers only use public facts about listings.
+
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
 import type { Db } from "./db.js";
 import { Vault } from "./vault.js";
 import { AppError } from "./errors.js";
-
-// AI features run on Sheetal's Claude account, server-side only (the key is never sent to a browser).
-// The key is saved in Admin → AI (encrypted, write-only); ANTHROPIC_API_KEY in the environment works too.
-// Each business has monthly AI credits from its plan (1 credit per 1,000 tokens, at least 1 per request).
 
 export const DEFAULT_MODEL = "claude-opus-5-5";
 export const AI_CREDITS: Record<string, number> = { Starter: 500, Business: 2000, Pro: 6000 }; // mirrors shared/src/core/plans.js

@@ -1,11 +1,13 @@
+// Settings read from the environment (backend-core/.env), checked once when an API starts.
+// Where it fits: loadConfig() is called by each API's server.ts and by the tests; app.config holds the result.
+// How it works: a zod schema with defaults for local development; production refuses to start without the
+// required values (database, site URL, SECRETS_KEY).
+// Rules: add every new setting here with a default or a clear error. Keys for outside services (payments, AI,
+// Meta) are not settings: they are saved encrypted in the database from the admin panel.
+
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
-// Every setting the APIs read from the environment, checked once at start-up.
-// There are three APIs (website, business, admin), one database. Each listens on its own port:
-// WEBSITE_API_PORT (4000), BUSINESS_API_PORT (4001), ADMIN_API_PORT (4002).
-// Secrets for outside services (Cloudflare, Meta, AI…) are not here: they live encrypted in the database,
-// entered in Admin → Setup center.
 const list = z.string().transform((s) => s.split(",").map((x) => x.trim()).filter(Boolean));
 
 const schema = z.object({

@@ -1,12 +1,17 @@
+// Who is asking, in which business, with which role, and on which branches. Used by every business route.
+// Where it fits: workspaceOf(request) at the start of each route; branchView(), inView() and branchFor() whenever a
+// query touches branch work (listings, leads, rooms, bookings, tills).
+// How it works: the panel sends the open business in "x-tenant-id" and the picked branch in "x-branch". The person
+// must be an active member of that business; their role gives ws.can(...); their branch access (Team page) limits
+// what they see, and new work goes to the picked branch or their only one.
+// Rules: never query business data without the tenant id, and never branch data without inView(); owners and "all
+// branches" people see everything, everyone else only their branches, even with "All branches" picked.
+
 import type { FastifyRequest } from "fastify";
 import type { PrismaClient } from "@prisma/client";
 import { requireUser, type SessionUser } from "@sheetal/backend-core/modules/auth/sessions";
 import { badRequest, forbidden } from "@sheetal/backend-core/lib/errors";
 import { hasPerm } from "@sheetal/backend-core/domain/permissions";
-
-// Which business a request is for, and what the person may do in it.
-// The business panel sends the workspace it has open in the "x-tenant-id" header; without it, the person's
-// first business is used. A person can only act in a business they are a member of.
 
 export type Member = SessionUser["memberships"][number];
 export interface Workspace {

@@ -1,7 +1,11 @@
+// Settings for the mail server, read once at start-up.
+// Where it fits: server.ts and the tests.
+// How it works: shared settings (DATABASE_URL, SECRETS_KEY, MAIL_HOST, MAIL_INBOUND_SECRET) come from backend-core/.env
+// like the APIs; the rest are the mail server's own (ports, TLS, sending pace, system email mode).
+// Rules: production needs the database, SECRETS_KEY, the inbound secret and a TLS certificate.
+
 import { z } from "zod";
 
-// Settings for Sheetal's mail server, read once at start-up. Shared settings (DATABASE_URL, SECRETS_KEY,
-// MAIL_HOST, MAIL_INBOUND_SECRET) come from backend-core/.env like the APIs; the rest are the server's own.
 const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),

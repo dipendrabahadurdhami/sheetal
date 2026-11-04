@@ -1,3 +1,10 @@
+// The signed-in person's businesses, adding a business, and each business's team, roles, profile and branding.
+// Where it fits: the business switcher, Team, Roles, Settings → Profile and Branding, and the invitation page.
+// How it works: invitations go by email with a one-time link (7 days); people get a role and branch access; a new
+// business is covered by the owner's Pro plan when they have one.
+// Rules: "team.manage" handles people, "roles.manage" roles (own roles need a plan that allows them); the owner role
+// can't be edited and a business always keeps one active owner; seats count pending invitations.
+
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { dbOf } from "@sheetal/backend-core/lib/db";
@@ -11,12 +18,6 @@ import { mediaBase, photoUrl, savePhoto } from "@sheetal/backend-core/lib/photos
 import { BUSINESS_TYPES, businessPermsFor, type BusinessType } from "@sheetal/backend-core/domain/permissions";
 import { branchesOf, workspaceOf, type Workspace } from "../access.js";
 import { checkScopes } from "../branches/routes.js";
-
-// The signed-in person's businesses, and each business's team: members, invitations, roles, activity.
-// - Anyone in the business sees the team; "team.manage" invites, changes and removes people;
-//   "roles.manage" edits roles (own roles need a plan with custom roles).
-// - The owner role can't be edited, and a business always keeps at least one active owner.
-// - People count against the plan's seats, pending invitations included.
 
 const INVITE_DAYS = 7;
 /** Businesses one person can own (more through Sheetal support). */

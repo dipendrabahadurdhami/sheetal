@@ -1,10 +1,13 @@
+// Sign-in sessions: who is making a request.
+// Where it fits: registered by the base app; routes call requireUser() or read request.user.
+// How it works: the browser keeps a random token; the database keeps its hash; a short cache in front means most
+// requests don't touch the sessions table. Each request gets the person with their active business memberships.
+// Rules: removed staff and paused members lose access on their next request.
+
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Membership, Plan, Role, Tenant, User } from "@prisma/client";
 import { newToken, sha256 } from "../../lib/secrets.js";
 import { unauthorized } from "../../lib/errors.js";
-
-// Login sessions: random token in the browser, its hash in the database, a short cache in front
-// so most requests don't touch the sessions table.
 
 export const SESSION_DAYS = 30;
 const CACHE_SECONDS = 60;

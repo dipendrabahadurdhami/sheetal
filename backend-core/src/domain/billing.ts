@@ -1,3 +1,12 @@
+// Plan billing: invoices, applying a payment, the renewal cycle, and businesses covered by a Pro plan.
+// Where it fits: used by the business API (checkout, payment return, bank proofs) and the admin API (payment review,
+// the renewal job every 6 hours, plan changes).
+// How it works: an invoice is made for a plan and period; once a gateway or Sheetal confirms the payment, the plan and
+// its end date are applied. Before the end date a renewal invoice and reminders go out; after it, a grace period;
+// then the business moves to Starter.
+// Rules: prices include 13% VAT. Nothing charges anyone automatically (Nepal wallets keep no cards on file).
+// Applying a payment is safe to repeat. Covered businesses follow their Pro business's plan.
+
 import type { Invoice, Plan, Prisma, Tenant } from "@prisma/client";
 import type { Db } from "../lib/db.js";
 import type { Mailer } from "../lib/mailer.js";
@@ -6,10 +15,6 @@ import { ESEWA_TEST, type Mode } from "../lib/payments.js";
 import { notify } from "../lib/notify.js";
 import { priceFor, starterPlanId } from "./plans.js";
 import type { BusinessType } from "./permissions.js";
-
-// Plan billing: invoices, applying a payment, and the renewal cycle (reminders, a grace period, then Starter).
-// Prices include VAT. Nothing renews by charging anyone on its own: Nepal's wallets don't keep cards on file, so
-// "auto-renew" means a renewal invoice is made and sent ahead of time; the business pays it like any other.
 
 export interface BillingSettings { vatRate: number; graceDays: number; reminderDays: number[]; bank: { name?: string; account?: string; accountName?: string; note?: string } }
 const BILLING_DEFAULTS: BillingSettings = { vatRate: 13, graceDays: 7, reminderDays: [7, 1], bank: {} };

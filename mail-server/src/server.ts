@@ -1,3 +1,7 @@
+// Starts the mail server: receiving (SMTP), sending business mail, and sending system emails.
+// Where it fits: runs as its own process next to the APIs (docs/mail-server.md explains the server set-up).
+// How it works: starts the SMTP listener and two senders that look at their queues every few seconds; stops cleanly.
+
 import pino from "pino";
 import { loadEnvFiles } from "@sheetal/backend-core/config";
 import { createDb } from "@sheetal/backend-core/lib/db";
@@ -6,9 +10,6 @@ import { apiHandOff, createInboundServer } from "./inbound.js";
 import { OutboundWorker } from "./outbound.js";
 import { SystemSender } from "./system.js";
 
-// Sheetal's mail server: receives mail for business domains (SMTP on port 25), sends the queued business mail and
-// Sheetal's own system emails.
-// Runs as its own process on the VPS (see docs/mail-server.md).
 loadEnvFiles();
 const config = loadMailConfig();
 const log = pino({ level: config.LOG_LEVEL, base: { service: "mail" } });

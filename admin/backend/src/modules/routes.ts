@@ -1,3 +1,9 @@
+// Staff console basics: businesses, plan changes and suspensions, adding a business, upgrade requests, staff, audit log.
+// Where it fits: the admin panel's Businesses, Staff and Audit log pages.
+// How it works: staffOf() lets only people with a platform role in and checks that role's permissions
+// (PLATFORM_ROLES in backend-core/src/domain/permissions.ts); every change is written to the audit log.
+// Rules: auto-renew is the super admin's alone; plan changes carry to businesses covered by that plan.
+
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { syncCovered } from "@sheetal/backend-core/domain/billing";
 import type { Prisma, TenantStatus } from "@prisma/client";
@@ -8,10 +14,6 @@ import { newToken, sha256 } from "@sheetal/backend-core/lib/secrets";
 import { requireUser, revokeAllSessions, type SessionUser } from "@sheetal/backend-core/modules/auth/sessions";
 import { BUSINESS_TYPES, hasPerm, PLATFORM_ROLES } from "@sheetal/backend-core/domain/permissions";
 import { createWorkspace } from "@sheetal/backend-core/modules/accounts/workspace";
-
-// Sheetal staff console: businesses, plan changes and suspensions, upgrade requests, staff, audit log.
-// Only people with a platform role get in, and each action checks that role's permissions
-// (backend-core/src/domain/permissions.ts PLATFORM_ROLES). Auto-renew is the super admin's alone.
 
 export interface Staff { user: SessionUser; role: string; can: (perm: string) => boolean }
 

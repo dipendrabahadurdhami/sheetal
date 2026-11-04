@@ -1,9 +1,11 @@
+// Night prices and closed nights for a room type at a branch (the hotel calendar).
+// Where it fits: used by the calendar screen, new bookings, availability, and the calendar sent to Booking.com/Airbnb.
+// How it works: a night costs the price set for that date, otherwise the room type's lowest room rate plus the weekend
+// markup on Friday and Saturday nights, rounded to Rs. 50.
+// Rules: closed nights and stays shorter than the minimum take no new bookings.
+
 import type { Db } from "../lib/db.js";
 import { ymd } from "./money.js";
-
-// Night prices for a room type at a branch (the calendar). A night's price is the one set for that date, else the
-// normal price (the type's lowest room rate) with the weekend markup on Friday and Saturday nights, rounded to Rs. 50.
-// Closed nights take no new bookings. Bookings, availability and the calendar sent to other sites all use this.
 
 export interface Night { day: string; price: number; override: number | null; closed: boolean; weekend: boolean }
 export interface Rule { weekendPct: number; minNights: number }

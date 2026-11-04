@@ -1,3 +1,11 @@
+// Paying for the plan from the business panel (Settings → Plan and billing).
+// Where it fits: the billing page; the gateway sends the payer back to /business/billing/return/<provider>/<payment>,
+// which calls this API to check the result.
+// How it works: checkout creates or reuses an invoice and starts a payment with eSewa, Khalti or Fonepay; on return the
+// result is checked with the gateway before the invoice is paid and the plan applied. Bank transfers upload a receipt
+// that Sheetal confirms (staff are notified). Also: joining the owner's Pro plan.
+// Rules: only "billing.manage" pays; amounts come from the invoice, never from the browser.
+
 import type { FastifyInstance } from "fastify";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
@@ -12,10 +20,6 @@ import { applyPayment, billingSettings, createInvoice, gateways, invoiceNumber, 
 import { PERIODS, priceFor } from "@sheetal/backend-core/domain/plans";
 import { requireUser } from "@sheetal/backend-core/modules/auth/sessions";
 import { workspaceOf, type Workspace } from "../access.js";
-
-// A business paying for its plan in /business/billing. The payer goes to eSewa, Khalti or Fonepay and comes back
-// to /business/billing/return/<provider>/<payment>, which asks this API to check the result with the gateway;
-// only then is the invoice paid and the plan applied. A bank transfer is paid with a proof that Sheetal confirms.
 
 const months = z.coerce.number().int().refine((m) => PERIODS.some((p) => p.months === m), "Choose 1, 3, 6 or 12 months.");
 

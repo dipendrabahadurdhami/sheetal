@@ -1,15 +1,16 @@
+// Sending business mail to the outside world.
+// Where it fits: works through mail_deliveries (one row per outside recipient, made when someone presses Send).
+// How it works: each message is signed with its domain's DKIM key and delivered to the recipient domain's mail
+// servers (MX) over SMTP, with STARTTLS when offered. Temporary refusals are tried again on a growing schedule
+// (about 3 days); permanent ones fail and a "not delivered" notice goes to the sender's inbox.
+// Rules: rows are locked while being worked on, so several mail servers can share the queue.
+
 import { promises as nodeDns } from "node:dns";
 import { randomUUID } from "node:crypto";
 import nodemailer from "nodemailer";
 import type { Db } from "@sheetal/backend-core/lib/db";
 import { Vault } from "@sheetal/backend-core/lib/vault";
 import type { MailConfig } from "./config.js";
-
-// Sending: works through mail_deliveries (one row per outside recipient, created when someone presses Send).
-// For each: sign with the domain's DKIM key, look up the recipient domain's mail servers (MX), deliver over SMTP
-// with STARTTLS when offered. A temporary refusal (4xx, timeouts) is tried again later on a growing schedule;
-// a permanent one (5xx) or running out of attempts marks it failed and puts a "not delivered" notice in the
-// sender's inbox. Rows are locked while being worked on, so several servers can share the queue.
 
 export interface MxResolver { resolveMx(domain: string): Promise<{ exchange: string; priority: number }[]> }
 export const systemMx: MxResolver = { resolveMx: (d) => nodeDns.resolveMx(d) };

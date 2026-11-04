@@ -1,3 +1,10 @@
+// What visitors do: save listings, send enquiries (contact, site visit, requirement, service) and write reviews.
+// Where it fits: forms on property, agency and requirement pages (components/Forms.jsx, pages/Requirement.jsx).
+// How it works: an enquiry becomes a lead for the listing's business, at the listing's branch, with an email and a
+// notification to the people who handle leads there. Reviews notify the people who answer reviews.
+// Rules: spam traps and rate limits on every form; a business can't review itself; one review per person per listing
+// or business. Forms send FormData or JSON; both are read the same way.
+
 import type { FastifyInstance } from "fastify";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -9,9 +16,6 @@ import { headOffice } from "@sheetal/backend-core/domain/branches";
 import { leadPeople, notify, notifyStaff, teamWith } from "@sheetal/backend-core/lib/notify";
 import { listingCard, mediaBase } from "../catalog/present.js";
 import { feeSettings } from "../board/routes.js";
-
-// What visitors do on a listing: save it, ask about it, book a visit, post a buyer requirement, review it.
-// Paths and fields match the website (api/endpoints.js, components/Forms.jsx, pages/Requirement.jsx).
 
 const LIVE: Prisma.ListingWhereInput = { status: { in: ["published", "sold", "rented"] } };
 const strict = (max: number) => ({ config: { rateLimit: { max, timeWindow: "1 minute" } } });

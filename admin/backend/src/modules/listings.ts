@@ -1,3 +1,8 @@
+// The listing review queue: nothing goes live on the website until a Sheetal moderator approves it.
+// Where it fits: the admin panel's Moderation page; listings come from businesses and website posters.
+// How it works: approve publishes it; "needs changes" sends it back with a note. The poster is emailed and notified
+// (in the business's bell when it belongs to a business).
+
 import type { FastifyInstance } from "fastify";
 import type { ListingStatus, Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -7,9 +12,6 @@ import { mediaBase, photoUrl } from "@sheetal/backend-core/lib/photos";
 import { FIRST_CHECKUP_DAYS } from "@sheetal/backend-core/domain/listings";
 import { notify } from "@sheetal/backend-core/lib/notify";
 import { staffOf } from "./routes.js";
-
-// The review queue: every listing a business (or a website poster) sends goes live only after a Sheetal moderator
-// approves it. "Needs changes" sends it back with a note the business sees on the listing. Both are emailed.
 
 const STATUSES = ["pending", "published", "rejected", "paused", "draft", "sold", "rented", "archived"] as const;
 

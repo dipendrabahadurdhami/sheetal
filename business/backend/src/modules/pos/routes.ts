@@ -1,3 +1,10 @@
+// Point of sale for restaurants, bars and extras: the menu, cashier shifts (tills) and bills.
+// Where it fits: the panel's Point of sale page.
+// How it works: each branch has its own till and bills; menu items are shared by every branch or belong to one;
+// bills are paid on the spot or put on a checked-in guest's room bill.
+// Rules: prices come from the menu, not the browser; cash needs an open shift so the drawer can be counted;
+// discounts and voids need their own permissions; the till works on one branch at a time.
+
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -5,11 +12,6 @@ import { dbOf } from "@sheetal/backend-core/lib/db";
 import { badRequest, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
 import { hotelBill } from "@sheetal/backend-core/domain/money";
 import { branchFor, branchView, inView, workspaceOf, type BranchView, type Workspace } from "../access.js";
-
-// Point of sale for restaurants, bars and extras: the menu, cashier shifts, and bills paid on the spot or put on a
-// guest's room. Cash bills need an open shift, so the cash in the drawer can be counted at the end.
-// Each branch has its own till (shift) and bills; a menu item is on every branch's menu, or just one branch's.
-// The till works on one branch: the one picked in the panel (or the person's only branch).
 
 const METHODS = ["cash", "fonepay", "card", "esewa", "khalti", "room"] as const;
 export const billCode = (b: { seq: number }) => `POS-${String(b.seq).padStart(5, "0")}`;

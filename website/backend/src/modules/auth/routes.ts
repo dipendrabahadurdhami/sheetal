@@ -1,3 +1,9 @@
+// Accounts on the website: sign up, sign in, confirm email, forgot and reset password, profile, change password.
+// Where it fits: the website's sign-in screens (website/frontend/src/api/endpoints.js); the panels reuse the same token.
+// How it works: passwords are hashed (Argon2id); sign-in gives a session token; email links carry one-time tokens.
+// Rules: five wrong passwords lock the account for a while; people from the old site must set a new password first;
+// replies never say whether an email has an account.
+
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { AppError, conflict } from "@sheetal/backend-core/lib/errors";
@@ -6,8 +12,6 @@ import { checkPassword, hashPassword, newToken, sha256 } from "@sheetal/backend-
 import { createWorkspace } from "@sheetal/backend-core/modules/accounts/workspace";
 import { userJson } from "@sheetal/backend-core/modules/auth/present";
 import { createSession, requireUser, revokeAllSessions, revokeSession, userForToken } from "@sheetal/backend-core/modules/auth/sessions";
-
-// Sign up, log in, verify email, reset password, profile. Paths and fields match the website (api/endpoints.js).
 
 const email = z.email("Enter a valid email address.").transform((s) => s.trim().toLowerCase());
 const password = z.string().min(8, "Use at least 8 characters.").max(128, "Use at most 128 characters.");

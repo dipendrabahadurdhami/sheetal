@@ -1,3 +1,9 @@
+// Billing for Sheetal staff: payments, invoices, revenue, gateway keys and billing settings, plus the renewal job.
+// Where it fits: the admin panel's Billing pages.
+// How it works: staff confirm or reject bank transfers (the business is told), record refunds, and set VAT, grace
+// period, reminders and bank details. startBillingJob() runs the renewal cycle every 6 hours.
+// Rules: gateway keys are write-only: once saved they are never shown again.
+
 import type { FastifyInstance } from "fastify";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -9,10 +15,6 @@ import { notify } from "@sheetal/backend-core/lib/notify";
 import { applyPayment, billingSettings, createInvoice, invoiceNumber, runBillingCycle, type StoredGateways } from "@sheetal/backend-core/domain/billing";
 import { PERIODS } from "@sheetal/backend-core/domain/plans";
 import { staffOf } from "./routes.js";
-
-// Billing for Sheetal staff: payments (confirm bank transfers, mark refunds), invoices, revenue, the payment
-// gateways' keys (write-only: once saved they are never shown again) and billing settings (VAT, grace period,
-// reminders, bank details). The renewal cycle runs here every few hours (see startBillingJob).
 
 export async function adminBillingRoutes(app: FastifyInstance) {
   const db = () => dbOf(app);

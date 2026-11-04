@@ -1,3 +1,12 @@
+// A business's listings: list, add (from the listing wizard), edit, duplicate, pause, publish, archive, mark sold,
+// delete, move to another branch or another of the person's businesses.
+// Where it fits: the panel's Listings page, the wizard and the check-ups page.
+// How it works: the wizard sends `values` (its form as filled in, kept privately so it can be edited again) and
+// `summary` (the readable fields the website shows). New and changed listings wait as "pending" until Sheetal
+// approves them in the admin panel (staff are notified).
+// Rules: nothing goes live or changes on the website without review; plan limits count the whole business; photos
+// must be names this API gave out; staff only see their branches' listings.
+
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Listing, ListingPhoto, ListingStatus, Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -8,13 +17,6 @@ import { isPhotoName, mediaBase, photoUrl, savePhoto } from "@sheetal/backend-co
 import { hasPerm } from "@sheetal/backend-core/domain/permissions";
 import { COUNTED, LISTING_KINDS, LISTING_PERMS, kindsFor, listingCap, purposeOf } from "@sheetal/backend-core/domain/listings";
 import { branchFor, branchView, inView, workspaceOf, type Workspace } from "../access.js";
-
-// A business's listings in /business: list, add (from the listing wizard), edit, duplicate, pause, archive,
-// delete and move to another business of the same person. Nothing goes live without Sheetal's review:
-// a new or edited listing waits as "pending" until the admin review queue approves it (admin/backend).
-//
-// The wizard sends two things: `values`, its form exactly as filled in (kept in `private.form`, never shown on the
-// website, so it can be opened again for editing), and `summary`, the readable fields the website shows.
 
 const LIVE: ListingStatus[] = ["published", "sold", "rented"];
 const day = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null);

@@ -1,6 +1,7 @@
-// Location privacy. Sale and rent listings are only ever sent as an approximate point: shifted 150–350 m
-// in a direction fixed by the listing, so it is stable between visits but never the property itself.
-// Same method as shared/src/core/geo.js (approx), which the website uses to draw the ~500 m area.
+// Location privacy for sale and rent listings.
+// Where it fits: used whenever a listing's map point leaves the server.
+// How it works: the point is moved 150–350 m in a direction fixed by the listing, so it stays the same between visits
+// but never shows the property itself. shared/src/core/geo.js draws the matching ~500 m area.
 
 const hash = (s: string) => {
   let h = 2166136261;

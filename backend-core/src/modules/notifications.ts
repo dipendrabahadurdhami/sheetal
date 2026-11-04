@@ -1,10 +1,13 @@
+// The notification bell endpoints for a panel: list, mark read, mark all read, remove.
+// Where it fits: registered by the business API (/notifications, one business) and the admin API
+// (/admin/notifications, staff work).
+// How it works: the panel passes a scope that picks the person's own notes for that panel.
+// Rules: every action is limited to the signed-in person's own notifications.
+
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Prisma } from "@prisma/client";
 import { dbOf } from "../lib/db.js";
 import { notFound } from "../lib/errors.js";
-
-// The bell in a panel: the signed-in person's notifications for that panel (one business, or Sheetal staff work).
-// `scope` picks them for each request; read, read-all and remove only ever touch the person's own.
 
 export function notificationRoutes(app: FastifyInstance, path: string, scope: (request: FastifyRequest) => Prisma.NotificationWhereInput) {
   const json = (n: { id: string; type: string; title: string; message: string; link: string | null; readAt: Date | null; createdAt: Date }) =>

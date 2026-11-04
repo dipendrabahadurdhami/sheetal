@@ -1,3 +1,10 @@
+// Business verification for staff with "moderation.kyc".
+// Where it fits: the admin panel's Moderation → Business verification tab.
+// How it works: lists businesses that sent documents; staff open each document here, then verify (the Verified badge
+// on the website), send back with a reason, or reopen so the business can change its documents. The business's
+// settings people get a notification and the owner an email.
+// Rules: documents are private files and are only opened through this API.
+
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { dbOf } from "@sheetal/backend-core/lib/db";
@@ -5,10 +12,6 @@ import { badRequest, notFound } from "@sheetal/backend-core/lib/errors";
 import { readPrivateFile } from "@sheetal/backend-core/lib/files";
 import { notify, teamWith } from "@sheetal/backend-core/lib/notify";
 import { staffOf } from "./routes.js";
-
-// Business verification for staff with "moderation.kyc": the businesses that sent documents, each document opened
-// here only, and the decision: verified (a badge on the website), sent back with a reason, or reopened so the
-// business can change its documents. The business's settings people are told in their bell; the owner by email.
 
 export async function adminVerificationRoutes(app: FastifyInstance) {
   const db = () => dbOf(app);

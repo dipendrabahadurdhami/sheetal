@@ -1,5 +1,8 @@
-// Bills at hotels and restaurants in Nepal: 10% service charge on the amount after discount, then 13% VAT on
-// that plus the service charge. Whole rupees. (shared/src core POS screens use the same rule.)
+// Hotel and restaurant bill maths, and date helpers for stays.
+// Where it fits: used by bookings, the room bill (folio) and point of sale.
+// How it works: 10% service charge on the amount after discount, then 13% VAT on that plus the service charge, in
+// whole rupees. Dates are whole days at midnight UTC.
+// Rules: the POS screens in shared/src use the same rule; change both together.
 
 export const SERVICE_RATE = 0.1;
 export const VAT_RATE = 0.13;

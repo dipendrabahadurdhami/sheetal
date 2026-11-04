@@ -1,3 +1,10 @@
+// Analytics, system status, system emails, AI and Meta settings, and the calendar sync job.
+// Where it fits: the admin panel's Traffic, System status and Setup pages.
+// How it works: analytics count people, not bots; system status checks the database, cache, email, AI, Meta and
+// calendar feeds; the outbox list shows every system email and can send failed ones again. startOtaJob() syncs every
+// business's calendar feeds every 2 hours.
+// Rules: AI and Meta keys are write-only; email text (with one-time links) is only shown outside production.
+
 import type { FastifyInstance } from "fastify";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -7,10 +14,6 @@ import { Vault } from "@sheetal/backend-core/lib/vault";
 import { AI_CREDITS, DEFAULT_MODEL, type AiSettings } from "@sheetal/backend-core/lib/ai";
 import { syncOtaFeed } from "@sheetal/backend-core/domain/ota";
 import { staffOf } from "./routes.js";
-
-// For Sheetal staff: site analytics (people, not bots), the system status page, and the settings for AI
-// (Claude key, model, monthly credits per plan) and Meta (the app secret and webhook verify token). Keys are
-// write-only. Also the job that syncs every business's calendar feeds with other sites.
 
 export async function adminInsightRoutes(app: FastifyInstance) {
   const db = () => dbOf(app);

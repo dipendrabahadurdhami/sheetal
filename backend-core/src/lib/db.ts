@@ -1,8 +1,10 @@
+// Database connection (Prisma) and the dbOf() helper routes use.
+// Where it fits: app.db in every API.
+// How it works: created only when DATABASE_URL is set, so an API can still start during first setup and report
+// "database not configured"; dbOf() turns that case into a clear 503.
+
 import { PrismaClient } from "@prisma/client";
 import { AppError } from "./errors.js";
-
-// Database connection. Created only when DATABASE_URL is set, so the API can still start
-// (and report "database not configured" on its status page) during first setup.
 
 export type Db = PrismaClient;
 

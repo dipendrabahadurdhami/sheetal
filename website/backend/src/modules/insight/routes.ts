@@ -1,3 +1,8 @@
+// Ask AI on the website, and visit tracking for analytics.
+// Where it fits: the Ask AI box and every page view.
+// How it works: Ask AI compares listings by their codes using public facts only; visits are counted per person.
+// Rules: bots never become page views; they are only counted per day for Admin → System status.
+
 import type { FastifyInstance } from "fastify";
 import { createHash } from "node:crypto";
 import { z } from "zod";
@@ -7,9 +12,6 @@ import { isBotRequest, isSearchEngine } from "@sheetal/backend-core/lib/bots";
 import { Vault } from "@sheetal/backend-core/lib/vault";
 import { aiClient, compareListings, type AiClient } from "@sheetal/backend-core/lib/ai";
 import { listingCard, mediaBase } from "../catalog/present.js";
-
-// "Ask AI" on the website (compare properties by their codes), and visit tracking for analytics.
-// Bots never become page views: they are only counted per day, so Admin → System status can show them.
 
 const LIVE = { status: { in: ["published" as const, "sold" as const, "rented" as const] } };
 

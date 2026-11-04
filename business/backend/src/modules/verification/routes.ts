@@ -1,3 +1,9 @@
+// Business verification: documents sent to Sheetal for the Verified badge.
+// Where it fits: Settings → Verification; Sheetal checks them in admin (admin/backend/src/modules/verification.ts).
+// How it works: upload the company registration and PAN/VAT certificate (owner's ID optional), then send; staff are
+// notified and verify or send back with a reason.
+// Rules: only "settings.business"; documents are private files; they lock while being checked or once verified.
+
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { dbOf } from "@sheetal/backend-core/lib/db";
@@ -5,11 +11,6 @@ import { badRequest, forbidden, notFound } from "@sheetal/backend-core/lib/error
 import { readPrivateFile, savePrivateFile } from "@sheetal/backend-core/lib/files";
 import { notifyStaff } from "@sheetal/backend-core/lib/notify";
 import { workspaceOf, type Workspace } from "../access.js";
-
-// Business verification: the business sends its company registration and PAN/VAT certificate (and, if it likes, the
-// owner's ID); Sheetal checks them and marks the business verified (a badge on the website) or sends it back with
-// a reason. People who manage settings handle it. Documents are private files: only they and Sheetal staff open them.
-// While a check is pending, or once verified, the documents are locked (Sheetal support can reopen).
 
 export const DOC_KINDS = ["registration", "pan", "owner_id", "other"] as const;
 const REQUIRED = ["registration", "pan"] as const;

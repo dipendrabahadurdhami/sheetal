@@ -1,3 +1,9 @@
+// Posting a listing from the website, the person's own listings, plans and upgrade requests.
+// Where it fits: the website's Post property, My properties and Plans pages.
+// How it works: a listing always belongs to a business (the person's own; anyone without one gets a free Starter
+// business), lands in its head office, and waits for Sheetal's review (staff are notified).
+// Rules: plan limits apply; photos are checked to be real images; upgrade requests go to Sheetal's team.
+
 import type { FastifyInstance } from "fastify";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -12,10 +18,6 @@ import { hasPerm } from "@sheetal/backend-core/domain/permissions";
 import { COUNTED, listingCap } from "@sheetal/backend-core/domain/listings";
 import { listingCard, mediaBase } from "../catalog/present.js";
 import { savePhoto } from "@sheetal/backend-core/lib/photos";
-
-// Posting from the website. A listing always belongs to a business workspace (the person's own; anyone without
-// one gets a free Starter workspace), is checked by Sheetal before it goes live, and counts against the plan.
-// Also: the person's own listings, mark sold, remove, plans and upgrade requests.
 
 const LIVE: Prisma.ListingWhereInput = { status: { in: ["published", "sold", "rented"] } };
 const OPEN: Prisma.ListingWhereInput = { status: { in: COUNTED } };

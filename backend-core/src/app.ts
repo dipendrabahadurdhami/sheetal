@@ -1,3 +1,10 @@
+// Base Fastify app shared by the website, business and admin APIs.
+// Where it fits: each API's src/app.ts calls buildBaseApp() and then registers its own routes on top.
+// How it works: adds logging (secrets redacted), request ids, the single error format, security headers, CORS,
+// rate limits, form parsing, login sessions, the email outbox and /health. Nothing listens here, so tests can
+// call the app directly with app.inject().
+// Rules: every API must be built through this function so security and error handling stay the same everywhere.
+
 import Fastify, { type FastifyInstance } from "fastify";
 import helmet from "@fastify/helmet";
 import cors from "@fastify/cors";
@@ -23,9 +30,6 @@ declare module "fastify" {
 
 export interface AppDeps { db?: Db; cache?: Cache }
 
-// The part every API shares: logging, request ids, one error format, security headers, CORS, rate limits,
-// form parsing, login sessions and /health. Each app (website, business, admin) adds its own routes on top.
-// Nothing is started here, so tests can call the app directly.
 export async function buildBaseApp(config: Config, deps: AppDeps = {}): Promise<FastifyInstance> {
   const app = Fastify({
     logger: config.LOG_LEVEL === "silent" ? false : {

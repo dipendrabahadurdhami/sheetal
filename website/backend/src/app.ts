@@ -1,3 +1,9 @@
+// Website API (port 4000): everything the public website needs.
+// Where it fits: server.ts starts it; tests build it with buildApp(); the website front-end calls it under /v1.
+// How it works: the shared base app (backend-core) plus the website's modules: accounts, catalogue and search,
+// enquiries and reviews, posting listings, the requirement board, blog and careers, Ask AI and visit tracking.
+// Rules: public endpoints only return public data; anything personal needs a signed-in person.
+
 import type { FastifyInstance } from "fastify";
 import type { Config } from "@sheetal/backend-core/config";
 import { buildBaseApp, type AppDeps } from "@sheetal/backend-core/app";
@@ -10,10 +16,6 @@ import { boardRoutes } from "./modules/board/routes.js";
 import { insightRoutes } from "./modules/insight/routes.js";
 import type { AiClient } from "@sheetal/backend-core/lib/ai";
 
-// Website API: accounts and login, the public catalogue (properties, search, map, agencies, photos),
-// and what visitors do: favourites, enquiries, reviews, posting their own listings, plans and upgrades;
-// the requirement board with offers, notifications, blog and careers; Ask AI and visit tracking.
-// Shared basics come from backend-core.
 export async function buildApp(config: Config, deps: AppDeps & { ai?: { client: AiClient; model: string } } = {}): Promise<FastifyInstance> {
   const app = await buildBaseApp(config, deps);
   await app.register(authRoutes, { prefix: "/v1" });

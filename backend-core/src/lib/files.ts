@@ -1,11 +1,15 @@
+// Private files people send: payment proofs, CVs and business verification documents.
+// Where it fits: saved by the website and business APIs; opened by staff through the admin API, or by the business's
+// own settings people for verification documents.
+// How it works: kept in MEDIA_DIR/private/<kind>, which is never served publicly; checked by their first bytes and
+// saved under a random name.
+// Rules: never link to these files directly; always stream them through an endpoint that checks who is asking.
+
 import { randomBytes } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { AppError, badRequest } from "./errors.js";
 import { photoKind } from "./photos.js";
-
-// Private files people send: payment proofs, CVs and business verification documents. Kept in MEDIA_DIR/private/<kind>, which is never served as
-// /media; staff open them through the admin API only. Checked by their first bytes, saved under a random name.
 
 export type PrivateKind = "proofs" | "cv" | "kyc";
 const MAX = { proofs: 8 * 1024 * 1024, cv: 5 * 1024 * 1024, kyc: 10 * 1024 * 1024 };

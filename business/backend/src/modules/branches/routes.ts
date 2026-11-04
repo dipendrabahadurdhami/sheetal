@@ -1,16 +1,16 @@
+// A business's branches (outlets, offices, sites): list, add, edit, rename, close, reopen, remove.
+// Where it fits: Settings → Branches, the branch picker in the top bar, and branch access on the Team page.
+// How it works: everyone sees the branches they work at; "settings.business" manages them. Work points at the branch
+// id; team access holds branch names, so a rename updates everyone's access in the same transaction.
+// Rules: a business keeps at least one open branch; a branch with any work in it, or someone's only branch, can't be
+// removed (close it instead: its history stays). checkScopes() makes sure access names real, open branches.
+
 import type { FastifyInstance } from "fastify";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { dbOf } from "@sheetal/backend-core/lib/db";
 import { badRequest, conflict, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
 import { workspaceOf, type Workspace } from "../access.js";
-
-// A business's branches (outlets, offices, sites). Everyone in the business sees the branches they work in
-// (owners and "all branches" people see every one); "settings.business" adds, edits, closes and removes them.
-// - Work (listings, leads, rooms, bookings, POS) points at the branch id; team access (Membership.scopes) holds
-//   branch names, so renaming a branch renames it there too, in one transaction.
-// - A business always keeps at least one open branch; a branch with any work in it, or someone's only branch, can't
-//   be removed (close it instead: its history stays).
 
 const name = z.string().trim().min(2, "Give the branch a name.").max(60);
 const text = (max: number) => z.string().trim().max(max).optional().nullable();

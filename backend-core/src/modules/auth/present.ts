@@ -1,6 +1,10 @@
+// The signed-in person as the website reads them.
+// Where it fits: sign-in and profile replies on the website API.
+// How it works: same field names as the old site's API, so existing screens keep working.
+
 import type { SessionUser } from "./sessions.js";
 
-// The user object the website reads (same field names as the old API, so screens keep working).
+/** The person in the shape the website expects. */
 export function userJson(user: SessionUser) {
   const main = user.memberships[0];
   return {

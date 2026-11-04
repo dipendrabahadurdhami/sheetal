@@ -1,3 +1,10 @@
+// Growth tools: AI lead finder, analytics, calendar sync with other sites, and chat channels.
+// Where it fits: the panel's Analytics, Channels and Other sites pages, and the lead finder in the Inbox.
+// How it works: the lead finder reads pasted text with AI (counted against monthly credits); analytics count real
+// visitors (bots excluded) for the branches in view; calendar feeds import stays and our own feed publishes busy
+// and closed nights; WhatsApp / Messenger / Instagram messages arrive through Meta's webhook as leads.
+// Rules: webhooks are only trusted with a valid signature; calendar feed links are signed so they can't be guessed.
+
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
@@ -13,10 +20,6 @@ import { syncOtaFeed } from "@sheetal/backend-core/domain/ota";
 import type { Fetch } from "@sheetal/backend-core/lib/payments";
 import { branchFor, branchView, inView, workspaceOf, type Workspace } from "../access.js";
 import { headOffice } from "@sheetal/backend-core/domain/branches";
-
-// Growth tools of a business: finding leads in pasted text with AI, its analytics, keeping rooms in sync with
-// Booking.com / Airbnb / Agoda through their calendar (iCal) feeds, and its WhatsApp / Messenger / Instagram
-// connected to the Inbox (Meta's webhook comes here; replies go out from the leads module).
 
 type Ai = { client: AiClient; model: string; credits: Record<string, number> };
 const SITES = ["booking", "airbnb", "agoda", "expedia", "other"] as const;

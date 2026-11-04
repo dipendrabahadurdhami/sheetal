@@ -1,6 +1,8 @@
-// HTML that people write (blog posts, listing descriptions) shown on the website. Only an allowlist of formatting
-// tags survives, with only safe attributes; links must be http(s), mailto or tel; images http(s) or a site path.
-// Everything else — scripts, styles, frames, forms, event handlers, unknown tags — is dropped.
+// Cleans HTML that people write (blog posts, listing descriptions) before it is shown on the website.
+// Where it fits: used when blog posts and listings are saved.
+// How it works: only an allowlist of formatting tags and safe attributes survives; links must be http(s), mailto or
+// tel; images http(s) or a site path.
+// Rules: scripts, styles, frames, forms, event handlers and unknown tags are always dropped.
 
 const TAGS = new Set(["p", "br", "b", "strong", "i", "em", "u", "s", "h2", "h3", "h4", "ul", "ol", "li", "blockquote", "a", "img", "table", "thead", "tbody", "tr", "th", "td", "hr", "span", "figure", "figcaption"]);
 const VOID = new Set(["br", "img", "hr"]);

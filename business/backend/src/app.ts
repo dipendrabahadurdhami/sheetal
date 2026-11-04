@@ -1,3 +1,11 @@
+// Business API (port 4001): everything the business panel (/business) needs.
+// Where it fits: server.ts starts it; tests build it with buildApp(); the business panel calls it under /v1.
+// How it works: the shared base app (backend-core) plus one module per area: team and businesses, branches,
+// listings, leads, email, billing, hotel and calendar, point of sale, projects and investments, growth (AI,
+// analytics, channels, calendar sync), reviews and verification, and the notification bell.
+// Rules: every route starts from workspaceOf() (modules/access.ts), so it always acts inside one business the
+// person belongs to, with their role, and only on the branches they work at.
+
 import type { FastifyInstance } from "fastify";
 import type { Config } from "@sheetal/backend-core/config";
 import { buildBaseApp, type AppDeps } from "@sheetal/backend-core/app";
@@ -19,12 +27,6 @@ import type { AiClient } from "@sheetal/backend-core/lib/ai";
 import type { Fetch } from "@sheetal/backend-core/lib/payments";
 import type { Resolver } from "./modules/mail/dns.js";
 
-// Business API: the business panel (/business). Shared basics come from backend-core; each module adds its routes.
-// Modules so far: workspaces and team (members, invitations, roles), email (own domains, team mailboxes),
-// listings (sent to Sheetal for review, moved between businesses), leads (website enquiries in the Inbox),
-// billing (invoices, eSewa, Khalti, Fonepay and bank transfer), hotels (rooms, bookings, front desk), POS (menu,
-// shifts, bills), developer projects (units, reservations, collections), sponsor investments, and growth
-// (AI lead finding, analytics, calendar sync with other sites, WhatsApp / Messenger / Instagram).
 export async function buildApp(config: Config, deps: AppDeps & { resolver?: Resolver; fetch?: Fetch; ai?: { client: AiClient; model: string; credits: Record<string, number> } } = {}): Promise<FastifyInstance> {
   const app = await buildBaseApp(config, deps);
   await app.register(teamRoutes, { prefix: "/v1" });

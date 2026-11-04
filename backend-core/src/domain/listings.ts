@@ -1,8 +1,11 @@
+// Listing rules shared by the website, business and admin APIs: which kinds a business may list and how many.
+// Where it fits: used when listings are created, edited, moved between businesses or posted from the website.
+// How it works: kinds come from the business type, or every kind on a plan with all_kinds (Pro); the cap comes from
+// the plan's limits.
+// Rules: keep in step with shared/src/data/catalog.js and shared/src/core/plans.js (the screens use those copies).
+
 import type { ListingStatus, Plan } from "@prisma/client";
 import type { BusinessType } from "./permissions.js";
-
-// Listing rules shared by the website, business and admin APIs. Mirrors shared/src/data/catalog.js kindsByType
-// and shared/src/core/plans.js (kindsFor, listingCap).
 
 export const LISTING_KINDS = ["sell", "rentout", "stay_hotel", "stay_unit", "project", "invest"] as const;
 export type ListingKind = (typeof LISTING_KINDS)[number];

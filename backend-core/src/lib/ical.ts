@@ -1,5 +1,6 @@
-// iCal (RFC 5545) as Booking.com, Airbnb, Agoda and Expedia use it for availability: each event is a stay
-// (or a blocked range) with all-day DTSTART/DTEND. We read their feeds and publish ours the same way.
+// iCal (RFC 5545) for availability calendars, as Booking.com, Airbnb, Agoda and Expedia use them.
+// Where it fits: reading their feeds (calendar sync) and publishing ours (business API /ical/...).
+// How it works: each event is a stay or a blocked range with all-day start and end dates.
 
 export interface IcalEvent { uid: string; start: string; end: string; summary: string }
 

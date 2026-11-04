@@ -1,3 +1,10 @@
+// The Inbox: enquiries (website forms, chat channels, the lead finder) as leads with stages and replies.
+// Where it fits: the panel's Inbox and lead pipeline.
+// How it works: a lead belongs to its listing's branch (or where it came in); replies go out by email or on the
+// chat channel it came from, signed with the business's own contact details.
+// Rules: people who can assign leads see all of them; others see their own and unassigned ones; everyone only sees
+// the branches in view; a lead can only be given to someone who works at its branch.
+
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -8,12 +15,6 @@ import { sendMetaText } from "@sheetal/backend-core/lib/meta";
 import type { Fetch } from "@sheetal/backend-core/lib/payments";
 import { branchView, inView, workspaceOf, type Workspace } from "../access.js";
 import { worksAt } from "@sheetal/backend-core/domain/branches";
-
-// Enquiries from the website (contact agent or owner, site visits, requirements) land here as leads of the
-// business that owns the listing. The Inbox shows each one as a conversation and the pipeline by stage.
-// Replies go to the person by email, with the business's own email and phone to answer on.
-// Who sees what: people who can assign leads see all of them; others see their own and unassigned ones; and
-// everyone only sees the leads of the branches in view (a lead belongs to its listing's branch, or where it came in).
 
 const STAGES = ["new", "contacted", "viewing", "negotiating", "won", "lost"] as const;
 const time = (d: Date) => d.toISOString();

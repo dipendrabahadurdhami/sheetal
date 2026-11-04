@@ -1,3 +1,9 @@
+// The public catalogue: lists, search, property pages, map pins, filters, agencies and photos.
+// Where it fits: the website's home, listing, search, map, agency and property pages.
+// How it works: only live listings are shown; public lists are cached for a minute; photos are streamed from MEDIA_DIR.
+// Rules: owner details never leave the server; sale and rent locations are approximate; only real photo names under
+// the public folders can be fetched.
+
 import type { FastifyInstance } from "fastify";
 import type { Prisma } from "@prisma/client";
 import { createReadStream } from "node:fs";
@@ -9,9 +15,6 @@ import { dbOf } from "@sheetal/backend-core/lib/db";
 import { notFound } from "@sheetal/backend-core/lib/errors";
 import { isBotRequest } from "@sheetal/backend-core/lib/bots";
 import { agencyJson, listingCard, listingDetail, mediaBase, type AgencyRow, type ListingRow } from "./present.js";
-
-// Public catalogue: lists, search, property pages, map pins, agencies and photos.
-// Paths and response shapes match the website (api/endpoints.js), so pages work unchanged.
 
 /** Listings visitors can see. Sold and rented ones stay visible with their label. */
 const LIVE: Prisma.ListingWhereInput = { status: { in: ["published", "sold", "rented"] } };

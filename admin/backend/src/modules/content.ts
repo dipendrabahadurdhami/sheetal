@@ -1,3 +1,10 @@
+// Website content run by Sheetal staff: blog posts, categories and comments; jobs and applications; buyer
+// requirements and the requirement fee.
+// Where it fits: the admin panel's Content, Careers and Demand pages.
+// How it works: posts are written here and appear on the website when published; comments wait for approval;
+// requirement fee proofs are confirmed or rejected here.
+// Rules: CVs and payment proofs are private files, opened only through this API.
+
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -8,9 +15,6 @@ import { readPrivateFile } from "@sheetal/backend-core/lib/files";
 import { htmlText, sanitizeHtml } from "@sheetal/backend-core/lib/html";
 import { notify } from "@sheetal/backend-core/lib/notify";
 import { staffOf } from "./routes.js";
-
-// Content for the website, run by Sheetal staff: blog posts, categories and comments; job posts and applications
-// (CVs are private files, opened only here); buyer requirements with their fee proofs, and the requirement fee.
 
 const slugify = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || "post";
 const opt = (max: number) => z.string().trim().max(max).nullable().optional().transform((v) => v || null);

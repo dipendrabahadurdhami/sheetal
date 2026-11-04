@@ -1,5 +1,8 @@
-// Permissions and role templates. Mirrors shared/src/core/rbac.js (the screens use that copy);
-// test/domain.test.ts fails if the two ever differ.
+// Permissions: business role templates per business type, and Sheetal staff roles.
+// Where it fits: business roles are created from these templates for every new business; the APIs check permissions
+// with hasPerm(); the admin API checks staff with PLATFORM_ROLES.
+// How it works: a role is a list of permission ids; "*" means everything (owners, super admins).
+// Rules: keep in step with shared/src/core/rbac.js (the screens use that copy); test/domain.test.ts fails if they differ.
 
 export const BUSINESS_TYPES = ["hotel", "host", "developer", "agency", "sponsor"] as const;
 export type BusinessType = (typeof BUSINESS_TYPES)[number];

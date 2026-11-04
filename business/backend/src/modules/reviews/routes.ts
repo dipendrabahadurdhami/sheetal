@@ -1,3 +1,9 @@
+// Reviews from the website about the business and its listings, with public replies.
+// Where it fits: the panel's Reviews page.
+// How it works: lists reviews with the average and a star breakdown for the branches in view; a reply shows under the
+// review on the website and the reviewer is notified.
+// Rules: "reviews.reply" replies, "customers.view" can read; hiding a review is Sheetal's decision, not the business's.
+
 import type { FastifyInstance } from "fastify";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -5,10 +11,6 @@ import { dbOf } from "@sheetal/backend-core/lib/db";
 import { forbidden, notFound } from "@sheetal/backend-core/lib/errors";
 import { notify } from "@sheetal/backend-core/lib/notify";
 import { branchView, inView, workspaceOf, type Workspace } from "../access.js";
-
-// Reviews people left on the website: of the business itself, and of its listings (those of the branches in view).
-// "reviews.reply" (or "customers.view" to read) answers them in public; the reply shows under the review on the
-// website and the reviewer is told. Hiding a review is Sheetal's call, not the business's.
 
 export async function reviewRoutes(app: FastifyInstance) {
   const db = () => dbOf(app);

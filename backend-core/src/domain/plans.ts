@@ -1,7 +1,9 @@
-import { BUSINESS_TYPES, type BusinessType } from "./permissions.js";
+// Plans for every business type: Starter (free), Business and Pro, with their limits and features.
+// Where it fits: seeds the plans table; the admin panel can change prices and limits afterwards.
+// How it works: one definition per type; Pro has every feature and lists every kind.
+// Rules: keep in step with shared/src/demo/demo.js and shared/src/core/plans.js; test/domain.test.ts fails if they differ.
 
-// Starter (free) / Business / Pro for every business type. Mirrors shared/src/demo/demo.js PLANS and
-// shared/src/core/plans.js; test/domain.test.ts fails if they differ. Admin can change prices later (stored in the plans table).
+import { BUSINESS_TYPES, type BusinessType } from "./permissions.js";
 
 const OFF = { pos: false, channel_sync: false, agreements: false, api: false, custom_roles: false, multi_property: false, all_kinds: false };
 const PRO_FEATURES = { pos: true, channel_sync: true, agreements: true, api: true, custom_roles: true, multi_property: true, all_kinds: true };

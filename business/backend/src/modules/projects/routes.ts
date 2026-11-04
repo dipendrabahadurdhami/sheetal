@@ -1,13 +1,15 @@
+// Developers and investment sponsors: project units, holds, reservations, collections; investor pledges and updates.
+// Where it fits: the panel's Projects, Collections and Investors pages.
+// How it works: units belong to a project listing; a hold lapses on its own; a reservation has a payment plan and its
+// collections (fully paid = sold); investors pledge against an investment listing and get emailed updates.
+// Rules: a unit is held or reserved by one buyer at a time; everything follows its listing's branch.
+
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Prisma, Unit } from "@prisma/client";
 import { z } from "zod";
 import { dbOf } from "@sheetal/backend-core/lib/db";
 import { badRequest, conflict, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
 import { branchView, inView, workspaceOf, type Workspace } from "../access.js";
-
-// Developers: the units of each project (from its project listing), short holds, reservations with a payment plan,
-// and collections against them. A unit can be held or reserved by one buyer at a time; a hold lapses on its own.
-// Sponsors: commitments to an investment listing, marked paid, and updates emailed to the investors.
 
 const n = (v: bigint | number | null | undefined) => (v == null ? null : Number(v));
 const money = z.number().int().min(0).max(1e12);

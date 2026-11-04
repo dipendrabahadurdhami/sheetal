@@ -1,3 +1,8 @@
+// Blog and careers on the website.
+// Where it fits: the website's Blog and Careers pages; posts and jobs are written in the admin panel.
+// How it works: only published posts and open jobs are shown; comments wait for Sheetal's approval; job applications
+// (with a CV kept as a private file) go to the admin panel and the support email.
+
 import type { FastifyInstance } from "fastify";
 import type { BlogCategory, BlogPost, JobPost, Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -5,9 +10,6 @@ import { dbOf } from "@sheetal/backend-core/lib/db";
 import { badRequest, notFound } from "@sheetal/backend-core/lib/errors";
 import { mediaBase, photoUrl } from "@sheetal/backend-core/lib/photos";
 import { savePrivateFile } from "@sheetal/backend-core/lib/files";
-
-// Blog and careers on the website. Only published posts and open jobs are shown. Comments wait for Sheetal to
-// approve them; job applications (with a CV kept as a private file) go to the admin panel and to the support email.
 
 const words = (html: string) => html.replace(/<[^>]*>/g, " ").split(/\s+/).filter(Boolean).length;
 const text = (max: number) => z.string().trim().max(max).optional().transform((v) => v || undefined);

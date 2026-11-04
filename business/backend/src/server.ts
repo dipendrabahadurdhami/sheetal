@@ -1,7 +1,9 @@
+// Starts the business API on BUSINESS_API_PORT (4001 by default).
+// How it works: loads backend-core/.env, builds the app and listens; stops cleanly on Ctrl+C.
+
 import { loadConfig, loadEnvFiles } from "@sheetal/backend-core/config";
 import { buildApp } from "./app.js";
 
-// Start the business API (port 4001 unless BUSINESS_API_PORT says otherwise).
 loadEnvFiles();
 
 const config = loadConfig(process.env, "business");

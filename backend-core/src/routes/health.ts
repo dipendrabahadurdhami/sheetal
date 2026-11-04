@@ -1,3 +1,7 @@
+// Health endpoints for the load balancer and monitoring.
+// How it works: /health says the process is running; /health/ready also checks the database and cache, and answers
+// 503 if they don't, so no traffic is sent to a broken instance.
+
 import type { FastifyInstance } from "fastify";
 import { collectStatus } from "../lib/status.js";
 

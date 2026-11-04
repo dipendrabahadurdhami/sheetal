@@ -1,3 +1,10 @@
+// The requirement board, offers on requirements, and the signed-in person's notifications.
+// Where it fits: the website's Requirements page and the notification bell.
+// How it works: buyers' requirements are listed so agencies and owners can offer one of their live listings; the
+// buyer is told by email and notification.
+// Rules: only first name, area, budget and type are shown: never phone or email, and numbers or links typed into the
+// description are hidden. With the requirement fee on, a requirement appears only after Sheetal confirms the payment.
+
 import type { FastifyInstance } from "fastify";
 import type { Lead } from "@prisma/client";
 import { z } from "zod";
@@ -6,11 +13,6 @@ import { badRequest, forbidden, notFound } from "@sheetal/backend-core/lib/error
 import { requireUser } from "@sheetal/backend-core/modules/auth/sessions";
 import { hasPerm } from "@sheetal/backend-core/domain/permissions";
 import { notify } from "@sheetal/backend-core/lib/notify";
-
-// The requirement board: buyers' requirements (sent through the requirement form) shown so agents and owners can
-// offer a listing. Only what helps match is shown — first name, area, budget, type — never phone or email, and
-// any number or address typed into the description is hidden. With a requirement fee on, a requirement shows only
-// after Sheetal confirms the payment. Also the signed-in person's notifications.
 
 export const FEE_KEY = "requirement_fee";
 export interface FeeSettings { enabled: boolean; amount: number; note?: string }

@@ -1,8 +1,9 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
+// Encryption for secrets kept in the database (service keys, channel tokens, email signing keys).
+// Where it fits: used wherever a key is saved or read (payments, AI, Meta, email domains).
+// How it works: AES-256-GCM with the key from SECRETS_KEY; stored as "v1:<iv>:<tag>:<ciphertext>" (base64url).
+// Rules: SECRETS_KEY never goes in the database or git; without it a copy of the database can't read any secret.
 
-// Encrypts secrets kept in the database (domain signing keys, service keys) with AES-256-GCM.
-// The key comes from SECRETS_KEY; it never goes in the database, so a stolen database copy can't read them.
-// Stored form: "v1:<iv>:<tag>:<ciphertext>" (base64url).
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 
 const DEV_KEY = "sheetal-local-development-only-key"; // used only outside production when SECRETS_KEY is unset
 

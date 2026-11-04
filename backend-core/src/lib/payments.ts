@@ -1,12 +1,10 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+// Nepal payment gateways: eSewa (ePay v2), Khalti (KPG-2) and Fonepay (web pay), plus bank transfer.
+// Where it fits: used by the business API's checkout and payment return, and the admin API's settings.
+// How it works: the payer is sent to the gateway's own page (we never see card, wallet or bank details); on return,
+// the result's signature is checked and the gateway's status API is asked again before anything is marked paid.
+// Rules: keys are stored encrypted from the admin panel; eSewa's public test merchant only works outside production.
 
-// Nepal payment gateways. Each one sends the payer to the gateway's own page (we never see card, wallet or bank
-// details), then the gateway sends them back with a result that is checked here: its signature, and again with the
-// gateway's own status API, before anything is marked paid.
-//
-//   eSewa ePay v2     https://developer.esewa.com.np  (test merchant EPAYTEST works without an account)
-//   Khalti KPG-2      https://docs.khalti.com          (test keys from a Khalti merchant account)
-//   Fonepay web pay   merchant integration guide from Fonepay (merchant code and secret from them)
+import { createHmac, timingSafeEqual } from "node:crypto";
 
 export type Fetch = typeof fetch;
 export type Mode = "test" | "live";

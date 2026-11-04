@@ -1,9 +1,11 @@
+// Turns database rows into the JSON the website reads (listings, cards, agencies).
+// Where it fits: used by the catalogue routes and anywhere else the website shows a listing or an agency.
+// How it works: keeps the old site's field names (see website/frontend/src/utils/format.js) so pages work unchanged.
+// Rules: only public data goes out: a listing's private details are never read here, and locations are approximate.
+
 import type { Listing, ListingPhoto, Tenant } from "@prisma/client";
 import { mediaBase, photoUrl } from "@sheetal/backend-core/lib/photos";
 import { approx, validLatLng } from "./geo.js";
-
-// Listing → the JSON the website already reads (field names from the old site's API, see website/frontend/src/utils/format.js).
-// Only public data goes out: `private` is never read here, and the location is always an approximate area.
 
 export type ListingRow = Listing & { photos: ListingPhoto[] };
 export type AgencyRow = Pick<Tenant, "id" | "name" | "city" | "email" | "phone" | "logoUrl"> & Partial<Pick<Tenant, "address" | "website" | "verifiedAt">> & { listings?: number };

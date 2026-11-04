@@ -1,8 +1,10 @@
+// Creating a business workspace: the business, its ready-made roles, its owner and its head office branch.
+// Where it fits: sign-up, posting from the website, adding a business in the panel or the admin panel, and tests.
+// How it works: one transaction; the business starts on its type's free Starter plan unless a plan is given.
+
 import type { Prisma } from "@prisma/client";
 import { roleTemplatesFor, type BusinessType } from "../../domain/permissions.js";
 import { starterPlanId } from "../../domain/plans.js";
-
-// Every account gets its own business workspace from day one, on the free Starter plan, with one branch.
 
 export const HEAD_OFFICE = "Head office";
 

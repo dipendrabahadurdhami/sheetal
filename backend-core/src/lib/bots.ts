@@ -1,6 +1,7 @@
-// Bot detection, rebuilt from the old site's BotDetector (see docs/old-backend-audit.md).
-// Used to keep bots out of visitor counts and to rate-limit scrapers. Search engines are still served
-// normally (they need to index listings); they are only left out of analytics.
+// Bot detection for visitor counts and scraper limits (rebuilt from the old site's BotDetector).
+// Where it fits: used by visit tracking on the website API and by rate limits.
+// How it works: known crawlers and headless browsers are recognised by user agent and headers.
+// Rules: search engines are still served normally (they index listings); they are only left out of analytics.
 
 const BOT = new RegExp([
   "bot|crawl|spider|slurp|mediapartners|adsbot|bingpreview|yandex|baidu|duckduck|sogou|exabot|petalbot|applebot",

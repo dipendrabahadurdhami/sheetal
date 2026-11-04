@@ -1,10 +1,13 @@
+// In-app notifications (the bell on the website and in both panels).
+// Where it fits: called wherever something needs someone's attention: new leads, payments, reviews, verification,
+// work waiting for Sheetal staff.
+// How it works: one row per person. A note about a business carries its id, so that business's bell shows it; notes
+// without one are the person's own (website) or, with an /admin link, staff work (admin bell). teamWith() finds the
+// people with a permission at a branch; notifyStaff() finds the staff roles that handle a task.
+
 import type { Db } from "./db.js";
 import { worksAt } from "../domain/branches.js";
 import { PLATFORM_ROLES, hasPerm } from "../domain/permissions.js";
-
-// In-app notifications (the bell on the website and in the panels). Emails are sent separately where needed.
-// A note about a business carries its id, so each business's bell shows only its own; notes without one are the
-// person's own (website bell) or, with an /admin link, for Sheetal staff (admin bell).
 
 export interface Note { type: string; title: string; message?: string; link?: string; tenantId?: string | null }
 

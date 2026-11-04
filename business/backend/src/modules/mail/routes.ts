@@ -1,3 +1,10 @@
+// Business email: own domains, mailboxes (personal and shared), folders, reading, sending, drafts and attachments.
+// Where it fits: the panel's Email page and Settings → Domain and email; the mail server calls /mail/inbound.
+// How it works: mail between Sheetal mailboxes is delivered at once; mail to anyone else is queued for the mail
+// server, which signs and sends it. Storage counts every message and attachment against the plan (1 GB on paid plans).
+// Rules: everyone uses their own mailbox and the shared ones they were given; "settings.business" adds domains and
+// mailboxes; "team.manage" can open every team mailbox; inbound mail needs the shared secret.
+
 import type { FastifyInstance } from "fastify";
 import type { Mailbox, Prisma } from "@prisma/client";
 import { createId } from "./id.js";
@@ -9,12 +16,6 @@ import { Vault } from "@sheetal/backend-core/lib/vault";
 import { mailQuotaBytes } from "@sheetal/backend-core/domain/plans";
 import { workspaceOf, type Workspace } from "../access.js";
 import { checkRecords, isVerified, newDkimKeys, recordsFor, systemResolver, type Resolver } from "./dns.js";
-
-// Business email: own domains, a mailbox per team member or shared address, folders, sending and receiving.
-// - Everyone uses their own mailbox and the shared ones they were given.
-// - "settings.business" (owners, managers) adds domains and mailboxes; "team.manage" can open every team mailbox.
-// - Mail between Sheetal mailboxes is delivered at once; mail to anyone else is queued for the mail server.
-// - Storage counts every message and attachment of the business against its plan (1 GB on paid plans).
 
 const FOLDERS = ["inbox", "sent", "drafts", "archive", "spam", "trash"] as const;
 const MAX_ATTACH = 20 * 1024 * 1024; // all attachments of one email

@@ -1,3 +1,10 @@
+// Admin API (port 4002): everything the super-admin panel (/admin) needs, for Sheetal staff only.
+// Where it fits: server.ts starts it; tests build it with buildApp(); the admin panel calls it under /v1/admin.
+// How it works: the shared base app (backend-core) plus modules for businesses and staff, plans, listing review,
+// content, billing, analytics and system status, business verification and the staff notification bell. It also
+// runs two background jobs: plan renewals (every 6 hours) and calendar sync (every 2 hours).
+// Rules: every route starts with staffOf(request, permission); businesses get nothing here.
+
 import type { FastifyInstance } from "fastify";
 import type { Config } from "@sheetal/backend-core/config";
 import { buildBaseApp, type AppDeps } from "@sheetal/backend-core/app";
@@ -11,10 +18,6 @@ import { notificationRoutes } from "@sheetal/backend-core/modules/notifications"
 import { adminVerificationRoutes } from "./modules/verification.js";
 import { staffOf } from "./modules/routes.js";
 
-// Admin API: the admin panel (/admin): Sheetal staff managing businesses, plans, moderation and settings.
-// Shared basics come from backend-core. So far: businesses, plan changes and suspensions, upgrade requests, staff, audit log,
-// plans and prices, the listing review queue, content (blog, careers, buyer requirements and their fee),
-// billing (payments, invoices, gateway keys, the renewal cycle), analytics, system status, and AI and Meta settings.
 export async function buildApp(config: Config, deps: AppDeps = {}): Promise<FastifyInstance> {
   const app = await buildBaseApp(config, deps);
   await app.register(adminRoutes, { prefix: "/v1" });

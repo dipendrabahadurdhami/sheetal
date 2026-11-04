@@ -1,8 +1,11 @@
+// System emails (verify email, reset password, invitations, invoices, reminders) and their texts.
+// Where it fits: app.mailer.send() in every API.
+// How it works: each email is saved to the outbox table; the mail server sends it within seconds (on a developer's
+// computer it is saved as a file instead, and can be opened in Admin → System status).
+// Rules: never put a password in an email; links carry one-time tokens only.
+
 import type { FastifyBaseLogger } from "fastify";
 import type { Db } from "./db.js";
-
-// Every email is saved to the outbox first; the sender set up in Admin → Setup center (own email on
-// Cloudflare) delivers queued mail in the background. Until then, development logs each email so links can be clicked.
 
 export interface Email { to: string; subject: string; text: string; html?: string }
 

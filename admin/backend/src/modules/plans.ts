@@ -1,3 +1,10 @@
+// Plans and prices per business type.
+// Where it fits: the admin panel's Plans page; prices show on the website's Plans page and in business billing.
+// How it works: staff who manage plans change a plan's name, monthly price, limits and features, hide it from sale,
+// or add a new one. Longer periods always get the PERIODS discount.
+// Rules: changes apply to every business on that plan from now on; nobody is moved between plans here; Starter
+// stays free and on sale.
+
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { dbOf } from "@sheetal/backend-core/lib/db";
@@ -5,10 +12,6 @@ import { badRequest, notFound } from "@sheetal/backend-core/lib/errors";
 import { BUSINESS_TYPES } from "@sheetal/backend-core/domain/permissions";
 import { PERIODS, priceFor } from "@sheetal/backend-core/domain/plans";
 import { staffOf } from "./routes.js";
-
-// Plans and prices per business type. Staff who manage plans can change a plan's name, monthly price, limits and
-// features, hide it from the website, or add a new one. Longer periods always get the PERIODS discount.
-// Changes apply to every business on the plan from now on; nobody is moved between plans here.
 
 const FEATURE_KEYS = ["pos", "channel_sync", "agreements", "api", "custom_roles", "multi_property", "all_kinds"] as const;
 

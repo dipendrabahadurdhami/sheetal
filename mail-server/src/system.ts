@@ -1,3 +1,10 @@
+// Sending system emails (verify email, reset password, invitations, invoices, reminders) from the outbox.
+// Where it fits: the APIs save emails to outbound_emails (backend-core/src/lib/mailer.ts); this sends them.
+// How it works: "direct" (production) delivers to each recipient's mail server, DKIM-signed with the sending domain
+// (added once under business email, like any business domain); "relay" uses an SMTP provider; "file" (development)
+// saves .eml files in MAIL_DROP_DIR and marks them sent so links can be opened locally.
+// Rules: temporary failures retry for about 3 days; rows are locked while sending, so several servers can share it.
+
 import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import nodemailer, { type SendMailOptions } from "nodemailer";
@@ -5,15 +12,6 @@ import type { Db } from "@sheetal/backend-core/lib/db";
 import { Vault } from "@sheetal/backend-core/lib/vault";
 import type { MailConfig } from "./config.js";
 import { RETRY_MINUTES, mailServersFor, systemMx, type MxResolver, type SmtpError } from "./outbound.js";
-
-// System emails: the APIs save them to outbound_emails (verify, reset, invites, invoices, reminders); this sends them.
-// - direct (production): to each recipient's mail server, DKIM-signed with the sending domain's key (the domain is
-//   added once in business email, Domain and email, like any business domain).
-// - relay: through an SMTP provider (SMTP_RELAY_URL), if Sheetal ever wants one.
-// - file (development): saved as .eml files in MAIL_DROP_DIR and marked sent, so links can be opened locally;
-//   the super admin also sees each email in Admin → System status.
-// Temporary failures are tried again on the same schedule as business mail (about 3 days); rows are locked while
-// being sent, so several mail servers can share the outbox.
 
 const LOCK_MS = 5 * 60 * 1000;
 
