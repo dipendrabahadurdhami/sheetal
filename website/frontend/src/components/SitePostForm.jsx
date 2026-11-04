@@ -1,3 +1,6 @@
+// The form for posting stays, projects and investments from the website.
+// How it works: fields per type are [key, label, kind, extra], where kind is text, num, money, seg, chips, check or year.
+
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Upload, X, ArrowLeft, Check, Crown, Clock } from "lucide-react";

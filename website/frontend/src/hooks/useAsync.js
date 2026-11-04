@@ -1,3 +1,5 @@
+// Hooks: useAsync (load data with loading and error states, reload on change) and useMedia (screen size).
+
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export function useAsync(fn, deps = []) {

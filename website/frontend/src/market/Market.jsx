@@ -1,3 +1,7 @@
+// Marketplace pages: home with search tabs, stays, projects, investments, partners, saved items, tools, help, offers,
+// questions and the map (sample data; listings for sale and rent use the main pages).
+// How it works: useL(key, english) keeps the text translatable; useCatalog() gives the listing options.
+
 import React, { useEffect, useState } from "react";
 import { api } from "../api/endpoints";
 import { isLivePath, toList } from "../api/client";
@@ -17,8 +21,7 @@ export function Crumbs({ items }) {
   return <nav className="pb-crumbs" aria-label="Breadcrumb"><ol>{items.map(([to, l], i) => <li key={l}>{i < items.length - 1 && to ? <Link to={to}>{l}</Link> : <span aria-current="page">{l}</span>}</li>)}</ol></nav>;
 }
 
-// Marketplace pages from the master prompt §5–7, §18, §19, §29: home with search tabs, stays, projects,
-// investments, partners, saved, compare and tools. Shared demo catalogue below.
+// useL: translated text with an English fallback. The sample catalogue lists below start empty.
 export const useL = () => { const t = useT(); return (k, en, v) => { const s = t(k, v); if (s !== k) return s; let o = en; if (v) for (const x in v) o = o.split(`{${x}}`).join(v[x]); return o; }; };
 export const STAYS = [];
 export const PROJECTS = [];
@@ -102,7 +105,7 @@ export const Page = ({ children, title }) => {
 
 const Missing = ({ what, to, label }) => <Page title={`${what} not found`}><section className="pb-inner pf-stack" style={{ padding: "56px 24px", alignItems: "center", textAlign: "center" }}><h1 className="pb-h1" style={{ fontSize: 28 }}>{what} not found</h1><p className="muted">It may have been removed, or it isn't published yet.</p><Link to={to} className="btn btn-outline">{label}</Link></section></Page>;
 
-/* Home with search tabs (§6) */
+/* Home with search tabs */
 export function Home() {
   const L = useL();
   const { navigate } = useRouter();
@@ -134,7 +137,7 @@ export const StayCard = ({ s }) => <Link to={s.href || `/stays/${s.id}`} classNa
 export const ProjectCard = ({ p }) => <Link to={p.href || `/project/${p.id}`} className="card pb-card"><div className="pb-cimg"><IMG seed={p.id} src={p.img} /><TypeTag>Project</TypeTag><Heart type="project" id={p.id} /></div><div className="pb-cbody"><b>{p.name}</b><span className="small muted">{p.area}, {p.city} · {p.status}</span>{p.deal ? dealPrice(p) : <span className="pb-price tnum"><small>Starting from </small>{rsShort(p.from)}</span>}</div></Link>;
 export const InvestCard = ({ v }) => <Link to={v.href || `/investment/${v.id}`} className="card pb-card"><div className="pb-cimg"><IMG seed={v.id} src={v.img} /><TypeTag>Invest</TypeTag><Heart type="invest" id={v.id} /></div><div className="pb-cbody"><b>{v.name}</b><span className="small muted">{v.type} · {v.city}</span>{v.deal ? dealPrice(v) : <><div className="bar" style={{ height: 6, marginTop: 6 }}><i style={{ width: `${(v.raised / v.target) * 100}%` }} /></div><span className="small tnum">{rsShort(v.raised)} of {rsShort(v.target)} · {v.ret} expected, not guaranteed</span></>}</div></Link>;
 
-/* Stays list + detail (§7.3, §7.4, §23.1) */
+/* Stays list + detail */
 export function Stays() {
   const L = useL();
   const q = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
@@ -233,7 +236,7 @@ function StayView({ s }) {
   );
 }
 
-/* Projects list + detail + unit drawer (§7.5) */
+/* Projects list + detail + unit drawer */
 export function Projects() {
   return <Page><section className="pb-inner pf-stack" style={{ padding: "28px 24px" }}><h1 className="pb-h1" style={{ fontSize: 30 }}>Projects</h1><div className="pb-grid">{useCatalog().projects.map((p) => <ProjectCard key={p.id} p={p} />)}</div></section></Page>;
 }
@@ -281,7 +284,7 @@ function ProjectView({ p }) {
   );
 }
 
-/* Investments list + detail (§7.6) */
+/* Investments list + detail */
 export function Investments() {
   return <Page><section className="pb-inner pf-stack" style={{ padding: "28px 24px" }}><h1 className="pb-h1" style={{ fontSize: 30 }}>Open investments</h1><p className="small muted">Returns are estimates and never guaranteed. Read the risks on each page.</p><div className="pb-grid">{useCatalog().invests.map((v) => <InvestCard key={v.id} v={v} />)}</div></section></Page>;
 }
@@ -319,7 +322,7 @@ function InvestView({ v }) {
   );
 }
 
-/* Partners directory + shared business profile (§18) */
+/* Partners directory + shared business profile */
 export function Partners() {
   const { db } = useStore();
   const [type, setType] = useState("all");
@@ -332,7 +335,7 @@ export function Partners() {
     </section></Page>
   );
 }
-/* Saved (per-type tabs), saved searches, compare (§29) */
+/* Saved (per-type tabs), saved searches, compare */
 export function SavedBody() {
   const [saved, toggle] = useSaved();
   const toast = useToast();
@@ -355,7 +358,7 @@ export function SavedBody() {
   );
 }
 
-/* Tools (§19) */
+/* Tools */
 export function Tools() {
   const [emi, setEmi] = useState({ amt: 10000000, rate: 11, yrs: 20 });
   const [inv, setInv] = useState({ amt: 100000, rate: 12, yrs: 3 });
@@ -376,7 +379,7 @@ export function Tools() {
   );
 }
 
-/* Help, legal and system pages (§19, §21) */
+/* Help, legal and system pages */
 const HELP = {
   booking: ["How booking works", ["Pick dates and guests; prices include service charge and VAT.", "Pay in full or 30% now with Fonepay, eSewa, Khalti, connectIPS or a card.", "You get a booking code by SMS. Add check-in details from My account.", "Most stays confirm instantly; a few hosts approve within 2 hours."]],
   investing: ["How investing works", ["Investing needs your ID (KYC) once.", "Returns are estimates and never guaranteed.", "You have 7 days to change your mind after investing.", "Updates and statements appear under My account."]],
@@ -408,7 +411,7 @@ export function LegalPage({ page }) {
   </section></Page>;
 }
 
-/* Offers (§30) */
+/* Offers */
 export const OFFERS = [];
 const daysLeft = (d) => Math.max(0, Math.ceil((new Date(d) - new Date()) / 864e5));
 export function OffersPage({ slug }) {
@@ -429,7 +432,7 @@ export function SystemPage({ kind }) {
   return <Page><div className="pb-done pb-inner"><span className="pf-kind-ico" style={{ width: 64, height: 64 }}><Icon name={m[0]} size={30} /></span><h1 className="pb-h1">{m[1]}</h1><p className="pb-lead">{m[2]}</p><Link to="/home" className="btn btn-primary">Go home</Link></div></Page>;
 }
 
-/* Questions and answers on any listing (§7.5) */
+/* Questions and answers on any listing */
 export function QA({ id }) {
   const { db, update } = useStore();
   const [q, setQ] = useState("");
@@ -442,7 +445,7 @@ export function QA({ id }) {
   );
 }
 
-/* Map with pins per type (§19) */
+/* Map with pins per type */
 export function MapPage() {
   const cat = useCatalog();
   const [f, setF] = useState("all");
@@ -458,7 +461,7 @@ export function MapPage() {
   );
 }
 
-/* Post a request: buy, rent, stay or invest (demand board, §19) */
+/* Post a request: buy, rent, stay or invest (demand board) */
 export function RequestPage() {
   const { update } = useStore();
   const toast = useToast();

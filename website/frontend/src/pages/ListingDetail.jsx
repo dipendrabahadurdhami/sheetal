@@ -1,3 +1,6 @@
+// A listing a business published from its panel, showing only the fields that listing has.
+// How it works: team members of the business that owns it also get a quick "check this listing" bar.
+
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useSEO } from "../utils/seo";
@@ -11,8 +14,6 @@ import { fdate } from "@sheetal/shared/core/format";
 import { CheckupCard, useCheckups } from "@sheetal/shared/components/CheckupCard";
 import { PlatformWrap } from "../market/SiteRows";
 
-// A listing a business published from its workspace. Shows only the fields that listing has.
-// Team members of the business that owns it also get a quick "check this listing" bar.
 const SKIP = new Set(["title", "photos", "location", "pin", "category", "price", "rent", "description", "docs"]);
 const human = (k) => k.replace(/([A-Z])/g, " $1").replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
 

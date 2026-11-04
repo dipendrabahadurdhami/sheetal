@@ -1,3 +1,5 @@
+// Investments: explore projects open for investment, a project's page and its gallery.
+
 import { useState, useRef, useEffect } from "react";
 import { ProjectsSection, InvestSection } from "../market/SiteRows";
 import { Link } from "react-router-dom";

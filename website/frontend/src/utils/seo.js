@@ -1,3 +1,6 @@
+// SEO and analytics: page titles and descriptions, structured data for Google, and visit tracking.
+// Rules: SITE_URL is the public address Google knows the site by.
+
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { api } from "../api/endpoints";

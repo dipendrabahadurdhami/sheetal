@@ -1,8 +1,10 @@
+// The email check before someone's first post.
+// Rules: this screen accepts any 6-digit code for now; real codes come with the email check on the server.
+
 import { useEffect, useState } from "react";
 import { MailCheck } from "lucide-react";
 import { markEmailVerified } from "../utils/sitePosts";
 
-// Email check before the first post. UI only: any 6-digit code works until the API sends real codes.
 export function EmailVerify({ user, onVerified }) {
   const [email, setEmail] = useState(user?.email || "");
   const [sent, setSent] = useState(false);

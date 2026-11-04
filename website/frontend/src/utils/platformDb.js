@@ -1,4 +1,6 @@
-// Read the shared platform database (the one Business and Admin write to) from the website.
+// Reads the sample platform data (the one the panels use in sample mode) from the website.
+// How it works: published sale and rent listings from businesses, shaped like the API's properties for PropertyCard.
+
 import { config } from "@sheetal/shared/core/config";
 import { seed, VERSION } from "@sheetal/shared/demo/demo";
 

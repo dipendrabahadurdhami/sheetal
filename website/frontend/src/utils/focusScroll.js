@@ -1,16 +1,6 @@
-// Keyboard navigation by section (website) with a "cloth" glide.
-//
-// Tab / Shift+Tab   next / previous section, centred below the sticky header
-// Hold Tab          keeps pulling the page section by section, slower, like hand-over-hand
-// Left / Right      cards inside the section (sliding rows follow)
-// Enter             opens the focused card
-//
-// While the page glides, the content behaves like printed cloth being pulled: the edge under the
-// header leads, the lower part lags, stretches slightly and tilts away, then settles with a soft
-// spring when the pull stops. Only transform/opacity change per frame (GPU), and nothing reads
-// layout inside the animation loop, so it stays smooth.
-//
-// We move focus ourselves (preventScroll) so the browser never runs a competing scroll of its own.
+// Keyboard navigation by section with a smooth glide.
+// How it works: Tab / Shift+Tab move to the next or previous section, centred below the sticky header.
+
 import "./cloth.css";
 
 const HEAD = ".section-head, .pb-sec-head, h2";

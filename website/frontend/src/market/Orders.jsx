@@ -1,3 +1,6 @@
+// The customer's orders: status, payments, documents, cancel and refund, check-in details, receipt and saved items
+// (sample data for now).
+
 import React, { useState } from "react";
 import { useStore } from "@sheetal/shared/core/store";
 import { Link } from "@sheetal/shared/core/router";
@@ -6,8 +9,7 @@ import { Badge, Button, Drawer, Field, Input, Seg, Table, Textarea, useToast } f
 import { Icon } from "@sheetal/shared/core/icons";
 import { Page, SavedBody } from "./Market";
 
-// Customer account (§9, §20–27) — one place for every order: status timeline, payments, documents,
-// cancel and refund, check-in details, stay hub, report a problem, review, receipt. Plus saved items.
+// The steps each kind of order goes through, and which step each status is at (-1: off the timeline).
 const FLOW = { confirmed: ["Booked", "Paid", "Checked in", "Checked out", "Completed"], reserved: ["Reserved", "Token paid", "Agreement", "Instalments", "Handover"], invested: ["Invested", "Cooling-off", "Active", "Returns paid", "Exited"] };
 const STEP = { confirmed: 1, reserved: 1, invested: 1, completed: 4, cancelled: -1, refund_pending: -1 };
 const Wrap = ({ embedded, children }) => (embedded ? <div className="pf-stack">{children}</div> : <Page><section className="pb-inner pf-stack" style={{ padding: "28px 24px" }}>{children}</section></Page>);

@@ -1,3 +1,6 @@
+// Legal pages (privacy, terms, data deletion) and the not-found page.
+// How it works: text saved in the admin panel replaces the built-in text; headings get anchors.
+
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Compass, ShieldCheck, Scale, Trash2, ChevronRight, Mail, Phone } from "lucide-react";

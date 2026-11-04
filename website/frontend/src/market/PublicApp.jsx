@@ -1,3 +1,6 @@
+// Each business's own public site (sheetalproperty.com/site/:id, or their own domain), listing detail, checkout,
+// confirmation and the customer account.
+
 import React, { useState } from "react";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
@@ -13,8 +16,6 @@ import { inDays, Home as MarketHome, Stays, StayDetail, Projects as MarketProjec
 import { Account as CustomerAccount } from "./Orders";
 import { formLink, formsOf } from "@sheetal/shared/core/forms";
 
-// Public side: each business's own site (sheetalproperty.com/site/:id, or book.theirdomain.com),
-// listing detail, checkout with the platform's gateways, confirmation and the customer account.
 const useL = () => { const t = useT(); return (k, en, v) => { const s = t(k, v); if (s !== k) return s; let o = en; if (v) for (const x in v) o = o.split(`{${x}}`).join(v[x]); return o; }; };
 const GW = { fonepay: ["Fonepay QR", "qr-code"], esewa: ["eSewa", "wallet"], khalti: ["Khalti", "wallet"], imepay: ["IME Pay", "wallet"], connectips: ["connectIPS", "landmark"], nps_card: ["Nepali bank card", "credit-card"], visa_mc: ["Visa / Mastercard", "credit-card"], unionpay: ["UnionPay", "credit-card"], paypal: ["PayPal", "globe"], bank: ["Bank transfer", "landmark"], cash: ["Pay on arrival", "banknote"] };
 const isStay = (k) => k === "stay_hotel" || k === "stay_unit";

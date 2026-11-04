@@ -1,3 +1,5 @@
+// Post a property: the form owners and agencies use to send a listing for Sheetal's review.
+
 import { useState } from "react";
 import { useSEO } from "../utils/seo";
 import { useSearchParams } from "react-router-dom";

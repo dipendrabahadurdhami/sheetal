@@ -1,7 +1,6 @@
-// Local data used until each part of the website is served by the real API.
-// It starts empty: no invented properties, agencies, people, reviews, blogs or jobs. Real listings come from
-// the backend (and the old-site import). Only reference lists (areas, property types, categories) live here.
-// Anything saved while testing (sign-ups, posted listings, reviews) stays in this browser's localStorage.
+// Local sample data for the parts of the website not served by the API.
+// How it works: starts empty: no invented properties, agencies, people, reviews, blogs or jobs; only reference lists
+// (areas, property types, categories) live here. Real listings come from the API.
 
 const STORE_KEY = "sheetal_demo_db_v7";
 

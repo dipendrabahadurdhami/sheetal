@@ -1,3 +1,5 @@
+// One agency's page: contact details, website, Verified badge, reviews and its listings (one page at a time).
+
 import { useState, useRef } from "react";
 import { useSEO } from "../utils/seo";
 import { Link, useParams } from "react-router-dom";

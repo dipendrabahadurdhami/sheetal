@@ -1,8 +1,9 @@
+// A styled dropdown used instead of the browser's own select list.
+// How it works: options are [[value, label], ...]; inside the search bar, opening another field keeps this one open.
+
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Check } from "lucide-react";
 
-// Custom dropdown — replaces the browser's native <select> list.
-// options: [[value, label], ...]
 export function Dropdown({ value, options, onChange, placeholder = "Select", bare, id, align = "left" }) {
   const [open, setOpen] = useState(false);
   const [hi, setHi] = useState(-1);

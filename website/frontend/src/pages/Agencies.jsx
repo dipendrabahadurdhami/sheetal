@@ -1,3 +1,5 @@
+// The agencies list, with each agency's logo, listings count and Verified badge.
+
 import { useState } from "react";
 import { useSEO } from "../utils/seo";
 import { Link } from "react-router-dom";

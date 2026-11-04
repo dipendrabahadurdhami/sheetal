@@ -1,3 +1,5 @@
+// Listing cards and grids used across the site, with loading placeholders.
+
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Heart, MapPin, BedDouble, Bath, Ruler, ChevronLeft, ChevronRight } from "lucide-react";

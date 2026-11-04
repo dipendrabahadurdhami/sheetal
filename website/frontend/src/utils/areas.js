@@ -1,5 +1,6 @@
-// Area-level location data for the map. Properties are grouped by province → district → locality,
-// and the map never shows an exact address (only an approximate area).
+// Area data for the map: provinces, districts and localities, and matching place names to districts.
+// Rules: the map never shows an exact address, only an approximate area.
+
 export const PROVINCES = {
   Koshi: { c: [27.0, 87.3], d: "Taplejung Panchthar Ilam Jhapa Morang Sunsari Dhankuta Terhathum Sankhuwasabha Bhojpur Solukhumbu Okhaldhunga Khotang Udayapur" },
   Madhesh: { c: [26.85, 85.8], d: "Saptari Siraha Dhanusha Mahottari Sarlahi Rautahat Bara Parsa" },

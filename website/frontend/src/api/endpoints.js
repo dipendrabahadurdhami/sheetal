@@ -1,9 +1,12 @@
+// Every data call the website makes, by name (api.properties(), api.login(), api.reviews()…).
+// Where it fits: pages and components call these instead of building URLs themselves.
+// How it works: paths and fields match the website API (website/backend) and the old site's API.
+
 import { request } from "./client";
 
 const get = (p, params) => request("get", p, { params });
 const post = (p, data) => request("post", p, { data });
 
-// Every data call the website makes (answered by api/mock until the new backend is ready).
 export const api = {
   // site
   banners: () => get("banners"),

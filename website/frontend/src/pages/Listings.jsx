@@ -1,3 +1,5 @@
+// Buy and Rent search pages: filters, sorting, results and pagination from the website API.
+
 import { useEffect, useMemo, useState } from "react";
 import { useSEO } from "../utils/seo";
 import { SearchTabs } from "../components/SearchTabs";

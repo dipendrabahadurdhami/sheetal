@@ -1,3 +1,5 @@
+// My profile: account details, my properties, saved items, plan, notifications and settings.
+
 import { Fragment, useEffect, useState } from "react";
 import { useSEO } from "../utils/seo";
 import { Link, useSearchParams } from "react-router-dom";

@@ -1,3 +1,5 @@
+// The home page: hero search, featured and latest listings, and the marketplace rows.
+
 import { Link } from "react-router-dom";
 import { useSEO } from "../utils/seo";
 import { Home as HomeIcon, Trees, Building2, Building, Store, Briefcase, Castle, Calculator, Ruler, TrendingUp, KeyRound, Landmark, Receipt, Wallet } from "lucide-react";

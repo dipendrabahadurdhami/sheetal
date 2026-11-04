@@ -1,9 +1,11 @@
+// A few questions asked once per account after the first sign-in (what the person is looking for).
+// How it works: answers are kept in the browser ("sheetal_prefs") to tailor the home page.
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 import { Modal } from "./ui";
 
-// Asked once per account after the first sign-in. Answers are kept in "sheetal_prefs".
 const GOALS = [["buy", "Buy a home or land"], ["rent", "Rent a place"], ["sell", "Sell or rent out my property"], ["stay", "Book a stay"], ["invest", "Invest"]];
 const CITIES = ["Kathmandu", "Lalitpur", "Bhaktapur", "Pokhara", "Chitwan", "Other"];
 const BUDGETS = { buy: ["Under 1 crore", "1 to 3 crore", "3 to 5 crore", "Above 5 crore"], rent: ["Under Rs. 20,000 a month", "Rs. 20,000 to 50,000", "Above Rs. 50,000"] };

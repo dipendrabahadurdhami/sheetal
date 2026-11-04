@@ -1,4 +1,5 @@
-// Text copied from the current site (privacy, terms, data deletion).
+// Legal text (privacy, terms, data deletion) carried over from the current site.
+
 export const LEGAL = {
  "privacy": {
   "title": "Privacy Policy",

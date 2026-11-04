@@ -1,3 +1,6 @@
+// Extra tabs for My profile: orders, investments, enquiries, payments, saved items and settings.
+// How it works: used as <PlatformProfileTab tab="orders" /> in pages/Profile.jsx.
+
 import React, { useState } from "react";
 import { StoreProvider, useStore } from "@sheetal/shared/core/store";
 import { RouterProvider } from "@sheetal/shared/core/router";
@@ -8,7 +11,6 @@ import { Account } from "./Orders";
 import { SavedBody } from "./Market";
 import "@sheetal/shared/styles/platform.css";
 
-// Tabs for your existing My profile page (master prompt §9, §17, §20, §26.3, §29).
 // Usage in pages/Profile.jsx:  <PlatformProfileTab tab="orders" />  (orders | investments | enquiries | payments | saved | settings)
 function Settings({ section }) {
   const show = (k) => !section || section === k;

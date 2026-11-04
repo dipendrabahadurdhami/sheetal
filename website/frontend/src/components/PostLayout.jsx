@@ -1,3 +1,5 @@
+// The layout of the post-a-property flow: steps, progress and the side summary.
+
 import { Link } from "react-router-dom";
 import { Check, Tag, KeyRound, BedDouble, Building2, HandCoins, ShieldCheck, ImageIcon, MapPin } from "lucide-react";
 import { fmtPrice } from "../utils/format";

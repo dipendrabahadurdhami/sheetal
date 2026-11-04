@@ -1,3 +1,6 @@
+// Small UI pieces for the website: logos, avatars, stars, modal, photo lightbox, pagination.
+// Rules: business logos show in one white colour in the dark and red themes; people's photos never do.
+
 import React from "react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";

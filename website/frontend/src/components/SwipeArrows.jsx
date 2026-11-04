@@ -1,14 +1,6 @@
-// Slim arrow that follows the protractor (inside the scale numbers) and whose LENGTH follows the rotation speed:
-// short when the ring is slow/still, stretching toward the ends of the half circle on a fast spin.
-// The parent calls apiRef.current(spanDegrees, dir) every animation frame; the paths are updated directly in
-// the DOM (no React re-render), so it stays in sync with no lag.
-//   dir =  0 -> ring is still: both heads
-//   dir =  1 -> only the RIGHT head, tail swept to a sharp point on the left
-//   dir = -1 -> only the LEFT head, tail swept to a sharp point on the right
-// (Gallery passes the OPPOSITE of the photo direction, so the arrow points against the way the photos travel.)
-//
-// Use inside the stage, right after <Protractor />:
-//   {geo && <SwipeArrows g={geo} hide={hov != null} apiRef={arrowApi} />}
+// The animated arrow on the home page dial: it follows the ring and stretches with the spin speed.
+// How it works: the parent calls apiRef.current(spanDegrees, dir) every frame; the paths are updated directly.
+
 import { useEffect, useRef } from "react";
 
 const CSS = `

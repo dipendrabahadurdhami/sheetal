@@ -1,3 +1,6 @@
+// Home page rows: popular stays, featured projects and open investments, plus the post-a-property type picker.
+// How it works: until something is posted, a row invites owners to post the first one instead of standing empty.
+
 import React from "react";
 import { StoreProvider, useStore as useSt0 } from "@sheetal/shared/core/store";
 import { I18nProvider } from "@sheetal/shared/core/i18n";
@@ -7,7 +10,6 @@ import { rs } from "@sheetal/shared/core/format";
 import "@sheetal/shared/styles/platform.css";
 import { InviteCards } from "../components/InviteCards";
 
-// Home-page rows for your existing site (master prompt §3): Popular stays, Featured projects, Open investments.
 // Usage in pages/Home.jsx:  <HomePlatformRows SectionHead={SectionHead} Link={Link} />
 function Rows({ SectionHead, Link }) {
   const { stays, projects, invests } = useCatalog();
@@ -71,7 +73,7 @@ export function ToolCalc({ kind }) {
 const Tile = ({ icon, title, sub, to, onClick, on }) => { const C = to ? "a" : "button"; return <C href={to} type={to ? undefined : "button"} onClick={onClick} className={`card pb-pick ${on ? "on" : ""}`}><span className="pf-kind-ico"><Icon name={icon} size={22} /></span><b>{title}</b><small className="muted">{sub}</small></C>; };
 import { Icon } from "@sheetal/shared/core/icons";
 
-// Post property: step one is the type picker (§10). Sell and Rent use your existing form below.
+// Post property, step one: pick the type. Sell and Rent go on to the main post form (pages/PostProperty.jsx).
 export function PostTypePicker() {
   // every type is posted from the website and reviewed before it goes live
   const k = (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("type")) || "sell";

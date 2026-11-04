@@ -1,10 +1,13 @@
+// Sign in, sign up and forgot password, in a modal.
+// Rules: Google and phone sign-in stay off until they are connected on the server.
+
 import { useState } from "react";
 import { Eye, EyeOff, Smartphone, Mail, MailCheck, Store } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { api } from "../api/endpoints";
 import { isLivePath } from "../api/client";
 
-// With the real API, Google and phone sign-in stay off until they are connected in Admin → Setup center.
+// With the real API, Google and phone sign-in stay off until they are connected (Admin → Setup center).
 const LIVE_LOGIN = isLivePath("login");
 const NOT_YET = "This sign-in method isn't set up yet. Please use your email and password.";
 import { Modal } from "./ui";
@@ -19,7 +22,7 @@ export function AuthModal() {
   const [via, setVia] = useState("email"); // email | phone
   const [phone, setPhone] = useState({ no: "", sent: false, code: "" });
   const [sentTo, setSentTo] = useState("");
-  // Google: signs in the demo user until the new backend is ready.
+  // Google: in sample mode, signs in the sample user.
   const google = async () => {
     if (LIVE_LOGIN) { setErr(NOT_YET); return; }
     setBusy(true); try { await login("demo@sheetal.test", "password"); toast("Signed in with Google"); setAuth(null); } catch (x) { setErr(x.message); } finally { setBusy(false); }

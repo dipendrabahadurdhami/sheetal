@@ -1,3 +1,5 @@
+// The About page, with the content of the current sheetalproperty.com About page.
+
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronRight, ChevronDown, Tag, KeyRound } from "lucide-react";
@@ -11,7 +13,6 @@ import { useSEO } from "../utils/seo";
 import { adminPage, textBlocks } from "../utils/content";
 import { readDb } from "../utils/platformDb";
 
-// Content carried over from the current sheetalproperty.com About page.
 const STATS = [["10+", "Years in Nepal real estate"], ["2,000+", "Active listings"], ["7", "Sheetal Group brands"]];
 const CONTACT = { address: "Kathmandu, Nepal", phone1: "+977 980-1000434", phone2: "970-5250833", email: "shetalrealestate@gmail.com", hours: "Sunday – Friday · 9:00 AM – 6:00 PM" };
 // Longer text shown when a service in "What we do" is opened (3–4 lines across the full width)

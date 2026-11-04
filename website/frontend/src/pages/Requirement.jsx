@@ -1,3 +1,6 @@
+// Buyer requirements: post one, the public requirement board, and a requirement's page where agencies offer listings.
+// Rules: the board never shows phone numbers or emails; with the fee on, a requirement shows after Sheetal confirms it.
+
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { MapPin, Upload, QrCode, Handshake, Wallet, Home as HomeIcon, Trees, Building2, Store, BedDouble, Car, Clock, ChevronRight, ClipboardList } from "lucide-react";

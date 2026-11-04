@@ -1,9 +1,10 @@
-// Answers API calls from the demo database.
+// Answers API calls from the local sample data, for paths the API doesn't serve (see api/client.js).
+// How it works: plans come from the same list the panels use (Starter, Business, Pro).
+
 import { db, save, LOCATIONS, PROPERTY_TYPES, CATEGORIES } from "./db";
 import { readDb } from "../../utils/platformDb";
 import { PERIODS, planFeatureList, priceFor, savingFor } from "@sheetal/shared/core/plans";
 
-// Plans for one business type, from the same list Business and Admin use (Starter, Business, Pro).
 const sitePlans = (type = "agency") => (readDb().plans || []).filter((p) => p.type === type && p.active).map((p) => ({
   id: p.id, type: p.type, name: p.name, slug: p.name.toLowerCase(), price: p.price,
   periods: PERIODS.map((x) => ({ months: x.months, save: x.save, price: priceFor(p, x.months), saving: savingFor(p, x.months) })),

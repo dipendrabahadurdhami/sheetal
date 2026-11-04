@@ -5,7 +5,7 @@
 export const config = {
   logo: "/brand/logo-mark.png",
   storageKey: "shetal_platform_demo",
-  // true when public pages render inside your existing site layout (your header and footer)
+  // true when public pages render inside the website's own layout (its header and footer)
   embedPublic: false,
   // which paths belong to this app; links to other paths do a full page load (set in each app's main.jsx)
   owns: null,

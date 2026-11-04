@@ -1,5 +1,6 @@
-// Website posts for stays, projects and investments (UI only for now).
-// Kept in this browser until the API is ready; swap these helpers for API calls later.
+// Website posts for stays, projects and investments (kept in the browser for now).
+// How it works: statuses are review, live, changes (sent back), rejected and paused (by the owner).
+
 const KEY = "shetal_site_posts";
 
 export const POST_TYPES = {

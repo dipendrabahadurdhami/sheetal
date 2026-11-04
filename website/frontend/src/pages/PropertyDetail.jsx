@@ -1,3 +1,6 @@
+// A property's page: photos, details, price, area map, contact and visit forms, reviews and similar listings.
+// Rules: the exact location stays private for sale and rent (area only, also in the Google listing data).
+
 import { clean } from "../utils/sanitize";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";

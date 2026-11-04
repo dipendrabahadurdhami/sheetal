@@ -1,3 +1,5 @@
+// The blog list and a blog post with comments (posts are written in the admin panel).
+
 import { clean } from "../utils/sanitize";
 import { useSEO } from "../utils/seo";
 import { useState } from "react";

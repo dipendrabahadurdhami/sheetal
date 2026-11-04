@@ -1,3 +1,5 @@
+// Property tools: land unit converter, EMI and other calculators.
+
 import { useMemo, useState } from "react";
 import { useSEO } from "../utils/seo";
 import { ToolCalc } from "../market/SiteRows";

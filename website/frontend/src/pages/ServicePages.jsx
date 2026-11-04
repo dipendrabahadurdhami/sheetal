@@ -1,3 +1,5 @@
+// Service pages: enquiries, points, home loan, legal help, property management and pay rent.
+
 import { useEffect, useMemo, useState } from "react";
 import { recordPayment } from "@sheetal/shared/core/store";
 import { Link, useParams } from "react-router-dom";

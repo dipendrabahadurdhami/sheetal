@@ -1,3 +1,5 @@
+// The search bar on listing pages: location, type, price and more, kept in the page address.
+
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, MapPin, Building2, Landmark, Home } from "lucide-react";

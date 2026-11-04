@@ -1,3 +1,6 @@
+// Forms on property and agency pages: contact, book a visit, and reviews (with the business's reply).
+// How it works: they send enquiries and reviews to the website API, which passes them to the right business.
+
 import { useState } from "react";
 import { MessageSquareText, CalendarDays } from "lucide-react";
 import { api } from "../api/endpoints";

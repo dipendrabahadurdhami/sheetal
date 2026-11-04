@@ -1,3 +1,6 @@
+// One directory for every partner: hotels, hosts, developers, agencies and sponsors.
+// How it works: agencies come from the agency list and open the agency page; other businesses open their business page.
+
 import { useState } from "react";
 import { useSEO } from "../utils/seo";
 import { Link, useSearchParams } from "react-router-dom";
@@ -10,8 +13,6 @@ import { agencyName, agencyTier } from "../utils/format";
 import { seed, VERSION } from "@sheetal/shared/demo/demo";
 import { config } from "@sheetal/shared/core/config";
 
-// One directory for every partner: hotels, hosts, developers, agencies and sponsors.
-// Agencies come from the agency list (api.agents) and open the agency profile; other businesses open their business page.
 const TABS = [["all", "All"], ["hotel", "Hotels"], ["host", "Hosts"], ["developer", "Developers"], ["agency", "Agencies"], ["sponsor", "Sponsors"]];
 const KIND = { hotel: "Hotel", host: "Host", developer: "Developer", agency: "Agency", sponsor: "Sponsor" };
 const tenants = () => { let s = null; try { s = JSON.parse(localStorage.getItem(config.storageKey)); } catch (e) { /* ignore */ } if (!s || s.version !== VERSION) s = seed(); return (s.tenants || []).filter((x) => x.status === "active" && x.type !== "agency"); };

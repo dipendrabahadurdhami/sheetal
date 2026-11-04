@@ -1,3 +1,5 @@
+// Open jobs and a job's page with the application form (CV kept private).
+
 import { clean } from "../utils/sanitize";
 import { useSEO } from "../utils/seo";
 import { useMemo, useState } from "react";

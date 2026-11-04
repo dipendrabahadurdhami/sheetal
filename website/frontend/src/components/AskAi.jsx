@@ -1,3 +1,6 @@
+// The "Ask AI" box: compare listings by their codes and get a plain answer.
+// How it works: sends the codes and question to the website API (/ask-ai), which answers from public facts only.
+
 import { useState } from "react";
 import { X, Plus, Send } from "lucide-react";
 import { api } from "../api/endpoints";

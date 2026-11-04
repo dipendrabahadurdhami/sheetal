@@ -1,3 +1,7 @@
+// The website frame: header, mobile tab bar, footer, WhatsApp button and theme button.
+// How it works: the footer has 4 groups of 4 links so every column is the same height; the theme button moves to the
+// next theme on each click.
+
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { Newspaper, Calculator, TrendingUp, ClipboardList, Images, Info, Building2, HandCoins, Landmark, Scale, KeyRound, Wallet, FilePlus2, Briefcase, BadgeCheck, Sun, Moon, Droplet, Heart, Plus, User, Home, Search, LogOut, LayoutGrid, Bell, Menu, X, Facebook, Instagram, Phone, Mail, MapPin, MessageCircle, MessagesSquare } from "lucide-react";

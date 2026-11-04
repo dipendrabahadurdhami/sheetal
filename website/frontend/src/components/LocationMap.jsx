@@ -1,11 +1,11 @@
+// Where a listing is, on a map.
+// How it works: AreaMap (sale and rent) shows a shaded circle around a shifted centre, never the exact spot; ExactMap
+// (stays, which guests travel to) shows the exact pin with Google Maps and directions links.
+
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { MapPin, Navigation, ExternalLink } from "lucide-react";
-
-// Two ways to show where a listing is:
-// AreaMap  — sale and rent: a shaded circle around a shifted centre, never the exact spot.
-// ExactMap — stays (places guests travel to): exact pin plus Google Maps and directions links.
 
 import { approx, directionsUrl, googleMapsUrl, validLatLng } from "@sheetal/shared/core/geo";
 export { approx, validLatLng };

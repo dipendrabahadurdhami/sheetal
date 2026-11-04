@@ -1,7 +1,8 @@
+// Filter sidebar pieces shared by every search page: collapsible groups with radio and checkbox options, price range.
+
 import { useEffect, useRef, useState } from "react";
 import { ChevronRight } from "lucide-react";
 
-// Filter sidebar pieces shared by every search page: accordion groups with radio / checkbox option rows.
 export function useGroups(initial) {
   const [open, setOpen] = useState(initial);
   return { isOpen: (id) => open.includes(id), toggle: (id) => setOpen((o) => (o.includes(id) ? o.filter((x) => x !== id) : [...o, id])) };

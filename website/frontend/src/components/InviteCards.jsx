@@ -1,8 +1,9 @@
+// Cards shaped like real listings that invite owners to post one, shown before anything of that kind is posted.
+// How it works: each opens the plans for that business type, where Starter is free with one listing.
+
 import { Link, useNavigate } from "react-router-dom";
 import { Hotel, TreePalm, House, Home, Building, Trees, Store, MapPin, ArrowRight } from "lucide-react";
 
-// Before anything of this kind is posted: cards shaped like real listings that invite owners to post one.
-// Each opens the plans for that business type, where Starter is free with one listing (checked before it goes live).
 const INVITE = {
   stay: { note: "Hotels and hosts list rooms and homes to book by the night.", cards: [
     [Hotel, "Your hotel here", "Rooms by the night, paid online", "hotel"],

@@ -1,9 +1,10 @@
+// Where each website request goes: the real API, or the local sample data.
+// How it works: VITE_API_URL is the API address (e.g. http://localhost:4000/v1); VITE_API_LIVE lists the paths the API
+// serves (comma separated, or "*" for all). Other paths are answered by demo/api so pages keep working.
+// Rules: sends the sign-in token; turns error replies into errors with the server's message.
+
 import { mockRequest } from "../demo/api/router";
 
-// Where each request goes. The backend is built module by module, so this switches per path:
-//   VITE_API_URL   the API address, e.g. http://localhost:4000/v1
-//   VITE_API_LIVE  paths already built in the backend, comma separated ("login,register,user-info"), or "*" for all.
-// Anything not listed is answered from the demo database (kept in the browser), so the site keeps working.
 const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
 const LIVE = String(import.meta.env.VITE_API_LIVE || "").split(",").map((s) => s.trim().replace(/^\/+/, "")).filter(Boolean);
 const isLive = (url) => !!API_URL && (LIVE.includes("*") || LIVE.some((p) => url.slice(1) === p || url.slice(1).startsWith(`${p}/`)));

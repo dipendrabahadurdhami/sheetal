@@ -1,3 +1,5 @@
+// The services overview page and each service's details.
+
 import { Link } from "react-router-dom";
 import { Check, ChevronRight, BedDouble, Building2, HandCoins, Ruler, Store, ShieldCheck } from "lucide-react";
 import { PageHead, SectionHead } from "../components/ui";

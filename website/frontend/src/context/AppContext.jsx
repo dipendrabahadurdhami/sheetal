@@ -1,3 +1,6 @@
+// Website-wide state: the signed-in person, sign-in modal, theme, toasts and saved preferences.
+// How it works: follows theme changes made in other tabs and in embedded pages.
+
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { api } from "../api/endpoints";
 import { toItem, toList } from "../api/client";

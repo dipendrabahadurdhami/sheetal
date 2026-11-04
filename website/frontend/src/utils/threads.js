@@ -1,5 +1,5 @@
-// Conversations with agencies, kept in the browser for now;
-// every message is also sent to the agency via contact-agent.
+// Conversations with agencies, kept in the browser; every message is also sent to the agency as an enquiry.
+
 const KEY = "sheetal_threads";
 export const listThreads = () => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } };
 const save = (t) => { localStorage.setItem(KEY, JSON.stringify(t)); window.dispatchEvent(new Event("sheetal:threads")); };

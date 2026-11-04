@@ -1,3 +1,5 @@
+// The public plans page: anyone can see the plans; choosing one asks to sign in, then sends an upgrade request.
+
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useApp } from "../context/AppContext";
@@ -8,8 +10,6 @@ import { PageHead } from "../components/ui";
 import { PeriodPicker, PlanCards } from "../components/PlanCards";
 import { useSEO } from "../utils/seo";
 
-// Public subscription page: anyone can see the plans; choosing one asks to sign in first,
-// then sends the same upgrade request as My account → Plan.
 const TYPES = [["agency", "Agencies"], ["hotel", "Hotels"], ["host", "Hosts"], ["developer", "Developers"], ["sponsor", "Sponsors"]];
 
 export default function Plans() {

@@ -1,3 +1,6 @@
+// Entry point of the public website (sheetalproperty.com).
+// How it works: loads the shared styles, sets up SEO and analytics, and renders App.
+
 import "./utils/focusScroll";
 import React from "react";
 import ReactDOM from "react-dom/client";

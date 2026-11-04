@@ -1,8 +1,10 @@
+// The big search on the home page: type tabs, one rounded bar, and a picker under each part.
+// How it works: the type tiles under the bar change with the tab.
+
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, MapPin, CalendarDays, Users, Home, Wallet, Building2, Building, Minus, Plus, Hotel, Trees, Tent, BedDouble, Store, Briefcase, Castle, Landmark, Mountain, Tractor, Warehouse, Factory } from "lucide-react";
 
-// Home hero search, Airbnb-style: type tabs, one rounded bar, a picker under each part.
 const TABS = [["stay", "Stay"], ["sale", "Buy"], ["rent", "Rent"], ["project", "Projects"], ["invest", "Invest"]];
 const PLACES = ["Pokhara", "Kathmandu", "Lalitpur", "Bhaktapur", "Chitwan", "Nagarkot", "Lumbini", "Bandipur"];
 const TYPES = ["House", "Land", "Apartment", "Flat", "Commercial Space", "Office Space", "Bungalow"];

@@ -1,3 +1,5 @@
+// Account pages reached from email links: messages, confirm email and reset password.
+
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Loader2, Send, MessageSquare, Eye, EyeOff } from "lucide-react";

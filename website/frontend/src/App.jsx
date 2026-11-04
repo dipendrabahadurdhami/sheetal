@@ -1,3 +1,6 @@
+// The website's pages and routes, inside the shared header, footer and tab bar.
+// How it works: one route per page; /business and /admin are separate apps, so links there do a full page load.
+
 import PlatformApp from "./market/PlatformApp";
 import { config as platformConfig } from "@sheetal/shared/core/config";
 platformConfig.embedPublic = true;

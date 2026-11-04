@@ -1,3 +1,5 @@
+// List pages for stays, projects and investments, with the same layout as Buy and Rent.
+
 import { useMemo, useState } from "react";
 import { useSEO } from "../utils/seo";
 import { FGroup, FScroll, Opts, PriceRange, useGroups } from "../components/FilterPanel";
@@ -11,7 +13,6 @@ import { Dropdown } from "../components/Dropdown";
 import { PlatformWrap } from "../market/SiteRows";
 import { useCatalog, photoFor } from "../market/Market";
 
-// Stays, projects and investments use the same list layout as Buy and Rent.
 const fmt = (n) => (n >= 1e7 ? `Rs. ${+(n / 1e7).toFixed(2)} Cr` : n >= 1e5 ? `Rs. ${+(n / 1e5).toFixed(2)} Lakh` : `Rs. ${Math.round(n).toLocaleString("en-IN")}`);
 const META = {
   stay: { kicker: "Stay", title: "Places to stay", text: "Hotels, resorts, villas and homestays across Nepal, booked and paid on Sheetal.", base: "/stays",

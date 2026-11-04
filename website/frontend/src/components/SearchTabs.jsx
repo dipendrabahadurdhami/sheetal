@@ -1,6 +1,7 @@
+// Tabs at the top of search pages: Buy, Rent, Stay, Projects and Invest, like the home search.
+
 import { Link, useLocation } from "react-router-dom";
 
-// One search page: switch between Buy, Rent, Stay, Projects and Invest at the top, like the home search.
 export const SEARCH_TABS = [["/sale", "Buy", /^\/(sale|search)$/], ["/rent", "Rent", /^\/rent$/], ["/stays", "Stay", /^\/stays$/], ["/project", "Projects", /^\/project$/], ["/investment", "Invest", /^\/investment(\/explore)?$/]];
 
 export function SearchTabs() {

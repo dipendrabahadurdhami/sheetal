@@ -1,7 +1,8 @@
+// Small pieces the public pages share with the business panel (each app keeps its own copy).
+
 import React from "react";
 import { Icon } from "@sheetal/shared/core/icons";
 
-// Small pieces the public pages share with the business app (each app keeps its own copy)
 export function Counter({ value, min = 0, max = 99, onChange, label }) {
   return (
     <div className="pf-counter" role="group" aria-label={label}>

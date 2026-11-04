@@ -1,3 +1,5 @@
+// The search box in the header: finds properties, stays, projects, investments, agencies and pages.
+
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, X, Home, BedDouble, Building2, TrendingUp, Users, FileText, CornerDownLeft, Store, Newspaper, LifeBuoy } from "lucide-react";

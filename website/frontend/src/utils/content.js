@@ -1,4 +1,6 @@
-// Blog posts and page text that Admin → Content saves into the shared platform database.
+// Blog posts and page text saved from the admin panel, turned into blocks for display.
+// How it works: plain text with "## Heading" and "- list item" lines becomes [[tag, text]] blocks.
+
 import { TODAY } from "@sheetal/shared/core/format";
 import { readDb } from "./platformDb";
 

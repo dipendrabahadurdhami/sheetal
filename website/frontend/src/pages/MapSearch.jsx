@@ -1,3 +1,6 @@
+// Map search: listings by area on a map, with filters and a list beside it.
+// Rules: sale and rent listings show approximate areas only, never exact addresses.
+
 import { PlatformWrap } from "../market/SiteRows";
 import { useCatalog, photoFor } from "../market/Market";
 import { useEffect, useMemo, useRef, useState } from "react";

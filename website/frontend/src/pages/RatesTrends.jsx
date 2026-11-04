@@ -1,3 +1,6 @@
+// Rates and trends: land and house prices by area, from the listings.
+// How it works: land sizes are turned into aana (1 ropani = 16 aana, 1 kattha ≈ 10.65 aana, 1 bigha = 20 kattha).
+
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Search, Home as HomeIcon, X } from "lucide-react";

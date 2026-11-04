@@ -1,9 +1,10 @@
+// Plan cards (Starter, Business, Pro) with the price for each billing period.
+// Where it fits: the Plans page and My profile → Plan; plans come from the website API (/subscription-plans).
+
 import { Check, Crown, X } from "lucide-react";
 import { PERIODS } from "@sheetal/shared/core/plans";
 import { fmtFull, planFeatures } from "../utils/format";
 
-// Plan cards used by the Plans page and My profile → Plan. Plans come from GET /subscription-plans
-// (Starter, Business, Pro); each carries its price for every billing period.
 const periodLabel = (m) => (m === 1 ? "1 month" : m === 12 ? "1 year" : `${m} months`);
 
 export function PeriodPicker({ value, onChange }) {

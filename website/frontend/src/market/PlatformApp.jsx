@@ -1,3 +1,6 @@
+// Public marketplace pages (stays, projects, business sites, checkout) inside the website.
+// Rules: /admin and /business are separate apps (admin/frontend and business/frontend).
+
 import React from "react";
 import { StoreProvider, useStore } from "@sheetal/shared/core/store";
 import { I18nProvider, useT } from "@sheetal/shared/core/i18n";
@@ -10,8 +13,6 @@ import "@sheetal/shared/styles/platform.css";
 
 import { themeAttr, useSharedTheme } from "@sheetal/shared/core/theme";
 
-// Public marketplace pages (stays, projects, business sites, checkout) inside the website.
-// /admin and /business are separate apps (see admin/frontend and business/frontend).
 export default function PlatformApp({ mode = "history" }) {
   return (
     <StoreProvider>

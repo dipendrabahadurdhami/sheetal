@@ -1,11 +1,13 @@
+// One payment screen for every purpose: stay, reservation, investment, rent, invoice or plan (sample flow).
+// How it works: choose a method, then processing, then paid, pending check, or failed with retry.
+
 import React, { useEffect, useState } from "react";
 import { useStore } from "@sheetal/shared/core/store";
 import { rs } from "@sheetal/shared/core/format";
 import { Badge, Button, Field, Input } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 
-// One payment screen for every purpose (master prompt §17): stay, reservation, investment, rent, invoice, plan.
-// Same methods as the existing Pay rent page. States: choose → processing → paid | pending verification | failed (retry).
+// Payment methods: the same ones as the Pay rent page.
 const METHODS = [
   ["fonepay", "Fonepay QR", "qr-code", "qr", "Scan with any bank app"], ["esewa", "eSewa", "wallet", "online", "Instant"], ["khalti", "Khalti", "wallet", "online", "Instant"],
   ["imepay", "IME Pay", "wallet", "online", "Instant"], ["connectips", "connectIPS", "landmark", "online", "From your bank account"], ["bank", "Bank transfer", "landmark", "manual", "Checked in 2 hours"],

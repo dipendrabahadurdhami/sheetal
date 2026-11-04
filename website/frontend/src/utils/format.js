@@ -1,3 +1,5 @@
+// Formatting for the website: prices (lakh, crore), dates, "time ago", photo addresses, sale or rent, sold.
+
 import { planFeatureList } from "@sheetal/shared/core/plans";
 export const fmtPrice = (v) => {
   const n = Number(String(v ?? "").replace(/[^0-9.]/g, ""));
