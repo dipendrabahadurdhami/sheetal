@@ -62,11 +62,14 @@ registerCheckupSync((tid, listing, action, opts) => {
 });
 
 // Import / Export buttons: these kinds come from and go to the business API.
-const EXPORTS = ["listings", "leads", "rooms", "units", "bookings", "team", "staff"];
-const IMPORTS = ["listings", "leads"];
+const EXPORTS = ["listings", "leads", "rooms", "units", "bookings", "team", "staff", "invoices"];
+const IMPORTS = ["listings", "leads", "invoices"];
+// Customer invoices have their own routes (business/backend/src/modules/invoicing); the rest are under /data.
+const exportPath = (kind) => (kind === "invoices" ? "/invoices/rows" : `/data/${kind}`);
+const importPath = (kind) => (kind === "invoices" ? "/invoices/import" : `/data/${kind}`);
 registerDataServer({
   canExport: (kind, tid) => isLive(tid) && EXPORTS.includes(kind),
   canImport: (kind, tid) => isLive(tid) && IMPORTS.includes(kind),
-  fetchRows: (kind, tid) => { setActiveTenant(tid); return bizApi("GET", `/data/${kind}`).then((r) => r.data); },
-  importRows: (kind, tid, rows) => { setActiveTenant(tid); return bizApi("POST", `/data/${kind}`, { rows }).then((r) => { workRefresh(); return r.message; }); },
+  fetchRows: (kind, tid) => { setActiveTenant(tid); return bizApi("GET", exportPath(kind)).then((r) => r.data); },
+  importRows: (kind, tid, rows) => { setActiveTenant(tid); return bizApi("POST", importPath(kind), { rows }).then((r) => { workRefresh(); return r.message; }); },
 });

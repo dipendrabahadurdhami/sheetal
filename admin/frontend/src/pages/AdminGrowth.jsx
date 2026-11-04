@@ -105,7 +105,7 @@ export function AdminVoice() {
       <div className="pf-stats">
         <Stat label={t("gv.calls")} value="—" note="Voice isn't connected yet" />
         <Stat label={t("gv.answered")} value="—" note="Voice isn't connected yet" />
-        <Stat label={t("gv.leads")} value="—" note="Voice isn't connected yet" to="/admin/leads" />
+        <Stat label={t("gv.leads")} value="—" note="Voice isn't connected yet" />
         <Stat label={t("gv.minutes")} value="—" note="Voice isn't connected yet" />
       </div>
       <div className="pf-split">

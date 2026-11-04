@@ -34,20 +34,17 @@ export function BusinessOverview({ tenant, role }) {
   const { navigate } = useRouter();
   const plan = db.plans.find((p) => p.id === tenant.planId);
   const invites = (db.invites[tenant.id] || []).filter((i) => i.status === "pending");
-  const agreements = (db.agreements[tenant.id] || []).filter((a) => a.status === "sent" || a.status === "draft");
   const draft = db.drafts[tenant.id];
   const ck = checkupsOf(db, tenant.id);
   const toCheck = todaysList(db.listings.filter((l) => l.tenantId === tenant.id), ck.settings, ck.log, TODAY.slice(0, 10)).length;
   const todo = [
     ...(toCheck ? [{ icon: "list-checks", text: `${toCheck} listing${toCheck > 1 ? "s" : ""} to check today`, to: "/business/checkups", cta: "Start" }] : []),
     ...(draft ? [{ icon: "file-pen", text: t("bdash.todoDraft"), to: "/business/listings/new", cta: t("listings.resume") }] : []),
-    ...agreements.map((a) => ({ icon: "file-pen-line", text: t(a.status === "draft" ? "bdash.todoAgDraft" : "bdash.todoAgSign", { id: a.id }), to: "/business/agreements", cta: t("common.open") })),
     ...invites.map((i) => ({ icon: "mail", text: t("bdash.todoInvite", { email: i.email }), to: "/business/team", cta: t("common.view") })),
     ...(tenant.status === "past_due" ? [{ icon: "credit-card", text: t("bdash.todoPastDue"), to: "/business/billing", cta: t("bdash.payNow") }] : []),
   ];
   const quick = [
     can(role, "listings.manage") || can(role, "projects.manage") || can(role, "investments.manage") || can(role, "calendar.edit") || role.perms.includes("*") ? { icon: "house-plus", label: t("listings.new"), to: "/business/listings/new" } : null,
-    { icon: "file-pen-line", label: t("ag.new"), to: "/business/agreements" },
     can(role, "team.manage") ? { icon: "user-plus", label: t("team.invite"), to: "/business/team" } : null,
     { icon: "messages-square", label: t("nav.inbox"), to: "/business/inbox" },
     (tenant.type === "hotel" || tenant.type === "host") && { icon: "calendar-days", label: t("nav.calendar"), to: "/business/calendar" },

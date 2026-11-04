@@ -200,6 +200,7 @@ model Branch {
   posBills  PosBill[]
   rateDays  RateDay[]
   roomRules RoomRule[]
+  bizInvoices BizInvoice[]
 
   @@unique([tenantId, name])
   @@map("branches")
@@ -1307,6 +1308,92 @@ model OtaFeed {
 
   @@index([tenantId])
   @@map("ota_feeds")
+}
+
+// ───────────── Customer invoices (a business's own, not Sheetal's plan bills above) ─────────────
+
+/// An invoice or credit note a business gives its own customer. Drafts have no number; the tax number
+/// (INV-2083-84-0001, CN-…) is set when it is sent, counted per business and fiscal year, and never reused.
+/// Amounts are whole rupees; a credit note is stored positive and shown negative.
+model BizInvoice {
+  id           String       @id @default(cuid())
+  /// Shown on a draft (DRAFT-0007) until it has its number.
+  seq          Int          @default(autoincrement())
+  tenantId     String       @map("tenant_id")
+  branchId     String       @map("branch_id")
+  branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  /// invoice or credit
+  kind         String       @default("invoice")
+  no           String?
+  /// Fiscal year the number belongs to, e.g. 2083-84.
+  fy           String?
+  /// A credit note points at the invoice it reduces.
+  creditForId  String?      @map("credit_for_id")
+  /// draft, sent or cancelled
+  status       String       @default("draft")
+  toName       String       @map("to_name")
+  toPhone      String?      @map("to_phone")
+  toPan        String?      @map("to_pan")
+  /// The "booking or order" the person typed; a booking code (BK-0001) is also linked in bookingId.
+  order        String?
+  bookingId    String?      @map("booking_id")
+  issuedOn     DateTime     @db.Date @map("issued_on")
+  dueOn        DateTime     @db.Date @map("due_on")
+  vatPct       Int          @default(13) @map("vat_pct")
+  /// [{ what, qty, rate }], rupees before VAT.
+  lines        Json
+  subtotal     Int
+  vat          Int
+  total        Int
+  notes        String?
+  /// Why a credit note was issued.
+  reason       String?
+  cancelReason String?      @map("cancel_reason")
+  sentAt       DateTime?    @map("sent_at")
+  cancelledAt  DateTime?    @map("cancelled_at")
+  createdBy    String?      @map("created_by")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+  receipts     BizReceipt[]
+
+  @@unique([tenantId, no])
+  @@index([tenantId, status, issuedOn])
+  @@index([branchId])
+  @@index([tenantId, bookingId])
+  @@map("biz_invoices")
+}
+
+/// Money received against a customer invoice (RC-2083-84-0001).
+model BizReceipt {
+  id        String     @id @default(cuid())
+  tenantId  String     @map("tenant_id")
+  invoiceId String     @map("invoice_id")
+  no        String
+  amount    Int
+  /// cash, fonepay, esewa, khalti, card, bank, other
+  method    String
+  paidOn    DateTime   @db.Date @map("paid_on")
+  /// Where it came from, so it is never counted twice (gp:<guest payment id> for a booking's front-desk payment).
+  ref       String?
+  note      String?
+  createdBy String?    @map("created_by")
+  createdAt DateTime   @default(now()) @map("created_at")
+  invoice   BizInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, no])
+  @@unique([invoiceId, ref])
+  @@index([invoiceId])
+  @@map("biz_receipts")
+}
+
+/// The last number given out per business and kind of document and fiscal year (key "INV:2083-84").
+model DocCounter {
+  tenantId String @map("tenant_id")
+  key      String
+  last     Int    @default(0)
+
+  @@id([tenantId, key])
+  @@map("doc_counters")
 }
 
 /// One listing check-up by one team member on one day (Nepal time): all correct, skipped, or changed (with the new

@@ -23,7 +23,6 @@ import { MenuButton, MenuLink, MenuSep, NoAccess, Pending, Shell } from "@sheeta
 import { BusinessOverview, BusinessRoles, TeamHub } from "./BusinessPages";
 import { ListingWizard } from "./ListingWizard";
 import { ListingsPage } from "./ListingsManager";
-import { Agreements } from "./Agreements";
 import { BusinessSettings, defaultTenantSettings } from "./BusinessSettings";
 import { SettingsShell, settingsSections } from "./SettingsHub";
 import { config } from "@sheetal/shared/core/config";
@@ -43,26 +42,24 @@ import { LiveAnalytics, LiveChannels } from "./LiveGrowth";
 import { LiveReviews } from "./LiveReviews";
 import { Verification } from "./Verification";
 import { Inbox } from "./Inbox";
-import { Forms } from "./Forms";
-import { formsOf } from "@sheetal/shared/core/forms";
 import { Invoices, Payouts } from "./Money";
+import { LiveInvoices } from "./LiveMoney";
 import { Analytics, Developers } from "./Workspace";
 import { BackupOnly } from "./BusinessBilling";
 import { Branches, Calendar, LiveBranches, branchesOf } from "./Branches";
-import { Promote } from "./Promote";
 import { BranchProvider } from "@sheetal/shared/core/branch";
 import { Collections, Expenses, Investors, Projects, Reviews, Stock } from "./Sector";
 import { atListingCap, isFree, listingCap, planOf, typesFor } from "@sheetal/shared/core/plans";
 import { UpgradeNeeded } from "./planBits";
-import { AiAccounts, Channels, Social, VoiceAssistant } from "./Connections";
+import { AiAccounts, Channels, VoiceAssistant } from "./Connections";
 import { ListingCheckups } from "./ListingCheckups";
 import { checkupsOf, todaysList } from "@sheetal/shared/data/checkups";
 import { TODAY } from "@sheetal/shared/core/format";
 import { opsOf } from "@sheetal/shared/demo/ops";
 
 const PREVIEW = [
-  "/business/agreements", "/business/forms", "/business/invoices", "/business/payouts", "/business/expenses",
-  "/business/rentals", "/business/stock", "/business/promote", "/business/social", "/business/voice",
+  "/business/payouts", "/business/expenses",
+  "/business/rentals", "/business/stock", "/business/voice",
   "/business/people", "/business/ai-accounts", "/business/developers",
 ];
 
@@ -125,7 +122,6 @@ export default function BusinessApp() {
   const newLeads = (opsOf(db, tenant.id).conversations || []).filter((c) => c.unread).length;
   // Unread emails in the person's own and shared mailboxes (checked every minute), for the Email button.
   const newMail = s.mailUnread?.[tenant.id] || 0;
-  const pendingAg = (db.agreements[tenant.id] || []).filter((a) => a.status === "sent").length;
   const ck = checkupsOf(db, tenant.id);
   const toCheck = todaysList(db.listings.filter((l) => l.tenantId === tenant.id), ck.settings, ck.log, TODAY.slice(0, 10)).length;
 
@@ -135,16 +131,12 @@ export default function BusinessApp() {
     { group: "group.listings", items: [
       { to: "/business/listings", icon: "house", key: "nav.listings", permAny: ["listings.manage", "projects.manage", "investments.manage", "calendar.edit", "overview.view"], count: drafts },
       { to: "/business/checkups", icon: "list-checks", key: "nav.checkups", permAny: ["listings.manage", "projects.manage", "investments.manage", "calendar.edit"], count: toCheck || undefined, countTone: "action" },
-      { to: "/business/promote", icon: "rocket", key: "nav.promote", permAny: ["listings.manage", "projects.manage", "investments.manage", "calendar.edit", "billing.manage"] },
-      { to: "/business/social", icon: "megaphone", key: "nav.bizSocial", permAny: ["listings.manage", "projects.manage", "investments.manage", "calendar.edit"] },
       { to: "/business/reviews", icon: "star", key: "nav.reviews", permAny: ["reviews.reply", "customers.view"] },
     ] },
     { group: "group.leads", items: [
       { to: "/business/inbox", icon: "messages-square", key: "nav.inbox", permAny: ["messages.reply", "leads.view"] },
       { to: "/business/mail", icon: "mail", key: "nav.mail" },
       { to: "/business/voice", paid: true, icon: "phone-call", key: "nav.bizVoice", permAny: ["messages.reply", "leads.view", "settings.business"] },
-      { to: "/business/forms", icon: "file-text", key: "nav.forms", permAny: ["messages.reply", "leads.view", "settings.business"] },
-      { to: "/business/agreements", paid: true, icon: "file-pen-line", key: "nav.agreements", permAny: ["customers.view", "listings.manage", "reservations.manage", "investments.manage", "overview.view"], count: pendingAg, countTone: "action" },
     ] },
     // Starter (free) gets its type's core tools within its limits; point of sale and stock are paid.
     { group: "group.operate", items: [
@@ -199,8 +191,6 @@ export default function BusinessApp() {
       quickCreate={[
         any("listings.manage", "projects.manage", "investments.manage", "calendar.edit") && { icon: "house-plus", label: t("listings.new"), to: "/business/listings/new" },
         stays && can(role, "bookings.create") && { icon: "calendar-plus", label: t("bk.manual"), to: "/business/bookings" },
-        !free && { icon: "file-pen-line", label: t("ag.new"), to: "/business/agreements" },
-        any("messages.reply", "leads.view", "settings.business") && { icon: "file-plus", label: "New online form", to: "/business/forms" },
         types.includes("agency") && !free && { icon: "key-round", label: "Rentals: rent bills", to: "/business/rentals/rent" },
         !free && can(role, "invoices.create") && { icon: "receipt", label: t("binv.new"), to: "/business/invoices" },
         can(role, "team.manage") && { icon: "user-plus", label: t("team.invite"), to: "/business/team" },
@@ -210,8 +200,6 @@ export default function BusinessApp() {
         ...settingsSections(role, t).flatMap((g) => g.items.map((i) => ({ kind: "setting", icon: i.icon, label: i.label, sub: `Settings · ${g.group}`, keywords: i.keywords, to: i.to }))),
         ...(opsOf(db, tenant.id).bookings || []).map((b) => ({ icon: "clipboard-list", label: `${b.id} · ${b.guest}`, sub: b.type, to: "/business/bookings" })),
         ...db.listings.filter((l) => l.tenantId === tenant.id).map((l) => ({ icon: "house", label: l.title, sub: l.id, to: "/business/listings" })),
-        ...(db.agreements[tenant.id] || []).map((a) => ({ icon: "file-pen-line", label: a.title, sub: a.id, to: "/business/agreements" })),
-        ...formsOf(db, tenant).map((f) => ({ icon: "file-text", label: f.title, sub: "Form", to: `/business/forms/${f.id}` })),
         ...(db.members[tenant.id] || []).map((m) => ({ icon: "user", label: m.name, sub: m.email, to: "/business/team" })),
       ]}
       style={brand ? { "--accent": brand, "--accent-ink": inkFor(brand), "--btn-bg": brand, "--btn-ink": btnInkFor(brand), "--btn-bg-hover": `color-mix(in srgb, ${brand} 82%, white)`, "--accent-soft": `color-mix(in srgb, ${brand} 10%, var(--card))` } : undefined}
@@ -251,7 +239,6 @@ export default function BusinessApp() {
         { path: "/business/roles", render: () => <TeamHub key={tenant.id + "r"} tenant={tenant} role={role} start="roles" /> },
         { path: "/business/listings", render: () => <ListingsPage tenant={tenant} canEdit={any("listings.manage", "projects.manage", "investments.manage", "calendar.edit")} /> },
         { path: "/business/listings/new", render: () => (!db.drafts[tenant.id]?.editId && atListingCap(plan, db.listings.filter((l) => l.tenantId === tenant.id && l.status !== "archived" && l.status !== "rejected").length) ? <UpgradeNeeded cap={listingCap(plan)} /> : guard(any("listings.manage", "projects.manage", "investments.manage", "calendar.edit"), <ListingWizard key={tenant.id} tenant={tenant} />)) },
-        { path: "/business/agreements", render: () => paid(any("customers.view", "listings.manage", "reservations.manage", "investments.manage", "overview.view"), <Agreements tenant={tenant} />) },
         { path: "/business/settings", render: () => guard(can(role, "settings.business"), <SettingsShell role={role}><BusinessSettings key={tenant.id} tenant={tenant} tab="profile" /></SettingsShell>) },
         { path: "/business/settings/verification", render: () => guard(can(role, "settings.business"), <SettingsShell role={role}>{isLive(tenant.id) ? <Verification key={tenant.id} tenant={tenant} /> : <Pending part={2} />}</SettingsShell>) },
         { path: "/business/settings/roles", render: () => guard(can(role, "roles.manage"), <SettingsShell role={role}><BusinessRoles key={tenant.id} tenant={tenant} role={role} /></SettingsShell>) },
@@ -262,11 +249,7 @@ export default function BusinessApp() {
         { path: "/business/pos", render: () => paid(any("pos.frontdesk", "pos.restaurant", "pos.extras", "shift.close"), (isLive(tenant.id) ? <LivePOSHub key={tenant.id} tenant={tenant} role={role} /> : <POS key={tenant.id} tenant={tenant} role={role} />)) },
         { path: "/business/bookings", render: () => guard(can(role, "bookings.view"), (isLive(tenant.id) ? <LiveBookings key={tenant.id} tenant={tenant} role={role} /> : <Bookings tenant={tenant} role={role} />)) },
         { path: "/business/inbox", render: () => guard(any("messages.reply", "leads.view"), <Inbox key={tenant.id} tenant={tenant} />) },
-        { path: "/business/forms", render: () => guard(any("messages.reply", "leads.view", "settings.business"), <Forms key={tenant.id} tenant={tenant} />) },
-        { path: "/business/forms/responses", render: () => guard(any("messages.reply", "leads.view", "settings.business"), <Forms key={tenant.id + "r"} tenant={tenant} view="responses" />) },
-        { path: "/business/forms/responses/:dest", render: ({ dest }) => guard(any("messages.reply", "leads.view", "settings.business"), <Forms key={tenant.id + "r"} tenant={tenant} view="responses" dest={dest} />) },
-        { path: "/business/forms/:id", render: ({ id }) => guard(any("messages.reply", "leads.view", "settings.business"), <Forms key={tenant.id + id} tenant={tenant} view="build" id={id} />) },
-        { path: "/business/invoices", render: () => guard(can(role, "invoices.view"), <Invoices tenant={tenant} />) },
+        { path: "/business/invoices", render: () => guard(can(role, "invoices.view"), (isLive(tenant.id) ? <LiveInvoices key={tenant.id} tenant={tenant} /> : <Invoices tenant={tenant} />)) },
         { path: "/business/payouts", render: () => guard(can(role, "payouts.view"), <Payouts tenant={tenant} />) },
         { path: "/business/projects", render: () => guard(any("projects.manage", "progress.post"), (isLive(tenant.id) ? <LiveProjects key={tenant.id} tenant={tenant} role={role} /> : <Projects key={tenant.id} tenant={tenant} />)) },
         { path: "/business/collections", render: () => guard(can(role, "collect.payments"), (isLive(tenant.id) ? <LiveProjects key={tenant.id + "c"} tenant={tenant} role={role} /> : <Collections key={tenant.id} tenant={tenant} />)) },
@@ -276,7 +259,6 @@ export default function BusinessApp() {
         { path: "/business/rentals", render: () => guard(any("listings.manage", "customers.view", "collect.payments"), <Rentals key={tenant.id} tenant={tenant} />) },
         { path: "/business/rentals/:tab", render: ({ tab }) => guard(any("listings.manage", "customers.view", "collect.payments"), <Rentals key={tenant.id} tenant={tenant} tab={tab} />) },
         { path: "/business/stock", render: () => paid(any("pos.restaurant", "pos.extras", "settings.business"), <Stock key={tenant.id} tenant={tenant} />) },
-        { path: "/business/promote", render: () => guard(any("listings.manage", "projects.manage", "investments.manage", "calendar.edit", "billing.manage"), <Promote tenant={tenant} />) },
         { path: "/business/branches", render: () => guard(can(role, "settings.business"), <SettingsShell role={role}>{isLive(tenant.id) ? <LiveBranches tenant={tenant} role={role} /> : <Branches tenant={tenant} role={role} />}</SettingsShell>) },
         { path: "/business/calendar", render: () => guard(can(role, "calendar.view"), (isLive(tenant.id) ? <LiveCalendar key={tenant.id} tenant={tenant} role={role} /> : <Calendar key={tenant.id} tenant={tenant} role={role} />)) },
         { path: "/business/analytics", render: () => guard(can(role, "overview.view"), (isLive(tenant.id) ? <LiveAnalytics key={tenant.id} tenant={tenant} /> : <Analytics tenant={tenant} />)) },
@@ -288,7 +270,6 @@ export default function BusinessApp() {
         { path: "/business/ai-accounts", render: () => guard(can(role, "settings.business"), <SettingsShell role={role}><AiAccounts key={tenant.id} tenant={tenant} /></SettingsShell>) },
         { path: "/business/voice", render: () => paid(any("messages.reply", "leads.view", "settings.business"), <VoiceAssistant key={tenant.id} tenant={tenant} />) },
         { path: "/business/checkups", render: () => guard(any("listings.manage", "projects.manage", "investments.manage", "calendar.edit"), <ListingCheckups key={tenant.id} tenant={tenant} role={role} />) },
-        { path: "/business/social", render: () => guard(any("listings.manage", "projects.manage", "investments.manage", "calendar.edit"), <Social key={tenant.id} tenant={tenant} />) },
         { path: "/business/help", render: () => <Help tenant={tenant} /> },
         { path: "/business/me", render: () => <MyProfile key={tenant.id} scope={`b-${tenant.id}`} roleLabel={roleName(role, t)} access={canAll ? "All branches" : allowed.join(", ")} homeTo="/business/settings" /> },
         { path: "/business/notifications", render: () => <NotificationsPage notifs={notifs} prefsTo="/business/me" /> },

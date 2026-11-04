@@ -1,4 +1,11 @@
-// Customer invoices (drafts, credit notes, receipts, printable PDF) and payouts (sample data, marked Preview).
+// Customer invoices (drafts, credit notes, receipts, printable PDF) and payouts.
+// Where it fits: Business → Customer invoices. InvoicesView is the one screen: Invoices below runs it on the sample
+// workspace (data kept in the browser, marked Preview), and LiveMoney.jsx runs it on the business API, passing the
+// actions that talk to the server.
+// How it works: an "actions" object does every change (save, send, pay, cancel, credit, delete, import) and shows its
+// own message; the screen waits for it and only closes a form when it worked. Server invoices bring their own totals
+// (inv.t, worked out on the server); sample ones are worked out here.
+// Rules: the screen never works out money for a server invoice, except the preview inside the editor.
 
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
@@ -12,14 +19,28 @@ import { Icon } from "@sheetal/shared/core/icons";
 import { defaultTenantSettings } from "./BusinessSettings";
 import { Link } from "@sheetal/shared/core/router";
 import { Counter } from "./ListingWizard";
-import { addDays, invoicesOf, invoiceFromRow, invoiceRow, nextNo, statusOf, totals } from "@sheetal/shared/demo/money";
+import { addDays, invoicesOf, invoiceFromRow, invoiceRow, nextNo, totals as sampleTotals } from "@sheetal/shared/demo/money";
 
 const DAY = TODAY.slice(0, 10);
 const ST = { draft: ["neutral", "Draft", "file-pen"], unpaid: ["progress", "Sent", "send"], partly: ["progress", "Part paid", "clock"], overdue: ["action", "Overdue", "circle-alert"], paid: ["done", "Paid", "check"], credit: ["neutral", "Credit note", "rotate-ccw"], cancelled: ["problem", "Cancelled", "ban"] };
+// Totals of an invoice: the server's own when it has them, else worked out from the lines (sample invoices, the editor).
+const T = (inv) => inv.t || sampleTotals(inv);
+// draft | cancelled | credit | paid | partly | overdue | unpaid
+export function statusOf(inv) {
+  if (inv.status === "cancelled") return "cancelled";
+  if (inv.status === "draft") return "draft";
+  if (inv.kind === "credit") return "credit";
+  const tt = T(inv);
+  if (tt.paid >= tt.total) return "paid";
+  if (inv.due < DAY) return "overdue";
+  return tt.paid > 0 ? "partly" : "unpaid";
+}
 const InvStatus = ({ inv }) => { const [tone, label, icon] = ST[statusOf(inv)]; return <Badge tone={tone} icon={icon}>{label}</Badge>; };
-const METHODS = ["Cash", "Fonepay", "eSewa", "Khalti", "Card", "Bank transfer"];
+export const METHODS = ["Cash", "Fonepay", "eSewa", "Khalti", "Card", "Bank transfer"];
 const CANCEL = ["Raised by mistake", "Customer details were wrong", "Booking cancelled before payment", "Duplicate invoice", "Other"];
 const QUICK = ["Room night", "Breakfast", "Airport pickup", "Service fee", "Consultation"];
+/** A draft opened for editing: its own copy, without the totals the server worked out for the old lines. */
+const draftCopy = (inv) => { const c = structuredClone(inv); delete c.t; return c; };
 
 function useMoney(tenant) {
   const { db, update } = useStore();
@@ -28,13 +49,45 @@ function useMoney(tenant) {
   return [list, set];
 }
 
+/** The sample workspace: invoices live in the browser. */
 export function Invoices({ tenant }) {
-  const t = useT();
   const toast = useToast();
   const undo = useUndo();
+  const [list, setList] = useMoney(tenant);
+  const actions = {
+    save: (inv, send) => {
+      const { isNew, ...x } = inv;
+      setList((l) => { const i = l.findIndex((y) => y.id === x.id); const rec = { ...x, status: send ? "sent" : "draft", ...(send ? { sentOn: DAY } : {}) }; if (i >= 0) l[i] = rec; else l.unshift(rec); });
+      toast(send ? `${x.id} sent to ${x.to}` : "Draft saved");
+      return x.id;
+    },
+    send: (inv) => { setList((l) => { Object.assign(l.find((y) => y.id === inv.id), { status: "sent", sentOn: DAY }); }); toast(`${inv.id} sent to ${inv.to}`); },
+    pay: (inv, r) => {
+      setList((l) => { const x = l.find((y) => y.id === inv.id); x.receipts = [...(x.receipts || []), { id: nextNo(l.flatMap((y) => y.receipts || []), "RC-"), ...r }]; });
+      toast("Payment recorded. Receipt ready to print or send.");
+    },
+    cancel: (inv, reason) => {
+      setList((l) => { Object.assign(l.find((y) => y.id === inv.id), { status: "cancelled", cancelReason: reason, cancelledOn: DAY }); });
+      undo(`${inv.id} cancelled`, () => setList((l) => { const x = l.find((y) => y.id === inv.id); x.status = inv.status; delete x.cancelReason; delete x.cancelledOn; }));
+    },
+    credit: (inv, lines, reason) => {
+      const id = nextNo(list, "CN-");
+      setList((l) => { l.unshift({ id, kind: "credit", creditFor: inv.id, reason, to: inv.to, phone: inv.phone, pan: inv.pan, order: inv.order, date: DAY, due: DAY, vatPct: inv.vatPct, status: "sent", lines, receipts: [] }); });
+      toast(`Credit note ${id} issued against ${inv.id}`);
+      return id;
+    },
+    remove: (x) => setList((l) => { l.splice(l.findIndex((y) => y.id === x.id), 1); }),
+    restore: (x) => setList((l) => { restoreAt(l, x, 0); }),
+    importRows: (r) => setList((l) => { r.forEach((x) => l.unshift(invoiceFromRow(x, l))); }),
+  };
+  return <InvoicesView tenant={tenant} list={list} actions={actions} />;
+}
+
+export function InvoicesView({ tenant, list, actions, branches }) {
+  const t = useT();
+  const toast = useToast();
   const { db } = useStore();
   const ts = db.tenantSettings[tenant.id] || defaultTenantSettings(tenant);
-  const [list, setList] = useMoney(tenant);
   const [tab, setTab] = useState("all");
   const [openId, setOpenId] = useState(null);
   const [edit, setEdit] = useState(null);
@@ -43,6 +96,7 @@ export function Invoices({ tenant }) {
   const [credit, setCredit] = useState(null);
   const [del, setDel] = useState(null);
   const [print, setPrint] = useState(null);
+  const [fromBk, setFromBk] = useState(null);
   const open = list.find((x) => x.id === openId);
   const live = list.filter((x) => x.status !== "draft" && x.status !== "cancelled");
   const TABS = {
@@ -51,34 +105,27 @@ export function Invoices({ tenant }) {
   };
   const rows = list.filter(TABS[tab]);
   const month = DAY.slice(0, 7);
-  const billed = live.filter((x) => x.kind === "invoice" && x.date.startsWith(month)).reduce((s, x) => s + totals(x).total, 0);
-  const due = live.filter((x) => x.kind === "invoice").map((x) => totals(x).balance);
-  const vat = live.reduce((s, x) => s + totals(x).vat, 0);
+  const billed = live.filter((x) => x.kind === "invoice" && x.date.startsWith(month)).reduce((s, x) => s + T(x).total, 0);
+  const due = live.filter((x) => x.kind === "invoice").map((x) => T(x).balance);
+  const vat = live.reduce((s, x) => s + T(x).vat, 0);
   const biz = { name: tenant.name, pan: ts.profile?.pan || tenant.pan, address: ts.profile?.address || `${tenant.city}, Nepal`, phone: ts.profile?.phone || tenant.phone, email: ts.profile?.email || tenant.email };
 
-  const blank = () => ({ id: nextNo(list, "INV-"), kind: "invoice", to: "", phone: "", pan: "", order: "", date: DAY, due: addDays(DAY, 10), vatPct: 13, status: "draft", notes: "", lines: [{ what: "Room night", qty: 1, rate: 6500 }], receipts: [], isNew: true });
-  const saveInv = (inv, send) => {
-    const { isNew, ...x } = inv;
-    setList((l) => { const i = l.findIndex((y) => y.id === x.id); const rec = { ...x, status: send ? "sent" : "draft", ...(send ? { sentOn: DAY } : {}) }; if (i >= 0) l[i] = rec; else l.unshift(rec); });
-    setEdit(null); setOpenId(x.id); toast(send ? `${x.id} sent to ${x.to}` : "Draft saved");
-  };
-  const sendDraft = (inv) => { setList((l) => { Object.assign(l.find((y) => y.id === inv.id), { status: "sent", sentOn: DAY }); }); toast(`${inv.id} sent to ${inv.to}`); };
-  const addReceipt = (inv, r) => {
-    setList((l) => { const x = l.find((y) => y.id === inv.id); x.receipts = [...(x.receipts || []), { id: nextNo(l.flatMap((y) => y.receipts || []), "RC-"), ...r }]; });
-    setPay(null); toast("Payment recorded. Receipt ready to print or send.");
-  };
-  const doCancel = (inv, reason) => { setList((l) => { Object.assign(l.find((y) => y.id === inv.id), { status: "cancelled", cancelReason: reason, cancelledOn: DAY }); }); setCancel(null); undo(`${inv.id} cancelled`, () => setList((l) => { const x = l.find((y) => y.id === inv.id); x.status = inv.status; delete x.cancelReason; delete x.cancelledOn; })); };
-  const doCredit = (inv, lines, reason) => {
-    const id = nextNo(list, "CN-");
-    setList((l) => { l.unshift({ id, kind: "credit", creditFor: inv.id, reason, to: inv.to, phone: inv.phone, pan: inv.pan, order: inv.order, date: DAY, due: DAY, vatPct: inv.vatPct, status: "sent", lines, receipts: [] }); });
-    setCredit(null); setOpenId(id); toast(`Credit note ${id} issued against ${inv.id}`);
-  };
-  const credited = (inv) => list.filter((x) => x.kind === "credit" && x.creditFor === inv.id && x.status !== "cancelled").reduce((s, x) => s - totals(x).total, 0);
+  // An action shows its own message; when it fails nothing closes, so the person can fix it and try again.
+  const run = async (fn, after) => { try { const r = await fn(); after?.(r); } catch { /* the action already said why */ } };
+  const blank = () => ({ id: actions.live ? "" : nextNo(list, "INV-"), kind: "invoice", to: "", phone: "", pan: "", order: "", date: DAY, due: addDays(DAY, 10), vatPct: 13, status: "draft", notes: "", lines: [{ what: "Room night", qty: 1, rate: 6500 }], receipts: [], isNew: true, branchId: "" });
+  const saveInv = (inv, send) => run(() => actions.save(inv, send), (id) => { setEdit(null); setOpenId(id); });
+  const sendDraft = (inv) => run(() => actions.send(inv));
+  const addReceipt = (inv, r) => run(() => actions.pay(inv, r), () => setPay(null));
+  const doCancel = (inv, reason) => run(() => actions.cancel(inv, reason), () => setCancel(null));
+  const doCredit = (inv, lines, reason, gross) => run(() => actions.credit(inv, lines, reason, gross), (id) => { setCredit(null); setOpenId(id); });
+  const credited = (inv) => list.filter((x) => x.kind === "credit" && x.creditFor === inv.id && x.status !== "cancelled").reduce((s, x) => s - T(x).total, 0);
+  const exportRows = list.filter((x) => x.kind === "invoice" && x.status !== "cancelled").map(invoiceRow);
 
   return (
     <>
       <PageHead title={t("nav.invoices")} sub={t("binv.sub", { pan: biz.pan })} actions={<>
-        <DataActions kind="invoices" rows={list.filter((x) => x.kind === "invoice" && x.status !== "cancelled").map(invoiceRow)} onImport={(r) => setList((l) => { r.forEach((x) => l.unshift(invoiceFromRow(x, l))); })} />
+        <DataActions kind="invoices" rows={actions.live ? undefined : exportRows} onImport={actions.importRows} />
+        {actions.fromBooking && <Button variant="outline" icon="bed-double" onClick={() => setFromBk("")}>From a booking</Button>}
         <Button icon="plus" onClick={() => setEdit(blank())}>{t("binv.new")}</Button></>} />
       <div className="pf-stats">
         <Stat label={t("binv.billed")} value={rs(billed)} note={t("binv.thisMonth")} />
@@ -94,12 +141,12 @@ export function Invoices({ tenant }) {
             { key: "to", label: t("binv.billedTo"), render: (r) => r.to },
             { key: "date", label: t("billing.date"), num: true, render: (r) => fdate(r.date) },
             { key: "due", label: t("pbill.due"), num: true, render: (r) => (r.kind === "credit" ? "—" : fdate(r.due)) },
-            { key: "amt", label: t("billing.amount"), num: true, align: "right", render: (r) => rs(totals(r).total) },
-            { key: "bal", label: t("pos.balance"), num: true, align: "right", render: (r) => (r.status === "cancelled" ? "—" : rs(totals(r).balance)) },
+            { key: "amt", label: t("billing.amount"), num: true, align: "right", render: (r) => rs(T(r).total) },
+            { key: "bal", label: t("pos.balance"), num: true, align: "right", render: (r) => (r.status === "cancelled" ? "—" : rs(T(r).balance)) },
             { key: "st", label: t("common.status"), render: (r) => <InvStatus inv={r} /> },
             { key: "x", label: "", align: "right", render: (r) => <div className="pf-row-actions" style={{ justifyContent: "flex-end" }} onClick={(e) => e.stopPropagation()}>
-              {r.status === "draft" ? <Button variant="ghost" size="sm" icon="pencil" onClick={() => setEdit(structuredClone(r))}>Edit</Button>
-                : ["unpaid", "partly", "overdue"].includes(statusOf(r)) && <Button variant="outline" size="sm" icon="link" onClick={() => toast(t("inbox.toastPayLink"))}>{t("binv.payLink")}</Button>}
+              {r.status === "draft" ? <Button variant="ghost" size="sm" icon="pencil" onClick={() => setEdit(draftCopy(r))}>Edit</Button>
+                : !actions.live && ["unpaid", "partly", "overdue"].includes(statusOf(r)) && <Button variant="outline" size="sm" icon="link" onClick={() => toast(t("inbox.toastPayLink"))}>{t("binv.payLink")}</Button>}
               <Button variant="ghost" size="sm" icon="download" onClick={() => setPrint({ doc: "invoice", inv: r })}>PDF</Button>
             </div> },
           ]} />
@@ -108,38 +155,45 @@ export function Invoices({ tenant }) {
       <Drawer open={!!open} onClose={() => setOpenId(null)} title={open && `${open.kind === "credit" ? "Credit note" : "Invoice"} ${open.id}`} sub={open && `${open.to} · ${fdate(open.date)}`}
         footer={open && <>
           {open.status === "draft" && <Button variant="ghost" className="pf-danger pf-foot-left" icon="trash-2" onClick={() => setDel(open)}>Delete</Button>}
-          {open.status !== "draft" && open.status !== "cancelled" && totals(open).paid === 0 && <Button variant="ghost" className="pf-danger pf-foot-left" icon="ban" onClick={() => setCancel(open)}>Cancel</Button>}
+          {open.status !== "draft" && open.status !== "cancelled" && T(open).paid === 0 && <Button variant="ghost" className="pf-danger pf-foot-left" icon="ban" onClick={() => setCancel(open)}>Cancel</Button>}
           <Button variant="outline" icon="printer" onClick={() => setPrint({ doc: "invoice", inv: open })}>Print or PDF</Button>
-          {open.status === "draft" && <><Button variant="outline" icon="pencil" onClick={() => setEdit(structuredClone(open))}>Edit</Button><Button icon="send" disabled={!open.to.trim()} onClick={() => sendDraft(open)}>Send</Button></>}
-          {open.kind === "invoice" && open.status === "sent" && totals(open).paid > 0 && credited(open) < totals(open).total && <Button variant="outline" icon="rotate-ccw" onClick={() => setCredit(open)}>Credit note</Button>}
-          {open.kind === "invoice" && open.status === "sent" && totals(open).balance > 0 && <Button icon="banknote" onClick={() => setPay({ inv: open, amount: String(totals(open).balance), method: "Cash", at: DAY })}>Record payment</Button>}
+          {open.status === "draft" && <><Button variant="outline" icon="pencil" onClick={() => setEdit(draftCopy(open))}>Edit</Button><Button icon="send" disabled={!open.to.trim()} onClick={() => sendDraft(open)}>Send</Button></>}
+          {open.kind === "invoice" && open.status === "sent" && T(open).paid > 0 && credited(open) < T(open).total && <Button variant="outline" icon="rotate-ccw" onClick={() => setCredit(open)}>Credit note</Button>}
+          {open.kind === "invoice" && open.status === "sent" && T(open).balance > 0 && <Button icon="banknote" onClick={() => setPay({ inv: open, amount: String(T(open).balance), method: "Cash", at: DAY })}>Record payment</Button>}
         </>}>
         {open && <InvoiceSummary inv={open} list={list} onReceipt={(r) => setPrint({ doc: "receipt", inv: open, receipt: r })} onOpen={setOpenId} />}
       </Drawer>
 
-      {edit && <InvoiceEditor inv={edit} onClose={() => setEdit(null)} onSave={saveInv} />}
+      {edit && <InvoiceEditor inv={edit} branches={branches} onClose={() => setEdit(null)} onSave={saveInv} />}
 
-      <Drawer open={!!pay} onClose={() => setPay(null)} title="Record payment" sub={pay && `${pay.inv.id} · ${pay.inv.to} · balance ${rs(totals(pay.inv).balance)}`}
-        footer={pay && <><Button variant="outline" onClick={() => setPay(null)}>{t("common.cancel")}</Button><Button icon="check" disabled={!(Number(pay.amount) > 0) || Number(pay.amount) > totals(pay.inv).balance} onClick={() => addReceipt(pay.inv, { at: pay.at, amount: Number(pay.amount), method: pay.method })}>Save payment</Button></>}>
+      <Drawer open={!!pay} onClose={() => setPay(null)} title="Record payment" sub={pay && `${pay.inv.id} · ${pay.inv.to} · balance ${rs(T(pay.inv).balance)}`}
+        footer={pay && <><Button variant="outline" onClick={() => setPay(null)}>{t("common.cancel")}</Button><Button icon="check" disabled={!(Number(pay.amount) > 0) || Number(pay.amount) > T(pay.inv).balance || pay.at < pay.inv.date} onClick={() => addReceipt(pay.inv, { at: pay.at, amount: Number(pay.amount), method: pay.method })}>Save payment</Button></>}>
         {pay && <div className="pf-stack">
-          <Field label="Amount" error={Number(pay.amount) > totals(pay.inv).balance ? `More than the balance of ${rs(totals(pay.inv).balance)}` : null}><div className="pf-unit"><span>Rs.</span><input className="input tnum" inputMode="numeric" value={pay.amount} onChange={(e) => setPay({ ...pay, amount: e.target.value.replace(/\D/g, "") })} /></div></Field>
+          <Field label="Amount" error={Number(pay.amount) > T(pay.inv).balance ? `More than the balance of ${rs(T(pay.inv).balance)}` : null}><div className="pf-unit"><span>Rs.</span><input className="input tnum" inputMode="numeric" value={pay.amount} onChange={(e) => setPay({ ...pay, amount: e.target.value.replace(/\D/g, "") })} /></div></Field>
           <Field label="Paid by"><div className="pf-chips">{METHODS.map((m) => <button key={m} type="button" className={`chip ${pay.method === m ? "active" : ""}`} onClick={() => setPay({ ...pay, method: m })}>{m}</button>)}</div></Field>
-          <Field label="Date"><Input type="date" value={pay.at} onChange={(e) => setPay({ ...pay, at: e.target.value })} /></Field>
+          <Field label="Date" error={pay.at < pay.inv.date ? "Before the invoice date" : null}><Input type="date" value={pay.at} onChange={(e) => setPay({ ...pay, at: e.target.value })} /></Field>
         </div>}
       </Drawer>
 
       <CancelModal inv={cancel} onClose={() => setCancel(null)} onConfirm={doCancel} />
       {credit && <CreditDrawer inv={credit} already={credited(credit)} onClose={() => setCredit(null)} onIssue={doCredit} />}
       <DeleteConfirm item={del} name={del?.id} what="draft" onClose={() => setDel(null)}
-        onDelete={(x) => { setList((l) => { l.splice(l.findIndex((y) => y.id === x.id), 1); }); setOpenId(null); }}
-        onRestore={(x) => setList((l) => { restoreAt(l, x, 0); })}>Drafts were never sent, so nothing changes for the customer.</DeleteConfirm>
+        onDelete={(x) => run(() => actions.remove(x), () => setOpenId(null))}
+        onRestore={(x) => run(() => actions.restore(x))}>Drafts were never sent, so nothing changes for the customer.</DeleteConfirm>
+      <Modal open={fromBk !== null} onClose={() => setFromBk(null)} title="Invoice a booking"
+        footer={<><Button variant="outline" onClick={() => setFromBk(null)}>{t("common.cancel")}</Button><Button icon="receipt" disabled={!/^BK-?\d+$/i.test((fromBk || "").trim())} onClick={() => run(() => actions.fromBooking(fromBk.trim()), (id) => { setFromBk(null); setOpenId(id); })}>Make draft</Button></>}>
+        <div className="pf-stack">
+          <p className="small" style={{ color: "var(--text)" }}>The room bill (nights, restaurant and extras, 10% service charge) becomes a draft invoice with 13% VAT. What the guest already paid at the front desk is counted when you send it.</p>
+          <Field label="Booking number"><Input className="input tnum" value={fromBk || ""} onChange={(e) => setFromBk(e.target.value)} placeholder="BK-0001" autoFocus /></Field>
+        </div>
+      </Modal>
       {print && <PrintDoc {...print} biz={biz} list={list} onDone={() => setPrint(null)} />}
     </>
   );
 }
 
 function InvoiceSummary({ inv, list, onReceipt, onOpen }) {
-  const tt = totals(inv);
+  const tt = T(inv);
   const credits = list.filter((x) => x.kind === "credit" && x.creditFor === inv.id);
   return (
     <div className="pf-stack">
@@ -163,30 +217,32 @@ function InvoiceSummary({ inv, list, onReceipt, onOpen }) {
       {(inv.receipts || []).length > 0 && <section className="pf-stack tight"><b className="pf-strong">Receipts</b>
         <ul className="pf-list">{inv.receipts.map((r) => <li key={r.id}><span className="pf-li-ico"><Icon name="receipt" size={16} /></span><div><b className="tnum">{r.id} · {rs(r.amount)}</b><span className="small muted">{r.method} · {fdate(r.at)}</span></div><Button variant="ghost" size="sm" icon="printer" onClick={() => onReceipt(r)}>Receipt</Button></li>)}</ul></section>}
       {credits.length > 0 && <section className="pf-stack tight"><b className="pf-strong">Credit notes</b>
-        <ul className="pf-list">{credits.map((c) => <li key={c.id}><span className="pf-li-ico"><Icon name="rotate-ccw" size={16} /></span><div><b className="tnum">{c.id} · {rs(totals(c).total)}</b><span className="small muted">{c.reason}</span></div><Button variant="ghost" size="sm" onClick={() => onOpen(c.id)}>Open</Button></li>)}</ul></section>}
+        <ul className="pf-list">{credits.map((c) => <li key={c.id}><span className="pf-li-ico"><Icon name="rotate-ccw" size={16} /></span><div><b className="tnum">{c.id} · {rs(T(c).total)}</b><span className="small muted">{c.reason}</span></div><Button variant="ghost" size="sm" onClick={() => onOpen(c.id)}>Open</Button></li>)}</ul></section>}
     </div>
   );
 }
 
-function InvoiceEditor({ inv, onClose, onSave }) {
+function InvoiceEditor({ inv, onClose, onSave, branches }) {
   const t = useT();
   const [f, setF] = useState(inv);
   const [dirty, setDirty] = useState(false);
   const set = (patch) => { setF((x) => ({ ...x, ...patch })); setDirty(true); };
   const setLine = (i, patch) => set({ lines: f.lines.map((l, j) => (j === i ? { ...l, ...patch } : l)) });
-  const tt = totals(f);
-  const ok = f.to.trim() && f.lines.length && f.lines.every((l) => l.what.trim() && l.rate > 0) && f.due >= f.date;
+  const tt = T(f);
+  const needBranch = !!branches && inv.isNew && !f.branchId;
+  const ok = !needBranch && f.to.trim() && f.lines.length && f.lines.every((l) => l.what.trim() && l.rate > 0) && f.due >= f.date;
   return (
     <Drawer open onClose={onClose} title={inv.isNew ? t("binv.new") : `Edit ${inv.id}`} sub={inv.isNew ? "Saved as a draft until you send it" : "Drafts can be changed until they are sent"}
-      footer={<><span className="small muted tnum pf-foot-left">{t("pos.total")}: <b className="pf-strong">{rs(tt.total)}</b>{dirty && " · unsaved"}</span><Button variant="outline" onClick={() => onSave(f, false)} disabled={!f.to.trim()}>{t("wiz.saveDraft")}</Button><Button icon="send" disabled={!ok} onClick={() => onSave(f, true)}>{t("binvf.send")}</Button></>}>
+      footer={<><span className="small muted tnum pf-foot-left">{t("pos.total")}: <b className="pf-strong">{rs(tt.total)}</b>{dirty && " · unsaved"}</span><Button variant="outline" onClick={() => onSave(f, false)} disabled={!f.to.trim() || needBranch}>{t("wiz.saveDraft")}</Button><Button icon="send" disabled={!ok} onClick={() => onSave(f, true)}>{t("binvf.send")}</Button></>}>
       <div className="pf-stack">
+        {branches && inv.isNew && <Field label="Branch" hint="Which branch this invoice belongs to"><Select value={f.branchId || ""} onChange={(v) => set({ branchId: v })} options={[{ id: "", label: "Pick a branch" }, ...branches]} /></Field>}
         <div className="pf-grid-2 tight">
           <Field label={t("binv.billedTo")}><Input value={f.to} onChange={(e) => set({ to: e.target.value })} placeholder="Name or company" /></Field>
           <Field label="PAN" optional><Input className="input tnum" value={f.pan} onChange={(e) => set({ pan: e.target.value.replace(/\D/g, "").slice(0, 9) })} placeholder="9 digits" /></Field>
         </div>
         <div className="pf-grid-2 tight">
           <Field label="Phone" optional><Input className="input tnum" value={f.phone} onChange={(e) => set({ phone: e.target.value })} placeholder="98XXXXXXXX" /></Field>
-          <Field label="Booking or order" optional><Input className="input tnum" value={f.order} onChange={(e) => set({ order: e.target.value })} placeholder="BK-2027-0418" /></Field>
+          <Field label="Booking or order" optional><Input className="input tnum" value={f.order} onChange={(e) => set({ order: e.target.value })} placeholder="BK-0001" /></Field>
         </div>
         <div className="pf-grid-2 tight">
           <Field label="Invoice date"><Input type="date" value={f.date} onChange={(e) => set({ date: e.target.value })} /></Field>
@@ -228,7 +284,7 @@ function CancelModal({ inv, onClose, onConfirm }) {
 }
 
 function CreditDrawer({ inv, already, onClose, onIssue }) {
-  const max = totals(inv).total - already;
+  const max = T(inv).total - already;
   const [mode, setMode] = useState("full");
   const [amount, setAmount] = useState(String(max));
   const [reason, setReason] = useState("");
@@ -236,7 +292,7 @@ function CreditDrawer({ inv, already, onClose, onIssue }) {
   const net = Math.round(gross / (1 + (inv.vatPct || 0) / 100));
   return (
     <Drawer open onClose={onClose} title={`Credit note for ${inv.id}`} sub={`${inv.to} · up to ${rs(max)} can be credited`}
-      footer={<><Button variant="outline" onClick={onClose}>Cancel</Button><Button icon="rotate-ccw" disabled={!(gross > 0) || !reason.trim()} onClick={() => onIssue(inv, [{ what: `Credit against ${inv.id}: ${reason.trim()}`, qty: 1, rate: net }], reason.trim())}>Issue credit note</Button></>}>
+      footer={<><Button variant="outline" onClick={onClose}>Cancel</Button><Button icon="rotate-ccw" disabled={!(gross > 0) || !reason.trim()} onClick={() => onIssue(inv, [{ what: `Credit against ${inv.id}: ${reason.trim()}`, qty: 1, rate: net }], reason.trim(), gross)}>Issue credit note</Button></>}>
       <div className="pf-stack">
         <Field label="How much"><Seg value={mode} onChange={setMode} options={[{ id: "full", label: `Full ${rs(max)}` }, { id: "part", label: "Part" }]} /></Field>
         {mode === "part" && <Field label="Amount including VAT" error={Number(amount) > max ? `Up to ${rs(max)}` : null}><div className="pf-unit"><span>Rs.</span><input className="input tnum" inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value.replace(/\D/g, ""))} /></div></Field>}
@@ -256,8 +312,8 @@ function PrintDoc({ doc, inv, receipt, biz, onDone }) {
     window.addEventListener("afterprint", done, { once: true });
     const id = setTimeout(() => window.print(), 60);
     return () => { clearTimeout(id); window.removeEventListener("afterprint", done); document.body.classList.remove("pf-printing"); };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  const tt = totals(inv);
+  }, []);  
+  const tt = T(inv);
   const title = doc === "receipt" ? "Payment receipt" : inv.kind === "credit" ? "Credit note" : inv.status === "draft" ? "Invoice (draft)" : "Tax invoice";
   return createPortal(
     <div className="pf-print-root" aria-hidden="true">

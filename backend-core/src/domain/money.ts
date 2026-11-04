@@ -20,3 +20,35 @@ export const nightsBetween = (from: Date, to: Date) => Math.round((Date.UTC(to.g
 /** A YYYY-MM-DD date as midnight UTC. */
 export const dayOf = (s: string) => new Date(`${s}T00:00:00.000Z`);
 export const ymd = (d: Date) => d.toISOString().slice(0, 10);
+
+// ───── Customer invoices (a business's own bills to its customers) ─────
+
+export const INVOICE_VAT = 13;
+export interface InvoiceLine { what: string; qty: number; rate: number }
+
+/** Subtotal, VAT and total of an invoice, in whole rupees: VAT is the percent of the subtotal, rounded. */
+export function invoiceAmounts(lines: readonly InvoiceLine[], vatPct: number) {
+  const sub = lines.reduce((s, l) => s + l.qty * l.rate, 0);
+  const vat = Math.round((sub * vatPct) / 100);
+  return { sub, vat, total: sub + vat };
+}
+
+/** A credit that includes VAT, split into the amount before VAT and the VAT (they always add back to the credit). */
+export function creditSplit(gross: number, vatPct: number) {
+  const net = Math.round(gross / (1 + vatPct / 100));
+  return { net, vat: gross - net, total: gross };
+}
+
+/** Nepal's fiscal year runs from Shrawan 1 (about 17 July) to the end of Asar, named by the Bikram Sambat years it
+ *  spans: 17 July 2026 to 16 July 2027 is "2083-84". Shrawan 1 can fall on the 16th or 17th: the table below holds
+ *  the year it differs, and must be checked against the official calendar before each new fiscal year. */
+const SHRAWAN_1: Record<number, string> = { 2025: "07-17", 2026: "07-17", 2027: "07-17", 2028: "07-16" };
+export function fiscalYearOf(d: Date) {
+  const y = d.getUTCFullYear();
+  const start = Date.UTC(y, Number((SHRAWAN_1[y] ?? "07-17").slice(0, 2)) - 1, Number((SHRAWAN_1[y] ?? "07-17").slice(3)));
+  const bs = (d.getTime() >= start ? y : y - 1) + 57;
+  return `${bs}-${String((bs + 1) % 100).padStart(2, "0")}`;
+}
+
+/** INV-2083-84-0001 */
+export const docNo = (prefix: string, fy: string, n: number) => `${prefix}-${fy}-${String(n).padStart(4, "0")}`;

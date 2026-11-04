@@ -130,7 +130,6 @@ export function ListingsPage({ tenant, canEdit }) {
                         ? <button type="button" data-close="" onClick={() => setStatusOf([l.id], "paused", "Paused. Hidden from the website until you publish again.")}><Icon name="clock" size={16} />Pause</button>
                         : l.status !== "in_review" && <button type="button" data-close="" onClick={() => setStatusOf([l.id], "published", "Published")}><Icon name="send" size={16} />Publish</button>)}
                       <button type="button" data-close="" onClick={() => navigate("/business/analytics")}><Icon name="chart-column" size={16} />{t("nav.analytics")}</button>
-                      <button type="button" data-close="" onClick={() => navigate("/business/agreements")}><Icon name="file-pen-line" size={16} />{t("ag.new")}</button>
                       {stays && isStayListing(l) && l.status === "published" && <button type="button" data-close="" onClick={() => setOta(l)}><Icon name="globe" size={16} />Sell on other sites</button>}
                       {live && canEdit && (l.status === "published" || l.status === "sold" || l.status === "rented") && (l.status === "published"
                         ? <button type="button" data-close="" onClick={() => setStatusOf([l.id], "sold")}><Icon name="handshake" size={16} />{l.kind === "sell" || l.kind === "project" ? "Mark sold" : "Mark rented out"}</button>
