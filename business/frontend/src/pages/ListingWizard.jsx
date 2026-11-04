@@ -13,6 +13,7 @@ import { AIStudio } from "./AI";
 import { Icon } from "@sheetal/shared/core/icons";
 import { AREA, areaToSqft, sqftToHill } from "@sheetal/shared/data/catalog";
 import { FORMS, HIGHLIGHTS, suggestTitle, summaryOf } from "./listingForms";
+import { formFor } from "@sheetal/shared/data/formSetup";
 import { PinPicker } from "./PinPicker";
 import { kindsFor, planOf } from "@sheetal/shared/core/plans";
 import { isLive, liveListings, uploadListingPhoto } from "../live";
@@ -49,7 +50,8 @@ export function ListingWizard({ tenant }) {
   React.useEffect(() => { if (!fillTick) return; const d2 = db.drafts[tenant.id]; if (d2 && FORMS[d2.kind]) { setKind(d2.kind); setStep(0); setV(d2.values || {}); } }, [fillTick, db.drafts, tenant.id]);
   const aiDrawer = <Drawer open={aiOpen} onClose={() => setAiOpen(false)} title={t("ai.listingTitle")} sub={t("ai.listingSub")}><AIStudio tenant={tenant} only="listing" onFill={() => { setAiOpen(false); setFillTick((n) => n + 1); }} /></Drawer>;
 
-  const steps = (kind && FORMS[kind]) || [];
+  // The form as Sheetal staff arranged it in Listing setup → Listing forms (built-in form when nothing changed).
+  const steps = React.useMemo(() => (kind ? formFor(kind, C) : []), [kind, C]);
   const visible = (f) => !f.when || f.when(v);
   const val = (f) => (v[f.name] !== undefined ? v[f.name] : f.def);
   const set = (name, x) => { setV((o) => ({ ...o, [name]: typeof x === "function" ? x(o[name]) : x })); setErr((e) => ({ ...e, [name]: null })); };
@@ -69,11 +71,29 @@ export function ListingWizard({ tenant }) {
 
   const validate = (i) => {
     const e = {};
-    steps[i].fields.filter(visible).forEach((f) => { if (f.req && !filled(f)) e[f.name] = f.type === "photos" ? t("wiz.errPhotos", { n: f.min }) : t("wiz.errRequired"); });
+    steps[i].fields.filter(visible).forEach((f) => {
+      const x = val(f);
+      if (f.req && !filled(f)) e[f.name] = f.type === "photos" ? t("wiz.errPhotos", { n: f.min }) : t("wiz.errRequired");
+      else if (f.name === "title" && x && String(x).trim().length < 8) e[f.name] = "Write a title of at least 8 characters.";
+      else if (f.type === "price" && f.req && !(Number(x) > 0)) e[f.name] = "Enter an amount above 0.";
+      else if ((f.type === "number" || f.type === "price") && x !== undefined && x !== "" && (!Number.isFinite(Number(x)) || Number(x) < 0)) e[f.name] = "Enter a number.";
+      else if (f.type === "text" && f.name === "video" && x && !/^https?:\/\//.test(String(x))) e[f.name] = "Paste the full link, starting with https://";
+    });
     setErr(e);
     return !Object.keys(e).length;
   };
-  const go = (i) => { if (i > step && !validate(step)) return; setStep(i); window.scrollTo(0, 0); };
+  const go = (i) => { if (i > step && !validate(step)) { toast("Fix the marked fields first."); return; } setStep(i); window.scrollTo(0, 0); };
+  // A missing or wrong answer: scroll to the first one and put the cursor in it.
+  React.useEffect(() => {
+    if (!Object.values(err).some(Boolean)) return undefined;
+    const id = requestAnimationFrame(() => {
+      const el = document.querySelector(".pf-wiz-fields .pf-fb.has-err");
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.querySelector("input, textarea, select, button")?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [err, step]);
   const send = (submit) => {
     const title = v.title || suggestTitle(kind, v, label);
     setBusy(true);
@@ -84,7 +104,7 @@ export function ListingWizard({ tenant }) {
   };
   const saveDraft = () => { if (live && !editId) { send(false); return; } update((d) => { d.drafts[tenant.id] = { kind, step, values: v }; }); toast(t("wiz.toastDraft")); };
   const publish = () => {
-    for (let i = 0; i < steps.length; i++) if (!validate(i)) { setStep(i); return; }
+    for (let i = 0; i < steps.length; i++) if (!validate(i)) { setStep(i); toast("Fix the marked fields first."); return; }
     if (live) { send(true); return; }
     const title = v.title || suggestTitle(kind, v, label);
     update((d) => {

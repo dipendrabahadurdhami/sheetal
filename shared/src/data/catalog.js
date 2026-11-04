@@ -167,6 +167,7 @@ export function mergeCatalog(base, stored) {
     else if (items && typeof items === "object") out[k] = { ...(base[k] || {}), ...items };
   }
   if (stored.kindsByType) out.kindsByType = { ...base.kindsByType, ...stored.kindsByType };
+  if (stored.forms) out.forms = stored.forms;
   return out;
 }
 

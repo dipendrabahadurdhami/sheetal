@@ -153,6 +153,7 @@ export default function PropertyDetail() {
             </section>
           )}
 
+          <MoreDetails p={p} />
           <StayRooms p={p} />
 
           {vid && (
@@ -240,6 +241,18 @@ function StayRooms({ p }) {
       {sleeping.length > 0 && <div className="facts">{sleeping.map((r, i) => <div key={i}><span>{r.room}</span><b>{bedText(r)}</b></div>)}</div>}
       {lists.map(([l, x]) => <div key={l} style={{ marginTop: 16 }}><b className="small">{l}</b><div className="amenities">{x.map((a) => <div key={a}><Check size={18} />{a}</div>)}</div></div>)}
       {times && <p className="muted small" style={{ marginTop: 12 }}>{times}</p>}
+    </section>
+  );
+}
+
+// The extra facts the listing form asks for each type (floor, society fee, land shape…) and fields Sheetal added.
+function MoreDetails({ p }) {
+  const rows = (Array.isArray(p.more) ? p.more : []).filter((r) => Array.isArray(r) && r[0] && r[1]);
+  if (!rows.length) return null;
+  return (
+    <section id="more" className="detail-section">
+      <h3>More details</h3>
+      <div className="facts">{rows.map(([l, v]) => <div key={l}><span>{l}</span><b>{v}</b></div>)}</div>
     </section>
   );
 }

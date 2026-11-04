@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const GROUPS = [
   ["Run it on this computer (four terminals, in this order)", [
+    ["start", "Starts everything in one window: database, the three APIs, the website and panels, and the mail server."],
     ["db:local", "Starts the local PostgreSQL database on port 5433. Start this first and keep it open."],
     ["dev:api", "Starts the three APIs: website :4000, business :4001, admin :4002. Restarts on code changes."],
     ["dev", "Starts the website, business panel and admin panel on http://localhost:5173."],
@@ -32,6 +33,7 @@ const GROUPS = [
     ["db:seed", "Adds the starting data: plans, the super admin and the Sheetal Property business (first setup)."],
     ["backup", "Exports the database to OneDrive\\Sheetal-Backups and copies new photos. Add -- --no-photos for the database only."],
     ["restore", "Lists database backups; `npm run restore -- <name> --yes` puts one back (replaces all data)."],
+    ["listings:tidy", "Fills empty listing fields from each title and description and writes a short description. Try -- --dry-run first."],
     ["photos:resize", "Makes every photo in MEDIA_DIR the new sizes (main 1920 px, thumbnail 800 px). Try -- --dry-run first."],
   ]],
   ["Build and release", [

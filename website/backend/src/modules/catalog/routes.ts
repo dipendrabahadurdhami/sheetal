@@ -162,6 +162,37 @@ export async function catalogRoutes(app: FastifyInstance) {
       };
     }));
 
+  // Counts beside every choice in the search filters. Each list counts the listings that match all the other filters,
+  // so choosing one option never makes the rest of its own list disappear.
+  app.get("/search/facets", async (request) => {
+    const q = searchQuery.partial().parse(request.query);
+    return cached(app.cache, cacheKey("facets", q), LIST_TTL, async () => {
+      const db = dbOf(app);
+      const without = (k: keyof Search) => whereFor({ ...q, [k]: undefined });
+      const [types, cats, beds, states, purposes] = await Promise.all([
+        db.listing.groupBy({ by: ["propertyType"], where: without("property_type"), _count: { _all: true } }),
+        db.listing.groupBy({ by: ["category"], where: without("category"), _count: { _all: true } }),
+        db.listing.groupBy({ by: ["bedrooms"], where: without("bedrooms"), _count: { _all: true } }),
+        db.listing.groupBy({ by: ["status"], where: without("property_status"), _count: { _all: true } }),
+        db.listing.groupBy({ by: ["purpose"], where: without("advertisement_purpose"), _count: { _all: true } }),
+      ]);
+      const named = (rows: { name: string | null; n: number }[]) => rows.filter((r) => r.name).map((r) => ({ name: r.name as string, count: r.n })).sort((a, b) => b.count - a.count);
+      const atLeast = (b: number) => beds.filter((r) => (r.bedrooms ?? 0) >= b).reduce((s, r) => s + r._count._all, 0);
+      const st = (s: string) => states.find((r) => r.status === s)?._count._all ?? 0;
+      const pu = (p: string) => purposes.find((r) => r.purpose === p)?._count._all ?? 0;
+      return {
+        status: 200,
+        data: {
+          property_type: named(types.map((r) => ({ name: r.propertyType, n: r._count._all }))),
+          category: named(cats.map((r) => ({ name: r.category, n: r._count._all }))),
+          bedrooms: Object.fromEntries([1, 2, 3, 4, 5].map((b) => [String(b), atLeast(b)])),
+          property_status: { AVAILABLE: st("published"), "SOLD OUT": st("sold"), "RENTED OUT": st("rented") },
+          purpose: { sale: pu("sale"), rent: pu("rent") },
+        },
+      };
+    });
+  });
+
   // Choices for the search filters, from what is actually listed.
   app.get("/property-attributes", async () =>
     cached(app.cache, "catalog:attributes", 300, async () => {

@@ -14,10 +14,11 @@ import { Button, Checkbox, Confirm, Drawer, Field, Input, PageHead, Panel, Searc
 import { Icon } from "@sheetal/shared/core/icons";
 import { adminApi } from "../api";
 import { isStaffLive } from "../live";
+import { AdminFormSetup } from "./AdminFormSetup";
 
 const CAT_GROUPS = [
   ["categories", "home"], ["propertyTypes", "home"], ["classTypes", "home"], ["ownerTypes", "home"], ["urgency", "home"], ["facilities", "home"], ["nearby", "home"],
-  ["environments", "home"], ["exteriorLooks", "home"], ["furnishing", "home"], ["interiorLooks", "home"], ["facing", "home"], ["roadWidth", "home"], ["roadType", "home"],
+  ["environments", "home"], ["exteriorLooks", "home"], ["furnishing", "home"], ["interiorLooks", "home"], ["facing", "home"], ["roadWidth", "home"], ["roadType", "home"], ["plotShapes", "home"], ["landTypes", "home"], ["commercialUses", "home"],
   ["propertyStatus", "home"], ["ownershipDocs", "home"], ["boosts", "home"],
   ["tenants", "rent"], ["utilities", "rent"], ["deposits", "rent"], ["leaseTerms", "rent"],
   ["stayTypesHotel", "stay"], ["stayTypesUnit", "stay"], ["stars", "stay"], ["roomTypes", "stay"], ["bedTypes", "stay"], ["sleepingSpaces", "stay"], ["bathroomTypes", "stay"],
@@ -31,7 +32,7 @@ const GROUPS = ["home", "rent", "stay", "project", "invest", "location"];
 // Lists kept per parent: property types per category, areas (plain names) per district.
 const GROUPED = { propertyTypes: "categories", areas: "districts" };
 const LABELS = {
-  propertyTypes: "Property types", classTypes: "Area type", ownerTypes: "Posted by", urgency: "How soon", roadWidth: "Road width", deposits: "Deposit",
+  plotShapes: "Land shape", landTypes: "Land type", commercialUses: "Commercial use", propertyTypes: "Property types", classTypes: "Area type", ownerTypes: "Posted by", urgency: "How soon", roadWidth: "Road width", deposits: "Deposit",
   stars: "Star rating", sleepingSpaces: "Sleeping spaces", bathroomTypes: "Bathroom types", roomAmenities: "In the room", bathroomAmenities: "Bathroom items",
   kitchenItems: "Kitchen and dining", roomViews: "Views", safetyItems: "Safety", accessibility: "Accessibility", checkTimes: "Check-in and check-out times",
   projectStatus: "Project status", minInvest: "Minimum investment", areas: "Areas", g_stay: "Stays",
@@ -110,7 +111,9 @@ export function AdminCatalog() {
   return (
     <>
       <PageHead title={t("catalog.title")} sub="What businesses can list, and the choices every listing form and website filter offers. Everything has a full built-in list, so nothing needs adding by hand; changes apply straight away." />
-      <Tabs value={tab} onChange={setTab} tabs={[{ id: "options", label: "Form options", icon: "list-checks", count: CAT_GROUPS.length }, { id: "types", label: "Listing types", icon: "layers", count: kinds.length }]} />
+      <Tabs value={tab} onChange={setTab} tabs={[{ id: "options", label: "Form options", icon: "list-checks", count: CAT_GROUPS.length }, { id: "forms", label: "Listing forms", icon: "file-text" }, { id: "types", label: "Listing types", icon: "layers", count: kinds.length }]} />
+
+      {tab === "forms" && <AdminFormSetup />}
 
       {tab === "types" && <Panel title="Who can list what" sub="Tick the listing types each kind of business can create. Unticked types disappear from their New listing screen. Pro plans can always list every type.">
         <div className="pf-table-wrap"><table className="table pf-table ls-matrix" style={{ minWidth: 720 }}>

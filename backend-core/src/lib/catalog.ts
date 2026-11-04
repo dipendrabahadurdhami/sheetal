@@ -13,7 +13,7 @@ export const CATALOG_KEY = "catalog";
 export interface CatalogItem { id: string; en: string; ne: string; icon?: string; [extra: string]: unknown }
 /** A plain list, or a grouped one (property types per category, area names per district). */
 export type StoredList = CatalogItem[] | Record<string, CatalogItem[] | string[]>;
-export interface StoredCatalog { lists?: Record<string, StoredList>; kindsByType?: Record<string, string[]>; updatedAt?: string }
+export interface StoredCatalog { lists?: Record<string, StoredList>; kindsByType?: Record<string, string[]>; forms?: Record<string, unknown>; updatedAt?: string }
 
 export async function readCatalog(db: Db): Promise<StoredCatalog> {
   const row = await db.appSetting.findUnique({ where: { key: CATALOG_KEY } });

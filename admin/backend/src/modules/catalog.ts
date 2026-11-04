@@ -97,6 +97,35 @@ export async function adminCatalogRoutes(app: FastifyInstance) {
     return { message: "Back to the built-in list.", data: value };
   });
 
+  // ───── Listing forms (Listing setup → Listing forms): one setup per listing kind ─────
+  const pair = z.tuple([z.string().trim().max(160), z.string().trim().max(160)]);
+  const FormSetup = z.object({
+    steps: z.record(z.string().max(40), z.object({ order: z.number().int().min(0).max(50).optional(), label: pair.optional(), hidden: z.boolean().optional() })).default({}),
+    fields: z.record(z.string().max(60), z.object({ order: z.number().int().min(0).max(300).optional(), step: z.string().max(40).optional(), label: pair.optional(), help: pair.optional(), req: z.boolean().optional(), hidden: z.boolean().optional(), cats: z.array(z.string().max(60)).max(60).optional() })).default({}),
+    custom: z.array(z.object({
+      name: z.string().regex(/^x_[a-z0-9_]{1,40}$/), type: z.enum(["text", "number", "choice", "multi", "toggle", "counter"]), label: pair, help: pair.optional(),
+      step: z.string().max(40), order: z.number().int().min(0).max(300).default(99), req: z.boolean().default(false), cats: z.array(z.string().max(60)).max(60).optional(),
+      listKey: z.string().regex(KEY).optional(), options: z.array(z.object({ id: z.string().max(60), en: z.string().max(120), ne: z.string().max(120).optional() })).max(200).optional(),
+    })).max(80).default([]),
+  });
+  app.put<{ Params: { kind: string } }>("/admin/catalog/forms/:kind", async (request) => {
+    const staff = staffOf(request, "content.edit");
+    const { kind } = request.params;
+    if (!(LISTING_KINDS as readonly string[]).includes(kind)) throw badRequest("Unknown listing type.");
+    const setup = FormSetup.parse(request.body);
+    const cur = await readCatalog(db());
+    const value = await save({ ...cur, forms: { ...(cur.forms ?? {}), [kind]: setup } }, staff.user.id, request.ip, `form ${kind}`);
+    return { message: "Form saved. New and edited listings use it now.", data: value };
+  });
+  app.delete<{ Params: { kind: string } }>("/admin/catalog/forms/:kind", async (request) => {
+    const staff = staffOf(request, "content.edit");
+    const cur = await readCatalog(db());
+    const forms = { ...(cur.forms ?? {}) };
+    delete forms[request.params.kind];
+    const value = await save({ ...cur, forms }, staff.user.id, request.ip, `form ${request.params.kind} reset`);
+    return { message: "Back to the built-in form.", data: value };
+  });
+
   app.put("/admin/catalog/kinds", async (request) => {
     const staff = staffOf(request, "content.edit");
     const types = [...BUSINESS_TYPES, "owner"] as [string, ...string[]];
