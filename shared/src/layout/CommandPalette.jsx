@@ -1,9 +1,11 @@
+// Ctrl/Cmd + K: jump to any page or start any task without the sidebar.
+// Where it fits: the search box in the panels' top bar.
+
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../core/i18n";
 import { useRouter } from "../core/router";
 import { Icon } from "../core/icons";
 
-// Ctrl/Cmd + K: jump to any page or start any task without the sidebar.
 export function CommandPalette({ nav, actions = [], records = [] }) {
   const t = useT();
   const { navigate } = useRouter();

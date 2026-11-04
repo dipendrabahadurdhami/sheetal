@@ -1,6 +1,7 @@
-// Online forms: field types, templates per business type, plan limits and links.
-// Data: db.forms[tenantId] = [{ id, slug, title, desc, fields, dest, places, style, thanks, pay, status, tpl, created }]
-//       db.formResponses[tenantId] = [{ id, formId, formTitle, dest, at, name, phone, answers, pay, summary }]
+// Online forms: field types, templates per business type, destinations and plan limits.
+// Where it fits: the business panel's Forms pages (sample data for now, marked Preview).
+// How it works: forms and responses live in db.forms[tenantId] and db.formResponses[tenantId].
+
 import { TODAY } from "./format";
 
 export const FIELD_TYPES = {

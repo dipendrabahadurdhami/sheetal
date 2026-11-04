@@ -1,4 +1,5 @@
-// Part 3 strings (moderation, content, billing, audit, money). Merged into en.
+// English screen text for the admin panel (moderation, content, billing, audit). Merged into en.js.
+
 export default {
   "mod.sub": "Check new listings and verify businesses before they go live", "mod.listings": "Listings to review", "mod.kyc": "Business verification", "mod.reports": "Reports from users",
   "mod.clear": "Nothing to review", "mod.clearText": "New listings show here as soon as they're submitted.", "mod.kycClear": "No businesses waiting", "mod.submitted": "Submitted", "mod.docs": "Papers",

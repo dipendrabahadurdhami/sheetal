@@ -1,3 +1,7 @@
+// Formatting helpers: money (Rs.), dates, initials, short text, email check, "today".
+// Where it fits: every screen.
+// Rules: amounts are whole rupees, formatted the Indian way (lakh, crore).
+
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 // Now, in the viewer's local time ("YYYY-MM-DDTHH:mm:ss"), read once when the app loads.

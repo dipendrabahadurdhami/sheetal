@@ -1,7 +1,7 @@
-// Listing setup: every option a listing form can offer.
-// Covers homes, land and commercial, and is extended for stays,
-// projects and investments. Super admin edits these at /admin/catalog.
-// Each item: { id, en, ne, icon }
+// Listing options: every choice a listing form can offer (kinds, categories, facilities, areas and units).
+// Where it fits: the listing wizard, filters and the website's listing pages.
+// How it works: each item is { id, en, ne, icon }; land areas convert between ropani-aana and bigha-kattha and sq ft.
+// Rules: the admin Catalog page doesn't change this list yet (marked Preview); edit it here.
 
 const o = (id, en, ne, icon) => ({ id, en, ne, icon });
 

@@ -1,10 +1,10 @@
+// The branch button in the top bar of the business panel.
+// How it works: always opens a menu: "All branches" (for people with all branches) and their branches, plus an
+// optional footer link (add or manage branches). With a single branch it just shows its name.
+
 import React from "react";
 import { Icon } from "../core/icons";
 import { Menu } from "../core/ui";
-
-// The branch the workspace is showing, in the top bar; it always opens. People with all branches can pick
-// "All branches" or any one; people limited to some branches pick among theirs. `footer` (e.g. a link to manage
-// branches) goes under the list. With a single branch the button just shows its name.
 
 export function BranchPicker({ branch, allowed, canAll, onPick, footer, allLabel = "All branches", label = "Branch" }) {
   if (!allowed.length) return null;

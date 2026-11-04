@@ -1,3 +1,5 @@
+// English screen text for branches, calendar, people and other business pages. Merged into en.js.
+
 export default {
   "nav.channels": "Channel manager", "chm.title": "Channel manager", "chm.sub": "Sell on Booking.com, Airbnb, Agoda and more without logging in to each. Rates, rooms and bookings stay in sync with Sheetal.",
   "chm.syncNow": "Sync now", "chm.toastSynced": "All channels synced", "chm.lastSync": "Synced {at}", "chm.notYet": "Not connected yet", "chm.rooms": "{n} room types", "chm.markup": "+{p}% price", "chm.sameRate": "Same price",

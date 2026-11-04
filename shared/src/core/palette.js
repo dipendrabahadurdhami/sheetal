@@ -1,6 +1,8 @@
-// Brand colours from a logo, and keeping text readable on them.
-// extractPalette reads the picture in the browser (a small canvas), groups similar colours, leaves out the
-// background (transparent or near-white pixels) and returns up to 4 distinct main colours, most used first.
+// Brand colours from a business's logo, and keeping text readable on them.
+// Where it fits: Settings → Branding (reading the logo) and the panel's brand themes.
+// How it works: the logo is read in the browser, its colours are grouped, and three roles are chosen: brand (most
+// colourful), dark and light. brandTheme() builds every theme from only those three colours.
+// Rules: no colour outside the logo's own (only lighter or darker shades for readable text).
 
 const hex = (r, g, b) => "#" + [r, g, b].map((v) => Math.round(v).toString(16).padStart(2, "0")).join("").toUpperCase();
 export const toRgb = (h) => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };

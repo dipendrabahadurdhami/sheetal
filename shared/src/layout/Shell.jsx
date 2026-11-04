@@ -1,3 +1,7 @@
+// The frame of both panels: sidebar, top bar, branch and business switchers, quick actions, bell and profile menu.
+// Where it fits: BusinessApp and AdminApp render every page inside it.
+// How it works: each app passes its menu and slots; pages listed in `preview` get a "Preview" tag and a note.
+
 import React, { useEffect, useState } from "react";
 import { Icon } from "../core/icons";
 import { Link, useRouter } from "../core/router";
@@ -8,7 +12,6 @@ import { config } from "../core/config";
 import { CommandPalette, openPalette } from "./CommandPalette";
 import { PANEL_THEMES } from "../core/theme";
 
-// Shared frame for /admin and /business. Each app passes its own nav and slots.
 export function Shell({ sub, nav, switcher, sideFooter, topLeft, topExtra, topTools, preview = [], userMenu, banner, notifications = [], notifTo, onReadAll, brandSlot, style, quickCreate = [], records = [], themes = PANEL_THEMES, children }) {
   const { path } = useRouter();
   const t = useT();

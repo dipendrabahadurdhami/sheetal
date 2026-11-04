@@ -1,6 +1,9 @@
+// Small charts (bars, line, donut, funnel) drawn with SVG, no chart library.
+// Where it fits: dashboards and analytics in both panels.
+// How it works: colours come from the theme, so charts follow light, dark and brand themes.
+
 import React from "react";
 
-// Small dependency-free charts drawn with SVG. Colours come from theme tokens.
 export function Bars({ data, height = 200, format = (v) => v, highlightLast = true }) {
   const max = Math.max(1, ...data.map((d) => d.v));
   const w = 100 / data.length;

@@ -1,3 +1,9 @@
+// Import and export (CSV) for one kind of data, on the page that shows that data (bookings, leads, invoices…).
+// Where it fits: the Import/Export buttons on list pages, and Settings → Import and export.
+// How it works: each kind has its own template with only the columns that page needs; rows are checked column by
+// column (text, number, date, phone, email, choice, stars) before anything is added.
+// Rules: works in the browser only for now (marked Preview when signed in).
+
 import React, { useMemo, useState } from "react";
 import { Badge, Button, Checkbox, Drawer, Input, useToast } from "../core/ui";
 import { Icon } from "../core/icons";
@@ -6,10 +12,6 @@ import { TODAY } from "../core/format";
 import { invoicesOf, invoiceRow, invoiceFromRow } from "../demo/money";
 import { emptyOps } from "../demo/ops";
 
-// Import + export for ONE kind of data, placed on the page that shows that data (Bookings, Leads, Invoices …).
-// Each kind has its own template, so people only fill in the columns that page needs.
-// Columns: [header, required, example, hint, key, type]. type: text | num | date | phone | email | enum | stars
-// For enum columns the hint lists the allowed values, comma separated.
 export const TEMPLATES = {
   bookings: { label: "Bookings", cols: [["Guest name", 1, "Sita Gurung", "", "guest"], ["Phone", 1, "9841010101", "", "phone", "phone"], ["Room no", 1, "201", "", "room"], ["Check-in", 1, "2027-03-12", "YYYY-MM-DD", "from", "date"], ["Check-out", 1, "2027-03-15", "YYYY-MM-DD", "to", "date"], ["Guests", 0, "2", "", "guests", "num"], ["Amount", 1, "49720", "", "amount", "num"], ["Paid", 0, "14916", "", "paid", "num"], ["Came from", 0, "Walk-in", "Sheetal, Booking.com, Airbnb, Walk-in, Website", "source", "enum"]] },
   guests: { label: "Guests", cols: [["Name", 1, "Sita Gurung", "", "name"], ["Phone", 1, "9841010101", "", "phone", "phone"], ["Email", 0, "sita@gmail.com", "", "email", "email"], ["Nationality", 0, "Nepali", "", "nationality"], ["ID no", 0, "27-01-74-01234", "", "idNo"], ["Birthday", 0, "1994-03-04", "YYYY-MM-DD", "birthday", "date"]] },

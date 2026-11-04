@@ -1,3 +1,9 @@
+// Team management: members, invitations, roles and branch access.
+// Where it fits: the business panel's Team page and the admin panel's Staff page.
+// How it works: invite by email with a role (and, for businesses, the branches they work at); change role, pause or
+// remove people; see recent activity.
+// Rules: at least one branch stays ticked for anyone limited to some branches; owners can't be changed from here.
+
 import React, { useMemo, useState } from "react";
 import { useT } from "../core/i18n";
 import { fdate, fdatetime, isEmail } from "../core/format";
@@ -7,7 +13,6 @@ import { Icon } from "../core/icons";
 import { DataActions } from "./DataIO";
 import { useUndo } from "./Crud";
 
-// Team management used by both a business workspace and Sheetal staff (/admin/staff).
 export function TeamPanel({ members, invites, roles, groups, scopes, seats, canManage, activity = [], onInvite, onUpdateMember, onRemoveMember, onRestoreMember, onResend, onRevoke, dataKind }) {
   const t = useT();
   const toast = useToast();

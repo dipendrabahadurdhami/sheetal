@@ -1,4 +1,7 @@
-// WCAG contrast helpers for colours businesses pick themselves (#rrggbb).
+// Colour contrast helpers (WCAG) for colours businesses pick themselves.
+// Where it fits: buttons and links in a business's own colour.
+// How it works: picks text that stays readable on the colour, darkening the colour when needed.
+
 const HEX = /^#[0-9a-f]{6}$/i;
 export function luminance(hex) {
   const n = parseInt(hex.slice(1), 16);

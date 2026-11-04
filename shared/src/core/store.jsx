@@ -1,11 +1,13 @@
+// The front-end store: one object with everything a screen shows, kept in the browser (localStorage).
+// Where it fits: every screen reads `db` and writes with update(draft => { ... }).
+// How it works: in the sample workspace this is all the data; when signed in, the live loaders (live.js in each panel)
+// fill it from the APIs, and pages that are on the server send their changes there.
+
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { seed, VERSION } from "../demo/demo";
 import { config } from "./config";
 import { storedTheme } from "./theme";
 
-// Demo store: the whole platform database lives in one object, persisted to localStorage.
-// Every page reads `db` and writes through `update(draft => { ... })`.
-// When the API is ready, replace update() calls with API requests one module at a time.
 const Ctx = createContext(null);
 
 function load() {

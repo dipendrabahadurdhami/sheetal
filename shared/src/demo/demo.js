@@ -1,3 +1,6 @@
+// The sample workspace's data: plans and a seed database for showing the product without signing in.
+// Rules: plans must stay the same as backend-core/src/domain/plans.ts; a test fails if they differ.
+
 import { PLATFORM_ROLE_TEMPLATES, roleTemplatesFor } from "../core/rbac";
 import { CATALOG } from "../data/catalog";
 import { TODAY } from "../core/format";

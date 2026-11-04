@@ -1,7 +1,9 @@
+// The common list-page pattern: view a record in a drawer, edit it, delete it with a confirmation and an Undo toast.
+// Where it fits: most list pages in both panels.
+// How it works: ViewDrawer shows label/value facts (empty ones are left out); DeleteConfirm asks first and offers Undo.
+
 import React from "react";
 import { Button, Confirm, Drawer, useToast } from "../core/ui";
-
-// One pattern on every list page: list → view drawer → edit → delete with Confirm and an undo toast.
 
 // toast with an Undo button; stays up a little longer than a normal toast
 export function useUndo() {

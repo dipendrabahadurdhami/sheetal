@@ -1,4 +1,6 @@
-// Location helpers shared by the website and the business app.
+// Location helpers for the website and the business panel: approximate points, distances, map links.
+// How it works: sale and rent listings show a point moved 150–350 m in a direction fixed by the listing (stable on
+// every visit, never the property itself) with a ~500 m circle; the website API uses the same method.
 
 const hash = (s) => { let h = 2166136261; for (const c of String(s)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
 

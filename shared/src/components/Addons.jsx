@@ -1,3 +1,7 @@
+// Paid add-ons on top of a plan: the list, the admin editor and the business's buying screen.
+// Where it fits: Admin → Add-ons and the business panel's billing area (sample data for now, marked Preview).
+// How it works: Sheetal sets each add-on's price, unit and which business types may buy it.
+
 import React, { useState } from "react";
 import { useT } from "../core/i18n";
 import { useStore } from "../core/store";
@@ -7,7 +11,6 @@ import { Icon } from "../core/icons";
 import { BUSINESS_TYPES } from "../core/rbac";
 import { isAllAccess, planOf } from "../core/plans";
 
-// Paid add-ons on top of a plan. Super admin sets price, unit and which business types can buy them.
 export const ADDONS = [
   { id: "pos", icon: "store", price: 1500, unit: "outlet", types: ["hotel", "host"], includedIn: ["hotel-pro"] },
   { id: "seats", icon: "users", price: 300, unit: "seat", types: ["hotel", "host", "developer", "agency", "sponsor"], includedIn: [] },

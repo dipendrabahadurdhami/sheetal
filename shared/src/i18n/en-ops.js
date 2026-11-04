@@ -1,4 +1,5 @@
-// Operations strings (POS, bookings, inbox). Merged into en in i18n.jsx.
+// English screen text for operations (POS, bookings, inbox). Merged into en.js.
+
 export default {
   "pos.front": "Front desk", "pos.restaurant": "Restaurant and bar", "pos.extras": "Extras", "pos.shift": "Shift",
   "pos.shiftOpen": "Shift open", "pos.shiftClosed": "Shift closed", "pos.shiftOpenBy": "Shift opened by {name} at {at}",

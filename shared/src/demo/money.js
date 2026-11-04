@@ -1,5 +1,6 @@
-// Invoices a business sends its own customers: drafts, sent invoices, credit notes and receipts.
-// Lives in db.money[tenantId].invoices. Workspaces without their own list start from this sample.
+// Sample customer invoices (drafts, sent invoices, credit notes, receipts) for the business panel.
+// Where it fits: Customer invoices (sample data for now, marked Preview).
+
 import { TODAY } from "../core/format";
 
 const DAY = TODAY.slice(0, 10);

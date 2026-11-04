@@ -1,11 +1,14 @@
+// Roles and access: the role list, and each role's name and grouped permissions.
+// Where it fits: the business panel's Roles page and the admin panel's staff roles.
+// How it works: permissions are grouped by area; a save bar appears when something changed.
+// Rules: the Owner role (all permissions) is locked.
+
 import React, { useState } from "react";
 import { useT } from "../core/i18n";
 import { permCount, roleDesc, roleName } from "../core/rbac";
 import { Button, Checkbox, Confirm, Field, Input, useToast } from "../core/ui";
 import { Icon } from "../core/icons";
 
-// Roles and access: role list on the left, name + grouped permissions on the right, save bar at the bottom.
-// Shared by business workspaces and Sheetal staff. Only the Owner role (perms "*") is locked.
 export function RoleEditor({ roles, groups, counts, canManage, onSave, onCreate, onDelete, customAllowed = true }) {
   const t = useT();
   const toast = useToast();

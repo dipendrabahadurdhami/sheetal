@@ -1,8 +1,9 @@
+// A small router for the three front-ends (no library).
+// How it works: "history" mode for the real site (/, /business, /admin), "hash" mode for static previews.
+
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { config } from "./config";
 
-// Dependency-free router. mode "history" for the real site (/admin, /business),
-// mode "hash" for static previews. Swap for react-router later if wanted.
 const Ctx = createContext({ path: "/", navigate: () => {}, mode: "history" });
 const read = (mode) => (mode === "hash" ? window.location.hash.slice(1) || "/" : window.location.pathname);
 

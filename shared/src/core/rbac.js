@@ -1,5 +1,7 @@
-// Permissions, role templates and business types.
-// Labels live in i18n: perm.<id>, permgroup.<module>, role.<key>, roledesc.<key>.
+// Permissions, role templates and business types for the screens.
+// Where it fits: menus and buttons hide what a role can't do (the server checks again).
+// How it works: can(role, perm) and canAny(role, perms); labels come from i18n (perm.*, role.*).
+// Rules: keep in step with backend-core/src/domain/permissions.ts; a test fails if they differ.
 
 export const BUSINESS_TYPES = {
   hotel: { icon: "bed-double" },

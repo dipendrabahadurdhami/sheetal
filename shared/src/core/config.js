@@ -1,4 +1,7 @@
-// App-level config. The host app can override before rendering <PlatformApp />.
+// App-level settings shared by the three front-ends (logo, base paths, demo switches).
+// Where it fits: each app's main.jsx sets its own values before rendering.
+// Rules: `demo` must be false in production (it shows "Reset demo" and the role switcher to everyone).
+
 export const config = {
   logo: "/brand/logo-mark.png",
   storageKey: "shetal_platform_demo",

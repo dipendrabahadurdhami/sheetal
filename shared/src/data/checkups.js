@@ -1,5 +1,6 @@
-// Listing check-ups: team members confirm a few listings every day so information stays correct.
-// The same rules run in the backend's daily job; the business page uses them to show today's list.
+// Listing check-ups: team members confirm a few listings every day so the information stays correct.
+// Where it fits: Business → Listing check-ups and the dashboard's to-do count.
+// How it works: works out today's list from each listing's due date and the business's check-up settings.
 
 export const CHECKUP_DEFAULTS = {
   reviewers: "all",      // "all" = everyone who manages listings, or a list of member ids

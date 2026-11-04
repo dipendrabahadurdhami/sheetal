@@ -1,4 +1,5 @@
-// Nepali. Missing keys fall back to English automatically.
+// Nepali screen text. Keys missing here fall back to English.
+
 export default {
   "mk.clear": "फिल्टर हटाउनुहोस्", "mk.pricePerNight": "प्रति रात मूल्य", "mk.rating": "पाहुना मूल्याङ्कन", "mk.amenities": "सुविधाहरू",
   "mk.stay": "बसाइ", "mk.projects": "परियोजना", "mk.invest": "लगानी", "mk.partners": "साझेदार", "mk.saved": "सुरक्षित", "mk.map": "नक्सा", "mk.request": "माग पोस्ट गर्नुहोस्", "mk.help": "सहायता", "mk.legal": "कानुनी",

@@ -1,3 +1,7 @@
+// Languages (English and Nepali): the language switch and the t() function for screen text.
+// Where it fits: every screen uses useT(); the language button in the top bar switches.
+// How it works: texts live in shared/src/i18n; a key missing in Nepali falls back to English.
+
 import React, { createContext, useContext, useMemo } from "react";
 import en from "../i18n/en";
 import ne from "../i18n/ne";

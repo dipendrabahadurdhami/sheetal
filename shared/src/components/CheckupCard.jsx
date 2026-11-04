@@ -1,12 +1,13 @@
+// One listing check-up as a compact, phone-style card.
+// Where it fits: Business → Listing check-ups, and the website when a team member opens a listing they manage.
+// How it works: shows what to confirm (price, status, photos) and the actions to keep the listing fresh.
+
 import React, { useState } from "react";
 import { useStore } from "../core/store";
 import { TODAY, fdate, rsShort } from "../core/format";
 import { Badge, Button } from "../core/ui";
 import { Icon } from "../core/icons";
 import { EXTEND_OPTIONS, addMonths, checkupsOf, daysBetween } from "../data/checkups";
-
-// One listing check-up as a compact, phone-style card. Used in Business → Listing check-ups
-// and on the public website when a team member opens a listing they manage.
 
 const today = TODAY.slice(0, 10);
 

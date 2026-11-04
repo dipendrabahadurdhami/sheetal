@@ -1,5 +1,6 @@
-// Day-to-day operations of one business: rooms, menu, tables, extras, bookings, the open shift and
-// conversations. Every business starts empty; the backend fills these from real activity.
+// A business's day-to-day data in the store: rooms, menu, tables, bookings, the open shift, conversations.
+// How it works: every business starts empty; the live loaders fill it from the APIs.
+
 export function emptyOps() {
   return {
     rooms: [], menu: [], tables: [], extras: [], bookings: [], conversations: [],

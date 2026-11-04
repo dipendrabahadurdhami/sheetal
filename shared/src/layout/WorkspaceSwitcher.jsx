@@ -1,10 +1,10 @@
+// The business at the top of the sidebar, and the list to switch businesses.
+// How it works: shows the business's logo (or initials) and name; the menu lists each business with its type and
+// the person's role there, and can offer "Add a business".
+
 import React from "react";
 import { Icon } from "../core/icons";
 import { Menu } from "../core/ui";
-
-// The business at the top of the sidebar: its logo and name; clicking the name lists the person's businesses,
-// each with its type (hotel, developer…) and the person's role there, since the menu and access change with both.
-// `big` is used when the business has its own branding and takes Sheetal's logo spot.
 
 const initials = (name) => name.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 

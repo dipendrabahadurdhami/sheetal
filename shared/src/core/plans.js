@@ -1,5 +1,8 @@
-// Plan rules used by every app. What a business can do depends on its type and its plan:
-// Starter (free) — one listing, the basics. Business — the tools of its own type. Pro — every kind and module.
+// Plan rules used by every front-end: what a business can do on Starter, Business or Pro.
+// How it works: Starter is free with one listing and the basics; Business has its type's tools; Pro has every kind
+// and module. Paid periods are 1, 3, 6 or 12 months, longer ones cheaper.
+// Rules: keep in step with backend-core/src/domain/plans.ts (the server's copy decides).
+
 import { BUSINESS_TYPES } from "./rbac";
 
 export const PLAN_FEATURES = ["all_kinds", "pos", "channel_sync", "agreements", "custom_roles", "multi_property", "api"];

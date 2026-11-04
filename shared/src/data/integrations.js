@@ -1,9 +1,6 @@
-// Platform integrations: every outside service Sheetal connects to, set up from Admin → Setup center.
-// Each one is a list of steps; its status comes from the steps:
-//   off    — nothing done yet ("Not set up")
-//   review — started, or waiting on someone else (DNS, Meta review, template approval) ("In review")
-//   done   — every step finished ("Setup complete")
-// The backend stores the same shape and fills the "check" results; secrets are write-only (shown as ••••).
+// Platform integrations (email, WhatsApp, Meta, Google, AI, voice): their set-up steps and status.
+// Where it fits: Admin → Setup center (the parts not yet on the server are marked Preview).
+// How it works: each integration is a list of steps; its status is "Not set up", "In review" or "Setup complete".
 
 export const API_BASE = "https://api.sheetalproperty.com";
 

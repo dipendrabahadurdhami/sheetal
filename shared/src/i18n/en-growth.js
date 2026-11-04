@@ -1,3 +1,5 @@
+// English screen text for growth tools (promote, social, AI, analytics). Merged into en.js.
+
 export default {
   "pub.s_completed": "Completed", "pub.s_confirmed": "Confirmed", "pub.s_reserved": "Reserved",
   "landing.public": "Public booking site", "landing.publicSub": "A business's own site, checkout and the customer account", "menu.mySite": "View my booking site",

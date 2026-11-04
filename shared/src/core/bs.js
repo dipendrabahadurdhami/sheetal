@@ -1,5 +1,7 @@
-// Approximate AD → BS (Bikram Sambat) for display. Month lengths change every year;
-// replace with the official calendar table (e.g. nepali-date-converter) before going live.
+// Approximate AD → BS (Bikram Sambat) dates for display.
+// Rules: month lengths change every year; replace with the official calendar table (e.g. nepali-date-converter)
+// before relying on it for documents.
+
 const NEW_YEAR = { 2082: "2025-04-14", 2083: "2026-04-14", 2084: "2027-04-14", 2085: "2028-04-13" };
 const LEN = [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30];
 const MONTHS = ["बैशाख", "जेठ", "असार", "साउन", "भदौ", "असोज", "कात्तिक", "मंसिर", "पुस", "माघ", "फागुन", "चैत"];

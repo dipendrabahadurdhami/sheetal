@@ -1,3 +1,8 @@
+// The person's own pages: notifications (bell and page), notification preferences and My profile.
+// Where it fits: both panels' bell, Notifications page and profile menu.
+// How it works: signed in, notifications come from the server (useServerNotifs, checked every minute); in the sample
+// workspace they come from sample data (useNotifs).
+
 import React, { useEffect, useMemo, useState } from "react";
 import { useStore } from "../core/store";
 import { useRouter } from "../core/router";

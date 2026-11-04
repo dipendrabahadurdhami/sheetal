@@ -1,3 +1,8 @@
+// The UI kit: buttons, badges, panels, page headings, stats, tables, tabs, fields, inputs, menus, drawers, modals,
+// confirmations and toasts.
+// Where it fits: every screen in both panels.
+// How it works: plain React components styled by shared/src/styles.
+
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Icon } from "./icons";
 import { useT } from "./i18n";

@@ -1,3 +1,5 @@
+// English screen text: navigation, common words and the main pages. Other en-*.js files are merged into it.
+
 export default {
   // brand + landing
   "brand.admin": "SUPER ADMIN", "brand.business": "BUSINESS", "brand.adminTitle": "Sheetal control panel",

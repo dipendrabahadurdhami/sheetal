@@ -1,7 +1,7 @@
-// Selling on other sites (Booking.com, Airbnb …), run by Sheetal.
-// Sheetal holds ONE partner account (contract, verification, payouts) with each site.
-// A business never signs up with the site itself: from a listing it asks Sheetal to post it,
-// and the Sheetal channel team sets it up under Sheetal's account and turns it live.
+// Selling on other sites (Booking.com, Airbnb…) through Sheetal's own partner accounts.
+// Where it fits: the business panel's listing actions and the admin panel's Channels page (sample data for now).
+// How it works: a business asks Sheetal to post a listing; the channel team sets it up under Sheetal's account.
+
 export const OTAS = [
   { id: "booking", name: "Booking.com", days: "3–5 days" },
   { id: "airbnb", name: "Airbnb", days: "2–4 days" },
