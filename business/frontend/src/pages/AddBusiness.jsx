@@ -1,11 +1,12 @@
+// "Add a business" form in the business switcher.
+// How it works: name, type and city; the person becomes its owner. It starts on Starter, or on Pro when the person
+// already owns a Pro business, and opens straight away.
+
 import React, { useState } from "react";
 import { useT } from "@sheetal/shared/core/i18n";
 import { Button, Field, Input, Modal, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { addBusiness } from "../live";
-
-// Another business for the signed-in person (they become its owner). Each business has its own type, menu,
-// team, branches and plan; it starts on the free Starter plan and can be upgraded from its own billing page.
 
 const TYPES = [
   ["agency", "briefcase", "Sells and rents property for owners"],

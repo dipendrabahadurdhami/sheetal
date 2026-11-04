@@ -1,10 +1,10 @@
+// Growth tools on the business API: connected chat channels, calendar sync with other sites, the AI lead finder and
+// analytics.
+
 import React, { useEffect, useState } from "react";
 import { fdatetime } from "@sheetal/shared/core/format";
 import { Badge, Button, Empty, Field, Input, PageHead, Panel, Select, Stat, Table, Textarea, useToast } from "@sheetal/shared/core/ui";
 import { bizApi } from "../api";
-
-// On the business API: connected channels (WhatsApp, Messenger, Instagram), calendar sync with Booking.com /
-// Airbnb / Agoda / Expedia, the AI lead finder, and analytics.
 
 function useApi(path, deps = []) {
   const [data, setData] = useState(null);

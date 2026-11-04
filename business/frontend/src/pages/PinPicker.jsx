@@ -1,3 +1,6 @@
+// The map pin for a listing: tap to place, drag to adjust, or use the device's location.
+// Rules: stays show this exact pin to the public; other kinds show only an approximate area.
+
 import React, { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -5,8 +8,6 @@ import { Button } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { showsExactLocation } from "@sheetal/shared/data/catalog";
 
-// Tap the map to place the listing's exact pin, drag to adjust, or use the device location.
-// Stays: the public sees this pin. Other kinds: the public sees only an approximate area.
 const KATHMANDU = [27.7172, 85.324];
 const pin = L.divIcon({ className: "loc-pin", iconSize: [30, 40], iconAnchor: [15, 40],
   html: '<svg width="30" height="40" viewBox="0 0 30 40" aria-hidden="true"><path d="M15 0C6.7 0 0 6.7 0 15c0 11 15 25 15 25s15-14 15-25C30 6.7 23.3 0 15 0z"/><circle cx="15" cy="15" r="6"/></svg>' });

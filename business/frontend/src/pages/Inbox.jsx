@@ -1,3 +1,7 @@
+// The Inbox: one place for every conversation, each also a lead in the pipeline.
+// How it works: signed in, conversations are the business's leads (website enquiries, chat channels, the lead finder)
+// for the branches in view; stage, assignee and follow-up changes and replies go to the business API.
+
 import React, { useState } from "react";
 import { DataActions } from "@sheetal/shared/components/DataIO";
 import { useT } from "@sheetal/shared/core/i18n";
@@ -10,9 +14,6 @@ import { Icon } from "@sheetal/shared/core/icons";
 import { useOps } from "./POS";
 import { isLive, liveLeads } from "../live";
 
-// One inbox for every channel; every conversation is also a lead in the pipeline.
-// For a business on the API (../live.js) the conversations are its website enquiries, and stage, assignee and
-// follow-up changes and replies (sent by email) go to the business API.
 export const CHANNELS = {
   whatsapp: { icon: "message-circle", label: "WhatsApp" }, messenger: { icon: "facebook", label: "Messenger" }, instagram: { icon: "instagram", label: "Instagram" },
   website: { icon: "house", label: "Website enquiry" }, web: { icon: "globe", label: "Web chat" }, sms: { icon: "smartphone", label: "SMS" }, email: { icon: "mail", label: "Email" },

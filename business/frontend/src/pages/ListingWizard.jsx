@@ -1,3 +1,7 @@
+// The listing wizard (every listing kind) and the Listings page wrapper.
+// How it works: one wizard renders every kind from listingForms.js, mostly with taps (chips, counters, quick prices);
+// photos upload as they are picked. Signed in, a new listing goes to the branch picked at the top, or asks which one.
+
 import React, { useRef, useState } from "react";
 import { DataActions } from "@sheetal/shared/components/DataIO";
 import { useLang, useT } from "@sheetal/shared/core/i18n";
@@ -14,8 +18,6 @@ import { kindsFor, planOf } from "@sheetal/shared/core/plans";
 import { isLive, liveListings, uploadListingPhoto } from "../live";
 import { useBranch } from "@sheetal/shared/core/branch";
 
-// One wizard renders every listing kind from listingForms.js.
-// Almost everything is a tap: chips with icons, counters, segments, quick prices.
 export function ListingWizard({ tenant }) {
   const t = useT();
   const lang = useLang();

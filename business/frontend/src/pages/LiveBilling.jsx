@@ -1,3 +1,7 @@
+// Plan and billing on the business API: the plan, paying (eSewa, Khalti, Fonepay, bank transfer) and invoices.
+// How it works: the gateway sends the payer back to /business/billing/return/<provider>/<payment> (BillingReturn),
+// which asks the API to check the result. Also offers to join the owner's Pro plan.
+
 import React, { useCallback, useEffect, useState } from "react";
 import { useStore } from "@sheetal/shared/core/store";
 import { fdate, rs } from "@sheetal/shared/core/format";
@@ -7,9 +11,6 @@ import { planFeatureList } from "@sheetal/shared/core/plans";
 import { config } from "@sheetal/shared/core/config";
 import { bizApi, fileToBase64 } from "../api";
 import { workRefresh, workspacesReload } from "../live";
-
-// Billing on the business API: the plan, paying by eSewa, Khalti, Fonepay or bank transfer, and invoices.
-// Gateways send the payer back to /business/billing/return/<provider>/<payment> (BillingReturn below).
 
 const PERIOD_LABEL = { 1: "1 month", 3: "3 months", 6: "6 months", 12: "1 year" };
 const METHOD_ICON = { esewa: "wallet", khalti: "wallet", fonepay: "qr-code", manual: "landmark" };

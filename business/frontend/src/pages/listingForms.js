@@ -1,7 +1,7 @@
-// Listing form definitions, one per listing kind.
-// Field types: choice, multi, counter, seg, text, number, price, land, location, map,
-// photos, docs, toggle, repeat, story. Labels are [English, Nepali].
-// `src` = catalog key, or (values, catalog) => items. `when` = (values) => show?
+// The listing forms: which questions the wizard asks for each listing kind.
+// How it works: field types are choice, multi, counter, seg, text, number, price, land, location, map, photos, docs,
+// toggle, repeat and story; labels are [English, Nepali]; `src` names a catalog list; `when` decides if a field shows.
+// summaryOf() turns the answers into the readable fields the website shows.
 
 import { areaToSqft, sqftToHill } from "@sheetal/shared/data/catalog";
 

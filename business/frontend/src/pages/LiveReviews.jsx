@@ -1,11 +1,11 @@
+// Reviews on the business API: what people said about the business and its listings, with public replies.
+// How it works: replies show under the review on the website and the reviewer is told.
+
 import React, { useEffect, useState } from "react";
 import { fdate } from "@sheetal/shared/core/format";
 import { Button, Empty, PageHead, Panel, Stat, Textarea, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { bizApi } from "../api";
-
-// Reviews people left on the website about the business and its listings, answered here in public: the reply shows
-// under the review on the website, and the reviewer is told.
 
 const Stars = ({ n, size = 14 }) => (
   <span className="pf-stars" aria-label={`${n} out of 5 stars`}>{[1, 2, 3, 4, 5].map((i) => <Icon key={i} name="star" size={size} className={i <= Math.round(n) ? "on" : ""} />)}</span>

@@ -1,9 +1,12 @@
+// The setup checklist: what a new business needs before it is ready to sell (verify, profile, logo, payments, first
+// listing, team, domain).
+// How it works: each step is worked out from the business's real data.
+
 import { useStore } from "@sheetal/shared/core/store";
 import { Link, useRouter } from "@sheetal/shared/core/router";
 import { Button, Panel } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 
-// What a new business needs before it is ready to sell. Each step is worked out from real data.
 export function setupSteps(db, tenant) {
   const saved = db.tenantSettings?.[tenant.id];
   const pay = saved?.payments;

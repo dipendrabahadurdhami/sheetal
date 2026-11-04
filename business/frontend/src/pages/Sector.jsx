@@ -1,3 +1,7 @@
+// Sample screens for sector tools: projects and instalments, collections, investors, renewals, reviews, expenses and
+// stock. Signed-in businesses use the live screens where they exist (LiveOps, LiveReviews).
+// How it works: L(key, english) keeps the text translatable.
+
 import React, { useState } from "react";
 import { DataActions } from "@sheetal/shared/components/DataIO";
 import { useT } from "@sheetal/shared/core/i18n";
@@ -9,8 +13,6 @@ import { Bars, Donut } from "@sheetal/shared/core/charts";
 import { LinkChip } from "@sheetal/shared/layout/Links";
 import { DeleteConfirm, ViewDrawer, restoreAt, useUndo } from "@sheetal/shared/components/Crud";
 
-// Sector tools: developer projects + instalments, collections, sponsor investors, agent renewals,
-// reviews, expenses with profit and loss, and stock. `L(key, english)` keeps copy translatable.
 const useL = () => { const t = useT(); return (k, en, v) => { const s = t(k, v); if (s !== k) return s; let o = en; if (v) for (const x in v) o = o.split(`{${x}}`).join(v[x]); return o; }; };
 const useSec = (tid, key, seed) => {
   const { db, update } = useStore();

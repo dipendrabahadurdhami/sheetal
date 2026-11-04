@@ -1,3 +1,6 @@
+// Ads, boosts and search ranking on the website (sample data, marked Preview).
+// How it works: Sheetal sets slots, prices and ranking weights; businesses promote listings and see the results.
+
 import React, { useState } from "react";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
@@ -5,8 +8,6 @@ import { fdate, inDays, rs } from "@sheetal/shared/core/format";
 import { Badge, Button, Drawer, Field, Input, PageHead, Panel, Seg, Stat, Table, Tabs, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 
-// Ads, boosts and search ranking on sheetalproperty.com. Super admin sets slots, prices and ranking weights;
-// every business can promote its listings and see what it got for the money.
 export const SLOTS = [
   { id: "home_hero", icon: "image", price: 2500, unit: "day", stock: 3 },
   { id: "home_featured", icon: "star", price: 900, unit: "day", stock: 8 },

@@ -1,12 +1,12 @@
+// Settings → Verification: send the company registration and PAN/VAT certificate to Sheetal for the Verified badge.
+// Rules: the files stay private (only settings people here and Sheetal staff open them) and lock while checked.
+
 import React, { useEffect, useState } from "react";
 import { fdate, fdatetime } from "@sheetal/shared/core/format";
 import { Badge, Button, Empty, PageHead, Panel, Select, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { bizApi, fileToBase64, formatBytes } from "../api";
 import { workspacesReload } from "../live";
-
-// Business verification: send the company registration and PAN/VAT certificate to Sheetal; once checked, a Verified
-// badge shows on the website. The files stay private: only people who manage settings here, and Sheetal staff, open them.
 
 const KINDS = [["registration", "Company registration certificate"], ["pan", "PAN / VAT certificate"], ["owner_id", "Owner's ID (citizenship or passport)"], ["other", "Other document"]];
 const kindName = (k) => KINDS.find(([id]) => id === k)?.[1] || k;

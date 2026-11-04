@@ -1,3 +1,6 @@
+// Plan and billing in the sample workspace, the read-only screen for suspended businesses, and backup export.
+// Where it fits: signed-in businesses see LiveBilling instead.
+
 import React, { useState } from "react";
 import { ImportDrawer, TEMPLATES, downloadTemplate } from "@sheetal/shared/components/DataIO";
 import { useT } from "@sheetal/shared/core/i18n";
@@ -10,7 +13,6 @@ import { BusinessAddons } from "@sheetal/shared/components/Addons";
 import { isLive } from "../live";
 import { LiveBilling } from "./LiveBilling";
 
-// On the business API (signed in), the real billing screen; otherwise the sample one.
 export function BusinessBilling({ tenant, canManage }) {
   return isLive(tenant.id) ? <LiveBilling tenant={tenant} canManage={canManage} /> : <SampleBilling tenant={tenant} canManage={canManage} />;
 }

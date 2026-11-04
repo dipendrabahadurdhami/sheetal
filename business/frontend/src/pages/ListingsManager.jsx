@@ -1,3 +1,7 @@
+// Listings: find, edit, duplicate, pause, publish, archive, mark sold and delete every listing.
+// How it works: signed in, every action goes to the business API and new or edited listings wait for Sheetal's review
+// ("In review"); "Needs changes" shows the reviewer's note. With All branches picked, each shows its branch.
+
 import React, { useMemo, useState } from "react";
 import { useT, useLang } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
@@ -11,10 +15,6 @@ import { OtaCell, OtaDrawer, isStayListing } from "./OtaPanel";
 import { atListingCap, listingCap, planOf } from "@sheetal/shared/core/plans";
 import { isLive, liveListings, useListingPage } from "../live";
 
-// Listings: one place to find, edit, duplicate, pause, publish, archive and delete every listing.
-// "Needs review" holds listings imported from the old site until someone checks and publishes them.
-// For a business on the API (../live.js) every action goes to the business API, and new or edited listings wait
-// for Sheetal's review ("In review"); "Needs changes" shows the reviewer's note.
 const STATUS = [["all", "All statuses"], ["needs_review", "Needs review"], ["published", "Live"], ["in_review", "In review"], ["draft", "Draft"], ["paused", "Paused"], ["rejected", "Needs changes"], ["sold", "Sold"], ["rented", "Rented out"], ["archived", "Archived"]];
 const nextId = (list) => "L-" + (Math.max(1100, ...list.map((l) => Number(String(l.id).replace(/\D/g, "")) || 0)) + 1);
 

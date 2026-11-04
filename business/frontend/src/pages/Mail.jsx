@@ -1,3 +1,7 @@
+// The Email page: each person's mailbox and the shared ones they answer.
+// How it works: owners and managers can open every team mailbox; reading an email lowers the unread count in the top
+// bar. Mail between Sheetal mailboxes arrives at once; other mail goes through Sheetal's mail server.
+
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "@sheetal/shared/core/router";
 import { fdatetime } from "@sheetal/shared/core/format";
@@ -5,10 +9,6 @@ import { Badge, Button, Drawer, Empty, Field, Input, PageHead, Select, Textarea,
 import { Icon } from "@sheetal/shared/core/icons";
 import { bizApi, bizApiReady, fileToBase64, formatBytes, signedIn } from "../api";
 import { mailCountRefresh } from "../live";
-
-// Team email: each person's mailbox and the shared ones they answer (info@, sales@); owners and managers can
-// open every team mailbox. Mail between Sheetal mailboxes arrives at once; mail to anyone else goes through
-// Sheetal's mail server. Storage is shared by the whole business (1 GB on paid plans).
 
 const FOLDERS = [["inbox", "Inbox", "inbox"], ["sent", "Sent", "send"], ["drafts", "Drafts", "file-pen-line"], ["archive", "Archive", "archive"], ["spam", "Spam", "shield-alert"], ["trash", "Trash", "trash-2"]];
 const MAX_ATTACH = 20 * 1024 * 1024;

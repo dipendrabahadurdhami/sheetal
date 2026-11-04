@@ -1,3 +1,7 @@
+// Paperless agreements (sample data for now, marked Preview).
+// How it works: templates follow how deals are done on paper in Nepal; the legal wording is a slot the company's
+// lawyer fills (see the legal note on every document).
+
 import React, { useState } from "react";
 import { useLang, useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
@@ -10,8 +14,6 @@ import { LinkChip } from "@sheetal/shared/layout/Links";
 import { DataActions } from "@sheetal/shared/components/DataIO";
 import { DeleteConfirm, restoreAt } from "@sheetal/shared/components/Crud";
 
-// Paperless agreements. Templates follow how deals are done on paper in Nepal;
-// the wording is a slot the company's lawyer fills (see legal note on every document).
 export const TEMPLATES = {
   baina: { icon: "hand-coins", types: ["agency", "developer", "owner"], parties: ["seller", "buyer"], docs: ["lalpurja", "citizenship", "charkilla", "trace", "tiro", "naksa"] },
   rent: { icon: "key-round", types: ["agency", "host", "owner"], parties: ["landlord", "tenant"], docs: ["citizenship", "lalpurja", "rent_tax"] },

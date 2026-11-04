@@ -1,3 +1,7 @@
+// Hotel, point of sale, projects, investors and the calendar on the business API (instead of the sample screens).
+// How it works: each screen loads from and saves to the API; the API keeps the rules (no double bookings, ID before
+// check-in, paid before check-out, menu prices, shifts, holds, night prices and closed dates).
+
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { fdate, fdatetime, rs } from "@sheetal/shared/core/format";
 import { can } from "@sheetal/shared/core/rbac";
@@ -5,10 +9,6 @@ import { Badge, Button, Drawer, Empty, Field, Input, PageHead, Panel, Select, St
 import { Icon } from "@sheetal/shared/core/icons";
 import { bizApi } from "../api";
 import { useBranch } from "@sheetal/shared/core/branch";
-
-// Hotels, POS, developer projects and sponsor investments on the business API (shown instead of the sample
-// screens when signed in). The API keeps the rules: no double bookings, ID before check-in, settle before
-// check-out, menu prices, shifts, holds and reservations.
 
 const today = () => new Date().toISOString().slice(0, 10);
 const plusDays = (n) => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);

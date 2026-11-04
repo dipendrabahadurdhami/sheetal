@@ -1,3 +1,5 @@
+// Listing check-ups: a few listings a day per person, one card at a time, so the information stays correct.
+
 import React, { useState } from "react";
 import { useStore } from "@sheetal/shared/core/store";
 import { useRouter } from "@sheetal/shared/core/router";
@@ -9,7 +11,6 @@ import { Icon } from "@sheetal/shared/core/icons";
 import { CheckupCard, dueLabel, useCheckups } from "@sheetal/shared/components/CheckupCard";
 import { ACTIONS, checkupQueue, daysBetween, todaysList } from "@sheetal/shared/data/checkups";
 
-// Listing check-ups: a few listings a day per team member, one card at a time, so information stays correct.
 const today = TODAY.slice(0, 10);
 
 export function ListingCheckups({ tenant, role }) {

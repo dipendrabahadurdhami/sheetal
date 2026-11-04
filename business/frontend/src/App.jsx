@@ -1,3 +1,6 @@
+// Top of the business panel: store, language, theme and router, then BusinessApp.
+// How it works: each app keeps its own theme choice through <html data-theme> (see shared/src/core/theme.js).
+
 import React from "react";
 import { StoreProvider, useStore } from "@sheetal/shared/core/store";
 import { I18nProvider } from "@sheetal/shared/core/i18n";

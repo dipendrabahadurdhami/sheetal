@@ -1,3 +1,5 @@
+// Customer invoices (drafts, credit notes, receipts, printable PDF) and payouts (sample data, marked Preview).
+
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { DataActions, exportCSV } from "@sheetal/shared/components/DataIO";
@@ -12,8 +14,6 @@ import { Link } from "@sheetal/shared/core/router";
 import { Counter } from "./ListingWizard";
 import { addDays, invoicesOf, invoiceFromRow, invoiceRow, nextNo, statusOf, totals } from "@sheetal/shared/demo/money";
 
-// Invoices the business sends its own customers (drafts, credit notes, receipts, printable PDF),
-// and payouts Sheetal sends the business.
 const DAY = TODAY.slice(0, 10);
 const ST = { draft: ["neutral", "Draft", "file-pen"], unpaid: ["progress", "Sent", "send"], partly: ["progress", "Part paid", "clock"], overdue: ["action", "Overdue", "circle-alert"], paid: ["done", "Paid", "check"], credit: ["neutral", "Credit note", "rotate-ccw"], cancelled: ["problem", "Cancelled", "ban"] };
 const InvStatus = ({ inv }) => { const [tone, label, icon] = ST[statusOf(inv)]; return <Badge tone={tone} icon={icon}>{label}</Badge>; };

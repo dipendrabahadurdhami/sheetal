@@ -1,3 +1,6 @@
+// Rentals for agencies that manage homes and shops for owners: units, tenants, leases, rent, repairs and owner
+// statements (sample data in db.pm[tenantId], marked Preview).
+
 import React, { useMemo, useState } from "react";
 import { useStore } from "@sheetal/shared/core/store";
 import { useRouter } from "@sheetal/shared/core/router";
@@ -7,8 +10,6 @@ import { Icon } from "@sheetal/shared/core/icons";
 import { DataActions } from "@sheetal/shared/components/DataIO";
 import { DeleteConfirm, restoreAt } from "@sheetal/shared/components/Crud";
 
-// Rentals: property management for agencies that look after homes and shops for owners.
-// Units, tenants and leases, monthly rent, repairs and owner statements. Data lives in db.pm[tenantId].
 const TODAY = NOW.slice(0, 10);
 const MONTH = TODAY.slice(0, 7);
 const D = (s) => new Date(s + "T00:00:00Z");

@@ -1,6 +1,10 @@
-// Calls the business API (business/backend). The login token is the one the website stores after signing in
-// (same site, same browser), so signing in once works for both.
-//   VITE_BUSINESS_API_URL  e.g. http://localhost:4001/v1 (in business/frontend/.env.local)
+// Calls to the business API (business/backend), used by every live screen.
+// Where it fits: bizApi(method, path, body) everywhere the panel talks to the server.
+// How it works: sends the sign-in token (the same one the website stores, so one sign-in covers both), the open
+// business (x-tenant-id) and the picked branch (x-branch); turns error replies into ApiError with the server's message.
+// Rules: set VITE_BUSINESS_API_URL in business/frontend/.env.local (e.g. http://localhost:4001/v1); without it the
+// panel shows the sample workspace only.
+
 const BASE = (import.meta.env.VITE_BUSINESS_API_URL || "").replace(/\/+$/, "");
 
 export const bizApiReady = () => !!BASE;

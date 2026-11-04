@@ -1,3 +1,7 @@
+// Business settings: profile, branding, payments, notifications, listing defaults and documents.
+// How it works: signed in, the profile saves on the server (it shows on the website, bills and invoices) and branding
+// uses BrandFromLogo; the other tabs are still saved in the browser (marked Preview).
+
 import React, { useState } from "react";
 import { isLive, profileOf, saveProfile } from "../live";
 import { BrandFromLogo } from "./BrandFromLogo";

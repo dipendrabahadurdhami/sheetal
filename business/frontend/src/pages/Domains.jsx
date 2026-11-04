@@ -1,14 +1,13 @@
+// Settings → Domain and email: the business's own email domain and mailboxes (owners and managers).
+// How it works: 1 add the domain, 2 add the DNS records shown at the domain provider, 3 check them, 4 create mailboxes
+// for team members and shared addresses (info@, sales@). Mail is read and written on the Email page.
+
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "@sheetal/shared/core/router";
 import { fdatetime } from "@sheetal/shared/core/format";
 import { Badge, Button, Drawer, Empty, Field, Input, PageHead, Panel, Select, Table, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { bizApi, bizApiReady, formatBytes, signedIn } from "../api";
-
-// Domain and email setup (owners and managers), on the business API:
-// 1 add your domain → 2 add the DNS records shown here at your domain provider → 3 check them (all green)
-// → 4 create a mailbox for each team member and shared addresses (info@, sales@) people answer together.
-// Mail is read and written on the Email page; Sheetal's mail server sends and receives it.
 
 const STATUS = { ok: ["Found", "done"], missing: ["Not added yet", "action"], wrong: ["Different value", "problem"], unchecked: ["Not checked", "neutral"] };
 

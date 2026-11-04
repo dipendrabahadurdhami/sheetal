@@ -1,3 +1,8 @@
+// AI tools screen in the sample workspace (listing from text, lead finder, blog writer, voice agent, Ask AI).
+// Where it fits: opened from the listing wizard and the AI pages; signed-in businesses use the server's AI instead
+// (business API /ai/*, see LiveGrowth.jsx).
+// How it works: returns ready-made sample results after a short pause, so the screens can be shown without an AI account.
+
 import React, { useState } from "react";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
@@ -8,10 +13,6 @@ import { Icon } from "@sheetal/shared/core/icons";
 import { isAllAccess, kindsFor } from "@sheetal/shared/core/plans";
 import { emptyOps } from "@sheetal/shared/demo/ops";
 
-// AI tools screen (listing from text, lead finder, blog writer, voice agent, Ask AI) in the sample workspace.
-// Where it fits: shown from the listing wizard and the AI pages; signed-in businesses use the server's AI
-// (business API /ai/*, see LiveGrowth.jsx) instead.
-// How it works: returns ready-made sample results after a short pause, so the screens can be shown without an AI account.
 async function ask(_prompt, fallback) {
   await new Promise((r) => setTimeout(r, 700));
   return typeof fallback === "function" ? fallback() : fallback;

@@ -1,3 +1,6 @@
+// The first-run tour and the Help page.
+// How it works: the tour shows once per business; it can be restarted from the account menu.
+
 import React, { useState } from "react";
 import { useT } from "@sheetal/shared/core/i18n";
 import { Link, useRouter } from "@sheetal/shared/core/router";

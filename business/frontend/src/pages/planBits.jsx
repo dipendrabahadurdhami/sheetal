@@ -1,3 +1,5 @@
+// What a page shows when the plan doesn't include it, or the listing limit is reached, and the "Advanced" section.
+
 import React from "react";
 import { useT } from "@sheetal/shared/core/i18n";
 import { Icon } from "@sheetal/shared/core/icons";

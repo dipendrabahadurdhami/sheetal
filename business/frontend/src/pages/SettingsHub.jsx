@@ -1,9 +1,10 @@
+// The Settings menu: every business setting in one list, also searchable with Ctrl K.
+
 import { useT } from "@sheetal/shared/core/i18n";
 import { Link, useRouter } from "@sheetal/shared/core/router";
 import { can } from "@sheetal/shared/core/rbac";
 import { Icon } from "@sheetal/shared/core/icons";
 
-// Every business setting in one place. Used by the Settings left menu and by Ctrl K search.
 export const settingsSections = (role, t) => [
   { group: "Business", items: [
     { id: "profile", to: "/business/settings/profile", icon: "building-2", label: t("bsettings.profile"), perm: "settings.business", keywords: "general name pan vat tax address phone email" },

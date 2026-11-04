@@ -1,3 +1,6 @@
+// People (attendance and leave), analytics in the sample workspace, and Website and API (developer keys).
+// Where it fits: sample screens (marked Preview); signed-in analytics use LiveAnalytics.
+
 import React, { useState } from "react";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";

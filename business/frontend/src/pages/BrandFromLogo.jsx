@@ -1,3 +1,7 @@
+// Settings → Branding: upload the logo and set the workspace colours from it (Business and Pro plans).
+// How it works: the logo is cleaned (background removed, saved as PNG) and its colours read in the browser, sorted
+// into brand, dark and light; each can be changed by hand. Saving applies them for everyone in the business.
+
 import React, { useState } from "react";
 import { useStore } from "@sheetal/shared/core/store";
 import { Button, useToast } from "@sheetal/shared/core/ui";
@@ -5,9 +9,6 @@ import { Icon } from "@sheetal/shared/core/icons";
 import { brandTheme, cleanLogo, extractPalette, fillRoles, rolesFrom, savedRoles } from "@sheetal/shared/core/palette";
 import { fileToBase64 } from "../api";
 import { saveBranding } from "../live";
-
-// Upload the logo: its colours are read in the browser and sorted into three roles (brand, dark, light), which can
-// be changed by hand. On saving, the whole workspace uses only those three colours, for everyone in the business.
 
 const loadImage = (url) => new Promise((ok, bad) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => bad(new Error("That file isn't a picture we can read.")); i.src = url; });
 

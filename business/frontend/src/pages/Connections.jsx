@@ -1,3 +1,7 @@
+// Channels and alerts, social sharing, the business's own AI accounts and the AI voice assistant (sample screens).
+// Where it fits: signed-in businesses connect real channels on LiveChannels (LiveGrowth.jsx); the rest is Preview.
+// How it works: connect and test buttons show what the result will look like.
+
 import React, { useState } from "react";
 import { useStore } from "@sheetal/shared/core/store";
 import { Link } from "@sheetal/shared/core/router";
@@ -5,10 +9,6 @@ import { inDays } from "@sheetal/shared/core/format";
 import { Badge, Button, Checkbox, Drawer, Empty, Field, Input, PageHead, Panel, Seg, Select, Table, Tabs, Textarea, ToggleRow, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { integrationsOf, STATUS_LABEL, STATUS_TONE } from "@sheetal/shared/data/integrations";
-
-// Channels and alerts, social sharing and the AI voice assistant for one business.
-// Demo note: connect/test buttons simulate the result; the backend does the real work
-// (WhatsApp service, Meta Graph API, voice engine) and saves the same fields.
 
 const later = (fn, ms = 900) => setTimeout(fn, ms);
 const Ok = ({ st }) => <Badge tone={STATUS_TONE[st]}>{STATUS_LABEL[st]}</Badge>;

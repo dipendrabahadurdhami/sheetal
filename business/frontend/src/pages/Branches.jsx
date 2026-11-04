@@ -1,3 +1,8 @@
+// Branches, plus a few older sample screens kept here (calendar, booking and invoice forms).
+// Where it fits: Settings → Branches. LiveBranches is the signed-in version (data from the business API); Branches
+// and the others show sample data.
+// How it works: branchesOf() gives a business's branches from the store, whichever mode the panel is in.
+
 import React, { useState } from "react";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";

@@ -1,10 +1,13 @@
+// The page a team invitation link opens (/business/accept-invite?token=…).
+// How it works: shows which business and role the invitation is for; the invited person signs in on the website
+// with that email, then accepts here.
+// Rules: the link only works for the invited email, once, within 7 days.
+
 import React, { useEffect, useState } from "react";
 import { Button, Empty } from "@sheetal/shared/core/ui";
 import { config } from "@sheetal/shared/core/config";
 import { bizApi, bizApiReady, signedIn } from "../api";
 
-// The link in a team invitation (/business/accept-invite?token=…). Shows which business and role it is for;
-// the invited person signs in on the website with that email, then accepts here.
 export function AcceptInvite() {
   const token = new URLSearchParams(window.location.search).get("token") || "";
   const [inv, setInv] = useState(null);

@@ -1,3 +1,6 @@
+// Online forms: templates, a drag-and-drop builder, publishing, responses, and the public form page (/business/f/:slug).
+// Where it fits: sample data for now (marked Preview).
+
 import React, { useEffect, useRef, useState } from "react";
 import { useStore } from "@sheetal/shared/core/store";
 import { useRouter, Link } from "@sheetal/shared/core/router";
@@ -11,7 +14,6 @@ import {
 import { defaultTenantSettings } from "./BusinessSettings";
 import { emptyOps } from "@sheetal/shared/demo/ops";
 
-// Online forms: list + templates, drag-and-drop builder, publish, responses, and the public form page (/business/f/:slug).
 const TYPE_WORD = { hotel: "hotels", host: "hosts", developer: "developers", agency: "agencies", sponsor: "investment sponsors" };
 const uniqueSlug = (list, slug, selfId) => { const b = slug || "form"; let s = b, i = 2; while (list.some((x) => x.id !== selfId && x.slug === s)) s = `${b}-${i++}`; return s; };
 const RANGE = ["number", "money"];

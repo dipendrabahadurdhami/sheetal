@@ -1,3 +1,5 @@
+// The team structure: who reports to whom, by branch.
+
 import React from "react";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";

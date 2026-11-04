@@ -1,13 +1,15 @@
+// Loads a signed-in person's real data into the panel and sends their changes to the business API.
+// Where it fits: useLiveWorkspace() runs once in BusinessApp; screens keep reading the same store.
+// How it works: loads the person's businesses and role, then the open business's team, branches, listings, leads
+// and unread email (every minute); exports the actions screens call (team, listings, leads, branches, branding,
+// profile, add a business) and reload helpers.
+// Rules: isLive(tenantId) tells a screen whether to use the API or the sample data.
+
 import { useCallback, useEffect, useState } from "react";
 import { useStore } from "@sheetal/shared/core/store";
 import { emptyOps } from "@sheetal/shared/demo/ops";
 import { brandTheme } from "@sheetal/shared/core/palette";
 import { bizApi, bizApiReady, fileToBase64, setActiveTenant, signedIn } from "./api";
-
-// When someone is signed in, the panel shows their real businesses, their own role, and the team, roles and
-// invitations of the business they have open, from the business API. Screens still read the same store, so
-// nothing else changes for them; team actions call the API and then reload (see liveRefresh).
-// Listings and leads come from the API too. Modules not on the API yet (bookings…) keep their current data until their phase.
 
 const liveIds = new Set();
 let reload = null;

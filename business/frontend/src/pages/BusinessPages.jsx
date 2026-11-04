@@ -1,3 +1,7 @@
+// Overview dashboard, and the Team and Roles hubs.
+// How it works: the team and roles screens use the shared TeamPanel and RoleEditor; signed in, their actions go to the
+// business API.
+
 import { SetupPanel } from "./Setup";
 import { isLive, liveTeam } from "../live";
 import React from "react";

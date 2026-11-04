@@ -1,3 +1,5 @@
+// A listing's status on other sites (Booking.com, Airbnb…), as a cell in the listings table and a drawer.
+
 import React, { useState } from "react";
 import { useStore } from "@sheetal/shared/core/store";
 import { fdate, rs } from "@sheetal/shared/core/format";

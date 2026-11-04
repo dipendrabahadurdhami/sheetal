@@ -1,3 +1,11 @@
+// The business panel itself: the menu, the top bar, the switchers and every page's route and permission check.
+// Where it fits: rendered by App.jsx for every /business path.
+// How it works: picks the open business, the person's role and branch access; builds the menu for the business type,
+// plan and role; sends the picked branch with every API call; routes each path to its live screen when signed in,
+// or the sample screen otherwise.
+// Rules: PREVIEW lists the pages that still show sample data when signed in; remove a path once its page is on the
+// server. Each route keeps its permission guard.
+
 import { inkFor, btnInkFor } from "@sheetal/shared/core/contrast";
 import { Rentals } from "./Rentals";
 import { SetupChip } from "./Setup";
@@ -51,9 +59,6 @@ import { checkupsOf, todaysList } from "@sheetal/shared/data/checkups";
 import { TODAY } from "@sheetal/shared/core/format";
 import { opsOf } from "@sheetal/shared/demo/ops";
 
-// Business workspace at /business (later its own domain). One account can belong to several businesses.
-// Pages that still show sample data when signed in (nothing on them is saved on the server yet). They stay visible
-// as a preview, tagged in the menu and with a note on the page; remove a path here once its page is on the server.
 const PREVIEW = [
   "/business/agreements", "/business/forms", "/business/invoices", "/business/payouts", "/business/expenses",
   "/business/rentals", "/business/stock", "/business/promote", "/business/social", "/business/voice",

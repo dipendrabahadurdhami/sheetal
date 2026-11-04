@@ -1,3 +1,6 @@
+// Point of sale and bookings in the sample workspace (the sample hotel), and the useOps() data helper.
+// Where it fits: signed-in businesses use LivePOS and LiveBookings (LiveOps.jsx) instead.
+
 import React, { useMemo, useState } from "react";
 import { DataActions } from "@sheetal/shared/components/DataIO";
 import { OTA_RES, isOta, otaName, otaSplit } from "@sheetal/shared/data/ota";
