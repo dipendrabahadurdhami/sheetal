@@ -17,8 +17,8 @@ import { AdminPlans, TenantDetail } from "./AdminTenants";
 import { AdminSettings, AdminStaff } from "./AdminSystem";
 import { AdminCatalog } from "./AdminListingSetup";
 import { AdminAddons } from "@sheetal/shared/components/Addons";
-import { AdminCareers, AdminDemand, AdminEarnings, AdminMessages, AdminRequests, AdminVoice, Hub } from "./AdminGrowth";
-import { AdminAI, AdminAnalytics, AdminOrders } from "./AdminExtras";
+import { AdminCareers, AdminDemand, AdminEarnings, AdminLeads, AdminMessages, AdminRequests, AdminSocial, AdminVoice, Hub } from "./AdminGrowth";
+import { AdminAds, AdminAI, AdminAnalytics, AdminOrders } from "./AdminExtras";
 import { MyProfile, NotificationsPage, adminLive, useNotifs, useServerNotifs } from "@sheetal/shared/components/Me";
 import { AdminAudit, AdminBilling, AdminContent, AdminInbox, AdminModeration } from "./AdminOps";
 import { AdminChannels } from "./AdminChannels";
@@ -30,7 +30,7 @@ import { isStaffLive, useLiveStaff, useReviewQueue } from "../live";
 import { adminApi } from "../api";
 import { LiveAnalytics, LiveOutbox, LiveSetup, LiveStatus } from "./LiveSetup";
 
-const PREVIEW = ["/admin/ai", "/admin/voice", "/admin/messages", "/admin/earnings", "/admin/channels", "/admin/addons", "/admin/settings"];
+const PREVIEW = ["/admin/ai", "/admin/voice", "/admin/messages", "/admin/leads", "/admin/social", "/admin/earnings", "/admin/ads", "/admin/channels", "/admin/addons", "/admin/settings"];
 
 export default function AdminApp() {
   const t = useT();
@@ -53,6 +53,7 @@ export default function AdminApp() {
       { to: "/admin/moderation", icon: "shield-check", key: "nav.moderation", permAny: ["moderation.listings", "moderation.kyc"], count: pending, countTone: "action" },
       { to: "/admin/catalog", icon: "list-checks", key: "nav.catalog", perm: "content.edit" },
       { to: "/admin/content", icon: "newspaper", key: "nav.content", perm: "content.edit" },
+      { to: "/admin/ads", icon: "rocket", key: "nav.ads", perm: "content.edit" },
     ] },
     { group: "group.leads", items: [
       { to: "/admin/inbox", icon: "messages-square", key: "nav.inbox", perm: "tenants.view" },
@@ -73,11 +74,13 @@ export default function AdminApp() {
 
   const inboxHub = (start) => <Hub key={"inbox-" + (start || "")} start={start} title={t("nav.inbox")} sub={t("hub.inboxSub")} tabs={[
     { id: "inbox", label: t("hub.support"), icon: "messages-square", el: <AdminInbox /> },
+    { id: "leads", label: t("gl.master"), icon: "users", el: <AdminLeads /> },
     { id: "demand", label: t("nav.demand"), icon: "clipboard-list", el: <AdminDemand /> },
     { id: "requests", label: t("nav.requests"), icon: "calendar-check", el: <AdminRequests /> },
   ]} />;
   const contentHub = (start) => <Hub key={"content-" + (start || "")} start={start} title={t("nav.content")} sub={t("hub.contentSub")} tabs={[
     { id: "site", label: t("hub.pages"), icon: "newspaper", el: <AdminContent /> },
+    { id: "social", label: t("nav.social"), icon: "megaphone", el: <AdminSocial /> },
     { id: "careers", label: t("nav.careers"), icon: "briefcase", el: <AdminCareers /> },
   ]} />;
   const billingHub = (start) => <Hub key={"billing-" + (start || "")} start={start} title={t("nav.billing")} sub={t("hub.billingSub")} tabs={[
@@ -128,10 +131,13 @@ export default function AdminApp() {
         { path: "/admin/ai", render: () => guard("settings.platform", aiHub()) },
         { path: "/admin/voice", render: () => guard("settings.platform", aiHub("voice")) },
         { path: "/admin/messages", render: () => guard("settings.platform", aiHub("templates")) },
+        { path: "/admin/leads", render: () => guard("tenants.view", inboxHub("leads")) },
         { path: "/admin/demand", render: () => guard("tenants.view", inboxHub("demand")) },
         { path: "/admin/requests", render: () => guard("tenants.view", inboxHub("requests")) },
+        { path: "/admin/social", render: () => guard("content.edit", contentHub("social")) },
         { path: "/admin/careers", render: () => guard("content.edit", contentHub("careers")) },
         { path: "/admin/earnings", render: () => guard("billing.view", billingHub("earnings")) },
+        { path: "/admin/ads", render: () => guard("content.edit", <AdminAds />) },
         { path: "/admin/channels", render: () => guard("tenants.view", <AdminChannels />) },
         { path: "/admin/analytics", render: () => guard("dashboard.view", analyticsHub()) },
         { path: "/admin/addons", render: () => guard("plans.manage", <AdminAddons />) },

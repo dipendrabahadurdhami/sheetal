@@ -100,7 +100,8 @@ export function Inbox({ tenant }) {
                 {c.phone && <><dt>Phone</dt><dd className="tnum"><a href={`tel:${c.phone}`}>{c.phone}</a></dd></>}
               </dl>
               <div className="pf-stack tight">
-                <Button variant="outline" icon="calendar-plus" onClick={() => { toast(t("inbox.toastVisit")); (tenant.type === "hotel" || tenant.type === "host") && navigate("/business/bookings"); }}>{t("inbox.bookVisit")}</Button>
+                <Button variant="outline" icon="calendar-plus" onClick={() => { toast(t("inbox.toastVisit")); navigate(tenant.type === "hotel" || tenant.type === "host" ? "/business/bookings" : "/business/agreements"); }}>{t("inbox.bookVisit")}</Button>
+                <Button variant="outline" icon="file-pen-line" onClick={() => navigate("/business/agreements")}>{t("inbox.makeAgreement")}</Button>
                 <Button variant="outline" icon="link" onClick={() => toast(t("inbox.toastPayLink"))}>{t("inbox.payLink")}</Button>
               </div>
             </aside>

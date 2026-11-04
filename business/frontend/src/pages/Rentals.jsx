@@ -282,6 +282,7 @@ export function Rentals({ tenant, tab = "overview" }) {
           <div className="pf-grid-2 tight"><Field label="Tenant name"><Input value={f.tenant || ""} onChange={set("tenant")} /></Field><Field label="Mobile"><Input className="input tnum" inputMode="tel" value={f.phone || ""} onChange={set("phone")} /></Field></div>
           <div className="pf-grid-2 tight"><Field label="Start date"><Input type="date" value={f.start || ""} onChange={set("start")} /></Field><Field label="Length"><Select value={f.months || "12"} onChange={set("months")} options={[["6", "6 months"], ["12", "1 year"], ["24", "2 years"], ["36", "3 years"]].map(([id, label]) => ({ id, label }))} /></Field></div>
           <div className="pf-grid-2 tight"><Field label="Monthly rent"><Input className="input tnum" inputMode="numeric" value={f.rent || ""} onChange={(e) => setF({ ...f, rent: e.target.value.replace(/\D/g, "") })} /></Field><Field label="Deposit" hint="Default: 2 months' rent" optional><Input className="input tnum" inputMode="numeric" value={f.deposit || ""} placeholder={f.rent ? String(Number(f.rent) * 2) : ""} onChange={(e) => setF({ ...f, deposit: e.target.value.replace(/\D/g, "") })} /></Field></div>
+          <Button variant="ghost" size="sm" icon="file-pen-line" onClick={() => navigate("/business/agreements")}>Open Agreements to send for signing</Button>
         </div>
       </Drawer>
 
