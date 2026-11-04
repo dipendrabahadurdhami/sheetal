@@ -9,12 +9,16 @@ import { TODAY, fdate, fdatetime } from "@sheetal/shared/core/format";
 import { Badge, Checkbox, Empty, Field, PageHead, Panel, Seg, Stat, Table, Tabs, ToggleRow, useToast, Button } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { isLive, saveSettings } from "../live";
+import { LiveCheckups } from "./LiveCheckups";
 import { CheckupCard, dueLabel, useCheckups } from "@sheetal/shared/components/CheckupCard";
 import { ACTIONS, checkupQueue, daysBetween, todaysList } from "@sheetal/shared/data/checkups";
 
 const today = TODAY.slice(0, 10);
 
-export function ListingCheckups({ tenant, role }) {
+// Signed in: the check-ups on the server, per branch (LiveCheckups.jsx); sample workspaces keep this browser version.
+export function ListingCheckups(props) { return isLive(props.tenant.id) ? <LiveCheckups {...props} /> : <SampleCheckups {...props} />; }
+
+function SampleCheckups({ tenant, role }) {
   const t = useT();
   const toast = useToast();
   const { db, update } = useStore();

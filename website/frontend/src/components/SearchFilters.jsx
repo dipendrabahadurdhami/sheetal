@@ -8,6 +8,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { request } from "../api/client";
 import { PROPERTY_TYPE_NAMES } from "../utils/listingOptions";
 import "./SearchFilters.css";
@@ -74,6 +75,7 @@ export function PriceBox({ min: minNow = "", max: maxNow = "", ranges = PRICE_RA
  *  or { title, price: { min, max, ranges, onRange } }. */
 export function FilterRail({ placeholder = "Locality, city or #code", keyword = "", onKeyword, active = 0, onClear, groups }) {
   const [kw, setKw] = useState(keyword);
+  const rail = useRef(null);
   const typing = useRef(false);
   // The box follows the address (back button, Clear all) unless the person is typing in it.
   useEffect(() => { if (!typing.current) setKw(keyword); }, [keyword]);
@@ -84,7 +86,7 @@ export function FilterRail({ placeholder = "Locality, city or #code", keyword = 
     return () => clearTimeout(t);
   }, [kw]);
   return (
-    <aside className="sfilters" aria-label="Filters">
+    <aside ref={rail} className="sfilters" aria-label="Filters">
       <div className="sf-top">
         <label className="sf-search">
           <Search size={15} aria-hidden="true" />
@@ -95,11 +97,11 @@ export function FilterRail({ placeholder = "Locality, city or #code", keyword = 
         </label>
         {active > 0 && <button type="button" className="sf-clear" onClick={onClear}>Clear all ({active})</button>}
       </div>
-      {groups.filter(Boolean).map((g) => (
+      <div className="sf-body">{groups.filter(Boolean).map((g) => (
         <Group key={g.title} title={g.title}>
           {g.price ? <PriceBox {...g.price} /> : <Checks options={g.options} value={g.value} onPick={g.onPick} multi={g.multi} limit={g.limit} />}
         </Group>
-      ))}
+      ))}</div>
     </aside>
   );
 }
@@ -127,11 +129,15 @@ const BEDS = ["1", "2", "3", "4", "5"];
 /** Buy, Rent and Search: counts from the website API. */
 export function SearchFilters({ purpose, q, set, setMany, clear, active }) {
   const f = useFacets(q, purpose);
+  const nav = useNavigate();
+  // Stay, Projects and Invest have their own pages: picking one goes there (a place typed in the search comes along).
+  const PAGES = { stay: "/stays", project: "/project", invest: "/investment/explore" };
+  const pickPurpose = (v) => { if (purpose !== "search" && v !== "stay" && v !== "project" && v !== "invest") { nav(v ? `/${v}` : "/search"); return; } if (PAGES[v]) { const k = v === "stay" ? "where" : v === "invest" ? "city" : "keyword"; nav(q.keyword ? `${PAGES[v]}?${k}=${encodeURIComponent(q.keyword)}` : PAGES[v]); } else set("advertisement_purpose", v); };
   const counted = (list) => (list || []).map((x) => [x.name, x.name, x.count]);
   const pricePurpose = purpose === "search" ? q.advertisement_purpose : purpose;
   return (
     <FilterRail keyword={q.keyword || ""} onKeyword={(v) => set("keyword", v)} active={active.length} onClear={clear} groups={[
-      purpose === "search" && { title: "Purpose", options: [["sale", "Buy", f?.purpose ? f.purpose.sale : null], ["rent", "Rent", f?.purpose ? f.purpose.rent : null]], value: q.advertisement_purpose || "", onPick: (v) => set("advertisement_purpose", v) },
+      { title: "Purpose", options: [["sale", "Buy", f?.purpose ? f.purpose.sale : null], ["rent", "Rent", f?.purpose ? f.purpose.rent : null], ["stay", "Stay", null], ["project", "Projects", null], ["invest", "Invest", null]], value: purpose === "search" ? q.advertisement_purpose || "" : purpose, onPick: pickPurpose },
       { title: "Property type", limit: 8, options: f?.property_type?.length ? counted(f.property_type) : PROPERTY_TYPE_NAMES.map((t) => [t, t, null]), value: q.property_type || "", onPick: (v) => set("property_type", v) },
       { title: "Price (Rs.)", price: { min: q.min_price || "", max: q.max_price || "", ranges: PRICE_RANGES[pricePurpose === "rent" ? "rent" : "sale"], onRange: (a, b) => setMany({ min_price: a, max_price: b }) } },
       { title: "Bedrooms", options: BEDS.map((b) => [b, `${b}+ bedrooms`, f?.bedrooms ? f.bedrooms[b] ?? 0 : null]), value: q.bedrooms || "", onPick: (v) => set("bedrooms", v) },

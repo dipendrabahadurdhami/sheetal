@@ -387,6 +387,10 @@ model Listing {
   checkDueAt    DateTime?      @map("check_due_at")
   lastCheckedAt DateTime?      @map("last_checked_at")
   lastCheckedBy String?        @map("last_checked_by")
+  /// A reviewer changed something today: off the website until the changes are decided (the team keeps working on it).
+  reviewHold     Boolean       @default(false) @map("review_hold")
+  /// Fields reviewers disagreed on, waiting for the owner: { field: [{ value, by: [userId] }] }.
+  reviewConflict Json?         @map("review_conflict")
   /// Sheetal's review: when it was sent for review, who decided, and the note sent back when changes are needed.
   submittedAt   DateTime?      @map("submitted_at")
   reviewedAt    DateTime?      @map("reviewed_at")
@@ -1303,4 +1307,27 @@ model OtaFeed {
 
   @@index([tenantId])
   @@map("ota_feeds")
+}
+
+/// One listing check-up by one team member on one day (Nepal time): all correct, skipped, or changed (with the new
+/// values). Changes of a day are decided together: the value most reviewers chose wins, otherwise the owner picks.
+model ListingReview {
+  id        String   @id @default(cuid())
+  tenantId  String   @map("tenant_id")
+  branchId  String?  @map("branch_id")
+  listingId Int      @map("listing_id")
+  userId    String   @map("user_id")
+  /// YYYY-MM-DD in Nepal time.
+  day       String
+  /// ok, change, skip
+  action    String
+  changes   Json     @default("{}")
+  decided   Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, day])
+  @@index([listingId, day])
+  @@index([userId, day])
+  @@index([tenantId, action, decided])
+  @@map("listing_reviews")
 }

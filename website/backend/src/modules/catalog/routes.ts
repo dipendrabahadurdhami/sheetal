@@ -17,7 +17,8 @@ import { isBotRequest } from "@sheetal/backend-core/lib/bots";
 import { agencyJson, listingCard, listingDetail, mediaBase, type AgencyRow, type ListingRow } from "./present.js";
 
 /** Listings visitors can see. Sold and rented ones stay visible with their label. */
-const LIVE: Prisma.ListingWhereInput = { status: { in: ["published", "sold", "rented"] } };
+// Listings a reviewer changed today stay off the website until the changes are decided (business check-ups).
+const LIVE: Prisma.ListingWhereInput = { status: { in: ["published", "sold", "rented"] }, reviewHold: false };
 /** Buy and rent pages show properties; stays, projects and investments have their own pages. */
 const PROPERTIES: Prisma.ListingWhereInput = { AND: [LIVE, { kind: { in: ["sell", "rentout"] } }] };
 /** Kinds with their own page on the website, by path. */

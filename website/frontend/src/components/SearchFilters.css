@@ -37,3 +37,67 @@
   border: 0 !important; outline: 0 !important; box-shadow: none !important; background: transparent !important;
   border-radius: 0 !important; padding: 0 !important; margin: 0 !important; height: 100% !important; min-height: 0 !important;
 }
+
+/* One sticky line: the search box (left) and the toolbar (right) share a top edge and a height of 40px, and stay
+   under the header together; the filter panel only scrolls away when the footer arrives. */
+.listing-layout { align-items: start !important; }
+.listing-layout > .sfilters { top: calc(var(--header-h) + 16px) !important; max-height: calc(100vh - var(--header-h) - 32px) !important; }
+.listing-layout > section > .toolbar {
+  position: sticky !important; top: calc(var(--header-h) + 16px) !important; z-index: 5; transform: none !important;
+  display: flex !important; align-items: center !important; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  min-height: 40px; margin: 0 0 16px !important; padding: 0 0 12px !important; background: var(--bg); box-shadow: 0 1px 0 var(--line);
+}
+.listing-layout > section > .toolbar > .row { align-items: center !important; gap: 8px !important; }
+.listing-layout .toolbar .search-tabs-row { margin: 0 !important; padding: 0 !important; }
+.listing-layout .toolbar .hx-tabs { height: 40px !important; margin: 0 !important; padding: 3px !important; box-sizing: border-box; align-items: stretch; }
+.listing-layout .toolbar .hx-tabs a { display: flex !important; align-items: center; height: auto !important; min-height: 0 !important; padding: 0 14px !important; font-size: 14px !important; }
+.listing-layout .toolbar .btn, .listing-layout .toolbar .dd-btn { height: 40px !important; min-height: 40px !important; padding-top: 0 !important; padding-bottom: 0 !important; font-size: 14px !important; box-sizing: border-box; }
+.listing-layout .toolbar .seg { height: 40px !important; padding: 3px !important; box-sizing: border-box; }
+.listing-layout .toolbar .seg button { height: 100% !important; min-height: 0 !important; width: 36px; padding: 0 !important; }
+@media (max-width: 1080px) {
+  .listing-layout > section > .toolbar { top: var(--header-h) !important; padding-top: 8px !important; }
+}
+
+/* No scroll bar on the filter panel: it still scrolls (wheel, touchpad, finger); a soft fade at the bottom shows
+   there is more below. */
+.sfilters, .listing-layout > .sfilters { scrollbar-width: none !important; -ms-overflow-style: none; }
+.sfilters::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
+.sfilters::after { content: ""; position: sticky; bottom: 0; flex: none; display: block; height: 36px; margin-top: -36px; pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--bg)); }
+@media (max-width: 1080px) { .sfilters::after { display: none; } }
+
+/* The sticky toolbar's background starts right under the header (no gap where cards show through), with a soft
+   frosted blur; its controls still line up with the search box on the left. */
+@media (min-width: 1081px) {
+  .listing-layout > section > .toolbar {
+    top: var(--header-h) !important; padding-top: 16px !important; margin-top: -16px !important;
+    background: color-mix(in srgb, var(--bg) 86%, transparent) !important;
+    -webkit-backdrop-filter: saturate(1.4) blur(12px); backdrop-filter: saturate(1.4) blur(12px);
+  }
+}
+
+/* The groups keep their full height, so the panel scrolls instead of squeezing them. */
+.sfilters > * { flex-shrink: 0 !important; }
+.sfilters { overflow-y: auto !important; overscroll-behavior: contain; }
+
+/* Final layout: only the search box is sticky (with the same frosted blur as the toolbar on the right); the filter
+   lists scroll with the page and slide up under it. No inner scrolling, no fade. */
+@media (min-width: 1081px) {
+  .listing-layout > .sfilters, .sfilters {
+    position: static !important; top: auto !important; max-height: none !important; overflow: visible !important;
+    align-self: stretch !important; padding-bottom: 24px !important;
+  }
+  .sfilters::after { display: none !important; }
+  .sfilters .sf-top {
+    position: sticky !important; top: var(--header-h) !important; z-index: 6;
+    padding-top: 16px !important; margin-top: -16px !important; padding-bottom: 12px !important;
+    background: color-mix(in srgb, var(--bg) 86%, transparent) !important;
+    -webkit-backdrop-filter: saturate(1.4) blur(12px); backdrop-filter: saturate(1.4) blur(12px);
+  }
+}
+
+/* The filter lists stay put under the search box while the listings scroll, and only move up when the end of the
+   list (page buttons, footer) arrives. */
+@media (min-width: 1081px) {
+  .sfilters .sf-body { position: sticky; top: calc(var(--header-h) + 68px); display: flex; flex-direction: column; gap: 20px; }
+}

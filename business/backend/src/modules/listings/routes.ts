@@ -332,7 +332,7 @@ export async function listingRoutes(app: FastifyInstance) {
     const copy = await db().$transaction(async (tx) => {
       const { id: _id, code: _c, slug: _s, createdAt: _a, updatedAt: _u, photos, branch: _b, ...rest } = l;
       const c = await tx.listing.create({ data: {
-        ...rest, details: rest.details as Prisma.InputJsonValue, private: rest.private as Prisma.InputJsonValue, suggest: undefined,
+        ...rest, details: rest.details as Prisma.InputJsonValue, private: rest.private as Prisma.InputJsonValue, suggest: undefined, reviewHold: false, reviewConflict: undefined,
         code: tmp(), slug: tmp(), title: `${l.title} (copy)`.slice(0, 150), status: "draft", userId: ws.user.id, views: 0, featured: false,
         legacyId: null, publishedAt: null, submittedAt: null, reviewedAt: null, reviewedBy: null, reviewNote: null, lastCheckedAt: null, lastCheckedBy: null, checkDueAt: null,
         photos: { create: photos.map((p) => ({ file: p.file, sort: p.sort })) },

@@ -7,7 +7,7 @@ import { useSearchParams } from "react-router-dom";
 import { LayoutGrid, List, SlidersHorizontal, X, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 import { api } from "../api/endpoints";
-import { toList } from "../api/client";
+import { isLivePath, toList } from "../api/client";
 import { useAsync, useMedia } from "../hooks/useAsync";
 import { PropertyGrid } from "../components/PropertyCard";
 import { PageHead, Pagination, Empty } from "../components/ui";
@@ -37,7 +37,8 @@ export default function Listings({ purpose }) {
   const key = params.toString() + purpose;
 
   // business listings published from Sheetal workspaces go first on page 1
-  const own = page > 1 || q.property_status ? [] : platformListings().filter((p) => {
+  // Only without the API: listings saved in this browser by the sample business panel (never on the live site).
+  const own = page > 1 || q.property_status || isLivePath("sale") ? [] : platformListings().filter((p) => {
     const want = purpose === "search" ? q.advertisement_purpose : purpose;
     return (!want || p.purpose.toLowerCase() === want) && matches(p, q);
   });

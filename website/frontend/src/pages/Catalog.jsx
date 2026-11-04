@@ -112,10 +112,13 @@ function Inner({ kind }) {
   const countBy = (except, test) => all.filter((x) => match(x, except) && test(x)).length;
   const same = (a, b) => String(a || "").toLowerCase() === String(b || "").toLowerCase();
   const types = [...new Set([...meta.types, ...all.map((x) => x.type).filter(Boolean)])];
+  const goTo = useNavigate();
+  const PURPOSE_PAGES = { sale: "/sale", rent: "/rent", stay: "/stays", project: "/project", invest: "/investment/explore" };
   const setMany = (o) => { const n = new URLSearchParams(params); for (const [k, v] of Object.entries(o)) v ? n.set(k, v) : n.delete(k); setParams(n); };
   const filters = (
     <FilterRail placeholder={kind === "stay" ? "Where are you going?" : "Name, area or city"} keyword={q.keyword || ""} onKeyword={(v) => set("keyword", v)}
       active={active.length} onClear={() => setParams({})} groups={[
+        { title: "Purpose", options: [["sale", "Buy"], ["rent", "Rent"], ["stay", "Stay"], ["project", "Projects"], ["invest", "Invest"]].map(([v, l]) => [v, l, null]), value: kind, onPick: (v) => goTo(v ? PURPOSE_PAGES[v] : "/search") },
         { title: "Type", options: types.map((t) => [t, t, countBy("type", (x) => same(x.type, t))]), value: q.type || "", onPick: (v) => set("type", v) },
         meta.statuses && { title: "Status", options: meta.statuses.map((s) => [s, s, countBy("status", (x) => x.status === s)]), value: q.status || "", onPick: (v) => set("status", v) },
         cities.length > 0 && { title: "City", limit: 8, options: cities.map((c) => [c, c, countBy("keyword", (x) => same(x.city, c))]), value: cities.includes(q.keyword) ? q.keyword : "", onPick: (v) => set("keyword", v) },

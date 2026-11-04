@@ -82,7 +82,8 @@ export function ListingWizard({ tenant }) {
     setErr(e);
     return !Object.keys(e).length;
   };
-  const go = (i) => { if (i > step && !validate(step)) { toast("Fix the marked fields first."); return; } setStep(i); window.scrollTo(0, 0); };
+  // Editing a listing: move between steps freely; only a new listing is checked step by step.
+  const go = (i) => { if (!editId && i > step && !validate(step)) { toast("Fix the marked fields first."); return; } setStep(i); window.scrollTo(0, 0); };
   // A missing or wrong answer: scroll to the first one and put the cursor in it.
   React.useEffect(() => {
     if (!Object.values(err).some(Boolean)) return undefined;
@@ -104,7 +105,7 @@ export function ListingWizard({ tenant }) {
   };
   const saveDraft = () => { if (live && !editId) { send(false); return; } update((d) => { d.drafts[tenant.id] = { kind, step, values: v }; }); toast(t("wiz.toastDraft")); };
   const publish = () => {
-    for (let i = 0; i < steps.length; i++) if (!validate(i)) { setStep(i); toast("Fix the marked fields first."); return; }
+    if (!editId) for (let i = 0; i < steps.length; i++) if (!validate(i)) { setStep(i); toast("Fix the marked fields first."); return; }
     if (live) { send(true); return; }
     const title = v.title || suggestTitle(kind, v, label);
     update((d) => {
