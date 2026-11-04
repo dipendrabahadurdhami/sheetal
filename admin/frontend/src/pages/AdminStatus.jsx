@@ -1,12 +1,12 @@
+// System status in the sample workspace.
+// Where it fits: signed in, LiveStatus and LiveOutbox (LiveSetup.jsx) show real data from the admin API instead.
+// How it works: shows "Waiting for data" rather than made-up numbers.
+
 import React from "react";
 import { useStore } from "@sheetal/shared/core/store";
 import { Badge, PageHead, Panel, Stat, Table } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { integrationsOf } from "@sheetal/shared/data/integrations";
-
-// System status: the super admin's view of every moving part. The backend fills this from
-// GET /admin/system/status (health checks, metrics, job queue and error log). Until that is connected,
-// core services show "Waiting for data" rather than made-up numbers.
 
 const STATE = { up: ["Working", "done"], slow: ["Slow", "progress"], down: ["Down", "problem"], off: ["Not set up", "neutral"], wait: ["Waiting for data", "neutral"] };
 

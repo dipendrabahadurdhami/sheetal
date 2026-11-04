@@ -1,10 +1,12 @@
+// Loads a signed-in staff member's real data into the admin panel and sends their changes to the admin API.
+// Where it fits: useLiveStaff() runs once in AdminApp; screens keep reading the same store.
+// How it works: loads the staff role, businesses, plans, staff and audit log; useReviewQueue() keeps the listing
+// review queue; liveAdmin() holds the actions screens call (businesses, plans, staff).
+// Rules: isStaffLive() tells a screen whether to use the API or the sample data.
+
 import { useCallback, useEffect, useState } from "react";
 import { useStore } from "@sheetal/shared/core/store";
 import { adminApi, adminApiReady, signedIn } from "./api";
-
-// When a Sheetal staff member is signed in, the panel runs on the admin API: their real staff role, businesses,
-// plans, staff, the audit log and the listing review queue. Screens keep reading the same store, so they barely
-// change; their actions call the API (liveAdmin) and then reload. Screens not on the API yet keep their own data.
 
 let staffLive = false;
 let reload = null;

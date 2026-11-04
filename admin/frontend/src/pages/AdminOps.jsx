@@ -1,3 +1,7 @@
+// Moderation (listing review and business verification), content, billing, the audit log and the support inbox.
+// How it works: signed in, listing review, verification, blog and billing use the admin API (LiveVerify,
+// LiveContent, LiveBilling); otherwise the sample screens.
+
 import React, { useState } from "react";
 import { LiveVerifications } from "./LiveVerify";
 import { useT } from "@sheetal/shared/core/i18n";

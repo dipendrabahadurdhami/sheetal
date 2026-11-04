@@ -1,11 +1,12 @@
+// Billing on the admin API: revenue, payments (bank transfers to confirm, refunds), invoices, and gateway and billing
+// settings.
+// Rules: payment keys are write-only: a saved key is never shown again.
+
 import React, { useEffect, useState } from "react";
 import { useStore } from "@sheetal/shared/core/store";
 import { fdate, fdatetime, rs } from "@sheetal/shared/core/format";
 import { Badge, Button, Drawer, Empty, Field, Input, Panel, Select, Stat, Table, Tabs, Textarea, ToggleRow, useToast } from "@sheetal/shared/core/ui";
 import { adminApi } from "../api";
-
-// Billing on the admin API: revenue, payments (bank transfers to confirm, refunds), invoices, and the
-// gateway and billing settings. Payment keys are write-only: a saved key is never shown again.
 
 const API_FILES = (import.meta.env.VITE_ADMIN_API_URL || "").replace(/\/v1\/?$/, "");
 const PROVIDER = { esewa: "eSewa", khalti: "Khalti", fonepay: "Fonepay", manual: "Bank transfer" };

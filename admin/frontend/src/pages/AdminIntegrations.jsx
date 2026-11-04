@@ -1,3 +1,7 @@
+// Setup center: every outside service Sheetal connects to, with its setup steps and status.
+// How it works: payments, AI and Meta are on the server (LiveSetup.jsx, shown above this page when signed in); the
+// other services' buttons show what the result will look like.
+
 import React, { useState } from "react";
 import { useStore } from "@sheetal/shared/core/store";
 import { Link } from "@sheetal/shared/core/router";
@@ -5,10 +9,6 @@ import { Badge, Button, Field, Input, PageHead, Panel, Seg, Select, Table, Toggl
 import { Icon } from "@sheetal/shared/core/icons";
 import { otaOf, OTAS } from "@sheetal/shared/data/ota";
 import { AI_PROVIDERS, API_BASE, INTEGRATIONS, STATUS_LABEL, STATUS_TONE, emailDnsRecords, integrationsOf, makeSecret, statusOf, stepsOf } from "@sheetal/shared/data/integrations";
-
-// Setup center: every outside service Sheetal connects to, with its setup steps and status.
-// Demo note: "Test", "Check" and "Deploy" buttons simulate the result here; the backend makes the real calls
-// (Cloudflare API, Meta Graph API, Google APIs) and stores the outcome in the same fields.
 
 const later = (fn, ms = 900) => setTimeout(fn, ms);
 
@@ -102,7 +102,7 @@ function CopyRow({ label, value }) {
 const Ok = ({ on, yes = "Done", no = "Not done", wait }) => (on ? <Badge tone="done">{yes}</Badge> : wait ? <Badge tone="progress">{wait}</Badge> : <Badge tone="neutral">{no}</Badge>);
 function Text({ label, value, onChange, placeholder, hint }) { return <Field label={label} hint={hint}><Input value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} /></Field>; }
 
-// ── Email: own system on Cloudflare ──
+// ── Email set-up (sample screen; real email runs on Sheetal's own mail server, see docs/mail-server.md) ──
 function EmailSetup() {
   const { db, all, patch } = useIntegrations();
   const toast = useToast();

@@ -1,3 +1,7 @@
+// Channel manager desk: listings that businesses asked Sheetal to post on Booking.com, Airbnb and others.
+// Where it fits: sample data for now (marked Preview).
+// How it works: Sheetal holds one partner account per site; the channel team lists businesses' rooms under it.
+
 import React, { useState } from "react";
 import { useStore } from "@sheetal/shared/core/store";
 import { fdate, fdatetime } from "@sheetal/shared/core/format";
@@ -6,7 +10,6 @@ import { Icon } from "@sheetal/shared/core/icons";
 import { OPEN, OTAS, OTA_STATUS, otaName, otaOf, otaSettings, otaUrl, siteHref, withOta } from "@sheetal/shared/data/ota";
 import { audit } from "./AdminOps";
 
-// Channel manager desk. Sheetal holds one partner account per OTA; the channel team lists subscribers under it.
 export function AdminChannels() {
   const { db, update } = useStore();
   const toast = useToast();

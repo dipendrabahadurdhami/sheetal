@@ -1,3 +1,6 @@
+// Admin screens for ads, AI settings, analytics and website orders (sample data, marked Preview where not live).
+// Rules: the business panel keeps its own copy of the ad slots and ranking (SLOTS, RANK); change both together.
+
 import React, { useState } from "react";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
@@ -5,9 +8,6 @@ import { fdate, rs } from "@sheetal/shared/core/format";
 import { Badge, Button, Input, PageHead, Panel, Seg, Stat, Table, Tabs, ToggleRow, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { Donut, Line } from "@sheetal/shared/core/charts";
-
-// Super admin pages that used to live inside business and website files.
-// The business app keeps its own copies of SLOTS / RANK (ads) and the website keeps its own orders list.
 
 /* ───────── Ads, boosts and search ranking ───────── */
 export const SLOTS = [

@@ -1,3 +1,10 @@
+// The admin panel itself: the menu, the staff bell and every page's route and permission check.
+// Where it fits: rendered by App.jsx for every /admin path.
+// How it works: the staff role decides the menu; signed in, pages that are on the admin API use their live screens
+// and the bell shows staff work from the server; otherwise the sample screens.
+// Rules: PREVIEW lists the pages that still show sample data when signed in; remove a path once its page is on the
+// server. Each route keeps its permission guard.
+
 import React from "react";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
@@ -23,9 +30,6 @@ import { isStaffLive, useLiveStaff, useReviewQueue } from "../live";
 import { adminApi } from "../api";
 import { LiveAnalytics, LiveOutbox, LiveSetup, LiveStatus } from "./LiveSetup";
 
-// Super admin: Sheetal staff control panel at /admin.
-// Pages that still show sample data when signed in as staff (nothing on them is saved on the server yet): tagged in
-// the menu, with a note on the page. Remove a path once its page is on the admin API.
 const PREVIEW = ["/admin/catalog", "/admin/ai", "/admin/voice", "/admin/messages", "/admin/leads", "/admin/social", "/admin/earnings", "/admin/ads", "/admin/channels", "/admin/addons", "/admin/settings"];
 
 export default function AdminApp() {

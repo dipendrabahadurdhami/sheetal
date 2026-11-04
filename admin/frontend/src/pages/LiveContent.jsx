@@ -1,10 +1,12 @@
+// Blog, careers and buyer requirements on the admin API.
+// How it works: shown instead of the sample screens when signed in as staff; private files (CVs, payment proofs,
+// verification documents) open in a new tab with the staff sign-in.
+
 import React, { useEffect, useState } from "react";
 import { fdate, fdatetime, rs } from "@sheetal/shared/core/format";
 import { Badge, Button, Drawer, Empty, Field, Input, Panel, Select, Table, Tabs, Textarea, ToggleRow, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { adminApi } from "../api";
-
-// Blog, careers and buyer requirements on the admin API (shown instead of the sample screens when signed in as staff).
 
 const API_FILES = (import.meta.env.VITE_ADMIN_API_URL || "").replace(/\/v1\/?$/, "");
 /** Plain paragraphs become <p>…</p>; HTML is kept (the API cleans it). */

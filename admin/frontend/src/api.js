@@ -1,6 +1,8 @@
-// Calls the admin API (admin/backend). The login token is the one the website stores after signing in
-// (same site, same browser); only Sheetal staff (people with a platform role) get answers.
-//   VITE_ADMIN_API_URL  e.g. http://localhost:4002/v1 (in admin/frontend/.env.local)
+// Calls to the admin API (admin/backend), used by every live admin screen.
+// How it works: sends the sign-in token (the same one the website stores); only Sheetal staff get answers.
+// Rules: set VITE_ADMIN_API_URL in admin/frontend/.env.local (e.g. http://localhost:4002/v1); without it the panel
+// shows sample data only.
+
 const BASE = (import.meta.env.VITE_ADMIN_API_URL || "").replace(/\/+$/, "");
 
 export const adminApiReady = () => !!BASE;

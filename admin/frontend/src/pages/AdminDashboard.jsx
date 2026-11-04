@@ -1,3 +1,7 @@
+// The admin dashboard and the businesses list.
+// How it works: revenue, plans, businesses that need attention and recent activity; signed in, businesses and their
+// changes come from the admin API.
+
 import React, { useMemo, useState } from "react";
 import { isStaffLive, liveAdmin } from "../live";
 import { DataActions } from "@sheetal/shared/components/DataIO";

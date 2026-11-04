@@ -1,3 +1,8 @@
+// A business's detail page, and the Plans page.
+// How it works: signed in, status, plan and auto-renew changes go to the admin API, and the team, listings and
+// enquiries come from the business's detail.
+// Rules: auto-renew is for the super admin only (the API checks too).
+
 import React, { useState } from "react";
 import { isStaffLive, liveAdmin, useLiveTenant } from "../live";
 import { useT } from "@sheetal/shared/core/i18n";

@@ -1,3 +1,6 @@
+// Listing setup: which listing kinds each business type can create, and the options every listing form shows.
+// Where it fits: sample editor for now (marked Preview); the real list is shared/src/data/catalog.js.
+
 import React, { useState } from "react";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
@@ -5,8 +8,6 @@ import { BUSINESS_TYPES } from "@sheetal/shared/core/rbac";
 import { Button, Checkbox, Confirm, Drawer, Field, Input, PageHead, Panel, SearchInput, Tabs, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 
-// Listing setup (Sheetal staff): which listing types each kind of business can create,
-// and the options every listing form shows (facilities, room types, banks, districts...).
 const CAT_GROUPS = [
   ["categories", "home"], ["facilities", "home"], ["nearby", "home"], ["environments", "home"], ["exteriorLooks", "home"], ["furnishing", "home"],
   ["interiorLooks", "home"], ["facing", "home"], ["propertyStatus", "home"], ["roadType", "home"], ["ownershipDocs", "home"], ["boosts", "home"],

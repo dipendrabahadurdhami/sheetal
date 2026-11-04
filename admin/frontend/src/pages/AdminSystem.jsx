@@ -1,3 +1,7 @@
+// Staff, platform settings and the catalog editor.
+// How it works: signed in, staff and their roles come from the admin API; roles are the fixed staff roles.
+// Platform settings are still sample (marked Preview).
+
 import React, { useState } from "react";
 import { isStaffLive, liveAdmin } from "../live";
 import { OTAS, otaSettings } from "@sheetal/shared/data/ota";

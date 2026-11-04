@@ -1,3 +1,7 @@
+// Tabbed hubs: platform leads, voice, social, buyer demand, careers, upgrade requests, earnings and message templates.
+// How it works: Hub shows several related tools as tabs on one page; signed in, demand and careers use the live
+// screens (LiveContent.jsx); the others are sample data (marked Preview).
+
 import React, { useState } from "react";
 import { isStaffLive, usePublishedPosts } from "../live";
 import { LiveCareers, LiveRequirements } from "./LiveContent";

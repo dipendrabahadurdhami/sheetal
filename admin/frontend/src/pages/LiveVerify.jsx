@@ -1,12 +1,13 @@
+// Business verification on the admin API.
+// How it works: lists businesses that sent documents; staff open each one, then verify (the Verified badge on the
+// website), send back with a reason, or reopen so the business can change its documents.
+
 import React, { useEffect, useState } from "react";
 import { fdatetime } from "@sheetal/shared/core/format";
 import { Badge, Button, Empty, Textarea, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { adminApi } from "../api";
 import { openPrivate } from "./LiveContent";
-
-// Business verification on the admin API: businesses that sent documents; open each one, then verify the business
-// (the Verified badge on the website), send it back with a reason, or reopen it so the business can change documents.
 
 const KIND = { registration: "Company registration", pan: "PAN / VAT certificate", owner_id: "Owner's ID", other: "Other" };
 const TONE = { pending: "action", verified: "done", rejected: "problem", none: "neutral" };

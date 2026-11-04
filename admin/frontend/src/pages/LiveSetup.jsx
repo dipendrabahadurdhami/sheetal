@@ -1,11 +1,12 @@
+// Setup, system status, analytics and system emails on the admin API.
+// How it works: AI and Meta keys are entered here (write-only); LiveStatus checks every part of the system; LiveOutbox
+// lists system emails with their outcome and can send failed ones again.
+// Rules: keys are never shown again once saved; email text is only shown outside production.
+
 import React, { useEffect, useState } from "react";
 import { fdatetime } from "@sheetal/shared/core/format";
 import { Badge, Button, Field, Input, Panel, Stat, ToggleRow, useToast } from "@sheetal/shared/core/ui";
 import { adminApi } from "../api";
-
-// Setup on the admin API: the AI (Claude key, model, monthly credits per plan) and Meta (app secret and webhook
-// verify token for WhatsApp, Messenger and Instagram). Keys are write-only: once saved they are never shown again.
-// Also the live system status and site analytics.
 
 function useApi(path) {
   const [data, setData] = useState(null);
