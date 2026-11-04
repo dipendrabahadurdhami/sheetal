@@ -73,8 +73,42 @@ Pages marked **Preview** in the menu still show sample data; nothing on them is 
 
 ## 6. Saved versions and backup
 
-Every change is saved as a version with git (64 versions so far). See them with `git log --oneline`.
+There are three parts to keep safe. Git holds the code; the other two are backed up with one command.
 
-**Important:** there is no copy online yet. If this computer is lost, the work is lost. Back it up: copy the whole
-folder to a USB drive or cloud storage now and then (`backend-core/.pgdata` holds the database; copy it while the database is stopped), or put it on a
-private GitHub repository.
+| What | Where it is | Backup |
+|---|---|---|
+| Code (and every saved version) | this folder | private GitHub: https://github.com/dipendrabahadurdhami/sheetal |
+| Database (listings, users, bookings, everything typed in) | `backend-core/.pgdata` | `npm run backup`: `OneDrive\Sheetal-Backups\database`, one dated folder each (newest 30 kept) |
+| Photos and private documents | `C:\Users\USER\Desktop\sheetal-laravel\ROOT\public\images` (6.5 GB) | `npm run backup`: copied to `C:\Users\USER\Sheetal-Backups\photos` (only new or changed files after the first time) |
+
+**Save the code to GitHub** after committing changes:
+
+```
+git push
+```
+
+**Back up the database and photos** (the database must be running, terminal 1):
+
+```
+npm run backup
+```
+
+Database only (quick): `npm run backup -- --no-photos`. Do it at least once a week, and before big changes.
+
+The photos copy is on the same disk as the original, so it protects against mistakes but not against losing the
+computer. For that, add `PHOTOS_BACKUP_DIR=E:\Sheetal-photos` (your USB drive's letter) to `backend-core/.env` and run
+`npm run backup` with the drive plugged in. OneDrive's free 5 GB is too small for the photos.
+
+**Put a database backup back** (replaces all current data; only when something went wrong):
+
+```
+npm run restore
+npm run restore -- 2026-11-04_1013 --yes
+```
+
+The first command lists the backups; the second restores the one you name. Tested: a restore gives back every row.
+
+**On a new computer:** install Node.js and Git, then `git clone https://github.com/dipendrabahadurdhami/sheetal.git`,
+`npm install`, create `backend-core/.env` from `backend-core/.env.example` (your own passwords and keys), start the
+database (`npm run db:local`), run `npx prisma migrate deploy` in `backend-core`, copy `OneDrive\Sheetal-Backups`
+across and run `npm run restore -- <name> --yes`, then copy the photos back to MEDIA_DIR.

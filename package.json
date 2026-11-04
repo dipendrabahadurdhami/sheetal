@@ -28,6 +28,8 @@
     "check": "npm run lint && npm run typecheck && npm run test",
     "sitemap": "node scripts/generate-sitemap.mjs",
     "db:local": "npm run db:local -w @sheetal/backend-core",
+    "backup": "node scripts/backup.mjs",
+    "restore": "node scripts/restore.mjs",
     "dev:api": "concurrently -k -n website-api,business-api,admin-api -c cyan,green,magenta \"npm:dev:api:website\" \"npm:dev:api:business\" \"npm:dev:api:admin\"",
     "dev:api:website": "npm run dev -w @sheetal/website-api",
     "dev:api:business": "npm run dev -w @sheetal/business-api",
