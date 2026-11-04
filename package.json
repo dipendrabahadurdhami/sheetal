@@ -30,6 +30,7 @@
     "check": "node scripts/help.mjs --check && npm run lint && npm run typecheck && npm run test",
     "help": "node scripts/help.mjs",
     "doctor": "node scripts/doctor.mjs",
+    "check:comments": "node scripts/comments-only.mjs",
     "sitemap": "node scripts/generate-sitemap.mjs",
     "db:local": "npm run db:local -w @sheetal/backend-core",
     "backup": "node scripts/backup.mjs",

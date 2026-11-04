@@ -32,6 +32,7 @@ describe("brand colours", () => {
 
   it("builds each theme only from the three colours", () => {
     const t = brandTheme(["#0A7D3B", "#000000", "#F4FBF6"]);
+    if (!t) throw new Error("expected a theme for three colours");
     expect(t.colors).toEqual(["#0A7D3B", "#000000", "#F4FBF6"]);
     expect(t.lightBar).toBe("#F4FBF6");
     expect(t.darkBar).toBe("#000000");

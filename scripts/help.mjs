@@ -25,6 +25,7 @@ const GROUPS = [
     ["test", "All automated tests (shared, core, website, business, admin, mail). They use their own temporary database."],
     ["test:watch", "Re-runs the shared front-end tests on every save."],
     ["doctor", "Checks this computer is ready: Node version, settings files, database, ports, photo folder."],
+    ["check:comments", "Proves a documentation change touched comments only (compares the code before and after)."],
   ]],
   ["Database", [
     ["db:migrate", "Applies new database migrations (after pulling changes that touch backend-core/prisma)."],

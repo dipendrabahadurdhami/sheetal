@@ -154,6 +154,9 @@ Every source file starts with a short header that tells a new developer what the
 Inside the code, comment **why**, not what: business rules, edge cases, and anything a reviewer, tester or bug-fixer
 would otherwise have to guess. Keep comments short and current: when you change code, update its comment.
 
+After a change that should only touch comments or documentation, run `npm run check:comments`: it compiles every
+changed file with comments removed, before and after, and fails if any real code changed.
+
 ## 9. Troubleshooting
 
 | Problem | Fix |
