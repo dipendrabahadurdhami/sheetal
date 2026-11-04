@@ -1,6 +1,8 @@
 {
   "name": "sheetal",
   "private": true,
+  "license": "UNLICENSED",
+  "author": "DhamiPlus Pvt. Ltd.",
   "version": "1.0.0",
   "type": "module",
   "workspaces": [
@@ -25,7 +27,9 @@
     "test": "vitest run && npm run test -w @sheetal/backend-core -w @sheetal/website-api -w @sheetal/business-api -w @sheetal/admin-api -w @sheetal/mail-server",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json && npm run typecheck -w @sheetal/backend-core -w @sheetal/website-api -w @sheetal/business-api -w @sheetal/admin-api -w @sheetal/mail-server",
-    "check": "npm run lint && npm run typecheck && npm run test",
+    "check": "node scripts/help.mjs --check && npm run lint && npm run typecheck && npm run test",
+    "help": "node scripts/help.mjs",
+    "doctor": "node scripts/doctor.mjs",
     "sitemap": "node scripts/generate-sitemap.mjs",
     "db:local": "npm run db:local -w @sheetal/backend-core",
     "backup": "node scripts/backup.mjs",

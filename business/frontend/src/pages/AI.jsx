@@ -8,10 +8,11 @@ import { Icon } from "@sheetal/shared/core/icons";
 import { isAllAccess, kindsFor } from "@sheetal/shared/core/plans";
 import { emptyOps } from "@sheetal/shared/demo/ops";
 
-// AI features (listing from text, lead finder, blog writer, voice agent, Ask AI), available to every business on its plan's AI credits.
-// Uses window.claude.complete when present, otherwise returns sample output so the demo always works.
-async function ask(prompt, fallback) {
-  try { if (window.claude?.complete) return await window.claude.complete(prompt); } catch (e) { /* fall back */ }
+// AI tools screen (listing from text, lead finder, blog writer, voice agent, Ask AI) in the sample workspace.
+// Where it fits: shown from the listing wizard and the AI pages; signed-in businesses use the server's AI
+// (business API /ai/*, see LiveGrowth.jsx) instead.
+// How it works: returns ready-made sample results after a short pause, so the screens can be shown without an AI account.
+async function ask(_prompt, fallback) {
   await new Promise((r) => setTimeout(r, 700));
   return typeof fallback === "function" ? fallback() : fallback;
 }
