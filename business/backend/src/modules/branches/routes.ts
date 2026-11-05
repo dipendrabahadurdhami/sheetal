@@ -96,11 +96,12 @@ export async function branchRoutes(app: FastifyInstance) {
     if ((await db().branch.count({ where: { tenantId: ws.tenantId } })) <= 1) throw badRequest("A business needs at least one branch.");
     if (br.status === "open" && !(await db().branch.count({ where: { tenantId: ws.tenantId, status: "open", id: { not: br.id } } }))) throw badRequest("A business needs at least one open branch.");
     const w = { branchId: br.id };
-    const [listings, rooms, leads, bookings, shifts, bills, invoices] = await Promise.all([
+    const [listings, rooms, leads, bookings, shifts, bills, invoices, expenses, recurring] = await Promise.all([
       db().listing.count({ where: { ...w, status: { not: "removed" } } }), db().room.count({ where: w }), db().lead.count({ where: w }),
       db().booking.count({ where: w }), db().shift.count({ where: w }), db().posBill.count({ where: w }), db().bizInvoice.count({ where: w }),
+      db().expense.count({ where: w }), db().recurringExpense.count({ where: w }),
     ]);
-    const work = [[listings, "listing"], [rooms, "room"], [leads, "enquiry"], [bookings, "booking"], [shifts + bills, "till record"], [invoices, "invoice"]]
+    const work = [[listings, "listing"], [rooms, "room"], [leads, "enquiry"], [bookings, "booking"], [shifts + bills, "till record"], [invoices, "invoice"], [expenses + recurring, "expense"]]
       .filter(([n]) => n).map(([n, w]) => `${n} ${n === 1 ? w : w === "enquiry" ? "enquiries" : `${w}s`}`);
     if (work.length) throw badRequest(`${br.name} has ${work.join(", ")}. Move them to another branch, or close the branch instead (its history stays).`);
     await db().menuItem.deleteMany({ where: { tenantId: ws.tenantId, branchId: br.id } });

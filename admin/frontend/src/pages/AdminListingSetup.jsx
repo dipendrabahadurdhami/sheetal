@@ -1,5 +1,5 @@
 // Listing setup: which listing kinds each business type can create, and every option the listing forms and the
-// website's filters show (41 lists, two of them grouped: property types per category and areas per district).
+// website's filters show (42 lists, two of them grouped: property types per category and areas per district).
 // Where it fits: Admin → Listing setup. Signed in as staff, every change is saved on the server (admin API
 // /admin/catalog); the business panel's listing forms and the website's filters follow it. The built-in lists, which
 // work with no changes at all, are shared/src/data/catalog.js.
@@ -27,8 +27,9 @@ const CAT_GROUPS = [
   ["projectTypes", "project"], ["projectStatus", "project"], ["unitTypes", "project"], ["projectAmenities", "project"], ["banks", "project"],
   ["investTypes", "invest"], ["returnTypes", "invest"], ["payoutFrequency", "invest"], ["minInvest", "invest"],
   ["districts", "location"], ["areas", "location"],
+  ["expenseCategories", "money"],
 ];
-const GROUPS = ["home", "rent", "stay", "project", "invest", "location"];
+const GROUPS = ["home", "rent", "stay", "project", "invest", "location", "money"];
 // Lists kept per parent: property types per category, areas (plain names) per district.
 const GROUPED = { propertyTypes: "categories", areas: "districts" };
 const LABELS = {
@@ -36,6 +37,7 @@ const LABELS = {
   stars: "Star rating", sleepingSpaces: "Sleeping spaces", bathroomTypes: "Bathroom types", roomAmenities: "In the room", bathroomAmenities: "Bathroom items",
   kitchenItems: "Kitchen and dining", roomViews: "Views", safetyItems: "Safety", accessibility: "Accessibility", checkTimes: "Check-in and check-out times",
   projectStatus: "Project status", minInvest: "Minimum investment", areas: "Areas", g_stay: "Stays",
+  expenseCategories: "Expense categories", g_money: "Money (expenses)",
 };
 const ICONS = ["circle-check", "house", "building-2", "car", "wifi", "droplets", "zap", "trees", "mountain", "shield-check", "key-round", "bed-double", "bed-single", "utensils", "cooking-pot", "chef-hat", "sofa", "armchair", "tv", "sun", "moon", "store", "school", "hospital", "bus", "landmark", "map-pin", "calendar-days", "wallet", "flame", "eye", "star", "lock", "heater", "concierge-bell", "plane", "wine", "coffee", "waves", "sprout"];
 const slug = (s) => s.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
@@ -132,7 +134,7 @@ export function AdminCatalog() {
           <SearchInput value={find} onChange={setFind} placeholder="Find a list" />
           {GROUPS.map((g) => { const ks = lists.filter(([, gg]) => gg === g); if (!ks.length) return null; return (
             <div key={g} className="ls-group">
-              <span className="pf-nav-group">{t("catalog.g_" + g)}</span>
+              <span className="pf-nav-group">{label("g_" + g)}</span>
               {ks.map(([k]) => <button key={k} type="button" className={key === k ? "on" : ""} aria-current={key === k ? "page" : undefined} onClick={() => { setKey(k); setQ(""); setParent(null); }}><span>{label(k)}</span><span className="pf-count">{countOf(k)}</span></button>)}
             </div>); })}
         </nav>

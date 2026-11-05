@@ -201,6 +201,8 @@ model Branch {
   rateDays  RateDay[]
   roomRules RoomRule[]
   bizInvoices BizInvoice[]
+  expenses    Expense[]
+  recurringExpenses RecurringExpense[]
 
   @@unique([tenantId, name])
   @@map("branches")
@@ -1370,7 +1372,8 @@ model BizReceipt {
   invoiceId String     @map("invoice_id")
   no        String
   amount    Int
-  /// cash, fonepay, esewa, khalti, card, bank, other
+  /// cash, fonepay, esewa, khalti, card, bank, other; "sheetal" = Sheetal collected it (set by the system, never by hand;
+  /// the money reaches the business through a payout, so the profit view leaves it out).
   method    String
   paidOn    DateTime   @db.Date @map("paid_on")
   /// Where it came from, so it is never counted twice (gp:<guest payment id> for a booking's front-desk payment).
@@ -1486,4 +1489,72 @@ model Payout {
   @@index([tenantId, branchId])
   @@index([status, scheduledOn])
   @@map("payouts")
+}
+
+// ───────────── Expenses and profit ─────────────
+
+/// Money a business spent (salaries, rent, repairs…), for one branch. "draft" = made by a recurring expense and not
+/// confirmed yet; only "confirmed" ones count in profit. "skipped" keeps a draft the business dismissed, so that month
+/// is never added again.
+model Expense {
+  id          String            @id @default(cuid())
+  /// EX-0007
+  seq         Int               @default(autoincrement())
+  tenantId    String            @map("tenant_id")
+  branchId    String            @map("branch_id")
+  branch      Branch            @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  /// draft, confirmed or skipped
+  status      String            @default("confirmed")
+  spentOn     DateTime          @db.Date @map("spent_on")
+  /// An id from the "expenseCategories" list (Admin → Listing setup): salaries, rent, other…
+  category    String
+  amount      Int
+  vendor      String?
+  note        String?
+  /// cash, bank, fonepay, esewa, khalti, card, other
+  method      String            @default("cash")
+  /// A private photo or PDF (MEDIA_DIR/private/expenses), opened only through the expenses API.
+  receiptFile String?           @map("receipt_file")
+  recurringId String?           @map("recurring_id")
+  recurring   RecurringExpense? @relation(fields: [recurringId], references: [id], onDelete: SetNull)
+  /// The month a recurring expense made this for (2026-11): one per recurring expense and month.
+  forMonth    String?           @map("for_month")
+  createdBy   String?           @map("created_by")
+  confirmedBy String?           @map("confirmed_by")
+  confirmedAt DateTime?         @map("confirmed_at")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  @@unique([recurringId, forMonth])
+  @@index([tenantId, status, spentOn])
+  @@index([branchId])
+  @@map("expenses")
+}
+
+/// An expense that repeats every month (rent, salaries). A daily job adds it as a draft on its day of the month; the
+/// business confirms it (the amount can be changed first). Paused ones add nothing; stopped ones are kept as history.
+model RecurringExpense {
+  id         String    @id @default(cuid())
+  tenantId   String    @map("tenant_id")
+  branchId   String    @map("branch_id")
+  branch     Branch    @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  /// active, paused or stopped
+  status     String    @default("active")
+  category   String
+  amount     Int
+  vendor     String?
+  note       String?
+  method     String    @default("cash")
+  /// The day of the month it falls on (1 to 28).
+  dayOfMonth Int       @map("day_of_month")
+  /// The first month it is added for (2026-11).
+  startMonth String    @map("start_month")
+  createdBy  String?   @map("created_by")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  expenses   Expense[]
+
+  @@index([tenantId, status])
+  @@index([branchId])
+  @@map("recurring_expenses")
 }

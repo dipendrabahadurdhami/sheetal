@@ -47,6 +47,7 @@ import { Forms } from "./Forms";
 import { formsOf } from "@sheetal/shared/core/forms";
 import { Invoices, Payouts } from "./Money";
 import { LiveInvoices, LivePayouts } from "./LiveMoney";
+import { LiveExpenses } from "./LiveExpenses";
 import { Analytics, Developers } from "./Workspace";
 import { BackupOnly } from "./BusinessBilling";
 import { Branches, Calendar, LiveBranches, branchesOf } from "./Branches";
@@ -62,7 +63,7 @@ import { TODAY } from "@sheetal/shared/core/format";
 import { opsOf } from "@sheetal/shared/demo/ops";
 
 const PREVIEW = [
-  "/business/agreements", "/business/forms", "/business/expenses",
+  "/business/agreements", "/business/forms",
   "/business/rentals", "/business/stock", "/business/promote", "/business/social", "/business/voice",
   "/business/people", "/business/ai-accounts", "/business/developers",
 ];
@@ -161,7 +162,7 @@ export default function BusinessApp() {
     { group: "group.money", items: [
       { to: "/business/invoices", icon: "receipt", key: "nav.invoices", perm: "invoices.view" },
       { to: "/business/payouts", icon: "wallet", key: "nav.payouts", perm: "payouts.view" },
-      { to: "/business/expenses", paid: true, icon: "chart-pie", key: "nav.expenses", perm: "invoices.view" },
+      { to: "/business/expenses", paid: true, icon: "chart-pie", key: "nav.expenses", perm: "expenses.view" },
     ] },
     { group: "group.admin", items: [
       { to: "/business/team", icon: "users", key: "nav.team" },
@@ -273,7 +274,7 @@ export default function BusinessApp() {
         { path: "/business/collections", render: () => guard(can(role, "collect.payments"), (isLive(tenant.id) ? <LiveProjects key={tenant.id + "c"} tenant={tenant} role={role} /> : <Collections key={tenant.id} tenant={tenant} />)) },
         { path: "/business/investors", render: () => guard(can(role, "investors.view"), (isLive(tenant.id) ? <LiveInvestors key={tenant.id} tenant={tenant} role={role} /> : <Investors key={tenant.id} tenant={tenant} />)) },
         { path: "/business/reviews", render: () => guard(any("reviews.reply", "customers.view"), (isLive(tenant.id) ? <LiveReviews key={tenant.id} tenant={tenant} /> : <Reviews key={tenant.id} tenant={tenant} />)) },
-        { path: "/business/expenses", render: () => paid(can(role, "invoices.view"), <Expenses key={tenant.id} tenant={tenant} />) },
+        { path: "/business/expenses", render: () => paid(can(role, "expenses.view"), (isLive(tenant.id) ? <LiveExpenses key={tenant.id} tenant={tenant} /> : <Expenses key={tenant.id} tenant={tenant} />)) },
         { path: "/business/rentals", render: () => guard(any("listings.manage", "customers.view", "collect.payments"), <Rentals key={tenant.id} tenant={tenant} />) },
         { path: "/business/rentals/:tab", render: ({ tab }) => guard(any("listings.manage", "customers.view", "collect.payments"), <Rentals key={tenant.id} tenant={tenant} tab={tab} />) },
         { path: "/business/stock", render: () => paid(any("pos.restaurant", "pos.extras", "settings.business"), <Stock key={tenant.id} tenant={tenant} />) },

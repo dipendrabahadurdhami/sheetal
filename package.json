@@ -46,6 +46,7 @@
     "start": "concurrently -n db,api,web,mail -c gray,cyan,green,magenta \"npm:db:local\" \"npm:dev:api\" \"npm:dev\" \"npm:dev:mail\"",
     "listings:tidy": "npm run listings:tidy -w @sheetal/backend-core --",
     "payouts:sample": "npm run payouts:sample -w @sheetal/backend-core --",
+    "expenses:roles": "npm run expenses:roles -w @sheetal/backend-core --",
     "qc": "eslint admin business website shared && tsc -p tsconfig.json",
     "dc": "npm run check"
   },

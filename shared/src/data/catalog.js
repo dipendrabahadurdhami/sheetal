@@ -27,6 +27,20 @@ export const CATALOG = {
     o("land", "Land", "जग्गा", "map"),
     o("commercial", "Commercial", "व्यावसायिक", "store"),
   ],
+  // What a business spent money on (Business → Expenses). Staff can change the list in Admin → Listing setup. Keep in
+  // step with EXPENSE_CATEGORIES in backend-core/src/domain/expenses.ts (the server's built-in list).
+  expenseCategories: [
+    o("salaries", "Salaries", "तलब", "users"),
+    o("rent", "Rent", "भाडा", "key-round"),
+    o("utilities", "Utilities", "बिजुली, पानी र इन्टरनेट", "zap"),
+    o("repairs", "Repairs and maintenance", "मर्मत सम्भार", "wrench"),
+    o("marketing", "Marketing", "मार्केटिङ", "megaphone"),
+    o("supplies", "Supplies", "सामग्री", "shopping-bag"),
+    o("travel", "Fuel and travel", "इन्धन र यात्रा", "car"),
+    o("commissions", "Commissions", "कमिसन", "hand-coins"),
+    o("taxes", "Taxes and fees", "कर र शुल्क", "receipt"),
+    o("other", "Other", "अन्य", "circle-check"),
+  ],
   propertyTypes: {
     house: [o("bungalow", "Bungalow", "बंगला", "house"), o("residential_house", "Residential house", "आवासीय घर", "house"), o("duplex", "Duplex", "डुप्लेक्स", "house-plus"), o("newari", "Traditional Newari house", "परम्परागत नेवारी घर", "landmark"), o("villa", "Villa", "भिला", "trees")],
     apartment: [o("flat", "Flat", "फ्ल्याट", "building"), o("apartment_unit", "Apartment unit", "अपार्टमेन्ट युनिट", "building-2"), o("penthouse", "Penthouse", "पेन्टहाउस", "crown"), o("studio", "Studio", "स्टुडियो", "door-open")],
