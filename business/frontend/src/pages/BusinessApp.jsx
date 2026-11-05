@@ -46,7 +46,7 @@ import { Inbox } from "./Inbox";
 import { Forms } from "./Forms";
 import { formsOf } from "@sheetal/shared/core/forms";
 import { Invoices, Payouts } from "./Money";
-import { LiveInvoices } from "./LiveMoney";
+import { LiveInvoices, LivePayouts } from "./LiveMoney";
 import { Analytics, Developers } from "./Workspace";
 import { BackupOnly } from "./BusinessBilling";
 import { Branches, Calendar, LiveBranches, branchesOf } from "./Branches";
@@ -62,7 +62,7 @@ import { TODAY } from "@sheetal/shared/core/format";
 import { opsOf } from "@sheetal/shared/demo/ops";
 
 const PREVIEW = [
-  "/business/agreements", "/business/forms", "/business/payouts", "/business/expenses",
+  "/business/agreements", "/business/forms", "/business/expenses",
   "/business/rentals", "/business/stock", "/business/promote", "/business/social", "/business/voice",
   "/business/people", "/business/ai-accounts", "/business/developers",
 ];
@@ -268,7 +268,7 @@ export default function BusinessApp() {
         { path: "/business/forms/responses/:dest", render: ({ dest }) => guard(any("messages.reply", "leads.view", "settings.business"), <Forms key={tenant.id + "r"} tenant={tenant} view="responses" dest={dest} />) },
         { path: "/business/forms/:id", render: ({ id }) => guard(any("messages.reply", "leads.view", "settings.business"), <Forms key={tenant.id + id} tenant={tenant} view="build" id={id} />) },
         { path: "/business/invoices", render: () => guard(can(role, "invoices.view"), (isLive(tenant.id) ? <LiveInvoices key={tenant.id} tenant={tenant} /> : <Invoices tenant={tenant} />)) },
-        { path: "/business/payouts", render: () => guard(can(role, "payouts.view"), <Payouts tenant={tenant} />) },
+        { path: "/business/payouts", render: () => guard(can(role, "payouts.view"), (isLive(tenant.id) ? <LivePayouts key={tenant.id} tenant={tenant} /> : <Payouts tenant={tenant} />)) },
         { path: "/business/projects", render: () => guard(any("projects.manage", "progress.post"), (isLive(tenant.id) ? <LiveProjects key={tenant.id} tenant={tenant} role={role} /> : <Projects key={tenant.id} tenant={tenant} />)) },
         { path: "/business/collections", render: () => guard(can(role, "collect.payments"), (isLive(tenant.id) ? <LiveProjects key={tenant.id + "c"} tenant={tenant} role={role} /> : <Collections key={tenant.id} tenant={tenant} />)) },
         { path: "/business/investors", render: () => guard(can(role, "investors.view"), (isLive(tenant.id) ? <LiveInvestors key={tenant.id} tenant={tenant} role={role} /> : <Investors key={tenant.id} tenant={tenant} />)) },

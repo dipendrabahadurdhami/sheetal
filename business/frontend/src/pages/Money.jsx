@@ -312,7 +312,7 @@ function PrintDoc({ doc, inv, receipt, biz, onDone }) {
     window.addEventListener("afterprint", done, { once: true });
     const id = setTimeout(() => window.print(), 60);
     return () => { clearTimeout(id); window.removeEventListener("afterprint", done); document.body.classList.remove("pf-printing"); };
-  }, []);  
+  }, []);
   const tt = T(inv);
   const title = doc === "receipt" ? "Payment receipt" : inv.kind === "credit" ? "Credit note" : inv.status === "draft" ? "Invoice (draft)" : "Tax invoice";
   return createPortal(
@@ -343,34 +343,69 @@ function PrintDoc({ doc, inv, receipt, biz, onDone }) {
     </div>, document.body);
 }
 
-export function Payouts({ tenant }) {
+/** Payouts, on the sample workspace (no data) or from the server: LivePayouts in LiveMoney.jsx passes "data" (what the
+ *  payouts API sent) and "actions" (lines of one payout, the statement download). Read-only: Sheetal makes and sends payouts. */
+export function PayoutsView({ tenant, data, actions }) {
   const t = useT();
   const toast = useToast();
   const { db } = useStore();
+  const [open, setOpen] = useState(null);
+  const [lines, setLines] = useState(null);
   const ts = db.tenantSettings[tenant.id] || defaultTenantSettings(tenant);
-  const own = ts.payments.mode === "own";
-  const rows = []; // payouts come from the payments API
-  const exportRows = rows.map((r) => ({ ...r, status: t(`status.${r.status}`) }));
+  const own = data ? data.mode === "own" : ts.payments.mode === "own";
+  const bank = (data ? data.bank.bank : ts.payments.payoutBank.bank) || "your bank";
+  const rows = data?.payouts || [];
+  const coming = (data?.waiting.net || 0) + (data?.onTheWay.net || 0);
+  const comingNote = !data || (!data.waiting.count && !data.onTheWay.count) ? "None yet" : data.onTheWay.count ? `${data.onTheWay.count} on the way` : `Next run ${fdate(data.schedule.nextOn)}`;
+  const manyBranches = new Set(rows.map((r) => r.branchId)).size > 1;
+  const view = (p) => { setOpen(p); setLines(null); actions?.lines(p).then(setLines).catch((e) => { toast(e.message); setLines([]); }); };
+  const statement = () => (actions ? actions.statement() : (exportCSV("payouts", []), toast("Statement downloaded")));
   return (
     <>
-      <PageHead title={t("nav.payouts")} sub={own ? t("bpay.ownSub") : t("bpay.sub", { bank: ts.payments.payoutBank.bank || "your bank" })} actions={!own && <>
-        <DataActions kind="payouts" onlyExport rows={exportRows} />
-        <Button variant="outline" icon="download" onClick={() => { exportCSV("payouts", exportRows); toast("Statement downloaded"); }}>{t("bpay.statement")}</Button></>} />
+      <PageHead title={t("nav.payouts")} sub={own ? t("bpay.ownSub") : t("bpay.sub", { bank })} actions={!own && <Button variant="outline" icon="download" onClick={statement}>{t("bpay.statement")}</Button>} />
       {own ? <div className="pf-note">{t("bpay.ownNote")}</div> : <>
         <div className="pf-stats">
-          <Stat label={t("bpay.next")} value={rs(rows[0]?.net || 0)} note={rows[0] ? fdate(rows[0].date) : "None yet"} />
-          <Stat label={t("bpay.last30")} value={rs(rows.slice(1).reduce((s, r) => s + r.net, 0))} note={t("bpay.afterFee")} />
-          <Stat label={t("bpay.fees")} value={rs(rows.reduce((s, r) => s + r.fee, 0))} note={t("bpay.commission")} />
+          <Stat label={t("bpay.next")} value={rs(coming)} note={comingNote} />
+          <Stat label={t("bpay.last30")} value={rs(data?.last30.net || 0)} note={t("bpay.afterFee")} />
+          <Stat label={t("bpay.fees")} value={rs(data?.last30.fee || 0)} note={t("bpay.commission")} />
         </div>
-        <section className="card pf-panel"><Table rows={rows} minWidth={680} columns={[
-          { key: "id", label: t("pbill.payout"), num: true, render: (r) => <b className="pf-strong">{r.id}</b> },
-          { key: "date", label: t("billing.date"), num: true, render: (r) => fdate(r.date) },
+        {data?.waiting.count > 0 && <div className="pf-note"><Icon name="clock" size={16} />{rs(data.waiting.net)} from {data.waiting.count} payment{data.waiting.count > 1 ? "s" : ""} is waiting. Money is paid out on {data.schedule.day[0].toUpperCase() + data.schedule.day.slice(1)}s, once it is {data.schedule.holdDays} day{data.schedule.holdDays === 1 ? "" : "s"} old.</div>}
+        <section className="card pf-panel"><Table rows={rows} minWidth={720} empty={<Empty icon="wallet" title="No payouts yet" />} columns={[
+          { key: "id", label: t("pbill.payout"), num: true, render: (r) => <span className="pf-two"><b className="pf-strong">{r.no}</b>{manyBranches && <small>{r.branch}</small>}</span> },
+          { key: "date", label: t("billing.date"), num: true, render: (r) => fdate(r.paidOn || r.scheduledOn) },
           { key: "g", label: t("bpay.gross"), num: true, align: "right", render: (r) => rs(r.gross) },
           { key: "f", label: t("bpay.commission"), num: true, align: "right", render: (r) => `− ${rs(r.fee)}` },
           { key: "n", label: t("bpay.net"), num: true, align: "right", render: (r) => <b className="pf-strong">{rs(r.net)}</b> },
           { key: "s", label: t("common.status"), render: (r) => <StatusBadge status={r.status} /> },
+          { key: "x", label: "", align: "right", render: (r) => actions && <Button size="sm" variant="ghost" onClick={() => view(r)}>Details</Button> },
         ]} /></section>
       </>}
+      <Drawer open={!!open} onClose={() => setOpen(null)} title={open ? `${open.no} · ${open.kind === "manual" ? "Settlement" : "Payout"}` : ""}>
+        {open && <div className="pf-stack">
+          <div className="pf-stats">
+            <Stat label={t("bpay.gross")} value={rs(open.gross)} />
+            <Stat label={t("bpay.commission")} value={`− ${rs(open.fee)}`} />
+            <Stat label={t("bpay.net")} value={rs(open.net)} />
+          </div>
+          <p className="small muted" style={{ margin: 0 }}>
+            <StatusBadge status={open.status} /> {open.branch && `· ${open.branch} · `}to {open.bank.bank || "your bank"}{open.bank.last4 ? ` •••• ${open.bank.last4}` : ""}
+            {open.bankRef ? ` · ref ${open.bankRef}` : ""}{open.paidOn ? ` · paid ${fdate(open.paidOn)}` : ""}
+          </p>
+          {open.note && <p style={{ margin: 0 }}>{open.note}</p>}
+          {open.failReason && <div className="pf-note"><Icon name="circle-alert" size={16} />{open.failReason} The money is kept for the next payout.</div>}
+          {open.kind === "batch" && (lines === null ? <p className="muted">Loading…</p> : <Table rows={lines} minWidth={520} empty={<Empty icon="receipt" title="No lines" />} columns={[
+            { key: "w", label: "Payment", render: (l) => <span className="pf-two"><b>{l.what}</b><small className="tnum">{l.ref}</small></span> },
+            { key: "d", label: t("billing.date"), num: true, render: (l) => fdate(l.on) },
+            { key: "g", label: t("bpay.gross"), num: true, align: "right", render: (l) => rs(l.gross) },
+            { key: "f", label: t("bpay.commission"), num: true, align: "right", render: (l) => `− ${rs(l.fee)}` },
+            { key: "n", label: t("bpay.net"), num: true, align: "right", render: (l) => rs(l.net) },
+          ]} />)}
+        </div>}
+      </Drawer>
     </>
   );
+}
+
+export function Payouts({ tenant }) {
+  return <PayoutsView tenant={tenant} data={null} />; // the sample workspace has no payouts; the live page is in LiveMoney.jsx
 }

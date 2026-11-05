@@ -1418,3 +1418,72 @@ model ListingReview {
   @@index([tenantId, action, decided])
   @@map("listing_reviews")
 }
+
+// ───────────── Payouts (money Sheetal collects for a business and pays out to its bank) ─────────────
+
+/// One payment Sheetal collected for a business (a guest's online payment, a rent, an instalment, a site booking)
+/// and the commission taken from it. It waits here (payoutId empty) until a payout run puts it into a payout.
+/// A refund is a negative amount. The same payment is never counted twice (tenant + source + ref).
+model PayoutItem {
+  id          String   @id @default(cuid())
+  tenantId    String   @map("tenant_id")
+  branchId    String   @map("branch_id")
+  payoutId    String?  @map("payout_id")
+  payout      Payout?  @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+  /// booking, reservation, commitment, rent, ota, other
+  source      String
+  /// What it came from (BK-0007, a receipt number), so it is never counted twice.
+  ref         String
+  what        String
+  /// Whole rupees collected.
+  gross       Int
+  /// The commission taken, in hundredths of a percent (1000 = 10%), as it was when collected.
+  feeBp       Int      @map("fee_bp")
+  fee         Int
+  net         Int
+  collectedOn DateTime @db.Date @map("collected_on")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([tenantId, source, ref])
+  @@index([tenantId, payoutId])
+  @@index([payoutId])
+  @@index([tenantId, branchId, collectedOn])
+  @@map("payout_items")
+}
+
+/// A transfer from Sheetal to a business's bank, for one branch. "batch" payouts are made by a payout run from the
+/// waiting items; "manual" ones are entered by staff (a settlement paid outside the run). pending → paid or failed;
+/// a failed payout gives its items back, so the next run picks them up again.
+model Payout {
+  id          String       @id @default(cuid())
+  /// PO-0001
+  seq         Int          @unique @default(autoincrement())
+  tenantId    String       @map("tenant_id")
+  branchId    String       @map("branch_id")
+  /// batch or manual
+  kind        String       @default("batch")
+  /// pending, paid or failed
+  status      String       @default("pending")
+  gross       Int
+  fee         Int
+  net         Int
+  periodFrom  DateTime?    @db.Date @map("period_from")
+  periodTo    DateTime?    @db.Date @map("period_to")
+  scheduledOn DateTime     @db.Date @map("scheduled_on")
+  paidOn      DateTime?    @db.Date @map("paid_on")
+  /// The bank's transfer reference.
+  bankRef     String?      @map("bank_ref")
+  /// Where it goes, as it was when the payout was made: { bank, holder, account, branch }.
+  bank        Json         @default("{}")
+  note        String?
+  failReason  String?      @map("fail_reason")
+  createdBy   String?      @map("created_by")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  items       PayoutItem[]
+
+  @@index([tenantId, status, scheduledOn])
+  @@index([tenantId, branchId])
+  @@index([status, scheduledOn])
+  @@map("payouts")
+}

@@ -1,7 +1,7 @@
 // Admin API (port 4002): everything the super-admin panel (/admin) needs, for Sheetal staff only.
 // Where it fits: server.ts starts it; tests build it with buildApp(); the admin panel calls it under /v1/admin.
 // How it works: the shared base app (backend-core) plus modules for businesses and staff, plans, listing review,
-// content, billing, analytics and system status, business verification and the staff notification bell. It also
+// content, billing, payouts, analytics and system status, business verification and the staff notification bell. It also
 // runs two background jobs: plan renewals (every 6 hours) and calendar sync (every 2 hours).
 // Rules: every route starts with staffOf(request, permission); businesses get nothing here.
 
@@ -13,6 +13,7 @@ import { adminListingRoutes } from "./modules/listings.js";
 import { adminPlanRoutes } from "./modules/plans.js";
 import { adminContentRoutes } from "./modules/content.js";
 import { adminBillingRoutes, startBillingJob } from "./modules/billing.js";
+import { adminPayoutRoutes } from "./modules/payouts.js";
 import { adminInsightRoutes, startOtaJob } from "./modules/insight.js";
 import { notificationRoutes } from "@sheetal/backend-core/modules/notifications";
 import { adminVerificationRoutes } from "./modules/verification.js";
@@ -26,6 +27,7 @@ export async function buildApp(config: Config, deps: AppDeps = {}): Promise<Fast
   await app.register(adminPlanRoutes, { prefix: "/v1" });
   await app.register(adminContentRoutes, { prefix: "/v1" });
   await app.register(adminBillingRoutes, { prefix: "/v1" });
+  await app.register(adminPayoutRoutes, { prefix: "/v1" });
   await app.register(adminInsightRoutes, { prefix: "/v1" });
   await app.register(adminVerificationRoutes, { prefix: "/v1" });
   await app.register(adminCatalogRoutes, { prefix: "/v1" });

@@ -1,5 +1,5 @@
-// Billing on the admin API: revenue, payments (bank transfers to confirm, refunds), invoices, and gateway and billing
-// settings.
+// Billing on the admin API: revenue, payments (bank transfers to confirm, refunds), invoices, payouts to businesses,
+// and gateway and billing settings.
 // Rules: payment keys are write-only: a saved key is never shown again.
 
 import React, { useEffect, useState } from "react";
@@ -50,7 +50,7 @@ export function LiveAdminBilling() {
         <Stat label="Monthly plan value" value={s ? rs(s.mrr) : "—"} note={s ? `${s.payingBusinesses} paying businesses` : ""} />
         <Stat label="Needs attention" value={s ? s.toCheck + s.pastDue : "—"} note={s ? `${s.toCheck} transfers to check · ${s.pastDue} past due` : ""} tone={s && s.toCheck + s.pastDue ? "action" : undefined} />
       </div>
-      <Tabs value={tab} onChange={setTab} tabs={[{ id: "payments", label: "Payments", icon: "wallet", count: s?.toCheck || undefined }, { id: "invoices", label: "Invoices", icon: "receipt" }, { id: "settings", label: "Settings", icon: "settings" }]} />
+      <Tabs value={tab} onChange={setTab} tabs={[{ id: "payments", label: "Payments", icon: "wallet", count: s?.toCheck || undefined }, { id: "invoices", label: "Invoices", icon: "receipt" }, { id: "payouts", label: "Payouts", icon: "hand-coins" }, { id: "settings", label: "Settings", icon: "settings" }]} />
 
       {tab === "payments" && <section className="card pf-panel">
         <div className="pf-toolbar"><Select value={show} onChange={setShow} style={{ width: 220 }} aria-label="Show" options={[["pending_review", "Bank transfers to check"], ["paid", "Paid"], ["failed", "Failed"], ["refunded", "Refunded"], ["all", "All"]].map(([id, label]) => ({ id, label }))} /></div>
@@ -79,6 +79,8 @@ export function LiveAdminBilling() {
         ]} />}
       </Panel>}
 
+      {tab === "payouts" && <PayoutsPanel />}
+
       {tab === "settings" && <BillingSettings />}
 
       <Drawer open={!!bill} onClose={() => setBill(null)} title="Bill a business" footer={bill && <><Button variant="ghost" onClick={() => setBill(null)}>Cancel</Button><Button disabled={!bill.tenantId || !bill.planId} onClick={() => adminApi("POST", "/admin/billing/invoices", { ...bill, months: Number(bill.months) }).then((r) => { toast(r.message); setBill(null); invoices.reload(); }).catch((e) => toast(e.message))}>Create invoice</Button></>}>
@@ -86,6 +88,69 @@ export function LiveAdminBilling() {
           <Field label="Business"><Select value={bill.tenantId} onChange={(v) => setBill({ ...bill, tenantId: v, planId: "" })} options={[{ id: "", label: "Choose…" }, ...paidTenants.map((t) => ({ id: t.id, label: `${t.name} (${t.type})` }))]} /></Field>
           <Field label="Plan"><Select value={bill.planId} onChange={(v) => setBill({ ...bill, planId: v })} options={[{ id: "", label: "Choose…" }, ...db.plans.filter((p) => p.price > 0 && p.type === paidTenants.find((t) => t.id === bill.tenantId)?.type).map((p) => ({ id: p.id, label: `${p.name} · ${rs(p.price)} a month` }))]} /></Field>
           <Field label="Months"><Select value={bill.months} onChange={(v) => setBill({ ...bill, months: Number(v) })} options={[1, 3, 6, 12].map((m) => ({ id: m, label: `${m} month${m > 1 ? "s" : ""}` }))} /></Field>
+        </div>}
+      </Drawer>
+    </>
+  );
+}
+
+/** Payouts to businesses: what is waiting, run the payouts, mark them paid or failed, enter a settlement by hand. */
+function PayoutsPanel() {
+  const toast = useToast();
+  const { db } = useStore();
+  const [show, setShow] = useState("pending");
+  const list = useApi(`/admin/payouts?status=${show}`);
+  const [manual, setManual] = useState(null);
+  const [waitingFor, setWaitingFor] = useState(null);
+  useEffect(() => {
+    if (!manual?.tenantId) { setWaitingFor(null); return; }
+    let gone = false;
+    adminApi("GET", `/admin/payouts/waiting/${manual.tenantId}`).then((r) => { if (gone) return; setWaitingFor(r.data); setManual((m) => m && { ...m, settleWaiting: r.data.net > 0 }); }).catch(() => !gone && setWaitingFor(null));
+    return () => { gone = true; };
+  }, [manual?.tenantId]);
+  const canRecord = manual && manual.tenantId && manual.note.trim() && (manual.settleWaiting ? waitingFor?.net > 0 : Number(manual.gross) > 0);
+  const record = () => adminApi("POST", "/admin/payouts/manual", { tenantId: manual.tenantId, settleWaiting: !!manual.settleWaiting, ...(manual.settleWaiting ? {} : { gross: Number(manual.gross), fee: Number(manual.fee) || 0 }), paidOn: manual.paidOn, bankRef: manual.bankRef.trim() || null, note: manual.note.trim() }).then((r) => { say(r); setManual(null); }).catch((e) => toast(e.message));
+  const s = list.data?.summary;
+  const say = (r) => { toast(r.message); list.reload(); };
+  const run = () => adminApi("POST", "/admin/payouts/run").then((r) => { say(r); (r.data.skipped || []).forEach((k) => toast(`${k.tenant}: ${k.reason}`)); }).catch((e) => toast(e.message));
+  const paid = (p) => { const ref = window.prompt(`Bank reference for ${p.no} (the transfer you sent). Leave empty if there is none.`); if (ref !== null) adminApi("POST", `/admin/payouts/${p.id}/paid`, { bankRef: ref.trim() || undefined }).then(say).catch((e) => toast(e.message)); };
+  const failed = (p) => { const reason = window.prompt(`Why did ${p.no} fail? The business gets this, and the money goes back to waiting.`); if (reason?.trim()) adminApi("POST", `/admin/payouts/${p.id}/fail`, { reason: reason.trim() }).then(say).catch((e) => toast(e.message)); };
+  const day = (d) => (d ? d[0].toUpperCase() + d.slice(1) : "");
+  return (
+    <>
+      <div className="pf-stats">
+        <Stat label="Waiting to be paid out" value={s ? rs(s.waiting.net) : "—"} note={s ? `${s.waiting.count} payments · ${s.waiting.businesses} businesses` : ""} />
+        <Stat label="Pending transfers" value={s ? rs(s.pending.net) : "—"} note={s ? `${s.pending.count} to send from the bank` : ""} tone={s?.pending.count ? "action" : undefined} />
+        <Stat label="Paid this month" value={s ? rs(s.paidThisMonth.net) : "—"} note={s ? `Commission kept ${rs(s.paidThisMonth.fee)}` : ""} />
+        <Stat label="Next run" value={s ? fdate(s.schedule.nextOn) : "—"} note={s ? `${day(s.schedule.day)}s · money held ${s.schedule.holdDays} days` : ""} />
+      </div>
+      <Panel title="Payouts" sub="Make the payouts, send the transfers from the bank, then mark each one paid." actions={<><Button variant="outline" icon="plus" onClick={() => setManual({ tenantId: "", settleWaiting: false, gross: "", fee: "0", paidOn: new Date().toISOString().slice(0, 10), bankRef: "", note: "" })}>Manual payout</Button><Button icon="wallet" onClick={() => window.confirm("Make payouts from all waiting money that is past the hold days?") && run()}>Run payouts</Button></>}>
+        <div className="pf-toolbar"><Select value={show} onChange={setShow} style={{ width: 200 }} aria-label="Show" options={[["pending", "To send"], ["paid", "Paid"], ["failed", "Failed"], ["all", "All"]].map(([id, label]) => ({ id, label }))} /></div>
+        {!list.data ? <p className="muted pf-pad">Loading…</p> : <Table rows={list.data.rows} minWidth={860} empty={<Empty icon="wallet" title="No payouts here" />} columns={[
+          { key: "p", label: "Payout", render: (r) => <span className="pf-two"><b className="tnum">{r.no}</b><small>{r.kind === "manual" ? "Manual" : "Run"} · {fdate(r.scheduledOn)}</small></span> },
+          { key: "t", label: "Business", render: (r) => <span className="pf-two"><b>{r.tenant}</b><small>{r.branch}</small></span> },
+          { key: "b", label: "Send to", render: (r) => <span className="pf-two"><b>{r.bank.bank || "—"}</b><small className="tnum">{r.bank.holder}{r.bank.account ? ` · ${r.bank.account}` : ""}</small></span> },
+          { key: "a", label: "Amount", num: true, align: "right", render: (r) => <span className="pf-two" style={{ alignItems: "flex-end" }}><b>{rs(r.net)}</b><small className="muted">{rs(r.gross)} − {rs(r.fee)}</small></span> },
+          { key: "s", label: "Status", render: (r) => <span className="pf-two"><Badge tone={{ pending: "action", paid: "done", failed: "problem" }[r.status]}>{{ pending: "To send", paid: "Paid", failed: "Failed" }[r.status]}</Badge>{(r.failReason || r.bankRef || r.note) && <small className="muted">{r.failReason || (r.bankRef ? `Ref ${r.bankRef}` : r.note)}</small>}</span> },
+          { key: "x", label: "", align: "right", render: (r) => r.status === "pending" && <div className="pf-row-actions" style={{ justifyContent: "flex-end" }}><Button size="sm" variant="outline" onClick={() => failed(r)}>Failed…</Button><Button size="sm" icon="check" onClick={() => paid(r)}>Mark paid</Button></div> },
+        ]} />}
+      </Panel>
+      <Drawer open={!!manual} onClose={() => setManual(null)} title="Manual payout" footer={manual && <><Button variant="ghost" onClick={() => setManual(null)}>Cancel</Button><Button disabled={!canRecord} onClick={record}>Record payout</Button></>}>
+        {manual && <div className="pf-stack">
+          <p className="small muted" style={{ margin: 0 }}>For a settlement you already paid outside the run. It is recorded as paid and the business is told.</p>
+          <Field label="Business"><Select value={manual.tenantId} onChange={(v) => setManual({ ...manual, tenantId: v, settleWaiting: false })} options={[{ id: "", label: "Choose…" }, ...db.tenants.map((t) => ({ id: t.id, label: t.name }))]} /></Field>
+          {waitingFor && (waitingFor.net > 0
+            ? <ToggleRow title={`Pay out the waiting money: ${rs(waitingFor.net)}`} sub={`${waitingFor.count} payments, ${rs(waitingFor.gross)} less ${rs(waitingFor.fee)} commission. The next run won't pay it again.`} checked={!!manual.settleWaiting} onChange={(v) => setManual({ ...manual, settleWaiting: v })} />
+            : <p className="small muted" style={{ margin: 0 }}>Nothing is waiting for this business. Enter the amount you paid.</p>)}
+          {!manual.settleWaiting && <div className="pf-grid-2 tight">
+            <Field label="Amount collected (Rs.)"><Input className="input tnum" inputMode="numeric" value={manual.gross} onChange={(e) => setManual({ ...manual, gross: e.target.value.replace(/\D/g, "") })} /></Field>
+            <Field label="Commission (Rs.)"><Input className="input tnum" inputMode="numeric" value={manual.fee} onChange={(e) => setManual({ ...manual, fee: e.target.value.replace(/\D/g, "") })} /></Field>
+          </div>}
+          <div className="pf-grid-2 tight">
+            <Field label="Paid on"><Input type="date" value={manual.paidOn} onChange={(e) => setManual({ ...manual, paidOn: e.target.value })} /></Field>
+            <Field label="Bank reference" optional><Input value={manual.bankRef} onChange={(e) => setManual({ ...manual, bankRef: e.target.value })} /></Field>
+          </div>
+          <Field label="What is it for?"><Input value={manual.note} onChange={(e) => setManual({ ...manual, note: e.target.value })} placeholder="October site settlement" /></Field>
         </div>}
       </Drawer>
     </>
@@ -120,6 +185,7 @@ function BillingSettings() {
     </div>
   );
   return (
+    <>
     <div className="pf-split">
       <Panel title="Payment methods" className="grow" sub="Only the super admin can change keys." pad>
         {!g ? <p className="muted">Loading…</p> : <div className="pf-stack">
@@ -144,5 +210,36 @@ function BillingSettings() {
         </div>}
       </Panel>
     </div>
+    <PayoutSettings />
+    </>
+  );
+}
+
+/** Commission by business type, the payout weekday and the hold days. Only the super admin can change them. */
+function PayoutSettings() {
+  const toast = useToast();
+  const cfg = useApi("/admin/settings/payouts");
+  const [p, setP] = useState(null);
+  useEffect(() => { if (cfg.data) { const { canEdit, commission, day, holdDays } = cfg.data; setP({ canEdit, day, holdDays: String(holdDays), commission: Object.fromEntries(Object.entries(commission).map(([k, v]) => [k, String(v)])) }); } }, [cfg.data]);
+  const save = () => adminApi("PUT", "/admin/settings/payouts", { commission: Object.fromEntries(Object.entries(p.commission).map(([k, v]) => [k, Number(v)])), day: p.day, holdDays: Number(p.holdDays) })
+    .then((r) => { toast(r.message); cfg.reload(); }).catch((e) => toast(e.message));
+  const rate = (k, label) => <Field label={label}><Input className="input tnum" inputMode="decimal" disabled={!p.canEdit} value={p.commission[k]} onChange={(e) => setP({ ...p, commission: { ...p.commission, [k]: e.target.value.replace(/[^\d.]/g, "") } })} /></Field>;
+  return (
+    <Panel title="Payouts" sub={p && !p.canEdit ? "Only the super admin can change these." : "What Sheetal keeps from money it collects for a business, and when it pays the rest out."} pad>
+      {!p ? <p className="muted">Loading…</p> : <div className="pf-stack">
+        <div className="pf-grid-2 tight">
+          {rate("stays", "Commission: hotels and hosts (%)")}
+          {rate("projects", "Commission: developers (%)")}
+          {rate("agency", "Commission: agencies (%)")}
+          {rate("investments", "Commission: sponsors (%)")}
+        </div>
+        <div className="pf-grid-2 tight">
+          <Field label="Payout day"><Select value={p.day} disabled={!p.canEdit} onChange={(v) => setP({ ...p, day: v })} options={["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"].map((d) => ({ id: d, label: d[0].toUpperCase() + d.slice(1) }))} /></Field>
+          <Field label="Hold days" hint="Money collected in the last N days waits, so refunds settle first."><Input className="input tnum" inputMode="numeric" disabled={!p.canEdit} value={p.holdDays} onChange={(e) => setP({ ...p, holdDays: e.target.value.replace(/\D/g, "") })} /></Field>
+        </div>
+        <p className="small muted" style={{ margin: 0 }}>A new commission applies to money collected from now on; money already collected keeps its old one.</p>
+        {p.canEdit && <Button onClick={save}>Save payout settings</Button>}
+      </div>}
+    </Panel>
   );
 }

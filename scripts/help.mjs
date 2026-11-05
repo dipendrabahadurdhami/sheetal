@@ -27,6 +27,8 @@ const GROUPS = [
     ["test:watch", "Re-runs the shared front-end tests on every save."],
     ["doctor", "Checks this computer is ready: Node version, settings files, database, ports, photo folder."],
     ["check:comments", "Proves a documentation change touched comments only (compares the code before and after)."],
+    ["qc", "Quick check while working: lint the apps and typecheck the shared code, without the tests."],
+    ["dc", "Same as check (a short name for it)."],
   ]],
   ["Database", [
     ["db:migrate", "Applies new database migrations (after pulling changes that touch backend-core/prisma)."],
@@ -34,6 +36,7 @@ const GROUPS = [
     ["backup", "Exports the database to OneDrive\\Sheetal-Backups and copies new photos. Add -- --no-photos for the database only."],
     ["restore", "Lists database backups; `npm run restore -- <name> --yes` puts one back (replaces all data)."],
     ["listings:tidy", "Fills empty listing fields from each title and description and writes a short description. Try -- --dry-run first."],
+    ["payouts:sample", "Adds sample collected payments to a business so the Payouts pages can be tested. Try -- --help first."],
     ["photos:resize", "Makes every photo in MEDIA_DIR the new sizes (main 1920 px, thumbnail 800 px). Try -- --dry-run first."],
   ]],
   ["Build and release", [
