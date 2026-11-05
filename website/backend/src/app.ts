@@ -15,6 +15,7 @@ import { postingRoutes } from "./modules/posting/routes.js";
 import { contentRoutes } from "./modules/content/routes.js";
 import { boardRoutes } from "./modules/board/routes.js";
 import { insightRoutes } from "./modules/insight/routes.js";
+import { rentRoutes } from "./modules/rent/routes.js";
 import type { AiClient } from "@sheetal/backend-core/lib/ai";
 
 export async function buildApp(config: Config, deps: AppDeps & { ai?: { client: AiClient; model: string } } = {}): Promise<FastifyInstance> {
@@ -27,6 +28,7 @@ export async function buildApp(config: Config, deps: AppDeps & { ai?: { client: 
   await app.register(boardRoutes, { prefix: "/v1" });
   await app.register(contentRoutes, { prefix: "/v1" });
   await app.register(insightRoutes, { prefix: "/v1", ai: deps.ai });
+  await app.register(rentRoutes, { prefix: "/v1" });
   await app.register(mediaRoutes);
   return app;
 }

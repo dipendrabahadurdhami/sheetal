@@ -146,18 +146,18 @@ describe("listings and leads per branch", () => {
     expect((await call("owner", "PATCH", `/team/members/${ids.agent}`, { scopes: ["Baneshwor"] }, ids.realty)).statusCode).toBe(200);
     expect(await titles("agent", ids.realty)).toEqual(["Baneshwor house", "Picked land"]);
     expect(await titles("agent", ids.realty, "all")).toEqual(["Baneshwor house", "Picked land"]);
-    expect((await call("agent", "GET", "/listings/SP-0001", undefined, ids.realty)).statusCode).toBe(404); // head office's
+    expect((await call("agent", "GET", "/listings/PR-0001", undefined, ids.realty)).statusCode).toBe(404); // head office's
     expect((await call("agent", "POST", "/listings", draft("Sneaky", await idOf("Head office", ids.realty)), ids.realty)).statusCode).toBe(403);
     expect((await call("agent", "POST", "/listings", draft("Agent flat"), ids.realty)).json().data.branchId).toBe(baneshwor); // their only branch
   });
 
   it("moves a listing to another branch with its leads", async () => {
     const head = await idOf("Head office", ids.realty);
-    const l = await app.db!.listing.findFirstOrThrow({ where: { code: "SP-0001" } });
+    const l = await app.db!.listing.findFirstOrThrow({ where: { code: "PR-0001" } });
     await app.db!.lead.create({ data: { tenantId: ids.realty, branchId: head, listingId: l.id, kind: "contact_agent", name: "Gita" } });
     expect((await call("agent", "GET", "/leads", undefined, ids.realty)).json().data).toEqual([]); // head office's lead
-    const values = (await call("owner", "GET", "/listings/SP-0001", undefined, ids.realty)).json().data.values;
-    await call("owner", "PATCH", "/listings/SP-0001", { kind: "sell", submit: false, values, summary: { title: "Head office flat" }, branchId: await idOf("Baneshwor", ids.realty) }, ids.realty);
+    const values = (await call("owner", "GET", "/listings/PR-0001", undefined, ids.realty)).json().data.values;
+    await call("owner", "PATCH", "/listings/PR-0001", { kind: "sell", submit: false, values, summary: { title: "Head office flat" }, branchId: await idOf("Baneshwor", ids.realty) }, ids.realty);
     expect((await call("agent", "GET", "/leads", undefined, ids.realty)).json().data.map((x: { name: string; branch: string }) => [x.name, x.branch])).toEqual([["Gita", "Baneshwor"]]);
   });
 

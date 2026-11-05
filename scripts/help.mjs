@@ -37,6 +37,8 @@ const GROUPS = [
     ["restore", "Lists database backups; `npm run restore -- <name> --yes` puts one back (replaces all data)."],
     ["listings:tidy", "Fills empty listing fields from each title and description and writes a short description. Try -- --dry-run first."],
     ["expenses:roles", "Gives the Expenses permissions to the owner-made manager and accountant roles of existing businesses (run once after the Expenses update)."],
+    ["rentals:roles", "Gives the Rentals permissions to the branch manager and accountant roles of existing agencies (run once after the Rentals update)."],
+    ["listings:codes", "Gives every business without one its property code prefix (its initials, Everest Realty → ER) and changes its listing codes; old codes keep working. Try -- --dry-run first."],
     ["payouts:sample", "Adds sample collected payments to a business so the Payouts pages can be tested. Try -- --help first."],
     ["photos:resize", "Makes every photo in MEDIA_DIR the new sizes (main 1920 px, thumbnail 800 px). Try -- --dry-run first."],
   ]],

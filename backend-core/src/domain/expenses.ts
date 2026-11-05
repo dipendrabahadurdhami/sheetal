@@ -6,7 +6,8 @@
 // branch = money received directly + payouts from Sheetal − confirmed expenses. Direct money is what the business
 // received itself (invoice payments, without VAT, counted in the month they were paid); money Sheetal collected
 // reaches the business through a payout, so a payment with method "sheetal" is left out and the payout (its net,
-// in the month it was paid) is counted instead. VAT collected and Sheetal's commission are shown for information
+// in the month it was paid) is counted instead. Rentals: the management fee of saved owner statements counts as
+// direct money in the statement's month (rent itself is the owner's money). VAT collected and Sheetal's commission are shown for information
 // only: VAT is owed to the government, and the commission is already taken off the payout.
 // Rules: whole rupees; months are calendar months in Nepal time (use nepalDay()); expenses count by their expense
 // date, invoice payments by their paid date, payouts by their paid date; only confirmed expenses count.
@@ -72,13 +73,15 @@ export interface ProfitRow { month: string; branchId: string; branch: string; di
 export async function profitRows(db: Db, o: { tenantId: string; branchIds: string[] | null; branchNames: Map<string, string>; from: string; to: string }): Promise<ProfitRow[]> {
   const first = dayOf(monthSpan(o.from).first), last = dayOf(monthSpan(o.to).last);
   const inBranch = o.branchIds ? { in: o.branchIds } : undefined;
-  const [receipts, payouts, expenses] = await Promise.all([
+  const [receipts, payouts, expenses, fees] = await Promise.all([
     db.bizReceipt.findMany({
       where: { tenantId: o.tenantId, paidOn: { gte: first, lte: last }, method: { not: SHEETAL_METHOD }, invoice: { kind: "invoice", ...(inBranch ? { branchId: inBranch } : {}) } },
       select: { amount: true, paidOn: true, invoice: { select: { branchId: true, subtotal: true, total: true } } }, take: 100_000,
     }),
-    db.payout.findMany({ where: { tenantId: o.tenantId, status: "paid", paidOn: { gte: first, lte: last }, ...(inBranch ? { branchId: inBranch } : {}) }, select: { branchId: true, paidOn: true, net: true, fee: true }, take: 100_000 }),
+    db.payout.findMany({ where: { tenantId: o.tenantId, status: "paid", paidOn: { gte: first, lte: last }, ...(inBranch ? { branchId: inBranch } : {}) }, select: { branchId: true, paidOn: true, net: true, fee: true, items: { where: { source: "rent" }, select: { net: true, fee: true } } }, take: 100_000 }),
     db.expense.findMany({ where: { tenantId: o.tenantId, status: "confirmed", spentOn: { gte: first, lte: last }, ...(inBranch ? { branchId: inBranch } : {}) }, select: { branchId: true, spentOn: true, amount: true }, take: 100_000 }),
+    // Rentals: rent belongs to the owner; only the agency's management fee, from saved owner statements, is income.
+    db.ownerStatement.findMany({ where: { tenantId: o.tenantId, month: { gte: o.from, lte: o.to }, ...(inBranch ? { branchId: inBranch } : {}) }, select: { branchId: true, month: true, fee: true }, take: 100_000 }),
   ]);
   const rows = new Map<string, ProfitRow>();
   const at = (date: Date, branchId: string) => {
@@ -89,8 +92,10 @@ export async function profitRows(db: Db, o: { tenantId: string; branchIds: strin
     return r;
   };
   for (const r of receipts) { const s = paymentSplit(r.amount, r.invoice); const row = at(r.paidOn, r.invoice.branchId); row.direct += s.net; row.vat += s.vat; }
-  for (const p of payouts) { const row = at(p.paidOn!, p.branchId); row.payouts += p.net; row.commission += p.fee; }
+  // Rent in a payout is the owner's money (the agency's income is its fee, from owner statements), so it is left out.
+  for (const p of payouts) { const row = at(p.paidOn!, p.branchId); row.payouts += p.net - p.items.reduce((s, i) => s + i.net, 0); row.commission += p.fee - p.items.reduce((s, i) => s + i.fee, 0); }
   for (const e of expenses) at(e.spentOn, e.branchId).expenses += e.amount;
+  for (const f of fees) at(dayOf(`${f.month}-01`), f.branchId).direct += f.fee;
   for (const r of rows.values()) r.profit = r.direct + r.payouts - r.expenses;
   return [...rows.values()].sort((a, b) => (a.month === b.month ? a.branch.localeCompare(b.branch) : b.month.localeCompare(a.month)));
 }

@@ -14,6 +14,7 @@ import { adminPlanRoutes } from "./modules/plans.js";
 import { adminContentRoutes } from "./modules/content.js";
 import { adminBillingRoutes, startBillingJob } from "./modules/billing.js";
 import { adminPayoutRoutes } from "./modules/payouts.js";
+import { adminRentPaymentRoutes } from "./modules/rent-payments.js";
 import { adminInsightRoutes, startOtaJob } from "./modules/insight.js";
 import { notificationRoutes } from "@sheetal/backend-core/modules/notifications";
 import { adminVerificationRoutes } from "./modules/verification.js";
@@ -28,6 +29,7 @@ export async function buildApp(config: Config, deps: AppDeps = {}): Promise<Fast
   await app.register(adminContentRoutes, { prefix: "/v1" });
   await app.register(adminBillingRoutes, { prefix: "/v1" });
   await app.register(adminPayoutRoutes, { prefix: "/v1" });
+  await app.register(adminRentPaymentRoutes, { prefix: "/v1" });
   await app.register(adminInsightRoutes, { prefix: "/v1" });
   await app.register(adminVerificationRoutes, { prefix: "/v1" });
   await app.register(adminCatalogRoutes, { prefix: "/v1" });

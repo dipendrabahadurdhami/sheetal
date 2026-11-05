@@ -7,6 +7,7 @@
 import React, { useState } from "react";
 import { isLive, profileOf, saveProfile, saveSettings, uploadQr } from "../live";
 import { BrandFromLogo } from "./BrandFromLogo";
+import { CodePrefix } from "./CodePrefix";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
 import { Badge, Field, Input, PageHead, Panel, SaveBar, Select, Seg, ToggleRow, useToast } from "@sheetal/shared/core/ui";
@@ -206,6 +207,7 @@ export function BusinessSettings({ tenant, tab: tabProp }) {
             </>}
 
             {tab === "listings" && <>
+              {isLive(tenant.id) && <CodePrefix tenantId={tenant.id} />}
               <Field label={t("bsettings.defaultVisibility")} hint={t("bsettings.defaultVisibilityHint")}>
                 <Seg value={get("listings.defaultVisibility")} onChange={(v) => set("listings.defaultVisibility", v)} options={["public", "unlisted", "private"].map((x) => ({ id: x, label: t(`vis.${x}`) }))} />
               </Field>

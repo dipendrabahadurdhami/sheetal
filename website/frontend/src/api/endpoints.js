@@ -37,6 +37,11 @@ export const api = {
   // contact
   contactAgent: (data) => post("contact-agent", data),
   contactOwner: (data) => post("contact-owner", data),
+
+  // rent (Pay rent and Profile → My rentals)
+  rentFind: (data) => post("rent/find", data),
+  rentMine: () => get("rent/mine"),
+  rentPay: (data) => post("rent/pay", data),
   scheduleTour: (data) => post("schedule-tour", data),
   requirement: (fd, agentId) => post(agentId ? "agent-requirement-form" : "requirement-form", fd),
   requirementFee: () => get("requirement-fee/settings-public"),

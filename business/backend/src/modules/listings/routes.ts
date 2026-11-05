@@ -17,6 +17,7 @@ import { isPhotoName, mediaBase, photoUrl, savePhoto } from "@sheetal/backend-co
 import { hasPerm } from "@sheetal/backend-core/domain/permissions";
 import { COUNTED, LISTING_KINDS, LISTING_PERMS, kindsFor, listingCap, purposeOf } from "@sheetal/backend-core/domain/listings";
 import { catalogKindsNow, warmCatalog } from "@sheetal/backend-core/lib/catalog";
+import { listingCode, prefixFor } from "@sheetal/backend-core/domain/codes";
 import { branchFor, branchView, inView, workspaceOf, type Workspace } from "../access.js";
 
 const LIVE: ListingStatus[] = ["published", "sold", "rented"];
@@ -238,7 +239,7 @@ export async function listingRoutes(app: FastifyInstance) {
         private: { form: { ...b.values, photos: undefined } } as Prisma.InputJsonValue,
         photos: { create: photos.map((file, sort) => ({ file, sort })) },
       } });
-      return tx.listing.update({ where: { id: l.id }, data: { code: `SP-${String(l.id).padStart(4, "0")}`, slug: `${slugify(l.title)}-${l.id}` }, include: { photos: true, branch: { select: { id: true, name: true } } } });
+      return tx.listing.update({ where: { id: l.id }, data: { code: listingCode(await prefixFor(tx, ws.tenantId), l.id), slug: `${slugify(l.title)}-${l.id}` }, include: { photos: true, branch: { select: { id: true, name: true } } } });
     });
     await audit(ws, request.ip, b.submit ? "listing.submitted" : "listing.draft_saved", created.code);
     if (b.submit) await notifyStaff(dbOf(app), "moderation.listings", { type: "review", title: "Listing to review", message: `${created.title} · ${ws.member.tenant.name}`, link: "/admin/moderation" });
@@ -337,7 +338,7 @@ export async function listingRoutes(app: FastifyInstance) {
         legacyId: null, publishedAt: null, submittedAt: null, reviewedAt: null, reviewedBy: null, reviewNote: null, lastCheckedAt: null, lastCheckedBy: null, checkDueAt: null,
         photos: { create: photos.map((p) => ({ file: p.file, sort: p.sort })) },
       } });
-      return tx.listing.update({ where: { id: c.id }, data: { code: `SP-${String(c.id).padStart(4, "0")}`, slug: `${slugify(c.title)}-${c.id}` }, include: { photos: true, branch: { select: { id: true, name: true } } } });
+      return tx.listing.update({ where: { id: c.id }, data: { code: listingCode(await prefixFor(tx, ws.tenantId), c.id), slug: `${slugify(c.title)}-${c.id}` }, include: { photos: true, branch: { select: { id: true, name: true } } } });
     });
     await audit(ws, request.ip, "listing.duplicated", copy.code, ws.tenantId, { from: l.code });
     return { message: "Copy saved as a draft.", data: row(copy, 0) };

@@ -2,7 +2,7 @@
 // Where it fits: server.ts starts it; tests build it with buildApp(); the business panel calls it under /v1.
 // How it works: the shared base app (backend-core) plus one module per area: team and businesses, branches,
 // listings, leads, email, billing, hotel and calendar, point of sale, projects and investments, growth (AI,
-// analytics, channels, calendar sync), reviews and verification, settings and check-ups, import and export, customer invoices, payouts, expenses and profit, and the
+// analytics, channels, calendar sync), reviews and verification, settings and check-ups, import and export, customer invoices, payouts, expenses and profit, rentals, and the
 // notification bell.
 // Rules: every route starts from workspaceOf() (modules/access.ts), so it always acts inside one business the
 // person belongs to, with their role, and only on the branches they work at.
@@ -27,6 +27,8 @@ import { dataRoutes } from "./modules/data/routes.js";
 import { invoicingRoutes } from "./modules/invoicing/routes.js";
 import { payoutRoutes } from "./modules/payouts/routes.js";
 import { expenseRoutes, startExpenseJob } from "./modules/expenses/routes.js";
+import { rentalRoutes, startRentJob } from "./modules/rentals/routes.js";
+import { listingCodeRoutes } from "./modules/listings/codes.js";
 import { reviewRoutes as checkupRoutes } from "./modules/reviews/checkups.js";
 import { notificationRoutes } from "@sheetal/backend-core/modules/notifications";
 import { workspaceOf } from "./modules/access.js";
@@ -45,6 +47,8 @@ export async function buildApp(config: Config, deps: AppDeps & { resolver?: Reso
   await app.register(invoicingRoutes, { prefix: "/v1" });
   await app.register(payoutRoutes, { prefix: "/v1" });
   await app.register(expenseRoutes, { prefix: "/v1" });
+  await app.register(rentalRoutes, { prefix: "/v1" });
+  await app.register(listingCodeRoutes, { prefix: "/v1" });
   await app.register(checkupRoutes, { prefix: "/v1" });
   // The bell: the person's notifications about the open business.
   await app.register(async (a) => notificationRoutes(a, "/notifications", (request) => { const ws = workspaceOf(request); return { userId: ws.user.id, tenantId: ws.tenantId }; }), { prefix: "/v1" });
@@ -58,5 +62,7 @@ export async function buildApp(config: Config, deps: AppDeps & { resolver?: Reso
   await app.register(growthRoutes, { prefix: "/v1", ai: deps.ai, fetch: deps.fetch });
   // Recurring expenses are added as drafts by a background job in this process. JOBS=off turns it off.
   if (config.NODE_ENV !== "test" && process.env.JOBS !== "off" && app.db) startExpenseJob(app);
+  // Rent bills and late fees are made the same way.
+  if (config.NODE_ENV !== "test" && process.env.JOBS !== "off" && app.db) startRentJob(app);
   return app;
 }

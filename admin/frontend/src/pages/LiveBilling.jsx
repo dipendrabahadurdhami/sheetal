@@ -50,7 +50,7 @@ export function LiveAdminBilling() {
         <Stat label="Monthly plan value" value={s ? rs(s.mrr) : "—"} note={s ? `${s.payingBusinesses} paying businesses` : ""} />
         <Stat label="Needs attention" value={s ? s.toCheck + s.pastDue : "—"} note={s ? `${s.toCheck} transfers to check · ${s.pastDue} past due` : ""} tone={s && s.toCheck + s.pastDue ? "action" : undefined} />
       </div>
-      <Tabs value={tab} onChange={setTab} tabs={[{ id: "payments", label: "Payments", icon: "wallet", count: s?.toCheck || undefined }, { id: "invoices", label: "Invoices", icon: "receipt" }, { id: "payouts", label: "Payouts", icon: "hand-coins" }, { id: "settings", label: "Settings", icon: "settings" }]} />
+      <Tabs value={tab} onChange={setTab} tabs={[{ id: "payments", label: "Payments", icon: "wallet", count: s?.toCheck || undefined }, { id: "invoices", label: "Invoices", icon: "receipt" }, { id: "payouts", label: "Payouts", icon: "hand-coins" }, { id: "rent", label: "Rent payments", icon: "key-round" }, { id: "settings", label: "Settings", icon: "settings" }]} />
 
       {tab === "payments" && <section className="card pf-panel">
         <div className="pf-toolbar"><Select value={show} onChange={setShow} style={{ width: 220 }} aria-label="Show" options={[["pending_review", "Bank transfers to check"], ["paid", "Paid"], ["failed", "Failed"], ["refunded", "Refunded"], ["all", "All"]].map(([id, label]) => ({ id, label }))} /></div>
@@ -81,6 +81,8 @@ export function LiveAdminBilling() {
 
       {tab === "payouts" && <PayoutsPanel />}
 
+      {tab === "rent" && <RentPaymentsPanel />}
+
       {tab === "settings" && <BillingSettings />}
 
       <Drawer open={!!bill} onClose={() => setBill(null)} title="Bill a business" footer={bill && <><Button variant="ghost" onClick={() => setBill(null)}>Cancel</Button><Button disabled={!bill.tenantId || !bill.planId} onClick={() => adminApi("POST", "/admin/billing/invoices", { ...bill, months: Number(bill.months) }).then((r) => { toast(r.message); setBill(null); invoices.reload(); }).catch((e) => toast(e.message))}>Create invoice</Button></>}>
@@ -91,6 +93,42 @@ export function LiveAdminBilling() {
         </div>}
       </Drawer>
     </>
+  );
+}
+
+/** Rent tenants paid online: payments made to Sheetal Property are checked and confirmed here (then they are paid out to
+ *  the business with its payout); payments made to a business's own account can be seen and confirmed too. */
+function RentPaymentsPanel() {
+  const toast = useToast();
+  const [status, setStatus] = useState("pending");
+  const [to, setTo] = useState("sheetal");
+  const list = useApi(`/admin/rent-payments?status=${status}&to=${to}`);
+  const say = (r) => { toast(r.message); list.reload(); };
+  const proof = (p) => adminApi("GET", `/admin/rent-payments/${p.id}/proof`).then((r) => {
+    const bin = atob(r.data.data); const bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    window.open(URL.createObjectURL(new Blob([bytes], { type: r.data.type })), "_blank", "noopener");
+  }).catch((e) => toast(e.message));
+  const reject = (p) => { const note = window.prompt(`Why can't ${p.bill} (${rs(p.amount)}) be confirmed? The tenant sees this.`); if (note?.trim()) adminApi("POST", `/admin/rent-payments/${p.id}/reject`, { note: note.trim() }).then(say).catch((e) => toast(e.message)); };
+  const confirm = (p) => window.confirm(`Confirm ${rs(p.amount)} from ${p.renter} for ${p.bill}? Check the money is in the account first.`) && adminApi("POST", `/admin/rent-payments/${p.id}/confirm`).then(say).catch((e) => toast(e.message));
+  return (
+    <Panel title="Rent payments" sub="Rent tenants paid online. Check the money arrived, then confirm. Payments to Sheetal are paid out to the business with its next payout.">
+      <div className="pf-toolbar">
+        <Select value={status} onChange={setStatus} style={{ width: 180 }} aria-label="Show" options={[["pending", "To check"], ["confirmed", "Confirmed"], ["rejected", "Rejected"], ["all", "All"]].map(([id, label]) => ({ id, label }))} />
+        <Select value={to} onChange={setTo} style={{ width: 220 }} aria-label="Paid to" options={[["sheetal", "Paid to Sheetal"], ["business", "Paid to the business"], ["all", "Paid to anyone"]].map(([id, label]) => ({ id, label }))} />
+      </div>
+      {!list.data ? <p className="muted pf-pad">Loading…</p> : <Table rows={list.data} minWidth={980} empty={<Empty icon="circle-check" title="Nothing here" />} columns={[
+        { key: "t", label: "Tenant", render: (r) => <span className="pf-two"><b>{r.renter}</b><small>{r.tenant} · {r.unit}</small></span> },
+        { key: "b", label: "Bill", render: (r) => <span className="pf-two"><b className="tnum">{r.bill}</b><small>{r.month} · {r.lease}</small></span> },
+        { key: "m", label: "Paid by", render: (r) => <span className="pf-two"><b>{r.method}</b><small className="tnum">{r.ref}{r.to === "business" ? " · to the business" : ""}</small></span> },
+        { key: "a", label: "Amount", num: true, align: "right", render: (r) => rs(r.amount) },
+        { key: "d", label: "Paid on", num: true, render: (r) => fdate(r.paidOn) },
+        { key: "s", label: "Status", render: (r) => <span className="pf-two"><Badge tone={{ pending: "action", confirmed: "done", rejected: "problem" }[r.status]}>{{ pending: "To check", confirmed: "Confirmed", rejected: "Rejected" }[r.status]}</Badge>{r.note && <small className="muted">{r.note}</small>}</span> },
+        { key: "x", label: "", align: "right", render: (r) => <div className="pf-row-actions" style={{ justifyContent: "flex-end" }}>
+          {r.hasProof && <Button size="sm" variant="ghost" icon="image" onClick={() => proof(r)}>Screenshot</Button>}
+          {r.status === "pending" && <><Button size="sm" variant="outline" onClick={() => reject(r)}>Reject</Button><Button size="sm" icon="check" onClick={() => confirm(r)}>Confirm</Button></>}
+        </div> },
+      ]} />}
+    </Panel>
   );
 }
 

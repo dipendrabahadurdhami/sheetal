@@ -57,8 +57,8 @@ describe("listings", () => {
   it("sends a new listing to Sheetal for review, keeping the form private", async () => {
     const res = await call("owner", "POST", "/listings", { kind: "sell", values: { category: "house", docs: { lalpurja: "lalpurja.pdf" } }, summary: await summary() });
     expect(res.statusCode).toBe(200);
-    expect(res.json().data).toMatchObject({ id: "SP-0001", status: "in_review", price: 25000000, link: null });
-    const l = await app.db!.listing.findUniqueOrThrow({ where: { code: "SP-0001" } });
+    expect(res.json().data).toMatchObject({ id: "ER-0001", status: "in_review", price: 25000000, link: null });
+    const l = await app.db!.listing.findUniqueOrThrow({ where: { code: "ER-0001" } });
     expect(l).toMatchObject({ status: "pending", purpose: "sale", tenantId: ids.agency, userId: ids.owner });
     expect(l.submittedAt).not.toBeNull();
     expect((l.private as { form: object }).form).toMatchObject({ docs: { lalpurja: "lalpurja.pdf" } });
@@ -86,42 +86,42 @@ describe("listings", () => {
 
   it("lists the open business's listings only, with the room left on the plan", async () => {
     const res = (await call("owner", "GET", "/listings")).json();
-    expect(res.data.map((l: { id: string }) => l.id).sort()).toEqual(["SP-0001", "SP-0002"]);
+    expect(res.data.map((l: { id: string }) => l.id).sort()).toEqual(["ER-0001", "ER-0002"]);
     expect(res.meta).toMatchObject({ cap: 150, used: 2, kinds: ["sell", "rentout"] });
-    expect((await call("account", "GET", "/listings/SP-0001")).statusCode).toBe(403);
-    expect((await call("owner", "GET", "/listings/SP-0003")).statusCode).toBe(404); // the free business's listing
+    expect((await call("account", "GET", "/listings/ER-0001")).statusCode).toBe(403);
+    expect((await call("owner", "GET", "/listings/EF-0003")).statusCode).toBe(404); // the free business's listing
   });
 
   it("pages, searches and filters on the server, with counts per status", async () => {
     const r = (await call("owner", "GET", "/listings?page=1&per=10&status=in_review")).json();
-    expect(r.data.map((l: { id: string }) => l.id)).toEqual(["SP-0001"]);
+    expect(r.data.map((l: { id: string }) => l.id)).toEqual(["ER-0001"]);
     expect(r.meta).toMatchObject({ total: 1, counts: { all: 2, in_review: 1, draft: 1 }, listedKinds: expect.arrayContaining(["sell", "rentout"]) });
-    expect((await call("owner", "GET", "/listings?page=1&q=dhapasi")).json().data.map((l: { id: string }) => l.id)).toEqual(["SP-0001"]);
-    expect((await call("owner", "GET", "/listings?page=1&q=sp-0002")).json().data.map((l: { id: string }) => l.id)).toEqual(["SP-0002"]);
+    expect((await call("owner", "GET", "/listings?page=1&q=dhapasi")).json().data.map((l: { id: string }) => l.id)).toEqual(["ER-0001"]);
+    expect((await call("owner", "GET", "/listings?page=1&q=er-0002")).json().data.map((l: { id: string }) => l.id)).toEqual(["ER-0002"]);
     expect((await call("owner", "GET", "/listings?page=1&kind=rentout")).json().meta.total).toBe(1);
   });
 
   it("opens the saved form for editing, and edits go back for review", async () => {
-    const d = (await call("agent", "GET", "/listings/SP-0001")).json().data;
+    const d = (await call("agent", "GET", "/listings/ER-0001")).json().data;
     expect(d.values).toMatchObject({ category: "house", photos: [expect.objectContaining({ url: expect.stringContaining("/property/main/") })] });
-    await app.db!.listing.update({ where: { code: "SP-0001" }, data: { status: "published", publishedAt: new Date() } });
-    expect((await call("agent", "PATCH", "/listings/SP-0001", { kind: "sell", submit: false, values: d.values, summary: await summary({ price: 1 }) })).statusCode).toBe(400);
-    const res = await call("agent", "PATCH", "/listings/SP-0001", { kind: "sell", values: d.values, summary: await summary({ price: 24000000 }) });
+    await app.db!.listing.update({ where: { code: "ER-0001" }, data: { status: "published", publishedAt: new Date() } });
+    expect((await call("agent", "PATCH", "/listings/ER-0001", { kind: "sell", submit: false, values: d.values, summary: await summary({ price: 1 }) })).statusCode).toBe(400);
+    const res = await call("agent", "PATCH", "/listings/ER-0001", { kind: "sell", values: d.values, summary: await summary({ price: 24000000 }) });
     expect(res.json().message).toContain("off the website");
-    expect(await app.db!.listing.findUniqueOrThrow({ where: { code: "SP-0001" } })).toMatchObject({ status: "pending", price: 24000000n });
+    expect(await app.db!.listing.findUniqueOrThrow({ where: { code: "ER-0001" } })).toMatchObject({ status: "pending", price: 24000000n });
   });
 
   it("pauses and publishes again without a new review once approved; drafts are sent for review", async () => {
-    await app.db!.listing.update({ where: { code: "SP-0001" }, data: { status: "published" } });
-    expect((await call("owner", "POST", "/listings/status", { ids: ["SP-0001"], status: "paused" })).json().data.changed).toEqual(["SP-0001"]);
-    expect((await call("owner", "POST", "/listings/status", { ids: ["SP-0001"], status: "published" })).json().message).toBe("Published");
-    expect((await app.db!.listing.findUniqueOrThrow({ where: { code: "SP-0001" } })).status).toBe("published");
+    await app.db!.listing.update({ where: { code: "ER-0001" }, data: { status: "published" } });
+    expect((await call("owner", "POST", "/listings/status", { ids: ["ER-0001"], status: "paused" })).json().data.changed).toEqual(["ER-0001"]);
+    expect((await call("owner", "POST", "/listings/status", { ids: ["ER-0001"], status: "published" })).json().message).toBe("Published");
+    expect((await app.db!.listing.findUniqueOrThrow({ where: { code: "ER-0001" } })).status).toBe("published");
     // The draft has no photo yet.
-    expect((await call("owner", "POST", "/listings/status", { ids: ["SP-0002"], status: "published" })).statusCode).toBe(400);
+    expect((await call("owner", "POST", "/listings/status", { ids: ["ER-0002"], status: "published" })).statusCode).toBe(400);
   });
 
   it("duplicates as a draft and deletes", async () => {
-    const copy = (await call("owner", "POST", "/listings/SP-0001/duplicate")).json().data;
+    const copy = (await call("owner", "POST", "/listings/ER-0001/duplicate")).json().data;
     expect(copy).toMatchObject({ status: "draft", title: "3 BHK house for sale in Dhapasi (copy)" });
     expect((await call("owner", "POST", "/listings/delete", { ids: [copy.id] })).statusCode).toBe(200);
     expect((await call("owner", "GET", `/listings/${copy.id}`)).statusCode).toBe(404);
@@ -129,15 +129,15 @@ describe("listings", () => {
 
   it("moves a listing and its enquiries to another business of the same person, if its plan allows the kind", async () => {
     await app.db!.lead.create({ data: { tenantId: ids.agency, listingId: 1, kind: "contact_agent", name: "Ram", email: "ram@buyer.test", message: "Still available?", assigneeId: ids.agent } });
-    const targets = (await call("owner", "GET", "/listings/SP-0001/move-targets")).json().data;
+    const targets = (await call("owner", "GET", "/listings/ER-0001/move-targets")).json().data;
     expect(targets).toEqual(expect.arrayContaining([expect.objectContaining({ id: ids.hotel, allowed: false }), expect.objectContaining({ id: ids.free, allowed: true })]));
-    expect((await call("owner", "POST", "/listings/SP-0001/move", { tenantId: ids.hotel })).statusCode).toBe(400);
-    expect((await call("owner", "POST", "/listings/SP-0001/move", { tenantId: ids.free })).statusCode).toBe(402); // the free one is full
-    expect((await call("agent", "POST", "/listings/SP-0001/move", { tenantId: ids.free })).statusCode).toBe(403); // not a member there
-    await app.db!.listing.update({ where: { code: "SP-0003" }, data: { status: "archived" } });
-    expect((await call("owner", "POST", "/listings/SP-0001/move", { tenantId: ids.free })).json().message).toBe("Moved to Everest Free.");
+    expect((await call("owner", "POST", "/listings/ER-0001/move", { tenantId: ids.hotel })).statusCode).toBe(400);
+    expect((await call("owner", "POST", "/listings/ER-0001/move", { tenantId: ids.free })).statusCode).toBe(402); // the free one is full
+    expect((await call("agent", "POST", "/listings/ER-0001/move", { tenantId: ids.free })).statusCode).toBe(403); // not a member there
+    await app.db!.listing.update({ where: { code: "EF-0003" }, data: { status: "archived" } });
+    expect((await call("owner", "POST", "/listings/ER-0001/move", { tenantId: ids.free })).json().message).toBe("Moved to Everest Free.");
     expect(await app.db!.lead.findFirstOrThrow({ where: { listingId: 1 } })).toMatchObject({ tenantId: ids.free, assigneeId: null });
-    await call("owner", "POST", "/listings/SP-0001/move", { tenantId: ids.agency }, ids.free);
+    await call("owner", "POST", "/listings/ER-0001/move", { tenantId: ids.agency }, ids.free);
   });
 });
 
@@ -149,7 +149,7 @@ describe("leads", () => {
     await db.lead.create({ data: { tenantId: ids.agency, kind: "requirement", name: "Bikash", phone: "9800000000", message: "Need land in Lalitpur", assigneeId: ids.agent2 } });
     const all = (await call("owner", "GET", "/leads")).json().data;
     expect(all).toHaveLength(2);
-    expect(all.find((l: { name: string }) => l.name === "Gita")).toMatchObject({ channel: "website", stage: "new", unread: 1, listing: "SP-0001", value: 24000000, msgs: [["in", "Can I visit on Saturday?", expect.any(String)]] });
+    expect(all.find((l: { name: string }) => l.name === "Gita")).toMatchObject({ channel: "website", stage: "new", unread: 1, listing: "ER-0001", value: 24000000, msgs: [["in", "Can I visit on Saturday?", expect.any(String)]] });
     expect((await call("agent", "GET", "/leads")).json().data.map((l: { name: string }) => l.name)).toEqual(["Gita"]);
     expect((await call("account", "GET", "/leads")).statusCode).toBe(403);
   });

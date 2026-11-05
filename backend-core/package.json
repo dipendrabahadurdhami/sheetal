@@ -18,7 +18,9 @@
     "photos:resize": "tsx scripts/resize-photos.ts",
     "listings:tidy": "tsx scripts/tidy-listings.ts",
     "payouts:sample": "tsx scripts/payouts-sample.ts",
-    "expenses:roles": "tsx scripts/expenses-roles.ts"
+    "expenses:roles": "tsx scripts/expenses-roles.ts",
+    "rentals:roles": "tsx scripts/rentals-roles.ts",
+    "listings:codes": "tsx scripts/listing-codes.ts"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",

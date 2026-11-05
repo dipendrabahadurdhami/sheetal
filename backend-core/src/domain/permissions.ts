@@ -17,6 +17,7 @@ export const BUSINESS_PERMS: PermGroup[] = [
   { module: "projects", types: ["developer"], perms: ["projects.manage", "progress.post", "visits.manage", "reservations.manage"] },
   { module: "collect", types: ["developer", "agency"], perms: ["collect.payments", "collect.refund"] },
   { module: "listings", types: ["agency"], perms: ["listings.manage", "leads.view", "leads.assign", "viewings.manage"] },
+  { module: "rentals", types: ["agency"], perms: ["rentals.view", "rentals.manage"] },
   { module: "investments", types: ["sponsor"], perms: ["investments.manage", "investors.view", "updates.post"] },
   { module: "money", types: "all", perms: ["invoices.view", "invoices.create", "payouts.view", "expenses.view", "expenses.manage"] },
   { module: "customers", types: "all", perms: ["customers.view", "messages.reply", "reviews.reply"] },
@@ -59,9 +60,9 @@ const TEMPLATES: Record<BusinessType, [string, string[] | null][]> = {
   ],
   agency: [
     ["owner", ["*"]],
-    ["branch_manager", ["overview.view", "listings.manage", "leads.view", "leads.assign", "viewings.manage", "collect.payments", "customers.view", "messages.reply", "reviews.reply", "team.view", "expenses.view", "expenses.manage"]],
+    ["branch_manager", ["overview.view", "listings.manage", "leads.view", "leads.assign", "viewings.manage", "collect.payments", "customers.view", "messages.reply", "reviews.reply", "team.view", "expenses.view", "expenses.manage", "rentals.view", "rentals.manage"]],
     ["agent", ["listings.manage", "leads.view", "viewings.manage", "messages.reply"]],
-    ["accountant", ["overview.view", "collect.payments", "invoices.view", "invoices.create", "payouts.view", "expenses.view", "expenses.manage"]],
+    ["accountant", ["overview.view", "collect.payments", "invoices.view", "invoices.create", "payouts.view", "expenses.view", "expenses.manage", "rentals.view", "rentals.manage"]],
   ],
   sponsor: [
     ["owner", ["*"]],

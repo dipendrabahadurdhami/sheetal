@@ -52,7 +52,7 @@ const has = (v: string) => ({ contains: v, mode: "insensitive" as const });
 function whereFor(q: Partial<Search>): Prisma.ListingWhereInput {
   const and: Prisma.ListingWhereInput[] = [PROPERTIES];
   const kw = q.keyword?.replace(/^#/, "");
-  if (kw) and.push({ OR: [{ title: has(kw) }, { area: has(kw) }, { city: has(kw) }, { district: has(kw) }, { code: has(kw) }, { propertyType: has(kw) }] });
+  if (kw) and.push({ OR: [{ title: has(kw) }, { area: has(kw) }, { city: has(kw) }, { district: has(kw) }, { code: has(kw) }, { oldCodes: { has: kw.toUpperCase() } }, { propertyType: has(kw) }] });
   if (!all(q.advertisement_purpose)) and.push({ purpose: q.advertisement_purpose!.startsWith("rent") ? "rent" : "sale" });
   if (!all(q.property_type)) and.push({ OR: [{ propertyType: ci(q.property_type!) }, { category: ci(q.property_type!) }] });
   if (!all(q.category)) and.push({ category: ci(q.category!) });
@@ -147,7 +147,8 @@ export async function catalogRoutes(app: FastifyInstance) {
   app.get<{ Params: { slug: string } }>("/property-by-slug/:slug", async (request) => showListing({ slug: request.params.slug.slice(0, 200) }, request));
   app.get<{ Params: { code: string } }>("/property-by-code/:code", async (request) => {
     const code = request.params.code.replace(/^#/, "").trim().toUpperCase().slice(0, 20);
-    return showListing(/^\d+$/.test(code) ? { OR: [{ id: Number(code) }, { code }] } : { code }, request);
+    // Old codes (from before a business changed its prefix) still find the listing.
+    return showListing(/^\d+$/.test(code) ? { OR: [{ id: Number(code) }, { code }] } : { OR: [{ code }, { oldCodes: { has: code } }] }, request);
   });
 
   // Every live listing's approximate point in one small response, for the map.

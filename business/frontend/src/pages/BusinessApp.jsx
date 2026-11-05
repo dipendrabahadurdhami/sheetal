@@ -48,6 +48,7 @@ import { formsOf } from "@sheetal/shared/core/forms";
 import { Invoices, Payouts } from "./Money";
 import { LiveInvoices, LivePayouts } from "./LiveMoney";
 import { LiveExpenses } from "./LiveExpenses";
+import { LiveRentals } from "./LiveRentals";
 import { Analytics, Developers } from "./Workspace";
 import { BackupOnly } from "./BusinessBilling";
 import { Branches, Calendar, LiveBranches, branchesOf } from "./Branches";
@@ -64,7 +65,7 @@ import { opsOf } from "@sheetal/shared/demo/ops";
 
 const PREVIEW = [
   "/business/agreements", "/business/forms",
-  "/business/rentals", "/business/stock", "/business/promote", "/business/social", "/business/voice",
+  "/business/stock", "/business/promote", "/business/social", "/business/voice",
   "/business/people", "/business/ai-accounts", "/business/developers",
 ];
 
@@ -154,7 +155,7 @@ export default function BusinessApp() {
       { to: "/business/calendar", icon: "calendar-days", key: "nav.calendar", perm: "calendar.view", types: ["hotel", "host"] },
       { to: "/business/pos", paid: true, icon: "store", key: "nav.pos", permAny: ["pos.frontdesk", "pos.restaurant", "pos.extras"], types: ["hotel", "host"] },
       { to: "/business/stock", paid: true, icon: "package", key: "nav.stock", permAny: ["pos.restaurant", "pos.extras", "settings.business"], types: ["hotel", "host"] },
-      { to: "/business/rentals", icon: "key-round", key: "nav.rentals", permAny: ["listings.manage", "customers.view", "collect.payments"], types: ["agency"] },
+      { to: "/business/rentals", icon: "key-round", key: "nav.rentals", permAny: ["rentals.view", "rentals.manage"], types: ["agency"] },
       { to: "/business/projects", icon: "building-2", key: "nav.projects", permAny: ["projects.manage", "progress.post"], types: ["developer"] },
       { to: "/business/collections", icon: "hand-coins", key: "nav.collections", perm: "collect.payments", types: ["developer", "agency"] },
       { to: "/business/investors", icon: "users", key: "nav.investors", perm: "investors.view", types: ["sponsor"] },
@@ -275,8 +276,8 @@ export default function BusinessApp() {
         { path: "/business/investors", render: () => guard(can(role, "investors.view"), (isLive(tenant.id) ? <LiveInvestors key={tenant.id} tenant={tenant} role={role} /> : <Investors key={tenant.id} tenant={tenant} />)) },
         { path: "/business/reviews", render: () => guard(any("reviews.reply", "customers.view"), (isLive(tenant.id) ? <LiveReviews key={tenant.id} tenant={tenant} /> : <Reviews key={tenant.id} tenant={tenant} />)) },
         { path: "/business/expenses", render: () => paid(can(role, "expenses.view"), (isLive(tenant.id) ? <LiveExpenses key={tenant.id} tenant={tenant} /> : <Expenses key={tenant.id} tenant={tenant} />)) },
-        { path: "/business/rentals", render: () => guard(any("listings.manage", "customers.view", "collect.payments"), <Rentals key={tenant.id} tenant={tenant} />) },
-        { path: "/business/rentals/:tab", render: ({ tab }) => guard(any("listings.manage", "customers.view", "collect.payments"), <Rentals key={tenant.id} tenant={tenant} tab={tab} />) },
+        { path: "/business/rentals", render: () => guard(any("rentals.view", "rentals.manage"), (isLive(tenant.id) ? <LiveRentals key={tenant.id} tenant={tenant} /> : <Rentals key={tenant.id} tenant={tenant} />)) },
+        { path: "/business/rentals/:tab", render: ({ tab }) => guard(any("rentals.view", "rentals.manage"), (isLive(tenant.id) ? <LiveRentals key={tenant.id} tenant={tenant} tab={tab} /> : <Rentals key={tenant.id} tenant={tenant} tab={tab} />)) },
         { path: "/business/stock", render: () => paid(any("pos.restaurant", "pos.extras", "settings.business"), <Stock key={tenant.id} tenant={tenant} />) },
         { path: "/business/promote", render: () => guard(any("listings.manage", "projects.manage", "investments.manage", "calendar.edit", "billing.manage"), <Promote tenant={tenant} />) },
         { path: "/business/branches", render: () => guard(can(role, "settings.business"), <SettingsShell role={role}>{isLive(tenant.id) ? <LiveBranches tenant={tenant} role={role} /> : <Branches tenant={tenant} role={role} />}</SettingsShell>) },

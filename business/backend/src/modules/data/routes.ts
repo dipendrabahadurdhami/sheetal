@@ -12,6 +12,7 @@ import { dbOf } from "@sheetal/backend-core/lib/db";
 import { AppError, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
 import { COUNTED, LISTING_PERMS, kindsFor, listingCap } from "@sheetal/backend-core/domain/listings";
 import { catalogKindsNow } from "@sheetal/backend-core/lib/catalog";
+import { listingCode, prefixFor } from "@sheetal/backend-core/domain/codes";
 import { branchFor, branchView, inView, workspaceOf, type Workspace } from "../access.js";
 
 const day = (d: Date | null | undefined) => (d ? d.toISOString().slice(0, 10) : "");
@@ -98,7 +99,7 @@ export async function dataRoutes(app: FastifyInstance) {
           district: r.district || null, area: r.area || null, bedrooms: r.beds ? Math.round(r.beds) : null,
           landArea: r.land ? `${r.land} Aana` : null, landSqft: r.land ? r.land * 342.25 : null,
         } });
-        await db().listing.update({ where: { id: l.id }, data: { code: `SP-${String(l.id).padStart(4, "0")}`, slug: `${slugify(r.title)}-${l.id}` } });
+        await db().listing.update({ where: { id: l.id }, data: { code: listingCode(await prefixFor(db(), ws.tenantId), l.id), slug: `${slugify(r.title)}-${l.id}` } });
         n++;
       }
       await db().auditLog.create({ data: { actorId: ws.user.id, tenantId: ws.tenantId, action: "data.import_listings", target: String(n), ip: request.ip } });

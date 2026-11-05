@@ -159,6 +159,8 @@ model Tenant {
   /// The business's own settings by section (payments, notifications, listings, documents, branding, checkups);
   /// secrets inside are sealed with SECRETS_KEY (business/backend/src/modules/settings).
   settings         Json         @default("{}")
+  /// The start of this business's listing codes (ER in ER-0123); empty = the initials of its name (domain/codes.ts).
+  codePrefix       String?      @map("code_prefix")
   createdAt        DateTime     @default(now()) @map("created_at")
   updatedAt        DateTime     @updatedAt @map("updated_at")
 
@@ -203,6 +205,8 @@ model Branch {
   bizInvoices BizInvoice[]
   expenses    Expense[]
   recurringExpenses RecurringExpense[]
+  rentOwners  RentOwner[]
+  rentUnits   RentUnit[]
 
   @@unique([tenantId, name])
   @@map("branches")
@@ -328,6 +332,8 @@ model Listing {
   id            Int            @id @default(autoincrement())
   /// Shown to people and used in links: SP-0006.
   code          String         @unique
+  /// Codes this listing had before (a business changed its prefix); they still find it on the website.
+  oldCodes      String[]       @default([]) @map("old_codes")
   slug          String         @unique
   tenantId      String?        @map("tenant_id")
   /// The branch it belongs to (see Branch); null = no business, or shared by all branches where noted.
@@ -1557,4 +1563,203 @@ model RecurringExpense {
   @@index([tenantId, status])
   @@index([branchId])
   @@map("recurring_expenses")
+}
+
+// ───────────── Rentals (homes and shops an agency manages for owners) ─────────────
+
+/// A landlord whose homes or shops the agency manages. The management fee is taken from the rent collected for them;
+/// the rest is the owner's money (never the agency's income).
+model RentOwner {
+  id         String           @id @default(cuid())
+  tenantId   String           @map("tenant_id")
+  branchId   String           @map("branch_id")
+  branch     Branch           @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  name       String
+  phone      String?
+  email      String?
+  /// Management fee in hundredths of a percent (800 = 8%).
+  feeBp      Int              @default(800) @map("fee_bp")
+  /// Where the owner is paid (bank and account, as printed on the statement).
+  bank       String?
+  note       String?
+  createdAt  DateTime         @default(now()) @map("created_at")
+  updatedAt  DateTime         @updatedAt @map("updated_at")
+  units      RentUnit[]
+  statements OwnerStatement[]
+
+  @@index([tenantId, branchId])
+  @@map("rent_owners")
+}
+
+/// A flat, room, shop or house of an owner. "property" is the building or house it is in (units are grouped by it).
+model RentUnit {
+  id        String       @id @default(cuid())
+  tenantId  String       @map("tenant_id")
+  branchId  String       @map("branch_id")
+  branch    Branch       @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  ownerId   String       @map("owner_id")
+  owner     RentOwner    @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  property  String
+  name      String
+  kind      String       @default("Flat")
+  rent      Int
+  /// vacant, let or repair
+  status    String       @default("vacant")
+  /// The listing on the website: its property code finds the lease for paying rent online.
+  listingId Int?         @map("listing_id")
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+  leases    RentLease[]
+  repairs   RentRepair[]
+
+  @@index([tenantId, branchId])
+  @@index([listingId])
+  @@map("rent_units")
+}
+
+/// A tenant's lease on a unit (LS-0007). Active leases get one rent bill a month. The deposit is held and returned.
+model RentLease {
+  id              String     @id @default(cuid())
+  seq             Int        @unique @default(autoincrement())
+  tenantId        String     @map("tenant_id")
+  branchId        String     @map("branch_id")
+  unitId          String     @map("unit_id")
+  unit            RentUnit   @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  /// The person renting (named renter so it isn't mixed up with the business, which is the tenant here).
+  renter          String
+  phone           String?
+  email           String?
+  startOn         DateTime   @db.Date @map("start_on")
+  endOn           DateTime   @db.Date @map("end_on")
+  rent            Int
+  deposit         Int        @default(0)
+  /// The day of the month rent is due (1 to 28).
+  dueDay          Int        @default(7) @map("due_day")
+  /// Late fee in hundredths of a percent of the unpaid rent (200 = 2%), added once, lateAfterDays after the due day.
+  lateFeeBp       Int        @default(200) @map("late_fee_bp")
+  lateAfterDays   Int        @default(5) @map("late_after_days")
+  /// active or ended
+  status          String     @default("active")
+  endedOn         DateTime?  @db.Date @map("ended_on")
+  /// held or returned
+  depositStatus   String     @default("held") @map("deposit_status")
+  depositReturned Int?       @map("deposit_returned")
+  depositNote     String?    @map("deposit_note")
+  /// The renter's website account, linked when they find their rent while signed in.
+  userId          String?    @map("user_id")
+  createdBy       String?    @map("created_by")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+  bills           RentBill[]
+
+  @@index([tenantId, status])
+  @@index([unitId])
+  @@index([userId])
+  @@map("rent_leases")
+}
+
+/// One month's rent of a lease (RB-0007): one per lease and month. paid is the sum of its payments.
+model RentBill {
+  id         String        @id @default(cuid())
+  seq        Int           @unique @default(autoincrement())
+  tenantId   String        @map("tenant_id")
+  branchId   String        @map("branch_id")
+  leaseId    String        @map("lease_id")
+  lease      RentLease     @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  /// 2026-11
+  month      String
+  dueOn      DateTime      @db.Date @map("due_on")
+  amount     Int
+  lateFee    Int           @default(0) @map("late_fee")
+  lateWaived Boolean       @default(false) @map("late_waived")
+  paid       Int           @default(0)
+  createdAt  DateTime      @default(now()) @map("created_at")
+  updatedAt  DateTime      @updatedAt @map("updated_at")
+  payments   RentPayment[]
+
+  @@unique([leaseId, month])
+  @@index([tenantId, month])
+  @@map("rent_bills")
+}
+
+/// Rent received for a bill: recorded by staff (counts at once), or sent by the tenant online (counts once confirmed:
+/// by Sheetal when the money was paid to Sheetal, by the business when it was paid to the business).
+model RentPayment {
+  id        String   @id @default(cuid())
+  tenantId  String   @map("tenant_id")
+  branchId  String   @map("branch_id")
+  billId    String   @map("bill_id")
+  bill      RentBill @relation(fields: [billId], references: [id], onDelete: Cascade)
+  amount    Int
+  /// cash, bank, esewa, khalti, fonepay, cheque, other
+  method    String
+  paidOn    DateTime @db.Date @map("paid_on")
+  ref       String?
+  note      String?
+  /// confirmed (counts on the bill), pending (sent online, waiting to be checked) or rejected
+  status      String    @default("confirmed")
+  /// staff (recorded by the business) or online (sent by the tenant on the website)
+  source      String    @default("staff")
+  /// Who received the money: business, or sheetal (then it reaches the business with its payout)
+  collectedBy String    @default("business") @map("collected_by")
+  /// The tenant's screenshot (a private file).
+  proofFile   String?   @map("proof_file")
+  userId      String?   @map("user_id")
+  reviewedBy  String?   @map("reviewed_by")
+  reviewedAt  DateTime? @map("reviewed_at")
+  reviewNote  String?   @map("review_note")
+  createdBy String?  @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, paidOn])
+  @@index([billId])
+  @@index([status, collectedBy])
+  @@map("rent_payments")
+}
+
+/// A repair on a unit (WO-0007). When done, its cost comes off the owner's statement for that month.
+model RentRepair {
+  id        String    @id @default(cuid())
+  seq       Int       @unique @default(autoincrement())
+  tenantId  String    @map("tenant_id")
+  branchId  String    @map("branch_id")
+  unitId    String    @map("unit_id")
+  unit      RentUnit  @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  title     String
+  /// urgent, normal or low
+  priority  String    @default("normal")
+  vendor    String?
+  cost      Int       @default(0)
+  /// open, assigned or done
+  status    String    @default("open")
+  doneOn    DateTime? @db.Date @map("done_on")
+  createdBy String?   @map("created_by")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@index([tenantId, status])
+  @@map("rent_repairs")
+}
+
+/// An owner's statement for a month, saved by the agency: rent collected − management fee − repairs = owed to the
+/// owner. Saving it counts the fee in the agency's profit (domain/expenses.ts profitRows).
+model OwnerStatement {
+  id        String    @id @default(cuid())
+  tenantId  String    @map("tenant_id")
+  branchId  String    @map("branch_id")
+  ownerId   String    @map("owner_id")
+  owner     RentOwner @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  /// 2026-11
+  month     String
+  collected Int
+  fee       Int
+  repairs   Int
+  payable   Int
+  createdBy String?   @map("created_by")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@unique([ownerId, month])
+  @@index([tenantId, month])
+  @@map("owner_statements")
 }

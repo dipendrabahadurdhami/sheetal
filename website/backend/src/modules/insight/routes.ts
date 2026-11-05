@@ -23,7 +23,7 @@ export async function insightRoutes(app: FastifyInstance, opts: { ai?: { client:
   app.post("/ask-ai", { config: { rateLimit: { max: 10, timeWindow: "1 hour" } } }, async (request) => {
     const b = z.object({ property_codes: z.array(z.string().trim().max(20)).min(1).max(4), question: z.string().trim().max(500).optional() }).parse(request.body);
     const codes = [...new Set(b.property_codes.map((c) => c.replace(/^#/, "").toUpperCase()).map((c) => (/^\d+$/.test(c) ? `SP-${c.padStart(4, "0")}` : c)))];
-    const rows = await db().listing.findMany({ where: { code: { in: codes }, ...LIVE }, include: { photos: { take: 1 } } });
+    const rows = await db().listing.findMany({ where: { AND: [LIVE, { OR: [{ code: { in: codes } }, { oldCodes: { hasSome: codes } }] }] }, include: { photos: { take: 1 } } });
     if (!rows.length) throw badRequest("Add a valid property code, like SP-0006.");
     const ai = opts.ai ?? (await aiClient(db(), vault));
     if (!ai) throw new AppError(503, "ai_off", "Ask AI isn't switched on yet.");
