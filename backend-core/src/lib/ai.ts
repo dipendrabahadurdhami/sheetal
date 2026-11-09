@@ -21,11 +21,14 @@ export interface AiSettings { enabled?: boolean; model?: string; apiKey?: string
 export async function aiClient(db: Db, vault: Vault, env: NodeJS.ProcessEnv = process.env) {
   const s = ((await db.appSetting.findUnique({ where: { key: "ai" } }))?.value ?? {}) as AiSettings;
   if (s.enabled === false) return null;
+  // Credits saved in Admin → AI (ai.features) win over the older "ai" credits.
+  const f = ((await db.appSetting.findUnique({ where: { key: "ai.features" } }))?.value ?? {}) as { plans?: Record<string, { credits?: number }> };
+  const planCredits = Object.fromEntries(Object.entries(f.plans ?? {}).filter(([, p]) => typeof p.credits === "number").map(([n, p]) => [n, p.credits!]));
   let key: string | undefined;
   try { key = s.apiKey ? vault.open(s.apiKey) : undefined; } catch { key = undefined; }
   key ??= env.ANTHROPIC_API_KEY;
   if (!key) return null;
-  return { client: new Anthropic({ apiKey: key, maxRetries: 2, timeout: 120_000 }), model: s.model || DEFAULT_MODEL, credits: { ...AI_CREDITS, ...(s.credits ?? {}) } };
+  return { client: new Anthropic({ apiKey: key, maxRetries: 2, timeout: 120_000 }), model: s.model || DEFAULT_MODEL, credits: { ...AI_CREDITS, ...(s.credits ?? {}), ...planCredits } };
 }
 export type AiClient = Pick<Anthropic, "messages" | "beta">;
 

@@ -20,7 +20,11 @@
     "payouts:sample": "tsx scripts/payouts-sample.ts",
     "expenses:roles": "tsx scripts/expenses-roles.ts",
     "rentals:roles": "tsx scripts/rentals-roles.ts",
-    "listings:codes": "tsx scripts/listing-codes.ts"
+    "agreements:roles": "tsx scripts/agreements-roles.ts",
+    "people:roles": "tsx scripts/people-roles.ts",
+    "promote:gift": "tsx scripts/promote-gift.ts",
+    "listings:codes": "tsx scripts/listing-codes.ts",
+    "accounts:test": "tsx scripts/test-accounts.ts"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",

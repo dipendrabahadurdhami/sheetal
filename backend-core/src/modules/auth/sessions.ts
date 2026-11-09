@@ -2,15 +2,29 @@
 // Where it fits: registered by the base app; routes call requireUser() or read request.user.
 // How it works: the browser keeps a random token; the database keeps its hash; a short cache in front means most
 // requests don't touch the sessions table. Each request gets the person with their active business memberships.
-// Rules: removed staff and paused members lose access on their next request.
+// Rules: removed staff and paused members lose access on their next request. A sign-in lasts sessionDays (Admin →
+// Settings → Security, default 30), counted again at most once an hour while it is used.
 
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Membership, Plan, Role, Tenant, User } from "@prisma/client";
 import { newToken, sha256 } from "../../lib/secrets.js";
 import { unauthorized } from "../../lib/errors.js";
+import { platformSettings } from "../../domain/platform.js";
 
+/** The default; Admin → Settings → Security can change it (sessionDays). */
 export const SESSION_DAYS = 30;
 const CACHE_SECONDS = 60;
+
+// How long a sign-in lasts, from the platform settings (read at most once a minute).
+let daysCache: { v: number; at: number } | null = null;
+async function sessionDays(app: FastifyInstance) {
+  if (daysCache && Date.now() - daysCache.at < 60_000) return daysCache.v;
+  const v = await platformSettings(app.db!).then((p) => (p.sessionDays > 0 ? p.sessionDays : SESSION_DAYS)).catch(() => SESSION_DAYS);
+  daysCache = { v, at: Date.now() };
+  return v;
+}
+/** Tests that change the setting call this so the next session reads it. */
+export const forgetSessionDays = () => { daysCache = null; };
 
 export type SessionUser = User & { memberships: (Membership & { tenant: Tenant & { plan: Plan }; role: Role })[] };
 
@@ -20,8 +34,9 @@ declare module "fastify" {
 
 export async function createSession(app: FastifyInstance, userId: string, request: FastifyRequest): Promise<string> {
   const token = newToken();
+  const days = await sessionDays(app);
   await app.db!.session.create({
-    data: { userId, tokenHash: sha256(token), expiresAt: new Date(Date.now() + SESSION_DAYS * 864e5), ip: request.ip, userAgent: request.headers["user-agent"]?.slice(0, 300) },
+    data: { userId, tokenHash: sha256(token), expiresAt: new Date(Date.now() + days * 864e5), ip: request.ip, userAgent: request.headers["user-agent"]?.slice(0, 300) },
   });
   await app.db!.user.update({ where: { id: userId }, data: { lastLoginAt: new Date() } });
   return token;
@@ -44,7 +59,7 @@ export async function userForToken(app: FastifyInstance, token: string): Promise
     await app.cache.set(key, userId, CACHE_SECONDS);
     // Slide the expiry at most once an hour, not on every request.
     if (Date.now() - s.lastUsedAt.getTime() > 3600e3) {
-      await app.db!.session.update({ where: { id: s.id }, data: { lastUsedAt: new Date(), expiresAt: new Date(Date.now() + SESSION_DAYS * 864e5) } });
+      await app.db!.session.update({ where: { id: s.id }, data: { lastUsedAt: new Date(), expiresAt: new Date(Date.now() + (await sessionDays(app)) * 864e5) } });
     }
   }
   const user = await loadUser(app, userId);
