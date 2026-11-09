@@ -212,6 +212,8 @@ model Branch {
   forms       Form[]
   agreements  Agreement[]
   stockItems  StockItem[]
+  attendance    Attendance[]
+  leaveRequests LeaveRequest[]
 
   @@unique([tenantId, name])
   @@map("branches")
@@ -1260,6 +1262,8 @@ model AiUsage {
   inputTok  Int      @map("input_tokens")
   outputTok Int      @map("output_tokens")
   credits   Int
+  /// Made with the business's own AI key (not counted against the plan's credits).
+  own       Boolean  @default(false)
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([tenantId, createdAt])
@@ -2093,6 +2097,96 @@ model StockRecipe {
   @@unique([menuItemId, itemId])
   @@index([tenantId])
   @@map("stock_recipes")
+}
+
+// ───────────── People: attendance and leave ─────────────
+
+/// One check-in (and check-out) of a person at a branch. day is the Nepal day of the check-in (midnight UTC).
+model Attendance {
+  id        String    @id @default(cuid())
+  tenantId  String    @map("tenant_id")
+  branchId  String    @map("branch_id")
+  branch    Branch    @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  userId    String    @map("user_id")
+  day       DateTime  @db.Date
+  inAt      DateTime  @map("in_at")
+  outAt     DateTime? @map("out_at")
+  inLat     Float?    @map("in_lat")
+  inLng     Float?    @map("in_lng")
+  outLat    Float?    @map("out_lat")
+  outLng    Float?    @map("out_lng")
+  /// Checked in after the start time (set for the first check-in of the day).
+  late      Boolean   @default(false)
+  note      String?
+  /// app (the person checked in) or manual (a manager added or fixed it).
+  source    String    @default("app")
+  editedBy  String?   @map("edited_by")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([tenantId, branchId, day])
+  @@index([tenantId, userId, day])
+  @@map("attendance")
+}
+
+/// A kind of leave a business gives (casual, sick…) and the days a person gets a year. 0 days = no limit.
+model LeaveType {
+  id          String   @id @default(cuid())
+  tenantId    String   @map("tenant_id")
+  name        String
+  daysPerYear Int      @default(0) @map("days_per_year")
+  paid        Boolean  @default(true)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([tenantId, name])
+  @@map("leave_types")
+}
+
+/// A request for leave. days counts the days asked for without the weekly off day (Saturday); a half day is 0.5.
+model LeaveRequest {
+  id        String    @id @default(cuid())
+  tenantId  String    @map("tenant_id")
+  branchId  String    @map("branch_id")
+  branch    Branch    @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  userId    String    @map("user_id")
+  typeId    String    @map("type_id")
+  fromDay   DateTime  @map("from_day") @db.Date
+  toDay     DateTime  @map("to_day") @db.Date
+  days      Float
+  halfDay   Boolean   @default(false) @map("half_day")
+  reason    String?
+  /// pending, approved, rejected or cancelled
+  status    String    @default("pending")
+  decidedBy String?   @map("decided_by")
+  decidedAt DateTime? @map("decided_at")
+  note      String?
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([tenantId, status])
+  @@index([tenantId, userId, fromDay])
+  @@index([tenantId, branchId, fromDay])
+  @@map("leave_requests")
+}
+
+// ───────────── Developer keys ─────────────
+
+/// A key a business's developer uses to call the public API (/v1/public). Only the SHA-256 of the key is kept.
+model ApiKey {
+  id         String    @id @default(cuid())
+  tenantId   String    @map("tenant_id")
+  name       String
+  /// The first 8 characters after "sk_live_", shown so a key can be recognised.
+  prefix     String
+  hash       String    @unique
+  /// listings.read, leads.write, bookings.read
+  scopes     String[]
+  lastUsedAt DateTime? @map("last_used_at")
+  createdBy  String    @map("created_by")
+  revokedAt  DateTime? @map("revoked_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@map("api_keys")
 }
 
 /// A business's request to sell a listing on another site (Booking.com, Airbnb…) through Sheetal's partner account.
