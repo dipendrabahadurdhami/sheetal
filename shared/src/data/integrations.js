@@ -153,5 +153,25 @@ export const INTEGRATIONS = [
   { id: "sms", icon: "smartphone", name: "SMS", sub: "Not used for now. WhatsApp sends every message instead." },
 ];
 
+// The three connections that are saved on the server (Admin → Setup center, LiveIntegrations.jsx). `secret` fields are
+// write-only: the server keeps them sealed and never sends them back.
+export const LIVE_INTEGRATIONS = [
+  { id: "google", name: "Google", sub: "Analytics and Search Console tags for the website, and the Maps key.", fields: [
+    { key: "measurementId", label: "Analytics measurement id", placeholder: "G-ABC123XYZ", hint: "Analytics → Admin → Data streams. Added to the website." },
+    { key: "searchConsoleToken", label: "Search Console verification token", hint: "Only the token from the HTML tag (content=\"…\"). Added to the website." },
+    { key: "mapsKey", label: "Maps key", secret: true, hint: "Google Cloud → APIs and services → Credentials." },
+  ] },
+  { id: "whatsapp", name: "WhatsApp", sub: "Messages and notifications through the WhatsApp Cloud API.", fields: [
+    { key: "mode", type: "seg", label: "Connect with", options: [{ id: "cloud", label: "Cloud API" }, { id: "qr", label: "QR pairing (soon)" }] },
+    { key: "phoneId", label: "Phone number id", placeholder: "1234567890", hint: "Meta → WhatsApp → API setup." },
+    { key: "token", label: "Access token", secret: true, hint: "A permanent token from a Meta system user." },
+    { key: "qrStatus", type: "seg", label: "QR pairing", options: [{ id: "not_paired", label: "Not paired" }, { id: "waiting", label: "Waiting" }, { id: "paired", label: "Paired" }] },
+  ] },
+  { id: "cloudflare", name: "Cloudflare", sub: "Zone and API token for DNS and email routing. The robot check (Turnstile) is set in Setup below.", fields: [
+    { key: "zoneId", label: "Zone id", placeholder: "32 letters and numbers", hint: "Cloudflare → your domain → Overview, right side." },
+    { key: "apiToken", label: "API token", secret: true, hint: "Cloudflare → My profile → API tokens." },
+  ] },
+];
+
 // Random token for webhook verify tokens and signing secrets.
 export const makeSecret = (n = 32) => Array.from(crypto.getRandomValues(new Uint8Array(n)), (b) => b.toString(16).padStart(2, "0")).join("").slice(0, n);
