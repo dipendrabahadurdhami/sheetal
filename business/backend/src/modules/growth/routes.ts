@@ -12,6 +12,7 @@ import { dbOf } from "@sheetal/backend-core/lib/db";
 import { AppError, badRequest, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
 import { Vault } from "@sheetal/backend-core/lib/vault";
 import { aiClient, creditsUsed, extractLeads, type AiClient } from "@sheetal/backend-core/lib/ai";
+import { requireAiFeature } from "@sheetal/backend-core/domain/ai-features";
 import { buildIcal } from "@sheetal/backend-core/lib/ical";
 import { metaSignatureOk, readMetaWebhook } from "@sheetal/backend-core/lib/meta";
 import { leadPeople, notify } from "@sheetal/backend-core/lib/notify";
@@ -35,6 +36,7 @@ export async function growthRoutes(app: FastifyInstance, opts: { ai?: Ai; fetch?
     const ws = workspaceOf(request);
     need(ws, "leads.view", "messages.reply");
     const b = z.object({ text: z.string().trim().min(20, "Paste a bit more text.").max(60_000, "That's too long; paste up to about 10 pages at a time."), save: z.boolean().default(false) }).parse(request.body);
+    await requireAiFeature(db(), ws.member.tenant.plan.name, "lead_finder");
     const a = await ai();
     if (!a) throw new AppError(503, "ai_off", "AI isn't switched on yet. Sheetal is setting it up.");
     const r = await extractLeads(db(), a, { text: b.text, tenantId: ws.tenantId, planName: ws.member.tenant.plan.name, userId: ws.user.id });

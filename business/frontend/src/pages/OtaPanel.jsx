@@ -1,16 +1,19 @@
 // A listing's status on other sites (Booking.com, Airbnb…), as a cell in the listings table and a drawer.
+// Signed in (live), the cell and drawer come from LiveOtaPanel.jsx on the business API; otherwise the sample versions below.
 
 import React, { useState } from "react";
 import { useStore } from "@sheetal/shared/core/store";
 import { fdate, rs } from "@sheetal/shared/core/format";
 import { Badge, Button, Drawer, Field, Seg, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
+import { isLive } from "../live";
+import { LiveOtaCell, LiveOtaDrawer, isLiveListing } from "./LiveOtaPanel";
 import { OTAS, OTA_STATUS, canAsk, forListing, latestFor, otaName, otaSettings, otaSplit, otaUrl, siteHref, withOta } from "@sheetal/shared/data/ota";
 
 export const isStayListing = (l) => String(l.kind).startsWith("stay");
 
 // Compact status of one listing on the other sites, for the listings table
-export function OtaCell({ listing, onOpen }) {
+function SampleOtaCell({ listing, onOpen }) {
   const { db } = useStore();
   const reqs = forListing(db, listing.id);
   const live = OTAS.filter((o) => latestFor(reqs, o.id)?.status === "live");
@@ -26,7 +29,7 @@ export function OtaCell({ listing, onOpen }) {
 }
 
 // Everything about posting one listing on the other sites
-export function OtaDrawer({ tenant, listing, onClose }) {
+function SampleOtaDrawer({ tenant, listing, onClose }) {
   const { db, update } = useStore();
   const toast = useToast();
   const set = otaSettings(db);
@@ -106,3 +109,6 @@ export function OtaDrawer({ tenant, listing, onClose }) {
   );
 }
 const otaOfAcc = (db, ch) => (db.otaDesk?.accounts || { expedia: "pending" })[ch] || "connected";
+
+export const OtaCell = (p) => (isLiveListing(p.listing) ? <LiveOtaCell {...p} /> : <SampleOtaCell {...p} />);
+export const OtaDrawer = (p) => (p.tenant && isLive(p.tenant.id) ? <LiveOtaDrawer {...p} /> : <SampleOtaDrawer {...p} />);

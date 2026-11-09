@@ -3,6 +3,7 @@
 // How it works: one load of owners, units, leases, bills and repairs; each tab works on it and every change goes to the
 // server, then the page loads again. Rent bills are made by the server every month; staff record payments, waive late
 // fees, log repairs and save owner statements (saving one counts the agency's fee in its profit).
+// "Agreement" on a lease starts a rent agreement filled from it (Business → Agreements).
 // Rules: nothing about money is worked out here; the server decides. Only people who can manage rentals see the buttons
 // that change things.
 
@@ -156,6 +157,7 @@ export function LiveRentals({ tenant, tab = "overview" }) {
           { key: "s", label: "Status", render: (l) => l.status === "ended" ? <Badge tone="neutral">Ended</Badge> : daysBetween(v.today, l.end) <= 60 ? <Badge tone="action">Ends {fdate(l.end)}</Badge> : <Badge tone="done">Active</Badge> },
           { key: "x", label: "", align: "right", render: (l) => can && <div className="pf-row-actions" style={{ justifyContent: "flex-end" }}>
             {l.status === "active" && <Button variant="ghost" size="sm" onClick={() => open("leaseEdit", { ...l, rent: String(l.rent), dueDay: String(l.dueDay), lateFeePct: String(l.lateFeePct), lateAfterDays: String(l.lateAfterDays) })}>Change or renew</Button>}
+            {l.status === "active" && <Button variant="ghost" size="sm" icon="file-pen-line" onClick={() => navigate(`/business/agreements/new/lease/${l.id}`)}>Agreement</Button>}
             {l.status === "active" && <Button variant="outline" size="sm" onClick={() => open("end", { lease: l, endedOn: v.today, depositReturned: String(l.deposit), depositNote: "" })}>End</Button>}
             {l.status === "ended" && l.depositStatus !== "returned" && l.deposit > 0 && <Button variant="outline" size="sm" onClick={() => open("deposit", { lease: l, returned: String(l.deposit), note: "" })}>Return deposit</Button>}
           </div> },

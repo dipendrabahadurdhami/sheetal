@@ -18,6 +18,7 @@ import { hasPerm } from "@sheetal/backend-core/domain/permissions";
 import { COUNTED, LISTING_KINDS, LISTING_PERMS, kindsFor, listingCap, purposeOf } from "@sheetal/backend-core/domain/listings";
 import { catalogKindsNow, warmCatalog } from "@sheetal/backend-core/lib/catalog";
 import { listingCode, prefixFor } from "@sheetal/backend-core/domain/codes";
+import { effectiveLimits } from "@sheetal/backend-core/domain/addons";
 import { branchFor, branchView, inView, workspaceOf, type Workspace } from "../access.js";
 
 const LIVE: ListingStatus[] = ["published", "sold", "rented"];
@@ -79,7 +80,7 @@ export async function listingRoutes(app: FastifyInstance) {
   }
 
   async function checkRoom(tenantId: string, plan: Workspace["member"]["tenant"]["plan"], adding = 1) {
-    const cap = listingCap(plan);
+    const cap = listingCap(await effectiveLimits(db(), tenantId, plan));
     if (cap === -1) return;
     const used = await db().listing.count({ where: { tenantId, status: { in: COUNTED } } });
     if (used + adding > cap) {
@@ -166,7 +167,7 @@ export async function listingRoutes(app: FastifyInstance) {
     const counts: Record<string, number> = Object.fromEntries(byStatus.map((g) => [g.status === "pending" ? "in_review" : g.status, g._count]));
     counts.all = byStatus.filter((g) => g.status !== "archived").reduce((a, g) => a + g._count, 0);
     const meta = {
-      cap: listingCap(plan), used,
+      cap: listingCap(await effectiveLimits(db(), ws.tenantId, plan)), used,
       kinds: kindsFor(ws.member.tenant.type, plan, catalogKindsNow(app.db)), listedKinds: byKind.map((g) => g.kind), counts,
     };
 

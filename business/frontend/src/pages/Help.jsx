@@ -1,11 +1,14 @@
 // The first-run tour and the Help page.
-// How it works: the tour shows once per business; it can be restarted from the account menu.
+// How it works: the tour shows once per business; it can be restarted from the account menu. Signed in, the Help
+// page also shows "Message Sheetal" (LiveSupport.jsx): questions to Sheetal's team and their answers.
 
 import React, { useState } from "react";
 import { useT } from "@sheetal/shared/core/i18n";
 import { Link, useRouter } from "@sheetal/shared/core/router";
 import { Button, PageHead, Panel, SearchInput } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
+import { isLive } from "../live";
+import { LiveSupport } from "./LiveSupport";
 
 const STEPS = [
   ["sparkles", "tour.s1", "/business"],
@@ -46,7 +49,7 @@ const GUIDES = [
   ["users", "team", ["g_team1", "g_team2", "g_team3"]],
 ];
 
-export function Help() {
+export function Help({ tenant }) {
   const t = useT();
   const [q, setQ] = useState("");
   const ql = q.toLowerCase();
@@ -65,6 +68,7 @@ export function Help() {
           );
         })}
       </div>
+      {tenant && isLive(tenant.id) && <LiveSupport tenant={tenant} />}
       <Panel title={t("help.contact")} sub={t("help.contactSub")} pad>
         <div className="pf-row-actions" style={{ justifyContent: "flex-start" }}>
           <Button icon="message-circle">{t("help.whatsapp")}</Button>

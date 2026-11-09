@@ -121,6 +121,7 @@ export function ListingsPage({ tenant, canEdit }) {
                 <td style={{ textAlign: "right" }}>
                   <div className="pf-row-actions" style={{ justifyContent: "flex-end" }}>
                     {canEdit && <Button variant="ghost" size="sm" icon="pencil" onClick={() => edit(l)}>Edit</Button>}
+                    {live && l.status === "published" && <Button variant="ghost" size="sm" icon="rocket" title="Show it first on the website" onClick={() => navigate(`/business/promote/boost/${encodeURIComponent(l.id)}`)}>Boost</Button>}
                     <Menu trigger={({ toggle: tg, open }) => <button type="button" className="btn btn-ghost btn-icon btn-sm" aria-haspopup="menu" aria-expanded={open} aria-label={"More actions for " + l.title} onClick={tg}><Icon name="list" size={16} /></button>}>
                       {live
                         ? l.link && <a data-close="" href={l.link} target="_blank" rel="noreferrer"><Icon name="external-link" size={16} />View on website</a>
@@ -130,6 +131,7 @@ export function ListingsPage({ tenant, canEdit }) {
                         ? <button type="button" data-close="" onClick={() => setStatusOf([l.id], "paused", "Paused. Hidden from the website until you publish again.")}><Icon name="clock" size={16} />Pause</button>
                         : l.status !== "in_review" && <button type="button" data-close="" onClick={() => setStatusOf([l.id], "published", "Published")}><Icon name="send" size={16} />Publish</button>)}
                       <button type="button" data-close="" onClick={() => navigate("/business/analytics")}><Icon name="chart-column" size={16} />{t("nav.analytics")}</button>
+                      {live && l.status === "published" && <button type="button" data-close="" onClick={() => navigate(`/business/promote/featured`)}><Icon name="star" size={16} />Free featured slot</button>}
                       <button type="button" data-close="" onClick={() => navigate("/business/agreements")}><Icon name="file-pen-line" size={16} />{t("ag.new")}</button>
                       {stays && isStayListing(l) && l.status === "published" && <button type="button" data-close="" onClick={() => setOta(l)}><Icon name="globe" size={16} />Sell on other sites</button>}
                       {live && canEdit && (l.status === "published" || l.status === "sold" || l.status === "rented") && (l.status === "published"

@@ -16,7 +16,7 @@ const PERIOD_LABEL = { 1: "1 month", 3: "3 months", 6: "6 months", 12: "1 year" 
 const METHOD_ICON = { esewa: "wallet", khalti: "wallet", fonepay: "qr-code", manual: "landmark" };
 
 /** Sends the browser to the gateway: posts eSewa's form, or follows the redirect. */
-function goToGateway(c) {
+export function goToGateway(c) {
   if (c.method === "form") {
     const f = document.createElement("form");
     f.method = "POST"; f.action = c.action;
@@ -95,7 +95,7 @@ export function LiveBilling({ tenant, canManage }) {
 
       <Panel title="Invoices">
         <Table rows={data.invoices} minWidth={620} empty={<Empty icon="receipt" title="No invoices yet" />} columns={[
-          { key: "n", label: "Invoice", render: (r) => <span className="pf-two"><b className="tnum">{r.number}</b><small>{r.plan} · {PERIOD_LABEL[r.months]}</small></span> },
+          { key: "n", label: "Invoice", render: (r) => <span className="pf-two"><b className="tnum">{r.number}</b><small>{r.kind === "boost" || r.kind === "banner" ? (r.addons?.[0]?.name || r.plan) : `${r.plan} · ${PERIOD_LABEL[r.months]}`}</small></span> },
           { key: "d", label: "Date", num: true, render: (r) => fdate(r.issuedAt) },
           { key: "a", label: "Amount", num: true, align: "right", render: (r) => rs(r.total) },
           { key: "s", label: "Status", render: (r) => <Badge tone={r.status === "paid" ? "done" : r.status === "open" ? "action" : "neutral"}>{r.status === "paid" ? "Paid" : r.status === "open" ? "To pay" : "Cancelled"}</Badge> },
@@ -122,7 +122,7 @@ export function LiveBilling({ tenant, canManage }) {
   );
 }
 
-function ManualProof({ manual, bank, onClose, onSent }) {
+export function ManualProof({ manual, bank, onClose, onSent }) {
   const toast = useToast();
   const [file, setFile] = useState(null);
   const [ref, setRef] = useState("");
@@ -158,7 +158,7 @@ async function printInvoice(id, toast) {
     w.document.write(`<!doctype html><meta charset="utf-8"><title>${esc(i.number)}</title><style>body{font:14px/1.5 system-ui,sans-serif;max-width:720px;margin:40px auto;color:#111}h1{font-size:22px;margin:0}table{width:100%;border-collapse:collapse;margin:24px 0}td,th{padding:8px;border-bottom:1px solid #ddd;text-align:left}td:last-child,th:last-child{text-align:right}.muted{color:#666}.tot td{font-weight:700}@media print{button{display:none}}</style>
       <img src="${esc(config.logo)}" alt="Sheetal Property" style="height:34px"><h1>Tax invoice ${esc(i.number)}</h1><p class="muted">Issued ${esc(fdate(i.issuedAt))}${i.paidAt ? ` · Paid ${esc(fdate(i.paidAt))}` : ` · Due ${esc(fdate(i.dueAt))}`}</p>
       <p><b>Billed to</b><br>${esc(b.name)}${b.pan ? `<br>${b.vatRegistered ? "VAT" : "PAN"} ${esc(b.pan)}` : ""}${b.address ? `<br>${esc(b.address)}` : b.city ? `<br>${esc(b.city)}` : ""}${b.email ? `<br>${esc(b.email)}` : ""}</p>
-      <table><tr><th>Item</th><th>Amount</th></tr><tr><td>${esc(i.plan)} plan, ${esc(PERIOD_LABEL[i.months])}${i.periodStart ? ` (${esc(fdate(i.periodStart))} – ${esc(fdate(i.periodEnd))})` : ""}</td><td>${money(i.subtotal)}</td></tr>
+      <table><tr><th>Item</th><th>Amount</th></tr><tr><td>${i.kind === "plan" ? `${esc(i.plan)} plan, ${esc(PERIOD_LABEL[i.months])}${i.periodStart ? ` (${esc(fdate(i.periodStart))} – ${esc(fdate(i.periodEnd))})` : ""}` : (i.addons || []).map((l) => esc(l.name)).join("<br>") || esc(i.plan)}</td><td>${money(i.subtotal)}</td></tr>
       <tr><td>VAT 13%</td><td>${money(i.vat)}</td></tr><tr class="tot"><td>Total</td><td>${money(i.total)}</td></tr></table>
       ${i.payments.map((p) => `<p class="muted">Paid ${money(p.amount)} by ${esc(p.provider)} on ${esc(fdate(p.paidAt))}${p.providerRef ? `, ref ${esc(p.providerRef)}` : ""}${p.status === "refunded" ? " (refunded)" : ""}</p>`).join("")}
       <p class="muted">${esc(i.seller.name)} · ${esc(i.seller.email)}</p><button onclick="print()">Print or save as PDF</button>`);
@@ -174,7 +174,7 @@ export function BillingReturn({ provider, id }) {
     const body = q.failed || q.status === "User canceled" ? { failed: true }
       : provider === "esewa" ? { data: q.data } : provider === "khalti" ? { pidx: q.pidx } : { query: q };
     bizApi("POST", `/billing/payments/${id}/verify`, body)
-      .then((r) => { setState({ status: r.data.status, message: r.message }); workRefresh(); })
+      .then((r) => { setState({ status: r.data.status, message: r.message, kind: r.data.kind }); workRefresh(); })
       .catch((e) => setState({ status: "failed", message: e.message }));
   }, [provider, id]);
   const ok = state.status === "paid";
@@ -183,7 +183,7 @@ export function BillingReturn({ provider, id }) {
       <Icon name={state.status === "checking" ? "clock" : ok ? "circle-check" : "circle-alert"} size={36} />
       <h1 style={{ fontSize: 22, margin: 0 }}>{state.status === "checking" ? "One moment" : ok ? "Payment received" : "Payment not completed"}</h1>
       <p className="muted" style={{ margin: 0 }}>{state.message}</p>
-      {state.status !== "checking" && <a className="btn btn-primary" href="/business/billing">Back to billing</a>}
+      {state.status !== "checking" && (state.kind === "boost" || state.kind === "banner" ? <a className="btn btn-primary" href={state.kind === "banner" ? "/business/promote/banner" : "/business/promote"}>Back to Promote</a> : <a className="btn btn-primary" href="/business/billing">Back to billing</a>)}
     </div>
   );
 }

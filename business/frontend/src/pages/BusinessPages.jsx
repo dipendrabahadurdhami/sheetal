@@ -14,6 +14,7 @@ import { typesFor } from "@sheetal/shared/core/plans";
 import { checkupsOf, todaysList } from "@sheetal/shared/data/checkups";
 import { Badge, Button, PageHead, Panel, Stat, Tabs, useToast } from "@sheetal/shared/core/ui";
 import { People } from "./Workspace";
+import { LivePeople } from "./LivePeople";
 import { useBranch } from "@sheetal/shared/core/branch";
 import { Structure } from "./Structure";
 import { Icon } from "@sheetal/shared/core/icons";
@@ -97,7 +98,7 @@ export function TeamHub({ tenant, role, start = "members" }) {
       <Tabs value={tab} onChange={setTab} tabs={tabs} />
       {tab === "members" && <BusinessTeam tenant={tenant} role={role} embedded />}
       {tab === "structure" && <Structure tenant={tenant} />}
-      {tab === "attendance" && <People tenant={tenant} role={role} embedded />}
+      {tab === "attendance" && (isLive(tenant.id) ? <LivePeople tenant={tenant} embedded /> : <People tenant={tenant} role={role} embedded />)}
       {tab === "roles" && <BusinessRoles tenant={tenant} role={role} embedded />}
     </>
   );

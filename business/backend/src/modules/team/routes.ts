@@ -6,6 +6,7 @@
 // can't be edited and a business always keeps one active owner; seats count pending invitations.
 
 import type { FastifyInstance } from "fastify";
+import { effectiveLimits } from "@sheetal/backend-core/domain/addons";
 import { z } from "zod";
 import { dbOf } from "@sheetal/backend-core/lib/db";
 import { AppError, badRequest, conflict, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
@@ -30,7 +31,8 @@ const scopes = z.union([z.literal("all"), z.array(z.string().trim().min(1).max(6
 
 const isAllAccess = (features: unknown) => !!(features as Record<string, boolean> | null)?.all_kinds;
 const typesOf = (ws: Workspace): BusinessType[] => (isAllAccess(ws.member.tenant.plan.features) ? [...BUSINESS_TYPES] : [ws.member.tenant.type as BusinessType]);
-const seatLimit = (ws: Workspace) => (ws.member.tenant.plan.limits as Record<string, number>).seats ?? 1;
+// Seats on the plan plus any extra seats bought as add-ons.
+const seatLimit = async (db: Parameters<typeof effectiveLimits>[0], ws: Workspace) => ((await effectiveLimits(db, ws.tenantId, ws.member.tenant.plan)).limits as Record<string, number>).seats ?? 1;
 
 export async function teamRoutes(app: FastifyInstance) {
   const audit = (ws: Workspace, ip: string, action: string, target?: string, meta?: object) =>
@@ -156,7 +158,7 @@ export async function teamRoutes(app: FastifyInstance) {
         invites: invites.map((i) => ({ id: i.id, email: i.email, roleId: i.roleId, scopes: i.scopes, status: i.expiresAt < new Date() ? "expired" : i.status, sent: i.sentAt, expires: i.expiresAt, by: names.get(i.invitedBy ?? "") ?? null })),
         roles: roles.map((r) => ({ id: r.id, key: r.key, name: r.name, perms: r.perms, system: r.system })),
         permissions: businessPermsFor(typesOf(ws)),
-        seats: { used: seatsUsed, limit: seatLimit(ws) },
+        seats: { used: seatsUsed, limit: await seatLimit(dbOf(app), ws) },
         activity: activity.map((a) => ({ id: a.id, who: names.get(a.actorId ?? "") ?? "Someone", what: a.action, target: a.target, at: a.createdAt })),
       },
     };
@@ -179,7 +181,7 @@ export async function teamRoutes(app: FastifyInstance) {
     const db = dbOf(app);
     const pending = await db.invite.count({ where: { tenantId: ws.tenantId, status: "pending", expiresAt: { gt: new Date() } } });
     const active = await db.membership.count({ where: { tenantId: ws.tenantId, status: "active" } });
-    const limit = seatLimit(ws);
+    const limit = await seatLimit(db, ws);
     if (limit !== -1 && active + pending + b.invites.length > limit) {
       throw new AppError(402, "seat_limit", limit === 1 ? "The Starter plan is just you. Upgrade to add your team." : `Your plan has ${limit} seats and ${active + pending} are taken.`);
     }

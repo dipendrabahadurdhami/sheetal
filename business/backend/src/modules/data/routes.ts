@@ -13,6 +13,7 @@ import { AppError, forbidden, notFound } from "@sheetal/backend-core/lib/errors"
 import { COUNTED, LISTING_PERMS, kindsFor, listingCap } from "@sheetal/backend-core/domain/listings";
 import { catalogKindsNow } from "@sheetal/backend-core/lib/catalog";
 import { listingCode, prefixFor } from "@sheetal/backend-core/domain/codes";
+import { effectiveLimits } from "@sheetal/backend-core/domain/addons";
 import { branchFor, branchView, inView, workspaceOf, type Workspace } from "../access.js";
 
 const day = (d: Date | null | undefined) => (d ? d.toISOString().slice(0, 10) : "");
@@ -84,7 +85,7 @@ export async function dataRoutes(app: FastifyInstance) {
         const kind = r.purpose === "Rent" ? "rentout" : "sell";
         if (!allowed.includes(kind)) throw forbidden(r.purpose === "Rent" ? "This business can't list rentals on its plan." : "This business can't list sales on its plan.");
       }
-      const cap = listingCap(t.plan);
+      const cap = listingCap(await effectiveLimits(db(), ws.tenantId, t.plan));
       if (cap !== -1) {
         const used = await db().listing.count({ where: { tenantId: ws.tenantId, status: { in: COUNTED } } });
         if (used + rows.length > cap) throw new AppError(402, "listing_limit", `Your plan has room for ${cap} listings and ${used} are used. Import fewer rows or upgrade.`);
