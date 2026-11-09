@@ -1,22 +1,51 @@
+# .gitignore: what git must never hold (secrets, local data, generated files, big files).
+# Rule of thumb: if it has a password, a key or a customer's data in it, it goes here.
+
+# ───── Packages and build output ─────
 node_modules
 dist
 */frontend/dist
-.env
-.env.local
-*.log
-.DS_Store
 .vite
 coverage
-.pgdata
-# generated on every build (npm run sitemap)
-website/frontend/public/sitemap.xml
-.env.local.api
+*.log
+npm-debug.log*
 
+# ───── Secrets: settings files with passwords and keys ─────
+# `.env.*` covers .env.local, .env.production and similar; the examples stay in git.
+.env
+.env.*
+!.env.example
+!.env.*.example
+.env.local.api
+*.pem
+*.pfx
+*.p12
+*.key
+test-accounts.csv
+
+# ───── Local data: never commit ─────
+# Database files of the local PostgreSQL
+.pgdata
+# Database exports and dumps (npm run backup writes outside the repo; this is a safety net)
+Sheetal-Backups/
+*.dump
+*.sql.gz
+*.bak
 # Development copies of system emails (mail-server, SYSTEM_MAIL_MODE=file)
 mail-outbox/
 
-# Local editor and tool settings
-.claude/
-
-# Copies kept by foundation-1/apply.mjs
+# ───── Update packages and files moving between chats ─────
+*.zip
+OUT-*/
 .foundation-1-backup/
+
+# ───── Generated on every build (npm run sitemap) ─────
+website/frontend/public/sitemap.xml
+
+# ───── Editor, system and tool leftovers ─────
+.claude/
+.DS_Store
+Thumbs.db
+desktop.ini
+~$*
+*.tmp
