@@ -282,15 +282,17 @@ export function sendProblem(a: { kind: string; lang: string; values: unknown; bo
     const body = (l === "en" ? a.bodyEn : a.bodyNe).trim();
     if (body.replace(/\{\{[^}]*\}\}/g, "").replace(/[#\s\d१-९.]/g, "").length < 20) return l === "en" ? "Write the English text first." : "Write the Nepali text first.";
   }
-  const { missing } = render(a, s);
-  const m = [...(missing.en ?? []), ...(missing.ne ?? [])];
-  if (m.length) return `Fill in: ${[...new Set(m)].slice(0, 6).join(", ")}${m.length > 6 ? "…" : ""}.`;
+  // Number checks come before "Fill in": a token above the price leaves the balance blank, and "Fill in: Balance"
+  // would hide the real reason.
   const v = (a.values ?? {}) as Record<string, number | string>;
   if (a.kind === "sale" && Number(v.token) > Number(v.price)) return "The token can't be more than the price.";
   if (a.kind === "booking" && Number(v.advance) > Number(v.amount)) return "The advance can't be more than the total price.";
   for (const [from, to, what] of [["start", "end", "The end date"], ["checkin", "checkout", "Check-out"]] as const) {
     if (v[from] && v[to] && String(v[to]) <= String(v[from])) return `${what} must be after the start.`;
   }
+  const { missing } = render(a, s);
+  const m = [...(missing.en ?? []), ...(missing.ne ?? [])];
+  if (m.length) return `Fill in: ${[...new Set(m)].slice(0, 6).join(", ")}${m.length > 6 ? "…" : ""}.`;
   return null;
 }
 

@@ -65,7 +65,12 @@ describe("Promote", () => {
 
   it("only people who manage billing buy; only listings on the website", async () => {
     expect((await call("agent", "POST", "/promote/boosts", { listingId: L.a, place: "home", days: 7 })).statusCode).toBe(403);
-    expect((await call("owner", "POST", "/promote/boosts", { listingId: L.draft, place: "home", days: 7 })).statusCode).toBe(404);
+    // The draft is the business's own listing, so it is found; the route refuses it in plain words (400, not 404).
+    const draft = await call("owner", "POST", "/promote/boosts", { listingId: L.draft, place: "home", days: 7 });
+    expect(draft.statusCode).toBe(400);
+    expect(draft.json().message).toContain("isn't on the website now");
+    // A listing that isn't the business's at all is still not found.
+    expect((await call("owner", "POST", "/promote/boosts", { listingId: 999999, place: "home", days: 7 })).statusCode).toBe(404);
   });
 
   it("makes a boost with its invoice, starts it when paid, and counts it on the invoice", async () => {

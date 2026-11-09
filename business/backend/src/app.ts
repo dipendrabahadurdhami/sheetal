@@ -37,6 +37,9 @@ import { promoteRoutes } from "./modules/promote/routes.js";
 import { bannerRoutes } from "./modules/promote/banners.js";
 import { overviewRoutes } from "./modules/overview/routes.js";
 import { startStockJob, stockRoutes } from "./modules/stock/routes.js";
+import { peopleRoutes } from "./modules/people/routes.js";
+import { devKeyRoutes } from "./modules/devkeys/routes.js";
+import { aiAccountRoutes } from "./modules/aiaccount/routes.js";
 import { reviewRoutes as checkupRoutes } from "./modules/reviews/checkups.js";
 import { notificationRoutes } from "@sheetal/backend-core/modules/notifications";
 import { workspaceOf } from "./modules/access.js";
@@ -64,6 +67,9 @@ export async function buildApp(config: Config, deps: AppDeps & { resolver?: Reso
   await app.register(bannerRoutes, { prefix: "/v1" });
   await app.register(overviewRoutes, { prefix: "/v1" });
   await app.register(stockRoutes, { prefix: "/v1" });
+  await app.register(peopleRoutes, { prefix: "/v1" });
+  await app.register(devKeyRoutes, { prefix: "/v1" });
+  await app.register(aiAccountRoutes, { prefix: "/v1", ai: deps.ai });
   // The bell: the person's notifications about the open business.
   await app.register(async (a) => notificationRoutes(a, "/notifications", (request) => { const ws = workspaceOf(request); return { userId: ws.user.id, tenantId: ws.tenantId }; }), { prefix: "/v1" });
   await app.register(mailRoutes, { prefix: "/v1", resolver: deps.resolver });

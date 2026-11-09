@@ -111,8 +111,10 @@ export function checkAnswers(fields: FormField[], raw: Record<string, unknown>) 
       }
       case "number": case "money": {
         const s = str(v).replace(/,/g, "");
-        const n = Number(f.type === "money" ? s.replace(/[^\d.]/g, "") : s);
-        if (!s || !Number.isFinite(n) || n < 0 || n > 1e13) { fail(f, "Enter a number"); break; }
+        // Money may carry "Rs." or spaces, but must still hold a digit ("lots" is not an amount, not 0).
+        const digits = f.type === "money" ? s.replace(/[^\d.]/g, "") : s;
+        const n = Number(digits);
+        if (!s || !digits || !Number.isFinite(n) || n < 0 || n > 1e13) { fail(f, "Enter a number"); break; }
         if (f.min && n < Number(f.min)) { fail(f, `Minimum is ${f.type === "money" ? rs(Number(f.min)) : f.min}`); break; }
         if (f.max && n > Number(f.max)) { fail(f, `Maximum is ${f.type === "money" ? rs(Number(f.max)) : f.max}`); break; }
         const val = f.type === "money" ? Math.round(n) : n;

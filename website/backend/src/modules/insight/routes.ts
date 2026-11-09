@@ -10,7 +10,7 @@ import { dbOf } from "@sheetal/backend-core/lib/db";
 import { AppError, badRequest } from "@sheetal/backend-core/lib/errors";
 import { isBotRequest, isSearchEngine } from "@sheetal/backend-core/lib/bots";
 import { Vault } from "@sheetal/backend-core/lib/vault";
-import { aiClient, compareListings, type AiClient } from "@sheetal/backend-core/lib/ai";
+import { aiFor, compareListings, type AiClient } from "@sheetal/backend-core/lib/ai";
 import { requireAskAi } from "@sheetal/backend-core/domain/ai-features";
 import { listingCard, mediaBase } from "../catalog/present.js";
 
@@ -27,7 +27,10 @@ export async function insightRoutes(app: FastifyInstance, opts: { ai?: { client:
     const rows = await db().listing.findMany({ where: { AND: [LIVE, { OR: [{ code: { in: codes } }, { oldCodes: { hasSome: codes } }] }] }, include: { photos: { take: 1 } } });
     if (!rows.length) throw badRequest("Add a valid property code, like SP-0006.");
     await requireAskAi(db());
-    const ai = opts.ai ?? (await aiClient(db(), vault));
+    // Listings of one business use its own AI key when it has one (and is under its monthly cap); else Sheetal's.
+    const owners = [...new Set(rows.map((r) => r.tenantId))];
+    const tenantId = owners.length === 1 ? owners[0]! : null;
+    const ai = opts.ai ?? (tenantId ? await aiFor(db(), vault, tenantId, { fallbackOnCap: true }) : await aiFor(db(), vault, "", { fallbackOnCap: true }));
     if (!ai) throw new AppError(503, "ai_off", "Ask AI isn't switched on yet.");
     // Only what the website shows publicly goes to the AI.
     const listings = rows.map((l) => {
@@ -35,7 +38,7 @@ export async function insightRoutes(app: FastifyInstance, opts: { ai?: { client:
       return { code: l.code, title: l.title, facts: { purpose: c.purpose, type: c.property_type, price: c.price, price_per: c.price_per, negotiable: c.price_negotiable, location: c.property_location, district: c.district,
         bedrooms: l.bedrooms, bathrooms: l.bathrooms, floors: l.floors, land: l.landArea, built: l.builtArea, road: l.roadAccess, facing: l.facing, furnishing: l.furnishing, facilities: l.facilities, status: c.property_status } };
     });
-    const summary = await compareListings(db(), ai, { listings, question: b.question, userId: request.user?.id });
+    const summary = await compareListings(db(), ai, { listings, question: b.question, userId: request.user?.id, tenantId });
     return { status: 200, summary, data: { summary, codes: rows.map((r) => r.code) } };
   });
 
