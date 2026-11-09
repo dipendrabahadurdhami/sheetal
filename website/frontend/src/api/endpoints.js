@@ -10,6 +10,7 @@ const post = (p, data) => request("post", p, { data });
 export const api = {
   // site
   banners: () => get("banners"),
+  site: () => get("site"), // public platform settings: Google ids, maintenance message
   attributes: () => get("property-attributes"),
   suggestions: (q) => get("search/suggestions", { q }),
 
@@ -42,6 +43,22 @@ export const api = {
   rentFind: (data) => post("rent/find", data),
   rentMine: () => get("rent/mine"),
   rentPay: (data) => post("rent/pay", data),
+
+  // online forms of businesses (/f/:slug)
+  form: (slug) => get(`forms/${encodeURIComponent(slug)}`),
+  formSubmit: (slug, data) => post(`forms/${encodeURIComponent(slug)}`, data),
+
+  // how boosted listings do (Business → Promote)
+  promoSeen: (data) => post("promote/seen", data),
+  promoClick: (data) => post("promote/click", data),
+  // home page banners
+  bannerSeen: (data) => post("banners/seen", data),
+  bannerClick: (data) => post("banners/click", data),
+
+  // signing an agreement a business sent (/sign/:token)
+  signDoc: (token) => get(`sign/${encodeURIComponent(token)}`),
+  signCode: (token) => post(`sign/${encodeURIComponent(token)}/code`, {}),
+  sign: (token, data) => post(`sign/${encodeURIComponent(token)}`, data),
   scheduleTour: (data) => post("schedule-tour", data),
   requirement: (fd, agentId) => post(agentId ? "agent-requirement-form" : "requirement-form", fd),
   requirementFee: () => get("requirement-fee/settings-public"),

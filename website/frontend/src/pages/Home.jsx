@@ -1,5 +1,9 @@
 // The home page: hero search, featured and latest listings, and the marketplace rows.
+// The hero shows paid home page banners behind the title and search when any are running (up to 3, sliding every
+// 6 seconds, with a dark shade so the words stay readable); otherwise the plain hero. Small "Advertise here" and
+// "Boost your listing" links lead businesses to Business → Promote.
 
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSEO } from "../utils/seo";
 import { Home as HomeIcon, Trees, Building2, Building, Store, Briefcase, Castle, Calculator, Ruler, TrendingUp, KeyRound, Landmark, Receipt, Wallet } from "lucide-react";
@@ -17,12 +21,51 @@ const CATS = [["House", HomeIcon], ["Land", Trees], ["Apartment", Building2], ["
 const PLACES = [["Kathmandu", "/demo/12.jpg"], ["Lalitpur", "/demo/15.jpg"], ["Bhaktapur", "/demo/17.jpg"], ["Pokhara", "/demo/19.jpg"]];
 const FALLBACK_HERO = ["/demo/12.jpg", "/demo/15.jpg", "/demo/17.jpg"];
 
+const adLink = { fontSize: 12, textDecoration: "underline", textUnderlineOffset: 3 };
+
 function Hero() {
+  const banners = useAsync(() => api.banners().then((r) => r?.data || []).catch(() => []), []);
+  const list = banners.data || [];
+  const [i, setI] = useState(0);
+  const cur = list[i % Math.max(1, list.length)];
+  useEffect(() => {
+    if (list.length < 2) return undefined;
+    const t = setInterval(() => setI((x) => (x + 1) % list.length), 6000);
+    return () => clearInterval(t);
+  }, [list.length]);
+  useEffect(() => { if (list.length) api.bannerSeen({ ids: list.map((b) => b.id) }).catch(() => {}); }, [list.length]);
+  if (!list.length) {
+    return (
+      <section className="home-hero-plain">
+        <div className="container">
+          <h1 className="hh-title">Find your place in Nepal</h1><p className="hh-sub">Stays, homes, land, projects and investments across Nepal.</p>
+          <HeroSearch />
+          <a href="/business/promote/banner" className="muted" style={adLink}>Advertise here</a>
+        </div>
+      </section>
+    );
+  }
+  const open = (b) => api.bannerClick({ id: b.id }).catch(() => {});
   return (
-    <section className="home-hero-plain">
-      <div className="container">
-        <h1 className="hh-title">Find your place in Nepal</h1><p className="hh-sub">Stays, homes, land, projects and investments across Nepal.</p>
+    <section className="home-hero-plain" style={{ position: "relative", overflow: "hidden", isolation: "isolate", minHeight: "min(70vh, 560px)", display: "flex", alignItems: "center" }}>
+      {list.map((b, k) => (
+        <picture key={b.id} aria-hidden={k !== i % list.length} style={{ position: "absolute", inset: 0, zIndex: -2, opacity: k === i % list.length ? 1 : 0, transition: "opacity .8s ease" }}>
+          <source media="(max-width: 700px)" srcSet={b.mobile} />
+          <img src={b.desktop} alt={b.title || "Advertisement"} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading={k ? "lazy" : "eager"} />
+        </picture>
+      ))}
+      <div aria-hidden="true" style={{ position: "absolute", inset: 0, zIndex: -1, background: "linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.35) 55%, rgba(0,0,0,.6))" }} />
+      <div className="container" style={{ width: "100%" }}>
+        <h1 className="hh-title" style={{ color: "#fff" }}>Find your place in Nepal</h1><p className="hh-sub" style={{ color: "rgba(255,255,255,.88)" }}>Stays, homes, land, projects and investments across Nepal.</p>
         <HeroSearch />
+      </div>
+      <div style={{ position: "absolute", left: 16, right: 16, bottom: 14, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", color: "#fff" }}>
+        {cur.sponsored && <span className="tag tag-white" style={{ fontSize: 11 }}>Sponsored</span>}
+        {cur.title && <b style={{ fontSize: 15, textShadow: "0 1px 3px rgba(0,0,0,.5)" }}>{cur.title}</b>}
+        <a href={cur.link} target="_blank" rel="noopener noreferrer sponsored" onClick={() => open(cur)} className="btn btn-sm" style={{ background: "#fff", color: "#111" }}>{cur.button || "Learn more"}</a>
+        <span style={{ flex: 1 }} />
+        {list.length > 1 && <span style={{ display: "flex", gap: 6 }}>{list.map((b, k) => <button key={b.id} type="button" aria-label={`Banner ${k + 1}`} onClick={() => setI(k)} style={{ width: 8, height: 8, borderRadius: 4, border: 0, padding: 0, background: k === i % list.length ? "#fff" : "rgba(255,255,255,.45)", cursor: "pointer" }} />)}</span>}
+        <a href="/business/promote/banner" style={{ ...adLink, color: "rgba(255,255,255,.85)" }}>Advertise here</a>
       </div>
     </section>
   );
@@ -49,7 +92,7 @@ export default function Home() {
 
       <section className="section container">
         <SectionHead kicker="Hand-picked" title="Featured properties"
-          action={<Link to="/featured" className="link">View all</Link>} />
+          action={<span style={{ display: "flex", gap: 16, alignItems: "baseline" }}><a href="/business/promote" className="muted" style={adLink}>Boost your listing here</a><Link to="/featured" className="link">View all</Link></span>} />
         <Row loading={featured.loading} items={featured.data?.items || []} />
       </section>
 

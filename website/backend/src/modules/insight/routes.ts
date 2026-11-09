@@ -11,6 +11,7 @@ import { AppError, badRequest } from "@sheetal/backend-core/lib/errors";
 import { isBotRequest, isSearchEngine } from "@sheetal/backend-core/lib/bots";
 import { Vault } from "@sheetal/backend-core/lib/vault";
 import { aiClient, compareListings, type AiClient } from "@sheetal/backend-core/lib/ai";
+import { requireAskAi } from "@sheetal/backend-core/domain/ai-features";
 import { listingCard, mediaBase } from "../catalog/present.js";
 
 const LIVE = { status: { in: ["published" as const, "sold" as const, "rented" as const] } };
@@ -25,6 +26,7 @@ export async function insightRoutes(app: FastifyInstance, opts: { ai?: { client:
     const codes = [...new Set(b.property_codes.map((c) => c.replace(/^#/, "").toUpperCase()).map((c) => (/^\d+$/.test(c) ? `SP-${c.padStart(4, "0")}` : c)))];
     const rows = await db().listing.findMany({ where: { AND: [LIVE, { OR: [{ code: { in: codes } }, { oldCodes: { hasSome: codes } }] }] }, include: { photos: { take: 1 } } });
     if (!rows.length) throw badRequest("Add a valid property code, like SP-0006.");
+    await requireAskAi(db());
     const ai = opts.ai ?? (await aiClient(db(), vault));
     if (!ai) throw new AppError(503, "ai_off", "Ask AI isn't switched on yet.");
     // Only what the website shows publicly goes to the AI.

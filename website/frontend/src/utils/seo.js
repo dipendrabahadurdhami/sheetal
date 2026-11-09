@@ -69,14 +69,24 @@ export const trackView = (path, title = null) => {
   api.trackVisit({ session_id: sessionId(), page_url: path, page_type, entity_id: entity_id || null, entity_title: title, referrer: document.referrer || null }).catch(() => {});
 };
 
-// Visit tracking (same as the current site's admin dashboard) + optional Google Analytics 4.
-export function Analytics() {
+// Adds the Search Console verification tag and site name from the public site settings (GET /site).
+export function applySiteSettings(site) {
+  if (site?.searchConsoleToken) setMeta("name", "google-site-verification", site.searchConsoleToken);
+  if (site?.siteName) setMeta("property", "og:site_name", site.siteName);
+}
+
+// Visit tracking (same as the current site's admin dashboard) + optional Google Analytics 4. The id comes from
+// Admin → Setup center → Google (gaId); VITE_GA_ID still works as a fallback.
+export function Analytics({ gaId }) {
   const { pathname, search } = useLocation();
   useEffect(() => {
     const ping = () => api.heartbeat(sessionId()).catch(() => {});
     ping();
     const t = setInterval(ping, 20000);
-    const ga = import.meta.env.VITE_GA_ID;
+    return () => clearInterval(t);
+  }, []);
+  useEffect(() => {
+    const ga = gaId || import.meta.env.VITE_GA_ID;
     if (ga && !window.gtag) {
       const s = document.createElement("script");
       s.async = true; s.src = `https://www.googletagmanager.com/gtag/js?id=${ga}`;
@@ -86,8 +96,7 @@ export function Analytics() {
       window.gtag("js", new Date());
       window.gtag("config", ga, { send_page_view: false });
     }
-    return () => clearInterval(t);
-  }, []);
+  }, [gaId]);
   useEffect(() => {
     trackView(pathname);
     if (window.gtag) window.gtag("event", "page_view", { page_path: pathname + search });
