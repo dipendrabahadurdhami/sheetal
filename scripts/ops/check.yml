@@ -1,0 +1,77 @@
+# GitHub Actions: runs `npm run check` (lint + typecheck + all tests) on every push and pull request.
+# Where it fits: this is the "main always green" rule from docs/GIT-WORKFLOW.md. A red cross here = do not merge.
+# How the tests get a database: backend-core/test/setup-db.ts starts its own throwaway PostgreSQL (embedded-postgres)
+# on a free port, migrates it and deletes it at the end. It does not read DATABASE_URL. The PostgreSQL 16 service
+# below is therefore a spare: it makes the runner look like the real setup and is ready if a test ever needs a
+# server. The values below are fake and only for tests; never put a real key in this file.
+name: check
+
+on:
+  push:
+  pull_request:
+
+# A new push to the same branch cancels the older run.
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: sheetal_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test -d sheetal_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      CI: "true"
+      NODE_ENV: test
+      # Fake, test-only settings. Names checked by the Lead against backend-core/.env.example (9 Nov 2026).
+      DATABASE_URL: postgresql://test:test@localhost:5432/sheetal_test
+      SITE_URL: http://localhost:5173
+      API_URL: http://localhost:4000
+      SECRETS_KEY: ci-only-secret-key-not-used-anywhere-else-32chars
+
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      # backend-core/package.json asks for Node 22 or newer, so CI uses 22 (not 20).
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Keep downloaded packages between runs
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: npm-${{ runner.os }}-
+
+      # `npm ci` is exact and fast when package-lock.json is in the repo; otherwise fall back to `npm install`.
+      - name: Install packages
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+      - name: Generate the Prisma client
+        run: npx prisma generate
+        working-directory: backend-core
+
+      - name: Lint, typecheck and test
+        run: npm run check

@@ -48,7 +48,11 @@
     "payouts:sample": "npm run payouts:sample -w @sheetal/backend-core --",
     "expenses:roles": "npm run expenses:roles -w @sheetal/backend-core --",
     "rentals:roles": "npm run rentals:roles -w @sheetal/backend-core --",
+    "agreements:roles": "npm run agreements:roles -w @sheetal/backend-core --",
+    "people:roles": "npm run people:roles -w @sheetal/backend-core --",
+    "promote:gift": "npm run promote:gift -w @sheetal/backend-core --",
     "listings:codes": "npm run listings:codes -w @sheetal/backend-core --",
+    "accounts:test": "npm run accounts:test -w @sheetal/backend-core --",
     "qc": "eslint admin business website shared && tsc -p tsconfig.json",
     "dc": "npm run check"
   },
