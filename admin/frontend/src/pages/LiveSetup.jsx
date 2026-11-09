@@ -1,5 +1,5 @@
 // Setup, system status, analytics and system emails on the admin API.
-// How it works: AI and Meta keys are entered here (write-only); LiveStatus checks every part of the system; LiveOutbox
+// How it works: AI, Meta and robot-check (captcha) keys are entered here (write-only); LiveStatus checks every part of the system; LiveOutbox
 // lists system emails with their outcome and can send failed ones again.
 // Rules: keys are never shown again once saved; email text is only shown outside production.
 
@@ -27,6 +27,7 @@ export function LiveSetup() {
   const saveMeta = () => adminApi("PUT", "/admin/settings/meta", { appSecret: m.appSecret || undefined, verifyToken: m.verifyToken || undefined })
     .then((r) => { toast(r.message); setM({ appSecret: "", verifyToken: "" }); reloadMeta(); }).catch((e) => toast(e.message));
   return (
+    <>
     <div className="pf-split">
       <Panel title="AI (Claude)" className="grow" sub="Ask AI on the website and the lead finder in /business. Only the super admin can change the key." pad>
         {!a ? <p className="muted">Loading…</p> : <div className="pf-stack">
@@ -48,6 +49,33 @@ export function LiveSetup() {
         </div>}
       </Panel>
     </div>
+    <CaptchaPanel />
+    </>
+  );
+}
+
+// The "I'm not a robot" box on businesses' online forms (Cloudflare Turnstile). Without keys forms still work, with
+// the rate limit and the hidden spam field.
+function CaptchaPanel() {
+  const toast = useToast();
+  const [c, reload] = useApi("/admin/settings/captcha");
+  const [v, setV] = useState({ siteKey: "", secret: "" });
+  useEffect(() => { if (c) setV({ siteKey: c.siteKey, secret: "" }); }, [c]);
+  const save = (body) => adminApi("PUT", "/admin/settings/captcha", body).then((r) => { toast(r.message); reload(); }).catch((e) => toast(e.message));
+  return (
+    <Panel title="Robot check on online forms" sub="Cloudflare Turnstile (free): dash.cloudflare.com → Turnstile → Add site, with your website's domain. Only the super admin can change the keys." pad>
+      {!c ? <p className="muted">Loading…</p> : <div className="pf-stack">
+        <span>{c.on ? <Badge tone="done">On</Badge> : <Badge tone="neutral">Off</Badge>}</span>
+        <div className="pf-grid-2 tight">
+          <Field label="Site key" hint="Shown on the form page."><Input value={v.siteKey} onChange={(e) => setV({ ...v, siteKey: e.target.value })} /></Field>
+          <Field label="Secret key" hint={c.hasSecret ? "Saved. Leave empty to keep it." : "Kept encrypted; never shown again."}><Input type="password" autoComplete="new-password" value={v.secret} onChange={(e) => setV({ ...v, secret: e.target.value })} /></Field>
+        </div>
+        <div className="pf-row-actions" style={{ justifyContent: "flex-start" }}>
+          <Button disabled={!v.siteKey.trim() || (!v.secret && !c.hasSecret)} onClick={() => save({ siteKey: v.siteKey.trim(), secret: v.secret || undefined })}>Save robot-check keys</Button>
+          {c.on && <Button variant="outline" onClick={() => window.confirm("Turn the robot check off? Forms keep working with the rate limit.") && save({ off: true })}>Turn off</Button>}
+        </div>
+      </div>}
+    </Panel>
   );
 }
 

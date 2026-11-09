@@ -29,3 +29,17 @@ export async function adminApi(method, path, body) {
   if (!res.ok) throw new ApiError(res.status, json?.message || "Something went wrong.", json?.errors);
   return json;
 }
+
+/** Downloads a file the admin API makes (CSV exports) and saves it under `name`. */
+export async function adminDownload(path, name) {
+  if (!BASE) throw new ApiError(0, "The admin API isn't connected (VITE_ADMIN_API_URL).");
+  const headers = {};
+  const t = token();
+  if (t) headers.Authorization = `Bearer ${t}`;
+  const res = await fetch(`${BASE}${path}`, { headers });
+  if (!res.ok) { const j = await res.json().catch(() => null); throw new ApiError(res.status, j?.message || "Something went wrong."); }
+  const blob = await res.blob();
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}

@@ -1,10 +1,11 @@
 // Tabbed hubs: platform leads, voice, social, buyer demand, careers, upgrade requests, earnings and message templates.
-// How it works: Hub shows several related tools as tabs on one page; signed in, demand and careers use the live
-// screens (LiveContent.jsx); the others are sample data (marked Preview).
+// How it works: Hub shows several related tools as tabs on one page; signed in, demand, careers and upgrade requests use the live
+// screens (LiveContent.jsx, LiveUpgrades.jsx); the others are sample data (marked Preview).
 
 import React, { useState } from "react";
 import { isStaffLive, usePublishedPosts } from "../live";
 import { LiveCareers, LiveRequirements } from "./LiveContent";
+import { LiveUpgrades } from "./LiveUpgrades";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
 import { fdate, fdatetime, inDays, rs } from "@sheetal/shared/core/format";
@@ -262,7 +263,9 @@ function SampleCareers() {
 
 /* Contact-owner, contact-agent and tour requests (platform-wide view) */
 const REQ = [];
-export function AdminRequests() {
+/** Upgrade requests: live from the admin API when signed in as staff, sample requests otherwise. */
+export const AdminRequests = () => (isStaffLive() ? <LiveUpgrades /> : <AdminRequestsSample />);
+function AdminRequestsSample() {
   const t = useT();
   const [list] = useList("requests", REQ);
   const [k, setK] = useState("all");

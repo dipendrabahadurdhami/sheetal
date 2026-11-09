@@ -1,9 +1,9 @@
-// Analytics, system status, system emails, AI and Meta settings, and the calendar sync job.
+// Analytics, system status, system emails, AI, Meta and robot-check (captcha) settings, and the calendar sync job.
 // Where it fits: the admin panel's Traffic, System status and Setup pages.
 // How it works: analytics count people, not bots; system status checks the database, cache, email, AI, Meta and
 // calendar feeds; the outbox list shows every system email and can send failed ones again. startOtaJob() syncs every
 // business's calendar feeds every 2 hours.
-// Rules: AI and Meta keys are write-only; email text (with one-time links) is only shown outside production.
+// Rules: AI, Meta and captcha secret keys are write-only; email text (with one-time links) is only shown outside production.
 
 import type { FastifyInstance } from "fastify";
 import type { Prisma } from "@prisma/client";
@@ -13,6 +13,8 @@ import { badRequest, notFound } from "@sheetal/backend-core/lib/errors";
 import { Vault } from "@sheetal/backend-core/lib/vault";
 import { AI_CREDITS, DEFAULT_MODEL, type AiSettings } from "@sheetal/backend-core/lib/ai";
 import { syncOtaFeed } from "@sheetal/backend-core/domain/ota";
+import { captchaSettings } from "@sheetal/backend-core/lib/captcha";
+import { aiFeatureSettings, saveAiFeatures } from "@sheetal/backend-core/domain/ai-features";
 import { staffOf } from "./routes.js";
 
 export async function adminInsightRoutes(app: FastifyInstance) {
@@ -110,7 +112,7 @@ export async function adminInsightRoutes(app: FastifyInstance) {
   app.get("/admin/settings/ai", async (request) => {
     staffOf(request, "settings.platform");
     const s = ((await db().appSetting.findUnique({ where: { key: "ai" } }))?.value ?? {}) as AiSettings;
-    return { data: { enabled: s.enabled !== false, model: s.model || DEFAULT_MODEL, credits: { ...AI_CREDITS, ...(s.credits ?? {}) }, hasKey: !!s.apiKey, envKey: !!process.env.ANTHROPIC_API_KEY } };
+    return { data: { enabled: s.enabled !== false, model: s.model || DEFAULT_MODEL, credits: Object.fromEntries(Object.entries((await aiFeatureSettings(db())).plans).map(([n, p]) => [n, p.credits])), hasKey: !!s.apiKey, envKey: !!process.env.ANTHROPIC_API_KEY } };
   });
   app.put("/admin/settings/ai", async (request) => {
     const s = staffOf(request, "settings.platform");
@@ -122,6 +124,11 @@ export async function adminInsightRoutes(app: FastifyInstance) {
     const cur = ((await db().appSetting.findUnique({ where: { key: "ai" } }))?.value ?? {}) as AiSettings;
     const next: AiSettings = { enabled: b.enabled, model: b.model, apiKey: b.apiKey ? vault.seal(b.apiKey) : cur.apiKey, credits: b.credits ?? cur.credits };
     await db().appSetting.upsert({ where: { key: "ai" }, create: { key: "ai", value: next as Prisma.InputJsonValue }, update: { value: next as Prisma.InputJsonValue } });
+    if (b.credits) { // credits are kept in step with Admin → AI (ai.features), which is what aiClient() reads first
+      const f = await aiFeatureSettings(db());
+      for (const [n, c] of Object.entries(b.credits)) f.plans[n] = { credits: c, features: f.plans[n]?.features ?? { listing_from_text: true, lead_finder: true, blog_writer: true, reply_suggestions: true } };
+      await saveAiFeatures(db(), f);
+    }
     await audit(s.user.id, request.ip, "settings.ai", `${b.model}${b.enabled ? "" : " (off)"}`);
     return { message: "AI settings saved." };
   });
@@ -140,6 +147,23 @@ export async function adminInsightRoutes(app: FastifyInstance) {
     await db().appSetting.upsert({ where: { key: "meta" }, create: { key: "meta", value: next }, update: { value: next } });
     await audit(s.user.id, request.ip, "settings.meta", "Meta app");
     return { message: "Meta settings saved." };
+  });
+
+  // Robot check on the website's online forms (Cloudflare Turnstile). Saving both empty with off: true turns it off.
+  app.get("/admin/settings/captcha", async (request) => {
+    staffOf(request, "settings.platform");
+    const v = await captchaSettings(db());
+    return { data: { siteKey: v.siteKey ?? "", hasSecret: !!v.secret, on: !!(v.siteKey && v.secret) } };
+  });
+  app.put("/admin/settings/captcha", async (request) => {
+    const s = staffOf(request, "settings.platform");
+    if (s.role !== "super_admin") throw badRequest("Only the super admin can change the robot-check keys.");
+    const b = z.object({ siteKey: z.string().trim().max(200).optional(), secret: z.string().trim().min(10).max(300).optional(), off: z.boolean().optional() }).parse(request.body);
+    const cur = await captchaSettings(db());
+    const next = (b.off ? {} : { siteKey: b.siteKey ?? cur.siteKey ?? "", secret: b.secret ? vault.seal(b.secret) : cur.secret ?? "" }) as Prisma.InputJsonValue;
+    await db().appSetting.upsert({ where: { key: "captcha" }, create: { key: "captcha", value: next }, update: { value: next } });
+    await audit(s.user.id, request.ip, "settings.captcha", b.off ? "off" : "keys");
+    return { message: b.off ? "Robot check turned off." : "Robot-check keys saved." };
   });
 }
 

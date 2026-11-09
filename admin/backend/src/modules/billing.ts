@@ -14,6 +14,7 @@ import { readPrivateFile } from "@sheetal/backend-core/lib/files";
 import { notify } from "@sheetal/backend-core/lib/notify";
 import { applyPayment, billingSettings, createInvoice, invoiceNumber, runBillingCycle, type StoredGateways } from "@sheetal/backend-core/domain/billing";
 import { PERIODS } from "@sheetal/backend-core/domain/plans";
+import { savePlatform } from "@sheetal/backend-core/domain/platform";
 import { staffOf } from "./routes.js";
 
 export async function adminBillingRoutes(app: FastifyInstance) {
@@ -141,6 +142,7 @@ export async function adminBillingRoutes(app: FastifyInstance) {
       bank: z.object({ name: z.string().max(80).optional(), account: z.string().max(40).optional(), accountName: z.string().max(80).optional(), note: z.string().max(300).optional() }),
     }).parse(request.body);
     await db().appSetting.upsert({ where: { key: "billing" }, create: { key: "billing", value: b }, update: { value: b } });
+    await savePlatform(db(), { vatRate: b.vatRate, graceDays: b.graceDays }); // VAT and grace days are platform settings now
     await audit(s.user.id, request.ip, "settings.billing", "billing", undefined, { vatRate: b.vatRate, graceDays: b.graceDays });
     return { message: "Billing settings saved." };
   });
