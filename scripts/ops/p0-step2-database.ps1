@@ -52,9 +52,10 @@ Push-Location backend-core
 npx prisma migrate deploy
 if ($LASTEXITCODE -ne 0) { Pop-Location; Stop-Here "The migration did not apply. Send the red text above to the Lead." }
 npx prisma migrate status 2>&1 | Tee-Object -FilePath (Join-Path $desk "p0-db-status.txt")
-$diff = npx prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --script 2>&1
+# Only the script itself (stdout); Prisma's warnings go to stderr and are not differences.
+$diff = npx prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --script 2>$null
 $diff | Out-File -Encoding utf8 (Join-Path $desk "p0-db-diff.txt")
-$sql = $diff | Where-Object { "$_" -match '\S' -and "$_" -notmatch '^\s*--' }
+$sql = $diff | Where-Object { "$_" -match '^\s*(CREATE|ALTER|DROP|INSERT|UPDATE|DELETE|COMMENT)\b' }
 if ($sql) { Pop-Location; Stop-Here "The database still differs from the schema. Send p0-db-diff.txt (on your Desktop) to the Lead." }
 Ok "database matches the schema (no differences)"
 npx prisma generate
