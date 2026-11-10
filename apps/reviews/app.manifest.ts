@@ -1,7 +1,7 @@
 // Reviews: see what people say about your business and reply in public.
 // Where it fits: loaded by the generator (permissions, menu, roles) and by the API at start (events).
 // How it works: plain data. Reviews do not belong to a branch, so branchOwned is empty. Today customers.view reads reviews and reviews.reply replies (see the alias map).
-// Rules: no functions or logic; every permission and event starts with "reviews."; the code still lives in business/backend until P1-BE-6.
+// Rules: no functions or logic; every permission and event starts with "reviews."; the code lives in apps/reviews/backend (moved in by P1-BE-6).
 
 import type { AppManifest } from "@sheetal/platform/core/manifest";
 
