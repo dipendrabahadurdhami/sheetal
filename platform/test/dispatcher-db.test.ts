@@ -109,7 +109,9 @@ describe("delivery on the database", () => {
     const d1 = mkSide(), d2 = mkSide();
     for (let i = 0; i < 12; i++) await publish(a, "many", { i });
     const results = await Promise.all([d1.drain(), d2.drain()]);
-    expect(results[0]!.claimed + results[1]!.claimed).toBe(12);
+    // "claimed" counts every ready row a tick locked, including leftovers of earlier tests in this file (the outbox is shared), so the
+    // proof is in the deliveries: 12 in total across both sides, each event exactly once (Lead, after the first CI run).
+    expect(results[0]!.delivered + results[1]!.delivered).toBe(12);
     expect(seen).toHaveLength(12);
     expect(new Set(seen).size).toBe(12);                              // no event twice
     expect(await db.eventOutbox.count({ where: { name: name("many"), dispatchedAt: null } })).toBe(0);
