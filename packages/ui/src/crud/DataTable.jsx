@@ -4,7 +4,7 @@
 // panel with Retry), sort + onSort (server-side, header buttons, aria-sort), page + onPage (server-side paging, hidden when total <= per),
 // selection (checkboxes), and mobile="cards" (under 640 px each row becomes a card: the `primary` column is the title, `secondary`
 // columns follow, a column with no label, such as row actions, goes last). hideBelow hides a column on narrower screens.
-// Rules: money columns use `num` and rs() (tabular figures); dates use fdate(); nothing renders raw HTML; header buttons are real
+// Rules: all looks come from platform.css (pf-cards, pf-card-row, pf-skel, pf-pager, pf-bulk); only a column's own width / align stay inline. Money columns use `num` and rs() (tabular figures); dates use fdate(); nothing renders raw HTML; header buttons are real
 // <button>s; a click on a button, link or field inside a row does not also open the row.
 
 import React, { useEffect, useState } from "react";
@@ -59,7 +59,7 @@ export function DataTable({
 
   const pages = page ? Math.max(1, Math.ceil(page.total / page.per)) : 1;
   const pager = page && page.total > page.per && (
-    <nav className="pf-row-actions" style={{ justifyContent: "space-between", padding: "10px 4px" }} aria-label={t("kit.pageOf", { page: page.page, pages })}>
+    <nav className="pf-pager" aria-label={t("kit.pageOf", { page: page.page, pages })}>
       <span className="small muted tnum">{t("kit.pageOf", { page: page.page, pages })} · {t("kit.rows", { n: page.total })}</span>
       <span className="pf-row-actions">
         <Button size="sm" variant="outline" disabled={page.page <= 1} onClick={() => onPage(page.page - 1, page.per)}>{t("kit.prev")}</Button>
@@ -68,7 +68,7 @@ export function DataTable({
     </nav>
   );
   const bar = selection && selected.size > 0 && (
-    <div className="pf-note" role="status" style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+    <div className="pf-note pf-bulk" role="status">
       <b className="tnum">{t("kit.selected", { n: selected.size })}</b>
       {bulk}
       <Button size="sm" variant="ghost" onClick={() => selection.onChange([])}>{t("kit.clearSel")}</Button>
@@ -82,14 +82,14 @@ export function DataTable({
     return (
       <div aria-busy={loading || waiting || undefined}>
         {bar}
-        <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 10 }}>
-          {waiting ? [0, 1, 2].map((i) => <li key={i} className="card" style={{ padding: 14, minHeight: 72, opacity: 0.5 }} aria-hidden="true" />) : rows.map((r) => (
-            <li key={r[rowKey]} className={cx("card", onRowClick && "click", rowClassName?.(r))} style={{ padding: 14, display: "grid", gap: 6 }} onClick={open?.(r)}
+        <ul className="pf-cards">
+          {waiting ? [0, 1, 2].map((i) => <li key={i} className="card pf-card-row pf-card-skel" aria-hidden="true" />) : rows.map((r) => (
+            <li key={r[rowKey]} className={cx("card pf-card-row", onRowClick && "click", rowClassName?.(r))} onClick={open?.(r)}
               tabIndex={onRowClick ? 0 : undefined} onKeyDown={onRowClick ? (e) => e.key === "Enter" && !interactive(e) && onRowClick(r) : undefined}>
               {selection && <input type="checkbox" checked={selected.has(r[rowKey])} onChange={() => toggle(r[rowKey])} aria-label={t("kit.selectRow")} />}
-              <b>{cell(main, r)}</b>
-              {extra.map((c) => <div key={c.key} className="small" style={{ display: "flex", justifyContent: "space-between", gap: 8 }}><span className="muted">{c.label}</span><span className={c.num ? "tnum" : undefined}>{cell(c, r)}</span></div>)}
-              {actions.length > 0 && <div className="pf-row-actions">{actions.map((c) => <React.Fragment key={c.key}>{cell(c, r)}</React.Fragment>)}</div>}
+              <b className="pf-card-title">{cell(main, r)}</b>
+              {extra.map((c) => <div key={c.key} className="small pf-card-line"><span className="muted">{c.label}</span><span className={c.num ? "tnum" : undefined}>{cell(c, r)}</span></div>)}
+              {actions.length > 0 && <div className="pf-row-actions pf-card-actions">{actions.map((c) => <React.Fragment key={c.key}>{cell(c, r)}</React.Fragment>)}</div>}
             </li>
           ))}
         </ul>
@@ -123,7 +123,7 @@ export function DataTable({
             {waiting ? [0, 1, 2, 3, 4].map((i) => (
               <tr key={i} aria-hidden="true">
                 {selection && <td />}
-                {cols.map((c) => <td key={c.key}><span style={{ display: "inline-block", height: 12, width: "70%", borderRadius: 6, background: "currentColor", opacity: 0.08 }} /></td>)}
+                {cols.map((c) => <td key={c.key}><span className="pf-skel" /></td>)}
               </tr>
             )) : rows.map((r) => (
               <tr key={r[rowKey]} className={cx(onRowClick && "click", rowClassName?.(r))} onClick={open?.(r)}
