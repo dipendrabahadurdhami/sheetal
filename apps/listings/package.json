@@ -1,0 +1,13 @@
+{
+  "name": "@sheetal/app-listings",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Listings app: manifest only for now (declaration-only; its routes stay in business/backend until the app moves onto the kernel)",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "exports": {
+    "./manifest": "./app.manifest.ts"
+  }
+}

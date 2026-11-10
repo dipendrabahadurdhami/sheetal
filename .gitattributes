@@ -8,3 +8,6 @@
 *.webp binary
 *.woff binary
 *.woff2 binary
+
+# Generated files are always LF so gen:permissions --check gives the same answer on Windows (P1-BE-2).
+*.generated.* text eol=lf
