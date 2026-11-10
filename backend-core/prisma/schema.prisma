@@ -9,6 +9,7 @@ datasource db {
 }
 
 /// Platform-wide settings (site name, VAT, trial days…), one row per key.
+/// @app platform
 model AppSetting {
   key       String   @id
   value     Json
@@ -24,6 +25,7 @@ enum UserStatus {
   suspended
 }
 
+/// @app platform
 model User {
   id              String     @id @default(cuid())
   /// Always stored lower-case.
@@ -57,6 +59,7 @@ model User {
 }
 
 /// A logged-in device. The browser holds a random token; only its SHA-256 hash is stored.
+/// @app platform
 model Session {
   id         String    @id @default(cuid())
   userId     String    @map("user_id")
@@ -79,6 +82,7 @@ enum TokenPurpose {
 }
 
 /// One-time links sent by email (verify address, reset password). Only the hash is stored.
+/// @app platform
 model EmailToken {
   id        String       @id @default(cuid())
   userId    String       @map("user_id")
@@ -96,6 +100,7 @@ model EmailToken {
 // ───────────── Businesses, plans, roles ─────────────
 
 /// Starter (free) / Business / Pro for each business type. `limits` and `features` follow shared/src/core/plans.js.
+/// @app platform
 model Plan {
   id       String   @id
   type     String
@@ -188,6 +193,7 @@ model Tenant {
 /// A branch (outlet, office, site) of a business. Team members can be limited to some branches (Membership.scopes
 /// holds branch names); a business's work (listings and everything under them, leads, rooms, bookings, POS) belongs
 /// to one branch. Every business starts with "Head office".
+/// @app workspace
 model Branch {
   id        String     @id @default(cuid())
   tenantId  String     @map("tenant_id")
@@ -229,6 +235,7 @@ model Branch {
 
 /// A document sent for business verification: company registration, PAN/VAT certificate, owner's ID or other.
 /// The file is private (MEDIA_DIR/private/kyc), opened only by the business's settings people and Sheetal staff.
+/// @app platform
 model VerificationDoc {
   id         String   @id @default(cuid())
   tenantId   String   @map("tenant_id")
@@ -245,6 +252,7 @@ model VerificationDoc {
 }
 
 /// A role inside one business: a named set of permission ids (see src/domain/permissions.ts).
+/// @app workspace
 model Role {
   id          String       @id @default(cuid())
   tenantId    String       @map("tenant_id")
@@ -260,6 +268,7 @@ model Role {
 }
 
 /// A person in a business, with one role. `scopes` = "all" or a list of branches.
+/// @app workspace
 model Membership {
   id        String   @id @default(cuid())
   userId    String   @map("user_id")
@@ -282,6 +291,7 @@ model Membership {
 /// Every email the platform sends, queued here first; the mail sender (Cloudflare setup) delivers them.
 /// System emails (verify, reset, invites, invoices, reminders). The mail server sends them: queued → sending →
 /// sent, or deferred (tried again later) → failed. In development they are saved as files instead of sent.
+/// @app platform
 model OutboundEmail {
   id            String    @id @default(cuid())
   to            String
@@ -304,6 +314,7 @@ model OutboundEmail {
 }
 
 /// Who did what, for the admin audit log and business activity.
+/// @app platform
 model AuditLog {
   id        String   @id @default(cuid())
   actorId   String?  @map("actor_id")
@@ -343,6 +354,7 @@ enum ListingStatus {
 
 /// One table for every property, posted from /business and shown on the website.
 /// Public fields are columns; `details` holds the rest of what visitors may see; `private` never leaves the server.
+/// @app listings
 model Listing {
   id            Int            @id @default(autoincrement())
   /// Shown to people and used in links: SP-0006.
@@ -439,6 +451,7 @@ model Listing {
 }
 
 /// Photos in display order; `file` is the name inside the media store (main, thumbnail and original sizes share it).
+/// @app listings
 model ListingPhoto {
   id        Int     @id @default(autoincrement())
   listingId Int     @map("listing_id")
@@ -455,6 +468,7 @@ model ListingPhoto {
 // Paid plans only; storage is counted per business (all mailboxes together).
 
 /// A business's own domain for email. Mailboxes can be created only once it is verified.
+/// @app workspace
 model MailDomain {
   id             String    @id @default(cuid())
   tenantId       String    @map("tenant_id")
@@ -478,6 +492,7 @@ model MailDomain {
 }
 
 /// An address on a business domain: one person's mailbox, or a shared one (info@, sales@) several people answer.
+/// @app workspace
 model Mailbox {
   id        String          @id @default(cuid())
   tenantId  String          @map("tenant_id")
@@ -501,6 +516,7 @@ model Mailbox {
 }
 
 /// Who else may use a mailbox (the people who answer a shared address).
+/// @app workspace
 model MailboxAccess {
   mailboxId String  @map("mailbox_id")
   userId    String  @map("user_id")
@@ -512,6 +528,7 @@ model MailboxAccess {
 }
 
 /// One email in one mailbox. A message sent to a teammate is stored twice: in the sender's Sent and the teammate's Inbox.
+/// @app workspace
 model MailMessage {
   id          String           @id @default(cuid())
   mailboxId   String           @map("mailbox_id")
@@ -553,6 +570,7 @@ model MailMessage {
   @@map("mail_messages")
 }
 
+/// @app workspace
 model MailAttachment {
   id          String      @id @default(cuid())
   messageId   String      @map("message_id")
@@ -569,6 +587,7 @@ model MailAttachment {
 
 /// One outside recipient of a sent email, worked through by the mail server: queued → sending → sent,
 /// or deferred (temporary problem, tried again later) → failed after the last attempt or a permanent refusal.
+/// @app workspace
 model MailDelivery {
   id            String      @id @default(cuid())
   messageId     String      @map("message_id")
@@ -594,6 +613,7 @@ model MailDelivery {
 // ───────────── Website: favourites, enquiries, reviews, upgrades ─────────────
 
 /// A listing someone saved.
+/// @app listings
 model Favourite {
   userId    String   @map("user_id")
   listingId Int      @map("listing_id")
@@ -606,6 +626,7 @@ model Favourite {
 
 /// An enquiry from the website: contact the agency or owner, a site visit, a buyer requirement, a service request.
 /// It goes to the business that owns the listing (or to Sheetal when there is none) and shows in its Inbox.
+/// @app crm
 model Lead {
   id         String        @id @default(cuid())
   /// The business it is for; null = Sheetal itself.
@@ -661,6 +682,7 @@ model Lead {
 }
 
 /// Replies on a lead: "in" from the person (the first message is the lead itself), "out" from the business (sent by email).
+/// @app crm
 model LeadMessage {
   id        String   @id @default(cuid())
   leadId    String   @map("lead_id")
@@ -710,6 +732,7 @@ model Review {
 }
 
 /// A business asking to move to a paid plan; Sheetal's team follows up and takes payment.
+/// @app platform
 model UpgradeRequest {
   id        String   @id @default(cuid())
   tenantId  String   @map("tenant_id")
@@ -725,6 +748,7 @@ model UpgradeRequest {
 }
 
 /// An invitation to join a business's team, sent by email. Only the hash of the link's token is stored.
+/// @app workspace
 model Invite {
   id        String   @id @default(cuid())
   tenantId  String   @map("tenant_id")
@@ -749,6 +773,7 @@ model Invite {
 // ───────────── Requirement board, notifications ─────────────
 
 /// An agent or owner offering one of their listings for a buyer's requirement. The buyer is told by email and notification.
+/// @app listings
 model DemandMatch {
   id        String   @id @default(cuid())
   leadId    String   @map("lead_id")
@@ -766,6 +791,7 @@ model DemandMatch {
 }
 
 /// Something a person should know: listing approved, new offer on their requirement, new enquiry…
+/// @app workspace
 model Notification {
   id        String    @id @default(cuid())
   userId    String    @map("user_id")
@@ -803,6 +829,7 @@ enum SupportFrom {
 /// A business's message thread to Sheetal (Business → Help → Message Sheetal; answered in Admin → Inbox → Support).
 /// Rules: any member can open one; owners and people with settings.business see all of the business's tickets, others
 /// only their own (userId). A new business message or a reopen sets status "open"; a staff reply sets "waiting".
+/// @app platform
 model SupportTicket {
   id               String        @id @default(cuid())
   /// Short public number: SUP-0007.
@@ -832,6 +859,7 @@ model SupportTicket {
 }
 
 /// One message in a ticket. `from` says who wrote it; userId is the writer (null only if never recorded).
+/// @app platform
 model SupportMessage {
   id        String      @id @default(cuid())
   ticketId  String      @map("ticket_id")
@@ -848,6 +876,7 @@ model SupportMessage {
 
 // ───────────── Blog and careers ─────────────
 
+/// @app platform
 model BlogCategory {
   id          Int        @id @default(autoincrement())
   name        String
@@ -860,6 +889,7 @@ model BlogCategory {
   @@map("blog_categories")
 }
 
+/// @app platform
 model BlogPost {
   id              Int           @id @default(autoincrement())
   categoryId      Int?          @map("category_id")
@@ -890,6 +920,7 @@ model BlogPost {
 }
 
 /// Comments wait for Sheetal to approve them before they show.
+/// @app platform
 model BlogComment {
   id        String   @id @default(cuid())
   postId    Int      @map("post_id")
@@ -908,6 +939,7 @@ model BlogComment {
   @@map("blog_comments")
 }
 
+/// @app platform
 model JobPost {
   id               Int              @id @default(autoincrement())
   title            String
@@ -939,6 +971,7 @@ model JobPost {
 }
 
 /// The CV is a private file (MEDIA_DIR/private/cv), only opened by staff through the admin API.
+/// @app platform
 model JobApplication {
   id          String   @id @default(cuid())
   jobId       Int      @map("job_id")
@@ -961,6 +994,7 @@ model JobApplication {
 
 /// A bill for a plan. Prices include 13% VAT (shown on the invoice). Paid in one go by eSewa, Khalti, Fonepay
 /// or a bank transfer that Sheetal confirms; paying applies the plan for the months bought.
+/// @app platform
 model Invoice {
   id          String    @id @default(cuid())
   /// INV-2026-0001
@@ -994,6 +1028,7 @@ model Invoice {
   @@map("invoices")
 }
 
+/// @app platform
 model Payment {
   id          String    @id @default(cuid())
   invoiceId   String    @map("invoice_id")
@@ -1026,6 +1061,7 @@ model Payment {
 // ───────────── Hotels and stays ─────────────
 
 /// One night's price or closing for a room type at a branch (the calendar). No row = the normal price, open.
+/// @app hotel
 model RateDay {
   id       String   @id @default(cuid())
   tenantId String   @map("tenant_id")
@@ -1045,6 +1081,7 @@ model RateDay {
 }
 
 /// Pricing rules of a room type at a branch: a weekend markup (Friday and Saturday nights) and the shortest stay.
+/// @app hotel
 model RoomRule {
   id         String @id @default(cuid())
   tenantId   String @map("tenant_id")
@@ -1059,6 +1096,7 @@ model RoomRule {
 }
 
 /// A room (or a whole unit for a host). `status` is the front desk's view: vacant, arriving, occupied, dirty, blocked.
+/// @app hotel
 model Room {
   id        String    @id @default(cuid())
   tenantId  String    @map("tenant_id")
@@ -1084,6 +1122,7 @@ model Room {
 }
 
 /// A stay: requested (from the website or another site), confirmed, checked_in, completed, or cancelled.
+/// @app hotel
 model Booking {
   id          String         @id @default(cuid())
   /// BK-0001
@@ -1127,6 +1166,7 @@ model Booking {
 }
 
 /// What a guest is charged during a stay: room nights, restaurant bills put on the room, extras, discounts (negative).
+/// @app hotel
 model FolioLine {
   id        String   @id @default(cuid())
   bookingId String   @map("booking_id")
@@ -1144,6 +1184,7 @@ model FolioLine {
   @@map("folio_lines")
 }
 
+/// @app hotel
 model GuestPayment {
   id        String   @id @default(cuid())
   bookingId String   @map("booking_id")
@@ -1161,6 +1202,7 @@ model GuestPayment {
 
 // ───────────── Point of sale ─────────────
 
+/// @app pos
 model MenuItem {
   id        String   @id @default(cuid())
   tenantId  String   @map("tenant_id")
@@ -1180,6 +1222,7 @@ model MenuItem {
 }
 
 /// A cashier shift: opened with a cash float, closed with the cash counted against what was sold in cash.
+/// @app pos
 model Shift {
   id       String    @id @default(cuid())
   tenantId String    @map("tenant_id")
@@ -1201,6 +1244,7 @@ model Shift {
 }
 
 /// A restaurant or shop bill, paid on the spot or put on a guest room (then it is on their folio).
+/// @app pos
 model PosBill {
   id        String   @id @default(cuid())
   seq       Int      @unique @default(autoincrement())
@@ -1234,6 +1278,7 @@ model PosBill {
 // ───────────── Developer projects ─────────────
 
 /// A unit in a project (a flat, a plot, a shop): available, held (a few days), reserved, sold.
+/// @app projects
 model Unit {
   id           String        @id @default(cuid())
   tenantId     String        @map("tenant_id")
@@ -1255,6 +1300,7 @@ model Unit {
 }
 
 /// A buyer reservation of a unit, with its payment plan (instalments) and what has been collected.
+/// @app projects
 model Reservation {
   id          String       @id @default(cuid())
   seq         Int          @unique @default(autoincrement())
@@ -1279,6 +1325,7 @@ model Reservation {
 }
 
 /// Money received on a reservation. A refund is a negative amount.
+/// @app collections
 model Collection {
   id            String      @id @default(cuid())
   reservationId String      @map("reservation_id")
@@ -1298,6 +1345,7 @@ model Collection {
 // ───────────── Investments (sponsors) ─────────────
 
 /// An investor commitment to an investment listing: pledged, then paid (or refunded).
+/// @app investments
 model Commitment {
   id        String    @id @default(cuid())
   tenantId  String    @map("tenant_id")
@@ -1317,6 +1365,7 @@ model Commitment {
 }
 
 /// News for the investors in one investment, emailed to everyone who committed.
+/// @app investments
 model InvestmentUpdate {
   id        String   @id @default(cuid())
   tenantId  String   @map("tenant_id")
@@ -1333,6 +1382,7 @@ model InvestmentUpdate {
 // ───────────── AI and analytics ─────────────
 
 /// One AI request, for monthly credits per business (1 credit per 1,000 tokens, at least 1) and cost tracking.
+/// @app platform
 model AiUsage {
   id        String   @id @default(cuid())
   tenantId  String?  @map("tenant_id")
@@ -1352,6 +1402,7 @@ model AiUsage {
 }
 
 /// A page seen on the website by a person (bots are never stored). The session id is the browser's random id, hashed.
+/// @app platform
 model PageView {
   id        String   @id @default(cuid())
   session   String
@@ -1370,6 +1421,7 @@ model PageView {
 }
 
 /// Visits that were filtered out as bots, counted per day and kind (search engine, other bot).
+/// @app platform
 model BotDay {
   day   String
   kind  String
@@ -1382,6 +1434,7 @@ model BotDay {
 // ───────────── Channels and other sites ─────────────
 
 /// A business's WhatsApp number or Facebook page connected to its Inbox. The access token is encrypted.
+/// @app workspace
 model ChannelAccount {
   id          String   @id @default(cuid())
   tenantId    String   @map("tenant_id")
@@ -1399,6 +1452,7 @@ model ChannelAccount {
 }
 
 /// A calendar feed (iCal) from Booking.com, Airbnb, Agoda… for one room type: its stays block those rooms here.
+/// @app hotel
 model OtaFeed {
   id        String    @id @default(cuid())
   tenantId  String    @map("tenant_id")
@@ -1419,6 +1473,7 @@ model OtaFeed {
 /// An invoice or credit note a business gives its own customer. Drafts have no number; the tax number
 /// (INV-2083-84-0001, CN-…) is set when it is sent, counted per business and fiscal year, and never reused.
 /// Amounts are whole rupees; a credit note is stored positive and shown negative.
+/// @app invoicing
 model BizInvoice {
   id           String       @id @default(cuid())
   /// Shown on a draft (DRAFT-0007) until it has its number.
@@ -1468,6 +1523,7 @@ model BizInvoice {
 }
 
 /// Money received against a customer invoice (RC-2083-84-0001).
+/// @app invoicing
 model BizReceipt {
   id        String     @id @default(cuid())
   tenantId  String     @map("tenant_id")
@@ -1492,6 +1548,7 @@ model BizReceipt {
 }
 
 /// The last number given out per business and kind of document and fiscal year (key "INV:2083-84").
+/// @app workspace
 model DocCounter {
   tenantId String @map("tenant_id")
   key      String
@@ -1503,6 +1560,7 @@ model DocCounter {
 
 /// One listing check-up by one team member on one day (Nepal time): all correct, skipped, or changed (with the new
 /// values). Changes of a day are decided together: the value most reviewers chose wins, otherwise the owner picks.
+/// @app listings
 model ListingReview {
   id        String   @id @default(cuid())
   tenantId  String   @map("tenant_id")
@@ -1529,6 +1587,7 @@ model ListingReview {
 /// One payment Sheetal collected for a business (a guest's online payment, a rent, an instalment, a site booking)
 /// and the commission taken from it. It waits here (payoutId empty) until a payout run puts it into a payout.
 /// A refund is a negative amount. The same payment is never counted twice (tenant + source + ref).
+/// @app invoicing
 model PayoutItem {
   id          String   @id @default(cuid())
   tenantId    String   @map("tenant_id")
@@ -1559,6 +1618,7 @@ model PayoutItem {
 /// A transfer from Sheetal to a business's bank, for one branch. "batch" payouts are made by a payout run from the
 /// waiting items; "manual" ones are entered by staff (a settlement paid outside the run). pending → paid or failed;
 /// a failed payout gives its items back, so the next run picks them up again.
+/// @app invoicing
 model Payout {
   id          String       @id @default(cuid())
   /// PO-0001
@@ -1745,6 +1805,7 @@ model EventDelivery {
 
 /// A landlord whose homes or shops the agency manages. The management fee is taken from the rent collected for them;
 /// the rest is the owner's money (never the agency's income).
+/// @app rentals
 model RentOwner {
   id         String           @id @default(cuid())
   tenantId   String           @map("tenant_id")
@@ -1768,6 +1829,7 @@ model RentOwner {
 }
 
 /// A flat, room, shop or house of an owner. "property" is the building or house it is in (units are grouped by it).
+/// @app rentals
 model RentUnit {
   id        String       @id @default(cuid())
   tenantId  String       @map("tenant_id")
@@ -1794,6 +1856,7 @@ model RentUnit {
 }
 
 /// A tenant's lease on a unit (LS-0007). Active leases get one rent bill a month. The deposit is held and returned.
+/// @app rentals
 model RentLease {
   id              String     @id @default(cuid())
   seq             Int        @unique @default(autoincrement())
@@ -1835,6 +1898,7 @@ model RentLease {
 }
 
 /// One month's rent of a lease (RB-0007): one per lease and month. paid is the sum of its payments.
+/// @app rentals
 model RentBill {
   id         String        @id @default(cuid())
   seq        Int           @unique @default(autoincrement())
@@ -1860,6 +1924,7 @@ model RentBill {
 
 /// Rent received for a bill: recorded by staff (counts at once), or sent by the tenant online (counts once confirmed:
 /// by Sheetal when the money was paid to Sheetal, by the business when it was paid to the business).
+/// @app rentals
 model RentPayment {
   id        String   @id @default(cuid())
   tenantId  String   @map("tenant_id")
@@ -1894,6 +1959,7 @@ model RentPayment {
 }
 
 /// A repair on a unit (WO-0007). When done, its cost comes off the owner's statement for that month.
+/// @app rentals
 model RentRepair {
   id        String    @id @default(cuid())
   seq       Int       @unique @default(autoincrement())
@@ -1919,6 +1985,7 @@ model RentRepair {
 
 /// An owner's statement for a month, saved by the agency: rent collected − management fee − repairs = owed to the
 /// owner. Saving it counts the fee in the agency's profit (domain/expenses.ts profitRows).
+/// @app rentals
 model OwnerStatement {
   id        String    @id @default(cuid())
   tenantId  String    @map("tenant_id")
@@ -1941,6 +2008,7 @@ model OwnerStatement {
 }
 
 /// Add-ons a business owns (domain/addons.ts): qty counts now; renewQty is what renews with the plan.
+/// @app platform
 model TenantAddon {
   id        String   @id @default(cuid())
   tenantId  String   @map("tenant_id")
@@ -1959,6 +2027,7 @@ model TenantAddon {
 
 /// A form a business builds in Business → Forms (domain/forms.ts checks the fields). A live form is open to anyone at
 /// SITE_URL/f/<slug>; each response becomes an Inbox lead (kind "form").
+/// @app workspace
 model Form {
   id          String         @id @default(cuid())
   tenantId    String         @map("tenant_id")
@@ -1999,6 +2068,7 @@ model Form {
 
 /// One filled-in form: answers [{ id, label, type, value, text }], the person's name, phone and email taken from them,
 /// and the Inbox lead it made. Uploaded files are private (MEDIA_DIR/private/forms), named in the answer's value.
+/// @app workspace
 model FormResponse {
   id        String   @id @default(cuid())
   formId    String   @map("form_id")
@@ -2025,6 +2095,7 @@ model FormResponse {
 /// An agreement a business sends for e-signing (AG-0007), from a template in domain/agreements.ts. While a draft, the
 /// wording (bodyEn/bodyNe with {{placeholders}}), values and signers can change. Sending fills the texts (textEn/textNe)
 /// and freezes them with their SHA-256 (hash); after that nothing about it changes except the signatures.
+/// @app agreements
 model Agreement {
   id          String            @id @default(cuid())
   seq         Int               @unique @default(autoincrement())
@@ -2069,6 +2140,7 @@ model Agreement {
 
 /// A person who signs an agreement: a party (p1, p2) or a witness. They get a private link (only its SHA-256 is kept)
 /// and sign with a 6-digit code sent to their email (10 minutes, 5 tries, 5 codes per link).
+/// @app agreements
 model AgreementSigner {
   id          String    @id @default(cuid())
   agreementId String    @map("agreement_id")
@@ -2110,6 +2182,7 @@ model AgreementSigner {
 /// (domain/promote.ts). It holds a spot from when it is made until it is paid (or the payment window passes); once
 /// paid it runs on its dates by itself. It can move to another listing of the business for the days left, or stop
 /// (no refund). Gift boosts (source "gift") came free with the move from the old website.
+/// @app platform
 model Boost {
   id        String    @id @default(cuid())
   seq       Int       @unique @default(autoincrement())
@@ -2152,6 +2225,7 @@ model Boost {
 /// A home page banner (BN-0007): the picture behind the title and search (domain/banners.ts). Businesses book days and
 /// pay ("banner" invoice); staff check the picture before it shows. Sheetal's own banners (source "staff", no business)
 /// are free and show when paid ones leave a spot.
+/// @app platform
 model Banner {
   id         String    @id @default(cuid())
   seq        Int       @unique @default(autoincrement())
@@ -2195,6 +2269,7 @@ model Banner {
 /// Something a branch keeps and counts (domain/stock.ts): bottles in the bar, rice in the kitchen, towels, minibar snacks.
 /// Quantities are whole numbers in the smallest unit you count in (bottle, kg, piece, ml). Never changed directly:
 /// every change is a StockMove.
+/// @app pos
 model StockItem {
   id        String   @id @default(cuid())
   tenantId  String   @map("tenant_id")
@@ -2221,6 +2296,7 @@ model StockItem {
 }
 
 /// One change to a stock item. qty is signed (+ in, - out); after is what was left.
+/// @app pos
 model StockMove {
   id        String    @id @default(cuid())
   tenantId  String    @map("tenant_id")
@@ -2246,6 +2322,7 @@ model StockMove {
 
 /// What one sale of a menu item uses: qty of a stock item. At another branch that sells the same shared menu item, the
 /// stock item with the same name and place there is used.
+/// @app pos
 model StockRecipe {
   id         String    @id @default(cuid())
   tenantId   String    @map("tenant_id")
@@ -2263,6 +2340,7 @@ model StockRecipe {
 // ───────────── People: attendance and leave ─────────────
 
 /// One check-in (and check-out) of a person at a branch. day is the Nepal day of the check-in (midnight UTC).
+/// @app people
 model Attendance {
   id        String    @id @default(cuid())
   tenantId  String    @map("tenant_id")
@@ -2290,6 +2368,7 @@ model Attendance {
 }
 
 /// A kind of leave a business gives (casual, sick…) and the days a person gets a year. 0 days = no limit.
+/// @app people
 model LeaveType {
   id          String   @id @default(cuid())
   tenantId    String   @map("tenant_id")
@@ -2304,6 +2383,7 @@ model LeaveType {
 }
 
 /// A request for leave. days counts the days asked for without the weekly off day (Saturday); a half day is 0.5.
+/// @app people
 model LeaveRequest {
   id        String    @id @default(cuid())
   tenantId  String    @map("tenant_id")
@@ -2332,6 +2412,7 @@ model LeaveRequest {
 // ───────────── Developer keys ─────────────
 
 /// A key a business's developer uses to call the public API (/v1/public). Only the SHA-256 of the key is kept.
+/// @app workspace
 model ApiKey {
   id         String    @id @default(cuid())
   tenantId   String    @map("tenant_id")
@@ -2352,6 +2433,7 @@ model ApiKey {
 
 /// A business's request to sell a listing on another site (Booking.com, Airbnb…) through Sheetal's partner account.
 /// Sheetal's channel team works the queue in Admin → Channels. (Calendar sync with the sites is OtaFeed.)
+/// @app hotel
 model OtaRequest {
   id            String   @id @default(cuid())
   /// Shown as OTA-0001.
@@ -2383,6 +2465,7 @@ model OtaRequest {
 }
 
 /// Whether Sheetal's partner account on a site is connected (one row per site).
+/// @app hotel
 model OtaAccount {
   id        String   @id @default(cuid())
   channel   String   @unique
@@ -2395,6 +2478,7 @@ model OtaAccount {
 }
 
 /// The wording of a message the system sends. A row replaces the built-in text (domain/templates.ts); no row = built-in.
+/// @app workspace
 model MessageTemplate {
   id        String   @id @default(cuid())
   key       String
@@ -2414,6 +2498,7 @@ model MessageTemplate {
 }
 
 /// One expiry reminder that was sent, so it is never sent twice (kind + refId is the identity).
+/// @app platform
 model ReminderLog {
   id        String   @id @default(cuid())
   /// plan_renewal_3, listing_stale, boost_ending, banner_ending…
