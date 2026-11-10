@@ -36,11 +36,21 @@ const readBase64 = (file) => new Promise((ok, fail) => {
 export const receipt = {
   upload: async (id, file, api) => api("POST", `/expenses/${id}/receipt`, { data: await readBase64(file) }),
   remove: (id, api) => api("DELETE", `/expenses/${id}/receipt`),
-  /** Fetch the file and open it in a new tab. Returns nothing, so no toast is shown. */
+  /** Fetch the file and open it in a new tab. Returns nothing, so no toast is shown.
+   *  The tab is opened BEFORE the request (still inside the tap): phone browsers (Safari above all) block a tab opened after an
+   *  await. It is filled in when the file arrives, and closed again if the request fails. The file's address is freed after a minute. */
   async open(row, api) {
-    const { data: f } = await api("GET", `/expenses/${row.id}/receipt`);
-    const bin = atob(f.data), bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    window.open(URL.createObjectURL(new Blob([bytes], { type: f.type })), "_blank", "noopener");
+    const tab = typeof window !== "undefined" ? window.open("", "_blank") : null;
+    try {
+      const { data: f } = await api("GET", `/expenses/${row.id}/receipt`);
+      const bin = atob(f.data), bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const url = URL.createObjectURL(new Blob([bytes], { type: f.type }));
+      if (tab) { tab.opener = null; tab.location.href = url; } else window.open(url, "_blank", "noopener");
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (e) {
+      tab?.close();
+      throw e;
+    }
   },
 };
