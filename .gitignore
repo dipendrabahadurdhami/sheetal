@@ -34,7 +34,16 @@ Sheetal-Backups/
 # Development copies of system emails (mail-server, SYSTEM_MAIL_MODE=file)
 mail-outbox/
 
+# ───── Generated reports: output of our scripts, may hold property locations or customer data ─────
+# Every script that writes a report names it <something>-report.csv, so one rule covers them
+# (photo-gps-report.csv, tidy-listings-report.csv and any future one).
+*-report.csv
+# The GPS check also writes a summary next to its report.
+photo-gps-*.csv
+
 # ───── Update packages and files moving between chats ─────
+# "Claude outputs/" is the team's kit notes and zips folder; it lives on the owner's computer only.
+Claude outputs/
 *.zip
 OUT-*/
 .foundation-1-backup/
