@@ -2,7 +2,7 @@
   "name": "@sheetal/platform",
   "private": true,
   "version": "0.1.0",
-  "description": "Server code every app uses: errors, database, tenancy, billing, payments, integrations (empty for now; code moves in from Phase 1 step 2)",
+  "description": "Server code every app uses: errors, database, tenancy, billing, payments, integrations (core primitives from P1-BE-1: errors, config, database client, vault, Money, repository, service, controller, events)",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -10,6 +10,12 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@node-rs/argon2": "^2.2.2",
+    "@prisma/client": "^6.19.3",
+    "fastify": "^5.12.7",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",

@@ -40,4 +40,20 @@ export default [
     rules: { "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", caughtErrors: "none" }] },
   },
   { files: [...API.map((d) => `${d}/*.mjs`), "scripts/build-api.mjs"], languageOptions: { ecmaVersion: 2023, sourceType: "module", globals: { ...globals.node } }, rules: js.configs.recommended.rules },
+  // Moved files (P1-BE-1): new code in platform/ and apps/ imports the platform package, not the old backend-core paths.
+  // backend-core itself is left alone: its own files keep working through the re-export shims.
+  {
+    files: ["platform/**/*.ts", "apps/**/*.ts"],
+    rules: {
+      "no-restricted-imports": ["error", {
+        patterns: [
+          { group: ["@sheetal/backend-core/lib/errors", "**/backend-core/src/lib/errors", "**/backend-core/src/lib/errors.js"], message: "Moved: use @sheetal/platform/core/errors." },
+          { group: ["@sheetal/backend-core/lib/db", "**/backend-core/src/lib/db", "**/backend-core/src/lib/db.js"], message: "Moved: use @sheetal/platform/db/client." },
+          { group: ["@sheetal/backend-core/config", "**/backend-core/src/config", "**/backend-core/src/config.js"], message: "Moved: use @sheetal/platform/core/config." },
+          { group: ["@sheetal/backend-core/lib/vault", "**/backend-core/src/lib/vault", "**/backend-core/src/lib/vault.js"], message: "Moved: use @sheetal/platform/auth/vault." },
+          { group: ["@sheetal/backend-core/lib/secrets", "**/backend-core/src/lib/secrets", "**/backend-core/src/lib/secrets.js"], message: "Moved: use @sheetal/platform/auth/secrets." },
+        ],
+      }],
+    },
+  },
 ];
