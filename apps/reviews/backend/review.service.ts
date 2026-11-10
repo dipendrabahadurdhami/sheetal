@@ -45,7 +45,9 @@ export class ReviewService extends BaseService<ReviewRow, never, ReviewChange> {
 
   async overview(ctx: BusinessContext, rawQuery: unknown) {
     this.requireApp(ctx);
-    const scope = ctx.permissions.require(READ, "Your role can't see reviews.");
+    // Whoever may reply may also read (as today: "reviews.reply or customers.view can read"); a new role holding only
+    // reviews.review.reply must see what it answers (Lead, after the first CI run of P1-BE-6).
+    const scope = ctx.permissions.scopeOf(READ) ?? ctx.permissions.require(REPLY, "Your role can't see reviews.");
     const q = ListQuery.parse(rawQuery);
     const filters = q.show === "unanswered" ? [{ field: "reply", op: "isNull" as const, value: true }]
       : q.show === "low" ? [{ field: "rating", op: "lte" as const, value: 2 }] : [];
