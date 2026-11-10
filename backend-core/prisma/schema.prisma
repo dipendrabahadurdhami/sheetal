@@ -171,6 +171,7 @@ model Tenant {
   verificationDocs VerificationDoc[]
   forms            Form[]
   agreements       Agreement[]
+  supportTickets   SupportTicket[]
 
   @@index([type])
   @@index([coveredById])
@@ -763,6 +764,68 @@ model Notification {
   @@index([userId, createdAt])
   @@index([userId, tenantId, createdAt])
   @@map("notifications")
+}
+
+// ───────────── Support (Message Sheetal) ─────────────
+
+/// Where a ticket stands: open = waiting for Sheetal, waiting = Sheetal answered, closed.
+enum SupportStatus {
+  open
+  waiting
+  closed
+}
+
+/// Who wrote a support message: the business, Sheetal's staff, or a staff-only note (never shown to the business).
+enum SupportFrom {
+  business
+  staff
+  note
+}
+
+/// A business's message thread to Sheetal (Business → Help → Message Sheetal; answered in Admin → Inbox → Support).
+/// Rules: any member can open one; owners and people with settings.business see all of the business's tickets, others
+/// only their own (userId). A new business message or a reopen sets status "open"; a staff reply sets "waiting".
+model SupportTicket {
+  id               String        @id @default(cuid())
+  /// Short public number: SUP-0007.
+  seq              Int           @unique @default(autoincrement())
+  tenantId         String        @map("tenant_id")
+  /// The member who opened it; staff replies tell this person (bell and email).
+  userId           String        @map("user_id")
+  subject          String
+  status           SupportStatus @default(open)
+  /// The staff member handling it (a user id); null = nobody yet. Set to the first replier.
+  assigneeId       String?       @map("assignee_id")
+  /// When the last message (not a note) came in or went out; the inbox sorts on it.
+  lastAt           DateTime      @default(now()) @map("last_at")
+  /// When the business / Sheetal's staff last opened it; a newer lastAt counts as unread.
+  readByBusinessAt DateTime?     @map("read_by_business_at")
+  readByStaffAt    DateTime?     @map("read_by_staff_at")
+  createdAt        DateTime      @default(now()) @map("created_at")
+
+  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  messages SupportMessage[]
+
+  @@index([tenantId, lastAt])
+  @@index([tenantId, userId, lastAt])
+  @@index([status, lastAt])
+  @@index([assigneeId, lastAt])
+  @@map("support_tickets")
+}
+
+/// One message in a ticket. `from` says who wrote it; userId is the writer (null only if never recorded).
+model SupportMessage {
+  id        String      @id @default(cuid())
+  ticketId  String      @map("ticket_id")
+  from      SupportFrom
+  userId    String?     @map("user_id")
+  body      String
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt])
+  @@map("support_messages")
 }
 
 // ───────────── Blog and careers ─────────────
