@@ -228,6 +228,9 @@ model Branch {
   stockItems  StockItem[]
   attendance    Attendance[]
   leaveRequests LeaveRequest[]
+  /// The members and pending invites limited to this branch (the join rows go when the branch goes).
+  memberLinks MembershipBranch[]
+  inviteLinks InviteBranch[]
 
   @@unique([tenantId, name])
   @@map("branches")
@@ -267,23 +270,41 @@ model Role {
   @@map("roles")
 }
 
-/// A person in a business, with one role. `scopes` = "all" or a list of branches.
+/// A person in a business, with one role. Which branches they work at: `allBranches` = every branch (now and later),
+/// or else only the rows in MembershipBranch (by branch id). `scopes` is the OLD way ("all" or a list of branch names);
+/// it stays and is still written for one release (ACCESS.md section 3.4), then it is frozen.
 /// @app workspace
 model Membership {
-  id        String   @id @default(cuid())
-  userId    String   @map("user_id")
-  tenantId  String   @map("tenant_id")
-  roleId    String   @map("role_id")
-  scopes    Json     @default("\"all\"")
-  status    String   @default("active")
-  createdAt DateTime @default(now()) @map("created_at")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  role      Role     @relation(fields: [roleId], references: [id])
+  id          String             @id @default(cuid())
+  userId      String             @map("user_id")
+  tenantId    String             @map("tenant_id")
+  roleId      String             @map("role_id")
+  scopes      Json               @default("\"all\"")
+  allBranches Boolean            @default(true) @map("all_branches")
+  status      String             @default("active")
+  createdAt   DateTime           @default(now()) @map("created_at")
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  role        Role               @relation(fields: [roleId], references: [id])
+  branches    MembershipBranch[]
 
   @@unique([userId, tenantId])
   @@index([tenantId])
   @@map("memberships")
+}
+
+/// One branch a limited member works at (used only when Membership.allBranches is false). Deleting the member or the
+/// branch deletes the row. A limited member with no rows has no branch at all (never "all").
+/// @app workspace
+model MembershipBranch {
+  membershipId String     @map("membership_id")
+  branchId     String     @map("branch_id")
+  membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  branch       Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@id([membershipId, branchId])
+  @@index([branchId])
+  @@map("membership_branches")
 }
 
 // ───────────── Email outbox and audit ─────────────
@@ -750,24 +771,42 @@ model UpgradeRequest {
 /// An invitation to join a business's team, sent by email. Only the hash of the link's token is stored.
 /// @app workspace
 model Invite {
-  id        String   @id @default(cuid())
-  tenantId  String   @map("tenant_id")
+  id          String         @id @default(cuid())
+  tenantId    String         @map("tenant_id")
   /// Lower-case.
-  email     String
-  roleId    String   @map("role_id")
-  scopes    Json     @default("\"all\"")
-  tokenHash String   @unique @map("token_hash")
-  invitedBy String?  @map("invited_by")
+  email       String
+  roleId      String         @map("role_id")
+  /// The OLD way to say which branches ("all" or a list of branch names); see Membership.
+  scopes      Json           @default("\"all\"")
+  /// true = every branch; false = only the rows in InviteBranch (by branch id).
+  allBranches Boolean        @default(true) @map("all_branches")
+  tokenHash   String         @unique @map("token_hash")
+  invitedBy   String?        @map("invited_by")
   /// pending, accepted, revoked
-  status    String   @default("pending")
-  expiresAt DateTime @map("expires_at")
-  sentAt    DateTime @default(now()) @map("sent_at")
-  createdAt DateTime @default(now()) @map("created_at")
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  status      String         @default("pending")
+  expiresAt   DateTime       @map("expires_at")
+  sentAt      DateTime       @default(now()) @map("sent_at")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branches    InviteBranch[]
 
   @@index([tenantId, status])
   @@index([email])
   @@map("invites")
+}
+
+/// One branch a limited invitation gives (used only when Invite.allBranches is false). Only pending invitations are
+/// filled in by the migration. Deleting the invitation or the branch deletes the row.
+/// @app workspace
+model InviteBranch {
+  inviteId String @map("invite_id")
+  branchId String @map("branch_id")
+  invite   Invite @relation(fields: [inviteId], references: [id], onDelete: Cascade)
+  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@id([inviteId, branchId])
+  @@index([branchId])
+  @@map("invite_branches")
 }
 
 // ───────────── Requirement board, notifications ─────────────
