@@ -359,7 +359,8 @@ describe("the recurring job", () => {
     expect(await generateDueExpenses(db, { today: "2090-01-31" })).toBe(0);
     const d = await db.expense.findFirstOrThrow({ where: { recurringId: t.id } });
     expect(d.amountPaisa).toBe(10_000n);
-    expect(await db.eventOutbox.count({ where: { name: "expenses.recurring.draft_created" } })).toBe(0);   // no bus given, no event
+    // no bus given, no event for THIS recurring expense (earlier tests in this file write their own draft events to the same table)
+    expect((await db.eventOutbox.findMany({ where: { name: "expenses.recurring.draft_created" } })).filter((e) => (e.payload as { recurringId: string }).recurringId === t.id)).toHaveLength(0);
     await call("owner", "DELETE", `/expenses/${d.id}`);
     expect(await generateDueExpenses(db, { today: "2090-01-31" })).toBe(0);
     expect(await db.expense.count({ where: { recurringId: t.id } })).toBe(1);
