@@ -2,9 +2,14 @@
   "name": "@sheetal/sdk",
   "private": true,
   "version": "0.1.0",
-  "description": "The API client for the screens: bizApi, adminApi, hooks, ApiError (empty for now; code moves in at step 9)",
+  "description": "The API client for the screens: bizApi, createApi, ApiError, hooks (moved in by P1-FE-1)",
   "type": "module",
+  "peerDependencies": {
+    "react": "^18.3.1"
+  },
   "exports": {
-    ".": "./src/index.js"
+    ".": "./src/index.js",
+    "./client": "./src/client.js",
+    "./hooks": "./src/hooks.js"
   }
 }
