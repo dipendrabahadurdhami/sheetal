@@ -3,9 +3,10 @@
 // How it works: everyone sees the branches they work at; "settings.business" manages them. Work points at the branch
 // id; team access holds branch names, so a rename updates everyone's access in the same transaction.
 // Rules: a business keeps at least one open branch; a branch with any work in it, or someone's only branch, can't be
-// removed (close it instead: its history stays). checkScopes() makes sure access names real, open branches.
+// removed (close it instead: its history stays), nor one with open or live requests to sell on other sites. checkScopes() makes sure access names real, open branches.
 
 import type { FastifyInstance } from "fastify";
+import { OPEN_STATUSES } from "@sheetal/backend-core/domain/ota-requests";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { dbOf } from "@sheetal/backend-core/lib/db";
@@ -96,17 +97,17 @@ export async function branchRoutes(app: FastifyInstance) {
     if ((await db().branch.count({ where: { tenantId: ws.tenantId } })) <= 1) throw badRequest("A business needs at least one branch.");
     if (br.status === "open" && !(await db().branch.count({ where: { tenantId: ws.tenantId, status: "open", id: { not: br.id } } }))) throw badRequest("A business needs at least one open branch.");
     const w = { branchId: br.id };
-    const [listings, rooms, leads, bookings, shifts, bills, invoices, expenses, recurring, rentOwners, rentUnits, forms, agreements, stockItems, attendance, leaves] = await Promise.all([
+    const [listings, rooms, leads, bookings, shifts, bills, invoices, expenses, recurring, rentOwners, rentUnits, forms, agreements, stockItems, attendance, leaves, siteRequests] = await Promise.all([
       db().listing.count({ where: { ...w, status: { not: "removed" } } }), db().room.count({ where: w }), db().lead.count({ where: w }),
       db().booking.count({ where: w }), db().shift.count({ where: w }), db().posBill.count({ where: w }), db().bizInvoice.count({ where: w }),
       db().expense.count({ where: w }), db().recurringExpense.count({ where: w }),
       db().rentOwner.count({ where: w }), db().rentUnit.count({ where: w }), db().form.count({ where: w }), db().agreement.count({ where: w }),
       db().stockItem.count({ where: w }), db().attendance.count({ where: w }), db().leaveRequest.count({ where: w }),
+      db().otaRequest.count({ where: { ...w, status: { in: [...OPEN_STATUSES, "live"] } } }), // paused and rejected ones don't block
     ]);
-    const work = [[listings, "listing"], [rooms, "room"], [leads, "enquiry"], [bookings, "booking"], [shifts + bills, "till record"], [invoices, "invoice"], [expenses + recurring, "expense"], [rentOwners + rentUnits, "rental record"], [forms, "online form"], [agreements, "agreement"], [stockItems, "stock item"], [attendance, "attendance record"], [leaves, "leave request"]]
+    const work = [[listings, "listing"], [rooms, "room"], [leads, "enquiry"], [bookings, "booking"], [shifts + bills, "till record"], [invoices, "invoice"], [expenses + recurring, "expense"], [rentOwners + rentUnits, "rental record"], [forms, "online form"], [agreements, "agreement"], [stockItems, "stock item"], [attendance, "attendance record"], [leaves, "leave request"], [siteRequests, "other-site request"]]
       .filter(([n]) => n).map(([n, w]) => `${n} ${n === 1 ? w : w === "enquiry" ? "enquiries" : `${w}s`}`);
     if (work.length) throw badRequest(`${br.name} has ${work.join(", ")}. Move them to another branch, or close the branch instead (its history stays).`);
-    await db().menuItem.deleteMany({ where: { tenantId: ws.tenantId, branchId: br.id } });
     await db().$transaction(async (tx) => {
       const { members, invites } = await scoped(tx, ws.tenantId);
       const only = members.filter((m) => { const l = scopeList(m.scopes)!; return l.length === 1 && l[0] === br.name; });
@@ -116,6 +117,8 @@ export async function branchRoutes(app: FastifyInstance) {
         const left = scopeList(i.scopes)!.filter((x) => x !== br.name);
         await tx.invite.update({ where: { id: i.id }, data: { scopes: left.length ? left : "all" } });
       }
+      // Menu items go in the same transaction, so a refused removal keeps them.
+      await tx.menuItem.deleteMany({ where: { tenantId: ws.tenantId, branchId: br.id } });
       await tx.branch.delete({ where: { id: br.id } });
     });
     await audit(ws, request.ip, "branch.removed", br.name);

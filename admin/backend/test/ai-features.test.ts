@@ -75,7 +75,7 @@ describe("AI features by plan", () => {
 
   it("show credits changed in the Setup center on this page too", async () => {
     expect((await call("boss", "PUT", "/admin/settings/ai", { enabled: true, model: "claude-opus-5-5", credits: { Pro: 9000 } })).statusCode).toBe(200);
-    expect((await aiFeatureSettings(app.db!)).plans.Pro.credits).toBe(9000);
+    expect((await aiFeatureSettings(app.db!)).plans.Pro!.credits).toBe(9000);
     expect((await call("boss", "GET", "/admin/settings/ai")).json().data.credits).toMatchObject({ Pro: 9000, Business: 3000 });
   });
 

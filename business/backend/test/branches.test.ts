@@ -126,6 +126,17 @@ describe("branches", () => {
     expect((await call("owner", "PATCH", `/branches/${await idOf("Pokhara Lakeside")}`, { status: "closed" })).statusCode).toBe(200);
     expect((await call("owner", "PATCH", `/branches/${await idOf("Head office")}`, { status: "closed" })).statusCode).toBe(400); // the last open one
   });
+
+  it("won't remove a branch with an open request to sell on other sites; a paused one doesn't block", async () => {
+    expect((await call("owner", "POST", "/branches", { name: "Sites" })).statusCode).toBe(200);
+    const branchId = await idOf("Sites");
+    const r = await app.db!.otaRequest.create({ data: { tenantId: ids.hotel!, branchId, channel: "booking", status: "requested" } });
+    const del = await call("owner", "DELETE", `/branches/${branchId}`);
+    expect(del.statusCode).toBe(400);
+    expect(del.json().message).toContain("1 other-site request");
+    await app.db!.otaRequest.update({ where: { id: r.id }, data: { status: "paused" } });
+    expect((await call("owner", "DELETE", `/branches/${branchId}`)).statusCode).toBe(200);
+  });
 });
 
 describe("listings and leads per branch", () => {

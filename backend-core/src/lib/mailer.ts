@@ -15,11 +15,12 @@ export class Mailer {
   constructor(private readonly db: Db | undefined, private readonly log: FastifyBaseLogger, private readonly devLog: boolean) {}
 
   async send(email: Email): Promise<void> {
-    if (email.template && this.db) {
+    const tpl = email.template; // kept in a constant: TypeScript forgets the check on `email.template` after the await
+    if (tpl && this.db) {
       try {
-        const t = await activeTemplate(this.db, email.template.key, "email", email.template.lang ?? "en");
-        if (t) { const v = { site: "https://sheetalproperty.com", ...email.template.vars }; email = { ...email, subject: t.subject ? renderText(t.subject, v) : email.subject, text: renderText(t.body, v) }; }
-      } catch (e) { this.log.warn({ err: e, key: email.template.key }, "message template failed; sent the built-in text"); }
+        const t = await activeTemplate(this.db, tpl.key, "email", tpl.lang ?? "en");
+        if (t) { const v = { site: "https://sheetalproperty.com", ...tpl.vars }; email = { ...email, subject: t.subject ? renderText(t.subject, v) : email.subject, text: renderText(t.body, v) }; }
+      } catch (e) { this.log.warn({ err: e, key: tpl.key }, "message template failed; sent the built-in text"); }
     }
     if (this.devLog) this.log.info({ to: email.to, subject: email.subject, text: email.text }, "email queued");
     if (!this.db) return;

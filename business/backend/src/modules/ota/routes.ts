@@ -39,7 +39,7 @@ export async function otaRoutes(app: FastifyInstance) {
   app.post("/ota/requests", async (request, reply) => {
     const ws = workspaceOf(request);
     need(ws, "calendar.edit", "settings.business");
-    const b = z.object({ listingId: z.number().int().positive(), channel: z.string().max(20), price: z.number().int().min(0, "Mark-up can't be below 0.").max(100, "Mark-up can't be above 100."), note: z.string().trim().max(500).optional() }).parse(request.body);
+    const b = z.object({ listingId: z.number().int().positive(), channel: z.string().max(20), price: z.number().int().min(0, "Mark-up can't be below 0.").max(100, "Mark-up can't be above 100."), note: z.string().trim().max(500).optional() }).strict().parse(request.body); // strict: unknown fields are refused, not ignored
     const r = await askForChannel(db(), { tenant: { id: ws.tenantId, name: ws.member.tenant.name, type: ws.member.tenant.type }, ...b, who: ws.user.userName });
     return reply.code(201).send({ message: "Sent. Sheetal's team will set it up and tell you here.", data: presentRequest(r) });
   });

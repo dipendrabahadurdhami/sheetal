@@ -11,7 +11,8 @@ import { buildApp } from "../src/app.js";
 let app: FastifyInstance;
 const L: Record<string, number> = {};
 const get = (url: string) => app.inject({ method: "GET", url: `/v1${url}` });
-const post = (url: string, body: object, ua = "Mozilla/5.0 (Windows NT 10.0) Chrome/120") => app.inject({ method: "POST", url: `/v1${url}`, payload: body, headers: { "user-agent": ua } });
+// Real browsers always send Accept-Language; isBotRequest() counts a request without it as a bot.
+const post = (url: string, body: object, ua = "Mozilla/5.0 (Windows NT 10.0) Chrome/120", lang = "en-US,en;q=0.9") => app.inject({ method: "POST", url: `/v1${url}`, payload: body, headers: { "user-agent": ua, ...(lang ? { "accept-language": lang } : {}) } });
 
 beforeAll(async () => {
   app = await buildApp(loadConfig({ NODE_ENV: "test", LOG_LEVEL: "silent", DATABASE_URL: inject("databaseUrl"), SITE_URL: "https://sheetal.test" }, "website"));
@@ -61,6 +62,7 @@ describe("boosted listings on the website", () => {
     expect((await post("/promote/seen", { place: "search", ids: [L.old, L.new] })).statusCode).toBe(200);
     expect((await post("/promote/click", { place: "search", id: L.old })).statusCode).toBe(200);
     await post("/promote/seen", { place: "search", ids: [L.old] }, "Googlebot/2.1");
+    await post("/promote/seen", { place: "search", ids: [L.old] }, undefined, ""); // a browser-like agent with no Accept-Language ("" = none sent): a script, not a visitor
     expect((await post("/promote/seen", { place: "sky", ids: [1] })).statusCode).toBe(422);
     const b = await app.db!.boost.findFirstOrThrow({ where: { listingId: L.old, place: "search" } });
     expect([b.views, b.clicks]).toEqual([1, 1]);
