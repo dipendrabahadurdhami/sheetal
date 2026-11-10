@@ -238,15 +238,82 @@ export async function adminRoutes(app: FastifyInstance) {
   });
 
   // ───── Audit log ─────
+  // Filters: words in the action or target (q), who did it (actorId), kind (the part before the dot: billing,
+  // support, tenant...), Nepal dates from/to (inclusive) and business (tenantId). GET /admin/audit.csv gives the same
+  // rows as a spreadsheet (with a BOM so Excel shows Nepali names). Rules: staff with audit.view only.
+  const Day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use a date like 2026-11-10.");
+  const AuditQuery = z.object({
+    tenantId: z.string().max(40).optional(),
+    actorId: z.string().max(40).optional(),
+    kind: z.string().regex(/^[a-z_]{1,30}$/, "Pick a kind from the list.").optional(),
+    q: z.string().trim().max(100).optional(),
+    from: Day.optional(),
+    to: Day.optional(),
+    page: z.coerce.number().int().min(1).default(1),
+  });
+  /** Start of a Nepal day; refuses dates that don't exist (2026-02-30). */
+  const nepalDayStart = (day: string) => {
+    const [y, m, d] = day.split("-").map(Number) as [number, number, number];
+    const check = new Date(Date.UTC(y, m - 1, d));
+    if (check.getUTCFullYear() !== y || check.getUTCMonth() !== m - 1 || check.getUTCDate() !== d) throw badRequest(`${day} is not a real date.`);
+    return new Date(`${day}T00:00:00+05:45`);
+  };
+  const auditWhere = (q: z.infer<typeof AuditQuery>): Prisma.AuditLogWhereInput => {
+    const createdAt: { gte?: Date; lt?: Date } = {};
+    if (q.from) createdAt.gte = nepalDayStart(q.from);
+    if (q.to) createdAt.lt = new Date(nepalDayStart(q.to).getTime() + 864e5);
+    return {
+      ...(q.tenantId ? { tenantId: q.tenantId } : {}),
+      ...(q.actorId ? { actorId: q.actorId } : {}),
+      ...(q.kind ? { action: { startsWith: `${q.kind}.` } } : {}),
+      ...(q.q ? { OR: [{ action: { contains: q.q, mode: "insensitive" as const } }, { target: { contains: q.q, mode: "insensitive" as const } }] } : {}),
+      ...(q.from || q.to ? { createdAt } : {}),
+    };
+  };
+  /** Adds who did it and the business name to each row. */
+  const withNames = async (rows: { actorId: string | null; tenantId: string | null }[]) => {
+    const db = dbOf(app);
+    const [users, tenants] = await Promise.all([
+      db.user.findMany({ where: { id: { in: [...new Set(rows.map((r) => r.actorId).filter((x): x is string => !!x))] } }, select: { id: true, userName: true, email: true } }),
+      db.tenant.findMany({ where: { id: { in: [...new Set(rows.map((r) => r.tenantId).filter((x): x is string => !!x))] } }, select: { id: true, name: true } }),
+    ]);
+    return { who: new Map(users.map((u) => [u.id, u])), biz: new Map(tenants.map((t) => [t.id, t.name])) };
+  };
+
   app.get("/admin/audit", async (request) => {
     staffOf(request, "audit.view");
-    const q = z.object({ tenantId: z.string().max(40).optional(), page: z.coerce.number().int().min(1).default(1) }).parse(request.query);
-    const where = q.tenantId ? { tenantId: q.tenantId } : {};
+    const q = AuditQuery.parse(request.query);
+    const where = auditWhere(q);
     const per = 100;
     const db = dbOf(app);
-    const [total, rows] = await Promise.all([db.auditLog.count({ where }), db.auditLog.findMany({ where, orderBy: { createdAt: "desc" }, skip: (q.page - 1) * per, take: per })]);
-    const users = await db.user.findMany({ where: { id: { in: rows.map((r) => r.actorId).filter((x): x is string => !!x) } }, select: { id: true, userName: true, email: true } });
-    const who = new Map(users.map((u) => [u.id, u]));
-    return { data: rows.map((r) => ({ ...r, actor: r.actorId ? who.get(r.actorId) ?? null : null })), meta: { total, current_page: q.page, last_page: Math.max(1, Math.ceil(total / per)), per_page: per } };
+    const [total, rows, kindRows, staff] = await Promise.all([
+      db.auditLog.count({ where }),
+      db.auditLog.findMany({ where, orderBy: { createdAt: "desc" }, skip: (q.page - 1) * per, take: per }),
+      db.$queryRaw<{ kind: string }[]>`SELECT DISTINCT split_part(action, '.', 1) AS kind FROM audit_logs ORDER BY kind`,
+      db.user.findMany({ where: { platformRole: { not: null } }, select: { id: true, userName: true }, orderBy: { userName: "asc" } }),
+    ]);
+    const { who, biz } = await withNames(rows);
+    return {
+      data: rows.map((r) => ({ ...r, actor: r.actorId ? who.get(r.actorId) ?? null : null, tenant: r.tenantId ? biz.get(r.tenantId) ?? null : null })),
+      meta: { total, current_page: q.page, last_page: Math.max(1, Math.ceil(total / per)), per_page: per },
+      kinds: kindRows.map((k) => k.kind).filter(Boolean),
+      staff,
+    };
+  });
+
+  app.get("/admin/audit.csv", async (request, reply) => {
+    staffOf(request, "audit.view");
+    const q = AuditQuery.parse(request.query);
+    const rows = await dbOf(app).auditLog.findMany({ where: auditWhere(q), orderBy: { createdAt: "desc" }, take: 20000 });
+    const { who, biz } = await withNames(rows);
+    const cell = (v: unknown) => { const t = String(v ?? ""); return /[",\r\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
+    const nepal = (d: Date) => new Date(d.getTime() + 5.75 * 3_600_000).toISOString().slice(0, 16).replace("T", " ");
+    const lines = [["When (Nepal)", "Who", "Email", "Action", "Target", "Business", "IP"].join(",")];
+    for (const r of rows) {
+      const u = r.actorId ? who.get(r.actorId) : undefined;
+      lines.push([nepal(r.createdAt), u?.userName ?? "System", u?.email ?? "", r.action, r.target ?? "", r.tenantId ? biz.get(r.tenantId) ?? "" : "", r.ip ?? ""].map(cell).join(","));
+    }
+    reply.header("content-type", "text/csv; charset=utf-8").header("content-disposition", `attachment; filename="audit-log.csv"`);
+    return "\uFEFF" + lines.join("\r\n") + "\r\n";
   });
 }
