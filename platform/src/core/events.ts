@@ -54,7 +54,8 @@ export interface EventBus {
 }
 
 /** "<app>.<resource>.<verb>": three or more lower-case segments (letters, digits, hyphens). */
-export const EVENT_NAME = /^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*){2,}$/;
+// Lower case, digits, "_" or "-" in each part (the manifest checker uses "_", e.g. expenses.recurring.draft_created; P1-BE-5 found the mismatch).
+export const EVENT_NAME = /^[a-z][a-z0-9_-]*(\.[a-z][a-z0-9_-]*){2,}$/;
 
 /** Whole-segment wildcards only: "expenses.*" matches "expenses.expense.confirmed"; "*.expense.confirmed" matches too. */
 export function matchesPattern(pattern: string, name: string): boolean {
@@ -106,7 +107,7 @@ export class OutboxEventBus implements EventBus {
   subscribe<P>(pattern: string, handler: EventHandler<P>, opts: EventHandlerOptions & { platform?: false }): () => void;
   subscribe<P>(pattern: string, handler: PlatformEventHandler<P>, opts: EventHandlerOptions & { platform: true }): () => void;
   subscribe<P>(pattern: string, handler: EventHandler<P> | PlatformEventHandler<P>, opts: EventHandlerOptions): () => void {
-    if (!pattern.split(".").every((s) => s === "*" || /^[a-z][a-z0-9-]*$/.test(s))) throw new Error(`"${pattern}" is not a valid event pattern.`);
+    if (!pattern.split(".").every((s) => s === "*" || /^[a-z][a-z0-9_-]*$/.test(s))) throw new Error(`"${pattern}" is not a valid event pattern.`);
     if (this.subs.some((s) => s.opts.id === opts.id)) throw new Error(`Event handler "${opts.id}" is already registered.`);
     const sub: Subscription = { pattern, handler: handler as Subscription["handler"], opts };
     this.subs.push(sub);

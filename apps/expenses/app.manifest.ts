@@ -1,7 +1,7 @@
 // Expenses: what a business spent, recurring expenses, and profit by month and branch.
 // Where it fits: loaded by the generator (permissions, menu, roles) and by the API at start (events, limits).
 // How it works: plain data. Prices and limits are only defaults; the admin panel owns them after the first start. Phase 1: every limit is null (unlimited) and price is null, so nothing changes.
-// Rules: no functions or logic; every permission and event starts with "expenses."; the code still lives in business/backend until P1-BE-5.
+// Rules: no functions or logic; every permission and event starts with "expenses."; the code lives in apps/expenses/backend (moved in by P1-BE-5).
 
 import type { AppManifest } from "@sheetal/platform/core/manifest";
 

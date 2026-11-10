@@ -29,7 +29,7 @@ import { settingsRoutes } from "./modules/settings/routes.js";
 import { dataRoutes } from "./modules/data/routes.js";
 import { invoicingRoutes } from "./modules/invoicing/routes.js";
 import { payoutRoutes } from "./modules/payouts/routes.js";
-import { expenseRoutes } from "./modules/expenses/routes.js";
+import { expenseRoutes } from "@sheetal/app-expenses/backend";
 import { rentalRoutes } from "./modules/rentals/routes.js";
 import { listingCodeRoutes } from "./modules/listings/codes.js";
 import { formRoutes } from "./modules/forms/routes.js";
@@ -43,7 +43,7 @@ import { devKeyRoutes } from "./modules/devkeys/routes.js";
 import { aiAccountRoutes } from "./modules/aiaccount/routes.js";
 import { reviewRoutes as checkupRoutes } from "./modules/reviews/checkups.js";
 import { notificationRoutes } from "@sheetal/backend-core/modules/notifications";
-import { workspaceOf } from "./modules/access.js";
+import { businessContextOf, workspaceOf } from "./modules/access.js";
 import { CONSUMERS, businessJobs, eventsOf } from "./jobs.js";
 import { registerConsumers } from "@sheetal/platform/jobs/consumers";
 import { APPS } from "@sheetal/platform/tenancy/apps.generated";
@@ -62,7 +62,8 @@ export async function buildApp(config: Config, deps: AppDeps & { resolver?: Reso
   await app.register(dataRoutes, { prefix: "/v1" });
   await app.register(invoicingRoutes, { prefix: "/v1" });
   await app.register(payoutRoutes, { prefix: "/v1" });
-  await app.register(expenseRoutes, { prefix: "/v1" });
+  // Expenses is the first app on the kernel (P1-BE-5): its code lives in apps/expenses/backend; it gets the request-context builder from here.
+  await app.register(expenseRoutes, { prefix: "/v1", contextOf: businessContextOf });
   await app.register(rentalRoutes, { prefix: "/v1" });
   await app.register(listingCodeRoutes, { prefix: "/v1" });
   await app.register(checkupRoutes, { prefix: "/v1" });
