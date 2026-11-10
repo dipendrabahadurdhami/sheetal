@@ -15,7 +15,7 @@ import type { ConsumerImpls } from "@sheetal/platform/jobs/consumers";
 import { effectiveLimits } from "@sheetal/backend-core/domain/addons";
 import { buildSystemContext } from "@sheetal/platform/tenancy/system-context";
 import { OutboxEventBus } from "@sheetal/platform/core/events";
-import { expenseJob } from "./modules/expenses/routes.js";
+import { expenseJob } from "@sheetal/app-expenses/backend";
 import { rentJob } from "./modules/rentals/routes.js";
 import { reviewCheckupJob } from "./modules/reviews/checkups.js";
 import { stockJob } from "./modules/stock/routes.js";
