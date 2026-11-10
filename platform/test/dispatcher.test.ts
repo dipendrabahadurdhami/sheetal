@@ -266,6 +266,15 @@ describe("the tick budget is checked before every handler (QA, P1-BE-4 fix 1)", 
   });
 });
 
+describe("event names (Lead, after the first CI run of P1-BE-5)", () => {
+  it("accept '_' like the manifest checker does (expenses.recurring.draft_created), and still refuse capitals, two parts or spaces", async () => {
+    const { EVENT_NAME } = await import("../src/core/events.js");
+    for (const ok of ["expenses.recurring.draft_created", "expenses.expense.confirmed", "a.thing.done", "invoicing.on-expense.x"]) expect(EVENT_NAME.test(ok), ok).toBe(true);
+    for (const bad of ["Expenses.expense.confirmed", "expenses.confirmed", "expenses.expense confirmed", "_x.y.z", "expenses..x"]) expect(EVENT_NAME.test(bad), bad).toBe(false);
+    expect(() => new OutboxEventBus().subscribe("expenses.recurring.draft_created", async () => {}, { id: "t.ok", app: "t" })).not.toThrow();
+  });
+});
+
 describe("the bus and the job", () => {
   it("drain() and start() on a bus without a dispatcher say so; with one, drain() delivers", async () => {
     const bus = new OutboxEventBus();

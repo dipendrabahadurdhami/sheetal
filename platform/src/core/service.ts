@@ -7,6 +7,9 @@
 // thing it writes itself, with the same transaction. Old audit action strings stay as they are in Phase 1 (set per
 // operation in `audit.actions`). Maker-checker approvals are not built yet: an action that asks for one is refused loudly
 // rather than run without the check.
+// P1-BE-5 additions (all optional, nothing changes for a service that does not use them): `events` names the event of a standard write
+// (Expenses: a create is "expenses.expense.confirmed"), `audit.updateLabel` writes the target of an update from the row before and after
+// ("EX-0001 Rs. 1000 -> 1200"), and wrote()/eventPayload() receive the row as it was before an update (wrote() is now protected).
 
 import type { Prisma } from "@prisma/client";
 import type { z } from "zod";
@@ -36,7 +39,15 @@ export interface ServiceDeps<T extends BusinessEntity, C extends object, U exten
   schemas: { create: z.ZodType<C>; update: z.ZodType<U>; list?: z.ZodType<ListQuery> };
   /** `label` goes in AuditLog.target, e.g. "EX-0007 Rs. 1500". `actions` are the AuditLog.action strings; the defaults are
    *  "<entity>.added", ".updated", ".removed", ".restored". Apps with older strings set them here. */
-  audit: { entity: string; label: (row: T) => string; actions?: Partial<Record<WriteKind, string>> };
+  audit: {
+    entity: string; label: (row: T) => string;
+    /** The target of an "updated" audit line, when it shows the change (before -> after). Default: label(row). */
+    updateLabel?: (before: T, after: T) => string;
+    actions?: Partial<Record<WriteKind, string>>;
+  };
+  /** Event name per standard write when it is not "<app>.<resource>.<created|updated|deleted|restored>" (listed in the manifest's
+   *  events.publishes). null = this write publishes no event (Expenses: recurring templates, whose manifest lists only draft_created). */
+  events?: Partial<Record<WriteKind, string | null>>;
   bus: EventBus;
   /** false = an update without `version` is allowed (last write wins). Default true. */
   requireVersion?: boolean;
@@ -87,7 +98,7 @@ export abstract class BaseService<T extends BusinessEntity, C extends object, U 
       const current = await this.deps.repo.get(tx, id, scope);
       const data = await this.beforeUpdate(tx, current, input);
       const row = await this.deps.repo.update(tx, id, data, scope, version);
-      await this.wrote(tx, row, "updated");
+      await this.wrote(tx, row, "updated", current);
       return row;
     });
   }
@@ -124,7 +135,7 @@ export abstract class BaseService<T extends BusinessEntity, C extends object, U 
   protected async beforeDelete(_ctx: BusinessContext, _current: T): Promise<void> { /* nothing by default */ }
   protected async afterWrite(_ctx: BusinessContext, _row: T, _kind: WriteKind): Promise<void> { /* nothing by default */ }
   /** The small JSON an event carries for a standard write. Apps override it to add amounts (in paisa) and so on. */
-  protected eventPayload(row: T, _kind: WriteKind): object { return { id: row.id }; }
+  protected eventPayload(row: T, _kind: WriteKind, _before?: T): object { return { id: row.id }; }
 
   // ── For actions that are not plain create/update/delete (confirm, pause, reply, cancel) ──
 
@@ -197,12 +208,15 @@ export abstract class BaseService<T extends BusinessEntity, C extends object, U 
     return n;
   }
 
-  /** Audit row + event + after-hook for a standard write, inside the transaction. */
-  private async wrote(ctx: BusinessContext, row: T, kind: WriteKind): Promise<void> {
+  /** Audit row + event + after-hook for a standard write, inside the transaction. `before` is the row as it was (updates only).
+   *  Protected so an app's own write (Expenses: skipping a recurring draft) can end the same way. */
+  protected async wrote(ctx: BusinessContext, row: T, kind: WriteKind, before?: T): Promise<void> {
     const a = this.deps.audit;
-    await this.writeAudit(ctx, a.actions?.[kind] ?? `${a.entity}.${AUDIT_DEFAULT[kind]}`, a.label(row));
+    const target = kind === "updated" && before && a.updateLabel ? a.updateLabel(before, row) : a.label(row);
+    await this.writeAudit(ctx, a.actions?.[kind] ?? `${a.entity}.${AUDIT_DEFAULT[kind]}`, target);
     const branchId = (row as { branchId?: string | null }).branchId ?? null;
-    await this.deps.bus.publish(ctx, `${this.deps.app}.${this.deps.resource}.${VERB[kind]}`, this.eventPayload(row, kind), 1, { branchId });
+    const event = this.deps.events?.[kind];
+    if (event !== null) await this.deps.bus.publish(ctx, event ?? `${this.deps.app}.${this.deps.resource}.${VERB[kind]}`, this.eventPayload(row, kind, before), 1, { branchId });
     await this.afterWrite(ctx, row, kind);
   }
 

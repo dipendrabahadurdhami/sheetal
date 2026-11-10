@@ -38,7 +38,8 @@ export async function teamWith(db: Db, tenantId: string, perms: string[], branch
     db.branch.findMany({ where: { tenantId }, select: { id: true, name: true } }),
   ]);
   const members = rows.map((m) => reconcileOldNames(m, branches));   // a row written only the old way is never "every branch"
-  return members.filter((m) => (m.role.perms.includes("*") || perms.some((p) => m.role.perms.includes(p))) && worksAt(m, branchId)).map((m) => m.userId);
+  // hasPerm goes through the alias layer: a role holding only the new names (or only the old ones) is found either way (QA, P1-BE-5 fix 1).
+  return members.filter((m) => perms.some((p) => hasPerm(m.role.perms, p)) && worksAt(m, branchId)).map((m) => m.userId);
 }
 
 /** Everyone in a business whose role can see leads (owners always). */
