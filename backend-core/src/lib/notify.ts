@@ -3,7 +3,7 @@
 // work waiting for Sheetal staff.
 // How it works: one row per person. A note about a business carries its id, so that business's bell shows it; notes
 // without one are the person's own (website) or, with an /admin link, staff work (admin bell). teamWith() finds the
-// people with a permission at a branch; notifyStaff() finds the staff roles that handle a task.
+// people with a permission at a branch (by branch id, from the branch links); notifyStaff() finds the staff roles that handle a task.
 
 import type { Db } from "./db.js";
 import { worksAt } from "../domain/branches.js";
@@ -24,13 +24,13 @@ export async function notifyStaff(db: Db, perm: string, note: Omit<Note, "tenant
   await notify(db, staff.map((s) => s.id), { ...note, tenantId: null });
 }
 
-/** Everyone in a business whose role has one of `perms` (owners always), at that branch when one is given. */
+/** Everyone in a business whose role has one of `perms` (owners always), at that branch (by id) when one is given. */
 export async function teamWith(db: Db, tenantId: string, perms: string[], branchId?: string | null) {
-  const [members, branch] = await Promise.all([
-    db.membership.findMany({ where: { tenantId, status: "active" }, select: { userId: true, scopes: true, role: { select: { perms: true } } } }),
-    branchId ? db.branch.findUnique({ where: { id: branchId }, select: { name: true } }) : null,
-  ]);
-  return members.filter((m) => (m.role.perms.includes("*") || perms.some((p) => m.role.perms.includes(p))) && worksAt(m.scopes, m.role.perms, branch?.name)).map((m) => m.userId);
+  const members = await db.membership.findMany({
+    where: { tenantId, status: "active" },
+    select: { userId: true, allBranches: true, branches: { select: { branchId: true } }, role: { select: { perms: true } } },
+  });
+  return members.filter((m) => (m.role.perms.includes("*") || perms.some((p) => m.role.perms.includes(p))) && worksAt(m, branchId)).map((m) => m.userId);
 }
 
 /** Everyone in a business whose role can see leads (owners always). */

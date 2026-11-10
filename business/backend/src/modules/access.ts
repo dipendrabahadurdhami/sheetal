@@ -1,23 +1,30 @@
 // Who is asking, in which business, with which role, and on which branches. Used by every business route.
 // Where it fits: workspaceOf(request) at the start of each route; branchView(), inView() and branchFor() whenever a
-// query touches branch work (listings, leads, rooms, bookings, tills).
-// How it works: the panel sends the open business in "x-tenant-id" and the picked branch in "x-branch". The person
-// must be an active member of that business; their role gives ws.can(...); their branch access (Team page) limits
-// what they see, and new work goes to the picked branch or their only one.
+// query touches branch work (listings, leads, rooms, bookings, tills). New code uses businessContextOf(request) instead.
+// How it works: since P1-BE-3 this file is an ADAPTER over the tenancy context (platform/src/tenancy/context.ts). The panel sends the open
+// business in "x-tenant-id" and the picked branch in "x-branch". The person must be an active member of that business; their role gives
+// ws.can(...); their branch access (Team page) comes from the branch LINKS by branch id, and limits what they see. Every export keeps the
+// shape it had: `ws.branches` is still a list of branch NAMES (computed from the linked ids), `ws.inBranch(name)` still takes a name.
 // Rules: never query business data without the tenant id, and never branch data without inView(); owners and "all
 // branches" people see everything, everyone else only their branches, even with "All branches" picked.
 
 import type { FastifyRequest } from "fastify";
 import type { PrismaClient } from "@prisma/client";
 import { requireUser, type SessionUser } from "@sheetal/backend-core/modules/auth/sessions";
+import { dbOf } from "@sheetal/backend-core/lib/db";
+import { effectiveLimits } from "@sheetal/backend-core/domain/addons";
 import { badRequest, forbidden } from "@sheetal/backend-core/lib/errors";
 import { hasPerm } from "@sheetal/backend-core/domain/permissions";
+import type { BusinessContext } from "@sheetal/platform/core/context";
+import { accessOfMember, buildBusinessContext, createBranchScope, loadBranches, type TenancyDeps } from "@sheetal/platform/tenancy/context";
 
 export type Member = SessionUser["memberships"][number];
 export interface Workspace {
   user: SessionUser; member: Member; tenantId: string; can: (perm: string) => boolean;
-  /** The branches this person works in: "all", or a list of branch names (set on the Team page). */
+  /** The branches this person works in: "all", or a list of branch NAMES (computed from the linked branch ids; set on the Team page). */
   branches: "all" | string[];
+  /** The same as branch IDS (added in P1-BE-3): "all", or the ids of the branches this person is linked to. */
+  branchIds: "all" | string[];
   /** Whether a record of this branch is theirs (records with no branch belong to everyone). */
   inBranch: (branch: string | null | undefined) => boolean;
 }
@@ -29,18 +36,28 @@ export function workspaceOf(request: FastifyRequest): Workspace {
     ? user.memberships.find((m) => m.tenantId === wanted)
     : user.memberships[0];
   if (!member || member.status !== "active") throw forbidden("You are not a member of this business.");
-  const branches = branchesOf(member);
+  const access = accessOfMember(member);
+  const branches = access.names;
   return {
     user, member, tenantId: member.tenantId, can: (perm) => hasPerm(member.role.perms, perm),
-    branches, inBranch: (b) => branches === "all" || !b || branches.includes(b),
+    branches, branchIds: access.allowed, inBranch: (b) => branches === "all" || !b || branches.includes(b),
   };
 }
 
-/** Owners always see every branch; everyone else sees what their membership allows. */
-export function branchesOf(member: Pick<Member, "scopes" | "role">): "all" | string[] {
-  if (member.role.perms.includes("*")) return "all";
-  const s = member.scopes;
-  return Array.isArray(s) ? s.filter((x): x is string => typeof x === "string") : "all";
+/** Owners always see every branch; everyone else sees what their membership allows (branch names, from the branch links). */
+export function branchesOf(member: Pick<Member, "scopes" | "role"> & Partial<Pick<Member, "allBranches" | "branches">>): "all" | string[] {
+  return accessOfMember(member).names;
+}
+
+/** The same as branchesOf(), as branch IDS: "all", or the ids of the branches the membership is linked to. */
+export function branchIdsOf(member: Pick<Member, "scopes" | "role"> & Partial<Pick<Member, "allBranches" | "branches">>): "all" | string[] {
+  return accessOfMember(member).allowed;
+}
+
+/** The new context for this request (KERNEL.md section 5): for controllers built on the kernel. Old routes keep using workspaceOf(). */
+const deps: TenancyDeps = { effectiveLimits: (db, tenantId, plan) => effectiveLimits(db, tenantId, plan) };
+export function businessContextOf(request: FastifyRequest): Promise<BusinessContext> {
+  return buildBusinessContext({ db: dbOf(request.server), user: requireUser(request), headers: request.headers, ip: request.ip, requestId: String(request.id), log: request.log }, deps);
 }
 
 // ───── Which branches a request looks at ─────
@@ -66,15 +83,10 @@ export function branchView(db: PrismaClient, request: FastifyRequest, ws: Worksp
 }
 
 async function loadView(db: PrismaClient, request: FastifyRequest, ws: Workspace): Promise<BranchView> {
-  const all = await db.branch.findMany({ where: { tenantId: ws.tenantId }, select: { id: true, name: true, status: true }, orderBy: [{ sort: "asc" }, { createdAt: "asc" }] });
-  const mine = all.filter((b) => ws.inBranch(b.name));
   const wanted = request.headers["x-branch"];
-  if (typeof wanted === "string" && wanted && wanted !== "all") {
-    if (!mine.some((b) => b.id === wanted)) throw forbidden("You don't work at that branch.");
-    return { mine, ids: [wanted], pick: wanted };
-  }
-  const open = mine.filter((b) => b.status === "open");
-  return { mine, ids: ws.branches === "all" ? null : mine.map((b) => b.id), pick: open.length === 1 ? open[0]!.id : null };
+  const scope = createBranchScope({ all: await loadBranches(db, ws.tenantId), allowed: ws.branchIds, wanted: typeof wanted === "string" ? wanted : undefined });
+  const open = scope.mine.filter((b) => b.status === "open");
+  return { mine: scope.mine.map((b) => ({ ...b })), ids: scope.idsFor("branch") as string[] | null, pick: scope.picked ?? (open.length === 1 ? open[0]!.id : null) };
 }
 
 /** Prisma filter for records that carry a branch (listings, leads, rooms, bookings, shifts, bills). */

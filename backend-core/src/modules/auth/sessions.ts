@@ -2,6 +2,7 @@
 // Where it fits: registered by the base app; routes call requireUser() or read request.user.
 // How it works: the browser keeps a random token; the database keeps its hash; a short cache in front means most
 // requests don't touch the sessions table. Each request gets the person with their active business memberships.
+// Each membership also carries its branch links (P1-BE-3), so the branch scope is known without another query.
 // Rules: removed staff and paused members lose access on their next request. A sign-in lasts sessionDays (Admin →
 // Settings → Security, default 30), counted again at most once an hour while it is used.
 
@@ -26,7 +27,9 @@ async function sessionDays(app: FastifyInstance) {
 /** Tests that change the setting call this so the next session reads it. */
 export const forgetSessionDays = () => { daysCache = null; };
 
-export type SessionUser = User & { memberships: (Membership & { tenant: Tenant & { plan: Plan }; role: Role })[] };
+/** One branch link of a membership, with the branch name (the names stay available for screens and old code). */
+export type MemberBranchLink = { branchId: string; branch: { name: string } };
+export type SessionUser = User & { memberships: (Membership & { tenant: Tenant & { plan: Plan }; role: Role; branches: MemberBranchLink[] })[] };
 
 declare module "fastify" {
   interface FastifyRequest { user: SessionUser | null; sessionHash: string | null }
@@ -44,7 +47,7 @@ export async function createSession(app: FastifyInstance, userId: string, reques
 
 const loadUser = (app: FastifyInstance, userId: string) => app.db!.user.findUnique({
   where: { id: userId },
-  include: { memberships: { where: { status: "active" }, include: { tenant: { include: { plan: true } }, role: true }, orderBy: { createdAt: "asc" } } },
+  include: { memberships: { where: { status: "active" }, include: { tenant: { include: { plan: true } }, role: true, branches: { select: { branchId: true, branch: { select: { name: true } } } } }, orderBy: { createdAt: "asc" } } },
 });
 
 export async function userForToken(app: FastifyInstance, token: string): Promise<{ user: SessionUser; hash: string } | null> {

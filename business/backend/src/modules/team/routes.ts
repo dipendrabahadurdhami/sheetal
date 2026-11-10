@@ -1,9 +1,12 @@
 // The signed-in person's businesses, adding a business, and each business's team, roles, profile and branding.
 // Where it fits: the business switcher, Team, Roles, Settings → Profile and Branding, and the invitation page.
 // How it works: invitations go by email with a one-time link (7 days); people get a role and branch access; a new
-// business is covered by the owner's Pro plan when they have one.
+// business is covered by the owner's Pro plan when they have one. Branch access is kept by branch ID (allBranches + link rows);
+// since P1-BE-3 invitations and member edits write BOTH the new rows and the old branch names in one transaction (ACCESS.md 3.4),
+// read the new rows, and accept `branchIds` ("all" or ids) as well as the old `scopes` (names). Answers carry both.
 // Rules: "team.manage" handles people, "roles.manage" roles (own roles need a plan that allows them); the owner role
-// can't be edited and a business always keeps one active owner; seats count pending invitations.
+// can't be edited and a business always keeps one active owner; seats count pending invitations, and making a paused
+// member active again needs a free seat, like inviting.
 
 import type { FastifyInstance } from "fastify";
 import { effectiveLimits } from "@sheetal/backend-core/domain/addons";
@@ -17,8 +20,9 @@ import { isPro, syncCovered } from "@sheetal/backend-core/domain/billing";
 import { starterPlanId } from "@sheetal/backend-core/domain/plans";
 import { mediaBase, photoUrl, savePhoto } from "@sheetal/backend-core/lib/photos";
 import { BUSINESS_TYPES, businessPermsFor, type BusinessType } from "@sheetal/backend-core/domain/permissions";
-import { branchesOf, workspaceOf, type Workspace } from "../access.js";
-import { checkScopes } from "../branches/routes.js";
+import { accessOfMember } from "@sheetal/platform/tenancy/context";
+import { EVERY_BRANCH, accessColumns, accessFromNames, resolveBranchAccess, setLinks, type ResolvedAccess } from "@sheetal/platform/tenancy/branch-links";
+import { branchIdsOf, branchesOf, workspaceOf, type Workspace } from "../access.js";
 
 const INVITE_DAYS = 7;
 /** Businesses one person can own (more through Sheetal support). */
@@ -27,7 +31,11 @@ const MAX_OWNED = 10;
 const proOf = (user: { memberships: { tenantId: string; role: { perms: string[] }; tenant: { id: string; name: string; status: string; coveredById: string | null; plan: { price: number; features: unknown } } }[] }, except?: string) =>
   user.memberships.find((m) => m.tenantId !== except && m.role.perms.includes("*") && !m.tenant.coveredById && isPro(m.tenant.plan) && ["active", "trial", "past_due"].includes(m.tenant.status))?.tenant ?? null;
 const email = z.email("Enter a valid email address.").transform((s) => s.trim().toLowerCase());
-const scopes = z.union([z.literal("all"), z.array(z.string().trim().min(1).max(60)).max(50)]).default("all");
+// Branch access in a body: the old way (names) or the new way (ids). Neither sent = "all" for an invitation, no change for a member.
+const scopes = z.union([z.literal("all"), z.array(z.string().trim().min(1).max(60)).max(50)]);
+const branchIds = z.union([z.literal("all"), z.array(z.string().trim().min(1).max(40)).max(50)]);
+/** The link rows of a member or invite, in screen order, with the branch name (for the old `scopes` answer). */
+const linksInclude = { select: { branchId: true, branch: { select: { name: true } } }, orderBy: [{ branch: { sort: "asc" as const } }, { branch: { createdAt: "asc" as const } }] };
 
 const isAllAccess = (features: unknown) => !!(features as Record<string, boolean> | null)?.all_kinds;
 const typesOf = (ws: Workspace): BusinessType[] => (isAllAccess(ws.member.tenant.plan.features) ? [...BUSINESS_TYPES] : [ws.member.tenant.type as BusinessType]);
@@ -35,6 +43,19 @@ const typesOf = (ws: Workspace): BusinessType[] => (isAllAccess(ws.member.tenant
 const seatLimit = async (db: Parameters<typeof effectiveLimits>[0], ws: Workspace) => ((await effectiveLimits(db, ws.tenantId, ws.member.tenant.plan)).limits as Record<string, number>).seats ?? 1;
 
 export async function teamRoutes(app: FastifyInstance) {
+  /** Refuses when `adding` more people would pass the seat limit: active members plus pending, unexpired invitations (paused ones don't count). */
+  const requireFreeSeat = async (ws: Workspace, adding: number) => {
+    const db = dbOf(app);
+    const [pending, active, limit] = await Promise.all([
+      db.invite.count({ where: { tenantId: ws.tenantId, status: "pending", expiresAt: { gt: new Date() } } }),
+      db.membership.count({ where: { tenantId: ws.tenantId, status: "active" } }),
+      seatLimit(db, ws),
+    ]);
+    if (limit !== -1 && active + pending + adding > limit) {
+      throw new AppError(402, "seat_limit", limit === 1 ? "The Starter plan is just you. Upgrade to add your team." : `Your plan has ${limit} seats and ${active + pending} are taken.`);
+    }
+  };
+
   const audit = (ws: Workspace, ip: string, action: string, target?: string, meta?: object) =>
     dbOf(app).auditLog.create({ data: { tenantId: ws.tenantId, actorId: ws.user.id, action, target, ip, meta: meta as object | undefined } });
 
@@ -50,7 +71,7 @@ export async function teamRoutes(app: FastifyInstance) {
           verification: m.tenant.verification,
           status: m.tenant.status, period: m.tenant.period, renewsAt: m.tenant.renewsAt, autoRenew: m.tenant.autoRenew, createdAt: m.tenant.createdAt,
           plan: { id: m.tenant.plan.id, name: m.tenant.plan.name, price: m.tenant.plan.price, limits: m.tenant.plan.limits, features: m.tenant.plan.features },
-          role: { id: m.role.id, key: m.role.key, name: m.role.name, perms: m.role.perms }, scopes: branchesOf(m),
+          role: { id: m.role.id, key: m.role.key, name: m.role.name, perms: m.role.perms }, scopes: branchesOf(m), branchIds: branchIdsOf(m),
         })),
       },
     };
@@ -145,17 +166,21 @@ export async function teamRoutes(app: FastifyInstance) {
     const ws = workspaceOf(request);
     const db = dbOf(app);
     const [members, invites, roles, activity] = await Promise.all([
-      db.membership.findMany({ where: { tenantId: ws.tenantId, status: { in: ["active", "paused"] } }, include: { user: true }, orderBy: { createdAt: "asc" } }),
-      ws.can("team.manage") ? db.invite.findMany({ where: { tenantId: ws.tenantId, status: "pending" }, orderBy: { createdAt: "desc" } }) : Promise.resolve([]),
+      db.membership.findMany({ where: { tenantId: ws.tenantId, status: { in: ["active", "paused"] } }, include: { user: true, branches: linksInclude }, orderBy: { createdAt: "asc" } }),
+      ws.can("team.manage") ? db.invite.findMany({ where: { tenantId: ws.tenantId, status: "pending" }, include: { branches: linksInclude }, orderBy: { createdAt: "desc" } }) : Promise.resolve([]),
       db.role.findMany({ where: { tenantId: ws.tenantId }, orderBy: [{ system: "desc" }, { key: "asc" }] }),
       db.auditLog.findMany({ where: { tenantId: ws.tenantId }, orderBy: { createdAt: "desc" }, take: 50 }),
     ]);
     const names = new Map(members.map((m) => [m.userId, m.user.userName]));
+    // Branch access is read from the link rows; `scopes` (names) is computed from them for the old screens.
+    const perms = new Map(roles.map((r) => [r.id, r.perms]));
+    const accessOf = (x: { scopes: unknown; allBranches: boolean; branches: { branchId: string; branch: { name: string } }[]; roleId: string }) =>
+      accessOfMember({ scopes: x.scopes, allBranches: x.allBranches, branches: x.branches, role: { perms: perms.get(x.roleId) ?? [] } });
     const seatsUsed = members.filter((m) => m.status === "active").length + invites.length;
     return {
       data: {
-        members: members.map((m) => ({ id: m.userId, name: m.user.userName, email: m.user.email, phone: m.user.phone, roleId: m.roleId, status: m.status, scopes: m.scopes, lastActive: m.user.lastLoginAt, joinedAt: m.createdAt })),
-        invites: invites.map((i) => ({ id: i.id, email: i.email, roleId: i.roleId, scopes: i.scopes, status: i.expiresAt < new Date() ? "expired" : i.status, sent: i.sentAt, expires: i.expiresAt, by: names.get(i.invitedBy ?? "") ?? null })),
+        members: members.map((m) => ({ id: m.userId, name: m.user.userName, email: m.user.email, phone: m.user.phone, roleId: m.roleId, status: m.status, scopes: accessOf(m).names, branchIds: accessOf(m).allowed, lastActive: m.user.lastLoginAt, joinedAt: m.createdAt })),
+        invites: invites.map((i) => ({ id: i.id, email: i.email, roleId: i.roleId, scopes: accessOf(i).names, branchIds: accessOf(i).allowed, status: i.expiresAt < new Date() ? "expired" : i.status, sent: i.sentAt, expires: i.expiresAt, by: names.get(i.invitedBy ?? "") ?? null })),
         roles: roles.map((r) => ({ id: r.id, key: r.key, name: r.name, perms: r.perms, system: r.system })),
         permissions: businessPermsFor(typesOf(ws)),
         seats: { used: seatsUsed, limit: await seatLimit(dbOf(app), ws) },
@@ -176,22 +201,23 @@ export async function teamRoutes(app: FastifyInstance) {
   // ───── Invitations ─────
   app.post("/team/invites", { config: { rateLimit: { max: 20, timeWindow: "1 hour" } } }, async (request) => {
     const ws = workspaceOf(request); manage(ws);
-    const b = z.object({ invites: z.array(z.object({ email, roleId: z.string(), scopes })).min(1).max(20) }).parse(request.body);
-    for (const inv of b.invites) inv.scopes = (await checkScopes(app, ws.tenantId, inv.scopes))!;
+    const b = z.object({ invites: z.array(z.object({ email, roleId: z.string(), scopes: scopes.optional(), branchIds: branchIds.optional() })).min(1).max(20) }).parse(request.body);
     const db = dbOf(app);
-    const pending = await db.invite.count({ where: { tenantId: ws.tenantId, status: "pending", expiresAt: { gt: new Date() } } });
-    const active = await db.membership.count({ where: { tenantId: ws.tenantId, status: "active" } });
-    const limit = await seatLimit(db, ws);
-    if (limit !== -1 && active + pending + b.invites.length > limit) {
-      throw new AppError(402, "seat_limit", limit === 1 ? "The Starter plan is just you. Upgrade to add your team." : `Your plan has ${limit} seats and ${active + pending} are taken.`);
-    }
+    const access: ResolvedAccess[] = [];
+    for (const inv of b.invites) access.push((await resolveBranchAccess(db, ws.tenantId, { branchIds: inv.branchIds, scopes: inv.scopes })) ?? EVERY_BRANCH);
+    await requireFreeSeat(ws, b.invites.length);
     const sent: string[] = [];
-    for (const inv of b.invites) {
+    for (const [n, inv] of b.invites.entries()) {
       const role = await roleOf(ws, inv.roleId);
       if (await db.membership.findFirst({ where: { tenantId: ws.tenantId, user: { email: inv.email } } })) throw conflict(`${inv.email} is already in the team.`);
       await db.invite.updateMany({ where: { tenantId: ws.tenantId, email: inv.email, status: "pending" }, data: { status: "revoked" } });
       const token = newToken();
-      await db.invite.create({ data: { tenantId: ws.tenantId, email: inv.email, roleId: role.id, scopes: inv.scopes, tokenHash: sha256(token), invitedBy: ws.user.id, expiresAt: new Date(Date.now() + INVITE_DAYS * 864e5) } });
+      const ownerRole = role.perms.includes("*");
+      // The old names and the new rows are written together, so they can never disagree.
+      await db.$transaction(async (tx) => {
+        const row = await tx.invite.create({ data: { tenantId: ws.tenantId, email: inv.email, roleId: role.id, ...accessColumns(access[n]!, ownerRole), tokenHash: sha256(token), invitedBy: ws.user.id, expiresAt: new Date(Date.now() + INVITE_DAYS * 864e5) } });
+        await setLinks(tx, "invite", row.id, access[n]!, ownerRole);
+      });
       await sendInvite(inv.email, token, ws, role.name ?? role.key);
       await audit(ws, request.ip, "team.invited", inv.email, { role: role.key });
       sent.push(inv.email);
@@ -239,20 +265,25 @@ export async function teamRoutes(app: FastifyInstance) {
     const user = requireUser(request);
     const { token } = z.object({ token: z.string().min(20).max(100) }).parse(request.body);
     const db = dbOf(app);
-    const inv = await db.invite.findUnique({ where: { tokenHash: sha256(token) }, include: { tenant: true } });
+    const inv = await db.invite.findUnique({ where: { tokenHash: sha256(token) }, include: { tenant: true, branches: linksInclude } });
     if (!inv || inv.status !== "pending" || inv.expiresAt < new Date()) throw new AppError(410, "invite_invalid", "This invitation has expired or was already used. Ask for a new one.");
     if (inv.email !== user.email) throw forbidden(`This invitation is for ${inv.email}. Sign in with that email to accept it.`);
-    await db.$transaction([
-      db.membership.upsert({ where: { userId_tenantId: { userId: user.id, tenantId: inv.tenantId } }, create: { userId: user.id, tenantId: inv.tenantId, roleId: inv.roleId, scopes: inv.scopes as object }, update: { roleId: inv.roleId, scopes: inv.scopes as object, status: "active" } }),
-      db.invite.update({ where: { id: inv.id }, data: { status: "accepted" } }),
-      db.auditLog.create({ data: { tenantId: inv.tenantId, actorId: user.id, action: "team.joined", target: user.email, ip: request.ip } }),
-    ]);
+    // The membership gets the invitation's branch access: the same flag and the same branch rows, and the old names computed from them.
+    const links = inv.branches.map((l) => ({ id: l.branchId, name: l.branch.name }));
+    const access: ResolvedAccess = inv.allBranches ? EVERY_BRANCH : { all: false, ids: links.map((l) => l.id), names: links.map((l) => l.name) };
+    await db.$transaction(async (tx) => {
+      const cols = { scopes: inv.allBranches ? (inv.scopes as object) : access.names, allBranches: inv.allBranches };
+      const m = await tx.membership.upsert({ where: { userId_tenantId: { userId: user.id, tenantId: inv.tenantId } }, create: { userId: user.id, tenantId: inv.tenantId, roleId: inv.roleId, ...cols }, update: { roleId: inv.roleId, ...cols, status: "active" } });
+      await setLinks(tx, "membership", m.id, access, false);
+      await tx.invite.update({ where: { id: inv.id }, data: { status: "accepted" } });
+      await tx.auditLog.create({ data: { tenantId: inv.tenantId, actorId: user.id, action: "team.joined", target: user.email, ip: request.ip } });
+    });
     return { status: 200, message: `Welcome to ${inv.tenant.name}.`, data: { tenantId: inv.tenantId } };
   });
 
   // ───── Members ─────
   async function memberFor(ws: Workspace, userId: string) {
-    const m = await dbOf(app).membership.findFirst({ where: { tenantId: ws.tenantId, userId }, include: { role: true, user: { select: { userName: true, email: true } } } });
+    const m = await dbOf(app).membership.findFirst({ where: { tenantId: ws.tenantId, userId }, include: { role: true, branches: linksInclude, user: { select: { userName: true, email: true } } } });
     if (!m) throw notFound("Team member not found.");
     return m;
   }
@@ -261,14 +292,28 @@ export async function teamRoutes(app: FastifyInstance) {
 
   app.patch<{ Params: { userId: string } }>("/team/members/:userId", async (request) => {
     const ws = workspaceOf(request); manage(ws);
-    const b = z.object({ roleId: z.string().optional(), status: z.enum(["active", "paused"]).optional(), scopes: scopes.optional() }).parse(request.body);
-    b.scopes = await checkScopes(app, ws.tenantId, b.scopes);
+    const b = z.object({ roleId: z.string().optional(), status: z.enum(["active", "paused"]).optional(), scopes: scopes.optional(), branchIds: branchIds.optional() }).parse(request.body);
+    const asked = await resolveBranchAccess(dbOf(app), ws.tenantId, { branchIds: b.branchIds, scopes: b.scopes });
     const m = await memberFor(ws, request.params.userId);
     if (m.role.key === "owner" && ws.member.role.key !== "owner") throw forbidden("Only an owner can change an owner.");
     const role = b.roleId ? await roleOf(ws, b.roleId) : null;
     const losingOwner = m.role.key === "owner" && ((role && role.key !== "owner") || b.status === "paused");
     if (losingOwner && !(await otherOwners(ws, m.userId))) throw badRequest("A business needs at least one active owner. Make someone else an owner first.");
-    await dbOf(app).membership.update({ where: { id: m.id }, data: { roleId: role?.id, status: b.status, scopes: b.scopes as object | undefined } });
+    // A paused member comes back only if there is a seat for them (the same refusal as inviting).
+    if (b.status === "active" && m.status !== "active") await requireFreeSeat(ws, 1);
+    // Becoming an owner, or stopping being one, changes how the stored access is read: keep what the person has, only re-flag it.
+    const ownerNow = (role ?? m.role).perms.includes("*");
+    let access: ResolvedAccess | undefined = asked;
+    if (!access && role && ownerNow !== m.role.perms.includes("*")) {
+      const links = m.branches.map((l) => ({ id: l.branchId, name: l.branch.name }));
+      access = !m.allBranches ? { all: false, ids: links.map((l) => l.id), names: links.map((l) => l.name) }
+        : Array.isArray(m.scopes) ? accessFromNames(await dbOf(app).branch.findMany({ where: { tenantId: ws.tenantId }, select: { id: true, name: true } }), m.scopes)
+        : EVERY_BRANCH;
+    }
+    await dbOf(app).$transaction(async (tx) => {
+      await tx.membership.update({ where: { id: m.id }, data: { roleId: role?.id, status: b.status, ...(access ? accessColumns(access, ownerNow) : {}) } });
+      if (access) await setLinks(tx, "membership", m.id, access, ownerNow);
+    });
     await audit(ws, request.ip, "team.updated", m.user.email, { role: role?.key, status: b.status });
     return { status: 200, message: `${m.user.userName} updated.` };
   });
