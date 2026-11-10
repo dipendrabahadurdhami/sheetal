@@ -17,8 +17,13 @@ import { AdminPlans, TenantDetail } from "./AdminTenants";
 import { AdminSettings, AdminStaff } from "./AdminSystem";
 import { AdminCatalog } from "./AdminListingSetup";
 import { AdminAddons } from "@sheetal/shared/components/Addons";
+import { LiveAdminAddons } from "./LiveAddons";
+import { LiveAdminPromote } from "./LivePromote";
+import { LiveLeads } from "./LiveLeads";
+import { LiveEarnings } from "./LiveEarnings";
+import { LiveDashboard } from "./LiveDashboard";
 import { AdminCareers, AdminDemand, AdminEarnings, AdminLeads, AdminMessages, AdminRequests, AdminSocial, AdminVoice, Hub } from "./AdminGrowth";
-import { AdminAds, AdminAI, AdminAnalytics, AdminOrders } from "./AdminExtras";
+import { AdminAI, AdminAnalytics, AdminOrders } from "./AdminExtras";
 import { MyProfile, NotificationsPage, adminLive, useNotifs, useServerNotifs } from "@sheetal/shared/components/Me";
 import { AdminAudit, AdminBilling, AdminContent, AdminInbox, AdminModeration } from "./AdminOps";
 import { AdminChannels } from "./AdminChannels";
@@ -29,8 +34,13 @@ import { config } from "@sheetal/shared/core/config";
 import { isStaffLive, useLiveStaff, useReviewQueue } from "../live";
 import { adminApi } from "../api";
 import { LiveAnalytics, LiveOutbox, LiveSetup, LiveStatus } from "./LiveSetup";
+import { LivePlatformSettings } from "./LivePlatformSettings";
+import { LiveIntegrations } from "./LiveIntegrations";
+import { LiveChannels, useOtaWaiting } from "./LiveChannels";
+import { LiveAiFeatures } from "./LiveAiFeatures";
+import { LiveExpiry, LiveTemplates } from "./LiveMessages";
 
-const PREVIEW = ["/admin/catalog", "/admin/ai", "/admin/voice", "/admin/messages", "/admin/leads", "/admin/social", "/admin/earnings", "/admin/ads", "/admin/channels", "/admin/addons", "/admin/settings"];
+const PREVIEW = ["/admin/voice", "/admin/social"];
 
 export default function AdminApp() {
   const t = useT();
@@ -39,6 +49,7 @@ export default function AdminApp() {
   useLiveStaff(); // the real staff role when signed in (../live.js)
   const liveQueue = useReviewQueue(isStaffLive() && can(role, "moderation.listings"));
   const queue = isStaffLive() && can(role, "moderation.listings") ? liveQueue : null;
+  const otaWaiting = useOtaWaiting(isStaffLive() && can(role, "tenants.view")); // requests waiting for the channel team
   const pending = db.tenants.filter((x) => x.status === "pending_verification").length + (queue ? queue.waiting : 0);
 
   const nav = filterNav([
@@ -47,20 +58,20 @@ export default function AdminApp() {
       { to: "/admin/tenants", icon: "building-2", key: "nav.tenants", perm: "tenants.view" },
       { to: "/admin/plans", icon: "layers", key: "nav.plans", perm: "plans.manage" },
       { to: "/admin/addons", icon: "puzzle", key: "nav.addons", perm: "plans.manage" },
+      { to: "/admin/promote", icon: "trending-up", key: "nav.promote", perm: "billing.view" },
       { to: "/admin/billing", icon: "receipt", key: "nav.billing", perm: "billing.view" },
     ] },
     { group: "group.marketplace", items: [
       { to: "/admin/moderation", icon: "shield-check", key: "nav.moderation", permAny: ["moderation.listings", "moderation.kyc"], count: pending, countTone: "action" },
       { to: "/admin/catalog", icon: "list-checks", key: "nav.catalog", perm: "content.edit" },
       { to: "/admin/content", icon: "newspaper", key: "nav.content", perm: "content.edit" },
-      { to: "/admin/ads", icon: "rocket", key: "nav.ads", perm: "content.edit" },
     ] },
     { group: "group.leads", items: [
       { to: "/admin/inbox", icon: "messages-square", key: "nav.inbox", perm: "tenants.view" },
     ] },
     { group: "group.connections", items: [
       { to: "/admin/integrations", icon: "plug", key: "nav.setup", perm: "settings.platform" },
-      { to: "/admin/channels", icon: "network", key: "nav.channels", perm: "tenants.view", count: otaOf(db).requests.filter((r) => r.status === "requested").length || undefined, countTone: "action" },
+      { to: "/admin/channels", icon: "network", key: "nav.channels", perm: "tenants.view", count: (isStaffLive() ? otaWaiting : otaOf(db).requests.filter((r) => r.status === "requested").length) || undefined, countTone: "action" },
       { to: "/admin/ai", icon: "sparkles", key: "nav.aiAdmin", perm: "settings.platform" },
     ] },
     { group: "group.system", items: [
@@ -74,7 +85,7 @@ export default function AdminApp() {
 
   const inboxHub = (start) => <Hub key={"inbox-" + (start || "")} start={start} title={t("nav.inbox")} sub={t("hub.inboxSub")} tabs={[
     { id: "inbox", label: t("hub.support"), icon: "messages-square", el: <AdminInbox /> },
-    { id: "leads", label: t("gl.master"), icon: "users", el: <AdminLeads /> },
+    { id: "leads", label: t("gl.master"), icon: "users", el: isStaffLive() ? <LiveLeads /> : <AdminLeads /> },
     { id: "demand", label: t("nav.demand"), icon: "clipboard-list", el: <AdminDemand /> },
     { id: "requests", label: t("nav.requests"), icon: "calendar-check", el: <AdminRequests /> },
   ]} />;
@@ -86,17 +97,17 @@ export default function AdminApp() {
   const billingHub = (start) => <Hub key={"billing-" + (start || "")} start={start} title={t("nav.billing")} sub={t("hub.billingSub")} tabs={[
     { id: "billing", label: t("nav.billing"), icon: "receipt", el: <AdminBilling role={role} /> },
     { id: "orders", label: "Orders, refunds and claims", icon: "rotate-ccw", el: <AdminOrders /> },
-    { id: "earnings", label: t("nav.earnings"), icon: "hand-coins", el: <AdminEarnings /> },
+    { id: "earnings", label: t("nav.earnings"), icon: "hand-coins", el: isStaffLive() ? <LiveEarnings /> : <AdminEarnings /> },
   ]} />;
   const analyticsHub = (start) => <Hub key={"analytics-" + (start || "")} start={start} title={t("nav.traffic")} sub={t("an.trafficSub")} tabs={[
     { id: "traffic", label: t("an.traffic"), icon: "chart-column", el: isStaffLive() ? <LiveAnalytics /> : <AdminAnalytics /> },
     { id: "live", label: t("gm.live"), icon: "radio", el: <AdminMessages only="live" /> },
   ]} />;
   const aiHub = (start) => <Hub key={"ai-" + (start || "")} start={start} title={t("hub.aiTitle")} sub={t("hub.aiSub")} tabs={[
-    { id: "ai", label: t("ai.featuresTitle"), icon: "sparkles", el: <AdminAI embedded /> },
+    { id: "ai", label: t("ai.featuresTitle"), icon: "sparkles", el: isStaffLive() ? <LiveAiFeatures embedded /> : <AdminAI embedded /> },
     { id: "voice", label: t("nav.voice"), icon: "phone-call", el: <AdminVoice /> },
-    { id: "templates", label: t("gm.templates"), icon: "file-text", el: <AdminMessages only="templates" /> },
-    { id: "expiry", label: t("gm.expiry"), icon: "calendar-x", el: <AdminMessages only="expiry" /> },
+    { id: "templates", label: t("gm.templates"), icon: "file-text", el: isStaffLive() ? <LiveTemplates /> : <AdminMessages only="templates" /> },
+    { id: "expiry", label: t("gm.expiry"), icon: "calendar-x", el: isStaffLive() ? <LiveExpiry /> : <AdminMessages only="expiry" /> },
   ]} />;
   const guard = (perm, el) => (perm === true || (Array.isArray(perm) ? canAny(role, perm) : can(role, perm)) ? el : <NoAccess />);
 
@@ -123,7 +134,7 @@ export default function AdminApp() {
         <MenuButton icon="log-out" onClick={() => { try { localStorage.removeItem("sheetal_token"); } catch { /* storage off */ } window.location.href = "/"; }}>{t("menu.signOut")}</MenuButton>
       </>}>
       <Routes fallback={<Pending part={3} />} routes={[
-        { path: "/admin", render: () => guard("dashboard.view", <AdminDashboard />) },
+        { path: "/admin", render: () => guard("dashboard.view", isStaffLive() ? <LiveDashboard /> : <AdminDashboard />) },
         { path: "/admin/tenants", render: () => guard("tenants.view", <AdminTenants />) },
         { path: "/admin/tenants/:id", render: ({ id }) => guard("tenants.view", <TenantDetail id={id} role={role} />) },
         { path: "/admin/plans", render: () => guard("plans.manage", <AdminPlans />) },
@@ -137,19 +148,19 @@ export default function AdminApp() {
         { path: "/admin/social", render: () => guard("content.edit", contentHub("social")) },
         { path: "/admin/careers", render: () => guard("content.edit", contentHub("careers")) },
         { path: "/admin/earnings", render: () => guard("billing.view", billingHub("earnings")) },
-        { path: "/admin/ads", render: () => guard("content.edit", <AdminAds />) },
-        { path: "/admin/channels", render: () => guard("tenants.view", <AdminChannels />) },
+        { path: "/admin/channels", render: () => guard("tenants.view", isStaffLive() ? <LiveChannels canWork={can(role, "tenants.manage")} canSettings={can(role, "settings.platform")} /> : <AdminChannels />) },
         { path: "/admin/analytics", render: () => guard("dashboard.view", analyticsHub()) },
-        { path: "/admin/addons", render: () => guard("plans.manage", <AdminAddons />) },
+        { path: "/admin/addons", render: () => guard("plans.manage", isStaffLive() ? <LiveAdminAddons /> : <AdminAddons />) },
+        { path: "/admin/promote", render: () => guard("billing.view", isStaffLive() ? <LiveAdminPromote /> : <div className="pf-pad muted">Sign in as Sheetal staff to manage boosts and banners.</div>) },
         { path: "/admin/moderation", render: () => guard(["moderation.listings", "moderation.kyc"], <AdminModeration role={role} queue={queue} />) },
         { path: "/admin/content", render: () => guard("content.edit", contentHub()) },
         { path: "/admin/billing", render: () => guard("billing.view", billingHub()) },
         { path: "/admin/audit", render: () => guard("audit.view", <AdminAudit />) },
         { path: "/admin/inbox", render: () => guard("tenants.view", inboxHub()) },
         { path: "/admin/staff", render: () => guard("staff.view", <AdminStaff role={role} />) },
-        { path: "/admin/settings", render: () => guard("settings.platform", <AdminSettings />) },
+        { path: "/admin/settings", render: () => guard("settings.platform", isStaffLive() ? <LivePlatformSettings /> : <AdminSettings />) },
         { path: "/admin/status", render: () => guard("settings.platform", isStaffLive() ? <><LiveStatus /><LiveOutbox /></> : <AdminStatus />) },
-        { path: "/admin/integrations", render: () => guard("settings.platform", <>{isStaffLive() && <LiveSetup />}<AdminIntegrations /></>) },
+        { path: "/admin/integrations", render: () => guard("settings.platform", <>{isStaffLive() && <><LiveIntegrations /><LiveSetup /></>}<AdminIntegrations /></>) },
         { path: "/admin/integrations/:id", render: ({ id }) => guard("settings.platform", <AdminIntegrations key={id} id={id} />) },
         { path: "/admin/me", render: () => <MyProfile scope="admin" roleLabel={roleName(role, t)} access="Sheetal staff" /> },
         { path: "/admin/notifications", render: () => <NotificationsPage notifs={notifs} prefsTo="/admin/me" /> },

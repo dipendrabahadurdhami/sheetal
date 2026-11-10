@@ -5,22 +5,25 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, MapPin, CalendarDays, Users, Home, Wallet, Building2, Building, Minus, Plus, Hotel, Trees, Tent, BedDouble, Store, Briefcase, Castle, Landmark, Mountain, Tractor, Warehouse, Factory } from "lucide-react";
 
-const TABS = [["stay", "Stay"], ["sale", "Buy"], ["rent", "Rent"], ["project", "Projects"], ["invest", "Invest"]];
+const TABS = [["all", "All"], ["stay", "Stay"], ["sale", "Buy"], ["rent", "Rent"], ["project", "Projects"], ["invest", "Invest"]];
 const PLACES = ["Pokhara", "Kathmandu", "Lalitpur", "Bhaktapur", "Chitwan", "Nagarkot", "Lumbini", "Bandipur"];
-const TYPES = ["House", "Land", "Apartment", "Flat", "Commercial Space", "Office Space", "Bungalow"];
+import { PROPERTY_TYPE_NAMES } from "../utils/listingOptions";
+// Every category and property type from Listing setup, plus the names old listings use (utils/listingOptions.js).
+const TYPES = PROPERTY_TYPE_NAMES;
 const BUY = [["", "Any budget"], ["5000000", "Up to 50 Lakh"], ["10000000", "Up to 1 Cr"], ["30000000", "Up to 3 Cr"], ["50000000", "Up to 5 Cr"]];
 const RENT = [["", "Any budget"], ["20000", "Up to Rs. 20,000"], ["40000", "Up to Rs. 40,000"], ["80000", "Up to Rs. 80,000"]];
 const PTYPE = ["Any project", "Apartment building", "Colony", "Villa project", "Commercial"];
 const MIN = [["10000", "Rs. 10,000"], ["25000", "Rs. 25,000"], ["50000", "Rs. 50,000"], ["100000", "Rs. 1 Lakh"]];
 // Type tiles under the bar change with the tab.
 const TILES = {
+  all: [["House", Home], ["Land", Trees], ["Apartment", Building2], ["Flat", Building], ["Commercial Space", Store], ["Office Space", Briefcase], ["Bungalow", Castle], ["Agricultural land", Tractor], ["Warehouse", Warehouse]],
   stay: [["Hotel", Hotel], ["Resort", Trees], ["Villa", Castle], ["Apartment", Building2], ["Homestay", Home], ["Cottage", Tent], ["Hostel", BedDouble], ["Lodge", Mountain], ["Guest house", Building]],
   sale: [["House", Home], ["Land", Trees], ["Apartment", Building2], ["Flat", Building], ["Commercial Space", Store], ["Office Space", Briefcase], ["Bungalow", Castle], ["Agricultural land", Tractor], ["Warehouse", Warehouse]],
   rent: [["House", Home], ["Flat", Building], ["Apartment", Building2], ["Room", BedDouble], ["Commercial Space", Store], ["Office Space", Briefcase], ["Bungalow", Castle], ["Shutter", Store], ["Warehouse", Warehouse]],
   project: [["Apartment building", Building2], ["Colony", Home], ["Villa project", Castle], ["Commercial complex", Store], ["Townhouses", Building], ["Plotting", Trees], ["Mixed use", Landmark], ["Industrial", Factory]],
   invest: [["Hotel", Hotel], ["Villa project", Castle], ["Colony", Home], ["Commercial", Landmark], ["Resort", Trees], ["Homestay", Home], ["Lodge", Mountain], ["Land bank", Tractor]],
 };
-const tileLink = (tab, t) => tab === "stay" ? `/stays?type=${encodeURIComponent(t)}` : tab === "project" ? `/project?type=${encodeURIComponent(t)}` : tab === "invest" ? `/investment/explore?type=${encodeURIComponent(t)}` : `/search?advertisement_purpose=${tab}&property_type=${encodeURIComponent(t)}`;
+const tileLink = (tab, t) => tab === "stay" ? `/stays?type=${encodeURIComponent(t)}` : tab === "project" ? `/project?type=${encodeURIComponent(t)}` : tab === "invest" ? `/investment/explore?type=${encodeURIComponent(t)}` : (tab === "all" ? `/search?property_type=${encodeURIComponent(t)}` : `/search?advertisement_purpose=${tab}&property_type=${encodeURIComponent(t)}`);
 const iso = (d) => d.toISOString().slice(0, 10);
 const nice = (s) => (s ? new Date(s).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "");
 
@@ -40,7 +43,7 @@ export function HeroSearch() {
   const nav = useNavigate();
   const box = useRef(null);
   const today = new Date();
-  const [tab, setTab] = useState("stay");
+  const [tab, setTab] = useState("all");
   const [open, setOpen] = useState(null);
   const [where, setWhere] = useState("");
   const [from, setFrom] = useState(iso(new Date(today.getTime() + 7 * 864e5)));
@@ -61,7 +64,7 @@ export function HeroSearch() {
     if (tab === "project") { if (where) p.set("city", where); if (ptype !== "Any project") p.set("type", ptype); return nav(`/project?${p}`); }
     if (tab === "invest") { if (where) p.set("city", where); p.set("min", min); return nav(`/investment/explore?${p}`); }
     if (where) p.set("keyword", where);
-    p.set("advertisement_purpose", tab);
+    if (tab !== "all") p.set("advertisement_purpose", tab);
     if (type) p.set("property_type", type);
     if (budget) p.set("max_price", budget);
     nav(`/search?${p}`);
@@ -91,7 +94,7 @@ export function HeroSearch() {
             ))}
           </Seg>
         </>}
-        {(tab === "sale" || tab === "rent") && <>
+        {(tab === "all" || tab === "sale" || tab === "rent") && <>
           <Seg label="Property type" icon={Home} value={type} placeholder="Any type" active={open === "type"} onClick={() => tog("type")}>{pick([["", "Any type"], ...TYPES.map((x) => [x, x])], type, setType, "budget")}</Seg>
           <Seg label={tab === "rent" ? "Monthly budget" : "Budget"} icon={Wallet} value={(tab === "rent" ? RENT : BUY).find(([v]) => v === budget)?.[1]} placeholder="Any budget" active={open === "budget"} onClick={() => tog("budget")}>{pick(tab === "rent" ? RENT : BUY, budget, setBudget, null)}</Seg>
         </>}

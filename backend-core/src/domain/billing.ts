@@ -4,6 +4,7 @@
 // How it works: an invoice is made for a plan and period; once a gateway or Sheetal confirms the payment, the plan and
 // its end date are applied. Before the end date a renewal invoice and reminders go out; after it, a grace period;
 // then the business moves to Starter.
+// Boost invoices (kind "boost") start their boosts when paid (domain/promote.ts).
 // Rules: prices include 13% VAT. Nothing charges anyone automatically (Nepal wallets keep no cards on file).
 // Applying a payment is safe to repeat. Covered businesses follow their Pro business's plan.
 
@@ -12,16 +13,25 @@ import type { Db } from "../lib/db.js";
 import type { Mailer } from "../lib/mailer.js";
 import { Vault } from "../lib/vault.js";
 import { ESEWA_TEST, type Mode } from "../lib/payments.js";
-import { notify } from "../lib/notify.js";
+import { notify, notifyStaff } from "../lib/notify.js";
 import { priceFor, starterPlanId } from "./plans.js";
 import type { BusinessType } from "./permissions.js";
+import { applyAddonLines, endAddons, linesTotal, renewalLines, type AddonLine } from "./addons.js";
+import { activateBoosts } from "./promote.js";
+import { platformSaved, platformSettings } from "./platform.js";
+import { payBanners } from "./banners.js";
 
-export interface BillingSettings { vatRate: number; graceDays: number; reminderDays: number[]; bank: { name?: string; account?: string; accountName?: string; note?: string } }
-const BILLING_DEFAULTS: BillingSettings = { vatRate: 13, graceDays: 7, reminderDays: [7, 1], bank: {} };
+export interface BillingSettings { vatRate: number; graceDays: number; autoSuspend: boolean; reminderDays: number[]; bank: { name?: string; account?: string; accountName?: string; note?: string } }
+const BILLING_DEFAULTS: BillingSettings = { vatRate: 13, graceDays: 7, autoSuspend: true, reminderDays: [7, 1], bank: {} };
 
 export async function billingSettings(db: Db): Promise<BillingSettings> {
-  const row = await db.appSetting.findUnique({ where: { key: "billing" } });
-  return { ...BILLING_DEFAULTS, ...((row?.value as Partial<BillingSettings>) ?? {}) };
+  // VAT and grace days belong to the platform settings (Admin → Settings); the billing row is only the fallback for
+  // a platform that never saved them, and holds reminders and bank details.
+  const [row, saved, p] = await Promise.all([db.appSetting.findUnique({ where: { key: "billing" } }), platformSaved(db), platformSettings(db)]);
+  const out = { ...BILLING_DEFAULTS, ...((row?.value as Partial<BillingSettings>) ?? {}), autoSuspend: p.autoSuspend };
+  if (saved.vatRate !== undefined) out.vatRate = p.vatRate;
+  if (saved.graceDays !== undefined) out.graceDays = p.graceDays;
+  return out;
 }
 
 /** Gateway settings as stored (secrets sealed). */
@@ -69,16 +79,41 @@ export async function createInvoice(db: Db | Prisma.TransactionClient, o: { tena
   if (!o.plan.price) throw new Error("Starter is free; there is nothing to bill.");
   const now = o.now ?? new Date();
   const { start, end } = periodFor(o.tenant, o.plan.id, o.months, now);
+  // The add-ons the business keeps renew with the plan (only when it stays on the same plan).
+  const lines = o.tenant.planId === o.plan.id ? await renewalLines(db, o.tenant.id, o.months) : [];
   return db.invoice.create({
     data: {
-      tenantId: o.tenant.id, planId: o.plan.id, months: o.months, ...splitVat(priceFor(o.plan.price, o.months), o.vatRate),
+      tenantId: o.tenant.id, planId: o.plan.id, months: o.months, kind: "plan", addons: lines as unknown as Prisma.InputJsonValue, ...splitVat(priceFor(o.plan.price, o.months) + linesTotal(lines), o.vatRate),
       billedTo: { name: o.tenant.name, pan: o.tenant.pan, vatRegistered: o.tenant.vatRegistered, email: o.tenant.email, phone: o.tenant.phone, city: o.tenant.city, address: o.tenant.address },
       periodStart: start, periodEnd: end, dueAt: new Date(now.getTime() + (o.dueInDays ?? 7) * 864e5), createdBy: o.by,
     },
   });
 }
 
-async function ownerOf(db: Db, tenantId: string) {
+/** An invoice for add-ons bought now, for the rest of the paid period. */
+export async function createAddonInvoice(db: Tx, o: { tenant: Tenant; lines: AddonLine[]; by?: string; vatRate: number; now?: Date }) {
+  const now = o.now ?? new Date();
+  return db.invoice.create({
+    data: {
+      tenantId: o.tenant.id, planId: o.tenant.planId, months: o.lines[0]?.months ?? 1, kind: "addon", addons: o.lines as unknown as Prisma.InputJsonValue, ...splitVat(linesTotal(o.lines), o.vatRate),
+      billedTo: { name: o.tenant.name, pan: o.tenant.pan, vatRegistered: o.tenant.vatRegistered, email: o.tenant.email, phone: o.tenant.phone, city: o.tenant.city, address: o.tenant.address },
+      periodStart: now, periodEnd: o.tenant.renewsAt, dueAt: new Date(now.getTime() + 7 * 864e5), createdBy: o.by,
+    },
+  });
+}
+
+/** Open plan invoices are priced again with the add-ons the business keeps now (after it buys or removes one). */
+export async function repriceOpenPlanInvoices(db: Tx, tenantId: string) {
+  const [open, s, t] = await Promise.all([db.invoice.findMany({ where: { tenantId, status: "open", kind: "plan" }, include: { payments: { where: { status: { in: ["initiated", "pending_review"] } }, select: { id: true } } } }), billingSettings(db as Db), db.tenant.findUniqueOrThrow({ where: { id: tenantId } })]);
+  for (const i of open) {
+    if (i.payments.length || i.planId !== t.planId) continue; // someone is paying it now, or it is for another plan
+    const plan = await db.plan.findUniqueOrThrow({ where: { id: i.planId } });
+    const lines = await renewalLines(db, tenantId, i.months);
+    await db.invoice.update({ where: { id: i.id }, data: { addons: lines as unknown as Prisma.InputJsonValue, ...splitVat(priceFor(plan.price, i.months) + linesTotal(lines), s.vatRate) } });
+  }
+}
+
+export async function ownerOf(db: Db, tenantId: string) {
   const m = await db.membership.findFirst({ where: { tenantId, status: "active", role: { key: "owner" } }, orderBy: { createdAt: "asc" }, select: { user: { select: { id: true, email: true, userName: true } } } });
   return m?.user ?? null;
 }
@@ -116,6 +151,30 @@ export async function applyPayment(db: Db, mailer: Mailer, o: { paymentId: strin
     if (p.status === "paid" || p.invoice.status === "paid") return null;
     if (p.invoice.status === "void") throw new Error("This invoice was cancelled.");
     const tenant = await tx.tenant.findUniqueOrThrow({ where: { id: p.tenantId } });
+    if (p.invoice.kind === "banner") {
+      // A home page banner: paid, it waits for Sheetal to check the picture.
+      await tx.payment.update({ where: { id: p.id }, data: { status: "paid", paidAt: now, providerRef: o.providerRef ?? p.providerRef, raw: (o.raw ?? p.raw ?? undefined) as Prisma.InputJsonValue | undefined, reviewedBy: o.reviewedBy } });
+      await tx.invoice.update({ where: { id: p.invoiceId }, data: { status: "paid", paidAt: now } });
+      await payBanners(tx, p.invoiceId, now);
+      await tx.auditLog.create({ data: { actorId: o.reviewedBy, tenantId: tenant.id, action: "billing.banner_paid", target: `${invoiceNumber(p.invoice)} · ${p.provider} · Rs. ${p.amount}` } });
+      return { p, tenant, end: tenant.renewsAt ?? now };
+    }
+    if (p.invoice.kind === "boost") {
+      // Boosts on the website: they start on their dates; the plan stays as it is.
+      await tx.payment.update({ where: { id: p.id }, data: { status: "paid", paidAt: now, providerRef: o.providerRef ?? p.providerRef, raw: (o.raw ?? p.raw ?? undefined) as Prisma.InputJsonValue | undefined, reviewedBy: o.reviewedBy } });
+      await tx.invoice.update({ where: { id: p.invoiceId }, data: { status: "paid", paidAt: now } });
+      await activateBoosts(tx, p.invoiceId, now);
+      await tx.auditLog.create({ data: { actorId: o.reviewedBy, tenantId: tenant.id, action: "billing.boost_paid", target: `${invoiceNumber(p.invoice)} · ${p.provider} · Rs. ${p.amount}` } });
+      return { p, tenant, end: tenant.renewsAt ?? now };
+    }
+    if (p.invoice.kind === "addon") {
+      // Add-ons bought for the rest of the period: the plan and its dates stay as they are.
+      await tx.payment.update({ where: { id: p.id }, data: { status: "paid", paidAt: now, providerRef: o.providerRef ?? p.providerRef, raw: (o.raw ?? p.raw ?? undefined) as Prisma.InputJsonValue | undefined, reviewedBy: o.reviewedBy } });
+      await tx.invoice.update({ where: { id: p.invoiceId }, data: { status: "paid", paidAt: now } });
+      await applyAddonLines(tx, tenant.id, "addon", p.invoice.addons as unknown as AddonLine[]);
+      await tx.auditLog.create({ data: { actorId: o.reviewedBy, tenantId: tenant.id, action: "billing.addons_paid", target: `${invoiceNumber(p.invoice)} · ${p.provider} · Rs. ${p.amount}` } });
+      return { p, tenant, end: tenant.renewsAt ?? now };
+    }
     const { start, end } = periodFor(tenant, p.invoice.planId, p.invoice.months, now);
     await tx.payment.update({ where: { id: p.id }, data: { status: "paid", paidAt: now, providerRef: o.providerRef ?? p.providerRef, raw: (o.raw ?? p.raw ?? undefined) as Prisma.InputJsonValue | undefined, reviewedBy: o.reviewedBy } });
     await tx.invoice.update({ where: { id: p.invoiceId }, data: { status: "paid", paidAt: now, periodStart: start, periodEnd: end } });
@@ -123,18 +182,34 @@ export async function applyPayment(db: Db, mailer: Mailer, o: { paymentId: strin
     // Its own bill now: it stops being covered by another business; businesses it covers follow its new plan.
     if (tenant.coveredById) await tx.tenant.update({ where: { id: tenant.id }, data: { coveredById: null } });
     await syncCovered(tx, tenant.id);
+    // Add-ons follow the plan: the ones kept renew with it; on another plan they end.
+    if (tenant.planId === p.invoice.planId) await applyAddonLines(tx, tenant.id, "plan", p.invoice.addons as unknown as AddonLine[]);
+    else await endAddons(tx, tenant.id);
     await tx.auditLog.create({ data: { actorId: o.reviewedBy, tenantId: tenant.id, action: "billing.paid", target: `${invoiceNumber(p.invoice)} · ${p.provider} · Rs. ${p.amount}` } });
     return { p, tenant, end };
   });
   if (!done) return false;
+  if (done.p.invoice.kind === "addon") await repriceOpenPlanInvoices(db, done.tenant.id);
   const plan = await db.plan.findUnique({ where: { id: done.p.invoice.planId } });
   const owner = await ownerOf(db, done.tenant.id);
   const to = owner?.email ?? done.tenant.email;
   const number = invoiceNumber(done.p.invoice);
+  if (done.p.invoice.kind === "banner") {
+    if (to) await mailer.send({ to, subject: `Payment received: ${number}`, text: `Namaste ${owner?.userName ?? done.tenant.name},\n\nWe received Rs. ${done.p.amount.toLocaleString("en-IN")} for your home page banner. Sheetal checks the picture (usually within a working day); it then shows on its dates by itself.\n\n${o.siteUrl.replace(/\/$/, "")}/business/promote/banner\n\nSheetal Property`, template: { key: "payment_banner", vars: { name: owner?.userName ?? done.tenant.name, amount: done.p.amount.toLocaleString("en-IN"), number, link: `${o.siteUrl.replace(/\/$/, "")}/business/promote/banner` } } });
+    await notify(db, [owner?.id, done.p.userId], { tenantId: done.tenant.id, type: "billing", title: `Banner paid: ${number}`, message: "Sheetal checks the picture next.", link: "/business/promote/banner" });
+    await notifyStaff(db, "plans.manage", { type: "promote", title: `Banner picture to check: ${done.tenant.name}`, message: number, link: "/admin/promote" });
+    return true;
+  }
+  if (done.p.invoice.kind === "boost") {
+    if (to) await mailer.send({ to, subject: `Payment received: ${number}`, text: `Namaste ${owner?.userName ?? done.tenant.name},\n\nWe received Rs. ${done.p.amount.toLocaleString("en-IN")} for your boost. It runs on its dates by itself; see how it does in Business → Promote.\n\n${o.siteUrl.replace(/\/$/, "")}/business/promote\n\nSheetal Property`, template: { key: "payment_boost", vars: { name: owner?.userName ?? done.tenant.name, amount: done.p.amount.toLocaleString("en-IN"), number, link: `${o.siteUrl.replace(/\/$/, "")}/business/promote` } } });
+    await notify(db, [owner?.id, done.p.userId], { tenantId: done.tenant.id, type: "billing", title: `Boost paid: ${number}`, message: "It runs on its dates by itself.", link: "/business/promote" });
+    return true;
+  }
   if (to) {
     await mailer.send({
       to, subject: `Payment received: ${number}`,
-      text: `Namaste ${owner?.userName ?? done.tenant.name},\n\nWe received Rs. ${done.p.amount.toLocaleString("en-IN")} for ${plan?.name ?? "your plan"} (${done.p.invoice.months} month${done.p.invoice.months > 1 ? "s" : ""}). ${done.tenant.name} is paid until ${day(done.end)}.\n\nInvoice ${number}: ${o.siteUrl.replace(/\/$/, "")}/business/billing\n\nSheetal Property`,
+      text: `Namaste ${owner?.userName ?? done.tenant.name},\n\nWe received Rs. ${done.p.amount.toLocaleString("en-IN")} for ${done.p.invoice.kind === "addon" ? "add-ons" : `${plan?.name ?? "your plan"} (${done.p.invoice.months} month${done.p.invoice.months > 1 ? "s" : ""})`}. ${done.tenant.name} is paid until ${day(done.end)}.\n\nInvoice ${number}: ${o.siteUrl.replace(/\/$/, "")}/business/billing\n\nSheetal Property`,
+      template: { key: "payment_plan", vars: { name: owner?.userName ?? done.tenant.name, amount: done.p.amount.toLocaleString("en-IN"), what: done.p.invoice.kind === "addon" ? "add-ons" : `${plan?.name ?? "your plan"} (${done.p.invoice.months} month${done.p.invoice.months > 1 ? "s" : ""})`, business: done.tenant.name, until: day(done.end), number, link: `${o.siteUrl.replace(/\/$/, "")}/business/billing` } },
     });
   }
   await notify(db, [owner?.id], { tenantId: done.tenant.id, type: "billing", title: `Payment received: ${number}`, message: `Paid until ${day(done.end)}`, link: "/business/billing" });
@@ -151,15 +226,15 @@ export async function runBillingCycle(db: Db, mailer: Mailer, o: { siteUrl: stri
   const now = o.now ?? new Date();
   const s = await billingSettings(db);
   const site = o.siteUrl.replace(/\/$/, "");
-  const out = { reminded: 0, pastDue: 0, downgraded: 0 };
+  const out = { reminded: 0, pastDue: 0, downgraded: 0, trialsEnded: 0 };
   const tenants = await db.tenant.findMany({ where: { renewsAt: { not: null }, status: { in: ["active", "trial", "past_due"] }, plan: { price: { gt: 0 } } }, include: { plan: true } });
 
   for (const t of tenants) {
     const renews = t.renewsAt!;
     const owner = await ownerOf(db, t.id);
     const to = owner?.email ?? t.email;
-    const tell = async (subject: string, text: string, title: string) => {
-      if (to) await mailer.send({ to, subject, text: `Namaste ${owner?.userName ?? t.name},\n\n${text}\n\n${site}/business/billing\n\nSheetal Property` });
+    const tell = async (subject: string, text: string, title: string, tpl?: { key: string; vars: Record<string, string> }) => {
+      if (to) await mailer.send({ to, subject, text: `Namaste ${owner?.userName ?? t.name},\n\n${text}\n\n${site}/business/billing\n\nSheetal Property`, template: tpl && { key: tpl.key, vars: { name: owner?.userName ?? t.name, business: t.name, link: `${site}/business/billing`, ...tpl.vars } } });
       await notify(db, [owner?.id], { tenantId: t.id, type: "billing", title, link: "/business/billing" });
     };
 
@@ -169,14 +244,28 @@ export async function runBillingCycle(db: Db, mailer: Mailer, o: { siteUrl: stri
       const key = due !== undefined ? `${day(renews)}:${due}` : null;
       if (key && t.remindedFor !== key) {
         // A renewal invoice for the same plan and period, made once.
-        const open = await db.invoice.findFirst({ where: { tenantId: t.id, status: "open", planId: t.planId } });
+        const open = await db.invoice.findFirst({ where: { tenantId: t.id, status: "open", planId: t.planId, kind: "plan" } });
         if (!open) await createInvoice(db, { tenant: t, plan: t.plan, months: t.period, vatRate: s.vatRate, dueInDays: daysLeft, now });
         await db.tenant.update({ where: { id: t.id }, data: { remindedFor: key } });
         await tell(`${t.name}: ${t.plan.name} renews in ${daysLeft} day${daysLeft > 1 ? "s" : ""}`,
           `${t.name}'s ${t.plan.name} plan is paid until ${day(renews)}. The renewal invoice is ready; pay it by eSewa, Khalti, Fonepay or bank transfer to keep everything running.`,
-          `${t.plan.name} renews in ${daysLeft} day${daysLeft > 1 ? "s" : ""}`);
+          `${t.plan.name} renews in ${daysLeft} day${daysLeft > 1 ? "s" : ""}`, { key: "plan_renews", vars: { plan: t.plan.name, in: `${daysLeft} day${daysLeft > 1 ? "s" : ""}`, until: day(renews) } });
         out.reminded++;
       }
+      continue;
+    }
+
+    // A free trial that ends unpaid moves straight to Starter: no grace period, no unpaid invoice left behind.
+    if (t.status === "trial" && renews <= now) {
+      await db.$transaction([
+        db.tenant.update({ where: { id: t.id }, data: { planId: starterPlanId(t.type as BusinessType), status: "active", period: 1, renewsAt: null, graceUntil: null, remindedFor: null } }),
+        db.invoice.updateMany({ where: { tenantId: t.id, status: "open" }, data: { status: "void" } }),
+        endAddons(db, t.id),
+        db.auditLog.create({ data: { tenantId: t.id, action: "billing.trial_ended", target: t.name } }),
+      ]);
+      await syncCovered(db, t.id);
+      await tell(`${t.name}: free trial ended`, `${t.name}'s free trial of ${t.plan.name} ended on ${day(renews)}, so the business is on the free Starter plan now. Your listings and data stay; Starter's limits apply to anything new. Choose a plan any time to get everything back.`, "Your free trial has ended");
+      out.trialsEnded++;
       continue;
     }
 
@@ -184,19 +273,20 @@ export async function runBillingCycle(db: Db, mailer: Mailer, o: { siteUrl: stri
       const graceUntil = new Date(renews.getTime() + s.graceDays * 864e5);
       await db.tenant.update({ where: { id: t.id }, data: { status: "past_due", graceUntil } });
       await db.auditLog.create({ data: { tenantId: t.id, action: "billing.past_due", target: t.name } });
-      await tell(`${t.name}: payment due`, `${t.name}'s ${t.plan.name} plan ended on ${day(renews)}. Everything keeps working until ${day(graceUntil)}; after that the business moves to the free Starter plan.`, "Your plan payment is due");
+      await tell(`${t.name}: payment due`, `${t.name}'s ${t.plan.name} plan ended on ${day(renews)}. Everything keeps working until ${day(graceUntil)}; after that the business moves to the free Starter plan.`, "Your plan payment is due", { key: "plan_past_due", vars: { plan: t.plan.name, until: day(renews), date: day(graceUntil) } });
       out.pastDue++;
       continue;
     }
 
-    if (t.status === "past_due" && t.graceUntil && t.graceUntil <= now) {
+    if (s.autoSuspend && t.status === "past_due" && t.graceUntil && t.graceUntil <= now) {
       await db.$transaction([
         db.tenant.update({ where: { id: t.id }, data: { planId: starterPlanId(t.type as BusinessType), status: "active", period: 1, renewsAt: null, graceUntil: null, remindedFor: null } }),
         db.invoice.updateMany({ where: { tenantId: t.id, status: "open" }, data: { status: "void" } }),
+        endAddons(db, t.id),
         db.auditLog.create({ data: { tenantId: t.id, action: "billing.moved_to_starter", target: t.name } }),
       ]);
       await syncCovered(db, t.id);
-      await tell(`${t.name} is now on Starter`, `The ${t.plan.name} plan wasn't renewed, so ${t.name} is on the free Starter plan now. Your listings and data stay; Starter's limits apply to anything new. Pay for a plan any time to get everything back.`, "Moved to the free Starter plan");
+      await tell(`${t.name} is now on Starter`, `The ${t.plan.name} plan wasn't renewed, so ${t.name} is on the free Starter plan now. Your listings and data stay; Starter's limits apply to anything new. Pay for a plan any time to get everything back.`, "Moved to the free Starter plan", { key: "plan_to_starter", vars: { plan: t.plan.name } });
       out.downgraded++;
     }
   }

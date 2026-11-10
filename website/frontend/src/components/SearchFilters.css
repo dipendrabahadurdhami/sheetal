@@ -1,0 +1,103 @@
+/* Search filters (components/SearchFilters.jsx): small, calm lists with a count beside every choice.
+   Own class names (sf-), so none of the older .filters rules in theme.css apply. */
+.sfilters { position: sticky; top: calc(var(--header-h) + 16px); align-self: start; max-height: calc(100vh - var(--header-h) - 32px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; padding: 0 8px 20px 0; display: flex; flex-direction: column; gap: 20px; font-size: 14px; }
+.sfilters::-webkit-scrollbar { width: 6px; }
+.sfilters::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 3px; }
+.sf-top { position: sticky; top: 0; z-index: 2; background: var(--bg); padding-bottom: 4px; display: flex; flex-direction: column; gap: 6px; }
+.sf-search { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 8px 0 12px; border: 1px solid var(--line-strong); border-radius: var(--r-md); background: var(--card, #fff); color: var(--muted); transition: border-color .15s, box-shadow .15s; }
+.sf-search:focus-within { border-color: var(--c-red, var(--accent)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-red, var(--accent)) 14%, transparent); }
+.sf-search input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: none; font: inherit; font-size: 14px; color: var(--text-strong); }
+.sf-x { display: grid; place-items: center; flex: none; width: 22px; height: 22px; border: 0; border-radius: 50%; background: var(--surface); color: var(--muted); cursor: pointer; }
+.sf-x:hover { color: var(--text-strong); }
+.sf-clear { align-self: flex-end; border: 0; background: none; padding: 0; font: inherit; font-size: 13px; color: var(--c-red, var(--accent)); cursor: pointer; }
+.sf-clear:hover { text-decoration: underline; }
+.sf-g { display: flex; flex-direction: column; gap: 4px; }
+.sf-h { display: flex; align-items: center; gap: 10px; margin: 0 0 4px; font-size: 13.5px; font-weight: 600; color: var(--text-strong); }
+.sf-h::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.sf-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.sf-row { display: flex; align-items: center; gap: 10px; min-height: 30px; padding: 0 6px; margin: 0 -6px; border-radius: var(--r-sm); cursor: pointer; color: var(--text); user-select: none; }
+.sf-row:hover { background: var(--surface); }
+.sf-row input { flex: none; width: 16px; height: 16px; margin: 0; accent-color: var(--c-red, var(--accent)); cursor: pointer; }
+.sf-row.on { color: var(--text-strong); font-weight: 500; }
+.sf-row.none { color: var(--muted); }
+.sf-l { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sf-n { flex: none; font-size: 12.5px; color: var(--muted); }
+.sf-more { align-self: flex-start; margin-top: 2px; padding: 2px 0; border: 0; background: none; font: inherit; font-size: 13px; color: var(--c-red, var(--accent)); cursor: pointer; }
+.sf-more:hover { text-decoration: underline; }
+.sf-price { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 6px; }
+.sf-price input { width: 100%; min-width: 0; height: 36px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: var(--card, #fff); font: inherit; font-size: 13.5px; color: var(--text-strong); }
+.sf-price input:focus { outline: 0; border-color: var(--c-red, var(--accent)); }
+@media (max-width: 1080px) {
+  .sfilters { position: static; max-height: none; overflow: visible; padding: 0 0 16px; }
+  .sf-top { position: static; }
+}
+
+/* The search input sits inside .sf-search, which draws the only border; the site's general input style is switched off here. */
+.sfilters .sf-search input, .sfilters .sf-search input:hover, .sfilters .sf-search input:focus, .sfilters .sf-search input:focus-visible {
+  border: 0 !important; outline: 0 !important; box-shadow: none !important; background: transparent !important;
+  border-radius: 0 !important; padding: 0 !important; margin: 0 !important; height: 100% !important; min-height: 0 !important;
+}
+
+/* One sticky line: the search box (left) and the toolbar (right) share a top edge and a height of 40px, and stay
+   under the header together; the filter panel only scrolls away when the footer arrives. */
+.listing-layout { align-items: start !important; }
+.listing-layout > .sfilters { top: calc(var(--header-h) + 16px) !important; max-height: calc(100vh - var(--header-h) - 32px) !important; }
+.listing-layout > section > .toolbar {
+  position: sticky !important; top: calc(var(--header-h) + 16px) !important; z-index: 5; transform: none !important;
+  display: flex !important; align-items: center !important; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  min-height: 40px; margin: 0 0 16px !important; padding: 0 0 12px !important; background: var(--bg); box-shadow: 0 1px 0 var(--line);
+}
+.listing-layout > section > .toolbar > .row { align-items: center !important; gap: 8px !important; }
+.listing-layout .toolbar .search-tabs-row { margin: 0 !important; padding: 0 !important; }
+.listing-layout .toolbar .hx-tabs { height: 40px !important; margin: 0 !important; padding: 3px !important; box-sizing: border-box; align-items: stretch; }
+.listing-layout .toolbar .hx-tabs a { display: flex !important; align-items: center; height: auto !important; min-height: 0 !important; padding: 0 14px !important; font-size: 14px !important; }
+.listing-layout .toolbar .btn, .listing-layout .toolbar .dd-btn { height: 40px !important; min-height: 40px !important; padding-top: 0 !important; padding-bottom: 0 !important; font-size: 14px !important; box-sizing: border-box; }
+.listing-layout .toolbar .seg { height: 40px !important; padding: 3px !important; box-sizing: border-box; }
+.listing-layout .toolbar .seg button { height: 100% !important; min-height: 0 !important; width: 36px; padding: 0 !important; }
+@media (max-width: 1080px) {
+  .listing-layout > section > .toolbar { top: var(--header-h) !important; padding-top: 8px !important; }
+}
+
+/* No scroll bar on the filter panel: it still scrolls (wheel, touchpad, finger); a soft fade at the bottom shows
+   there is more below. */
+.sfilters, .listing-layout > .sfilters { scrollbar-width: none !important; -ms-overflow-style: none; }
+.sfilters::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
+.sfilters::after { content: ""; position: sticky; bottom: 0; flex: none; display: block; height: 36px; margin-top: -36px; pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--bg)); }
+@media (max-width: 1080px) { .sfilters::after { display: none; } }
+
+/* The sticky toolbar's background starts right under the header (no gap where cards show through), with a soft
+   frosted blur; its controls still line up with the search box on the left. */
+@media (min-width: 1081px) {
+  .listing-layout > section > .toolbar {
+    top: var(--header-h) !important; padding-top: 16px !important; margin-top: -16px !important;
+    background: color-mix(in srgb, var(--bg) 86%, transparent) !important;
+    -webkit-backdrop-filter: saturate(1.4) blur(12px); backdrop-filter: saturate(1.4) blur(12px);
+  }
+}
+
+/* The groups keep their full height, so the panel scrolls instead of squeezing them. */
+.sfilters > * { flex-shrink: 0 !important; }
+.sfilters { overflow-y: auto !important; overscroll-behavior: contain; }
+
+/* Final layout: only the search box is sticky (with the same frosted blur as the toolbar on the right); the filter
+   lists scroll with the page and slide up under it. No inner scrolling, no fade. */
+@media (min-width: 1081px) {
+  .listing-layout > .sfilters, .sfilters {
+    position: static !important; top: auto !important; max-height: none !important; overflow: visible !important;
+    align-self: stretch !important; padding-bottom: 24px !important;
+  }
+  .sfilters::after { display: none !important; }
+  .sfilters .sf-top {
+    position: sticky !important; top: var(--header-h) !important; z-index: 6;
+    padding-top: 16px !important; margin-top: -16px !important; padding-bottom: 12px !important;
+    background: color-mix(in srgb, var(--bg) 86%, transparent) !important;
+    -webkit-backdrop-filter: saturate(1.4) blur(12px); backdrop-filter: saturate(1.4) blur(12px);
+  }
+}
+
+/* The filter lists stay put under the search box while the listings scroll, and only move up when the end of the
+   list (page buttons, footer) arrives. */
+@media (min-width: 1081px) {
+  .sfilters .sf-body { position: sticky; top: calc(var(--header-h) + 68px); display: flex; flex-direction: column; gap: 20px; }
+}

@@ -2,10 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { useSEO } from "../utils/seo";
-import { FGroup, FScroll, Opts, PriceRange, useGroups } from "../components/FilterPanel";
+import { FilterRail, PRICE_RANGES } from "../components/SearchFilters";
 import { SearchTabs } from "../components/SearchTabs";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { LayoutGrid, List, SlidersHorizontal, X, Search, MapPin, Star, BedDouble, Building2, TrendingUp } from "lucide-react";
+import { LayoutGrid, List, SlidersHorizontal, X, MapPin, Star, BedDouble, Building2, TrendingUp } from "lucide-react";
 import { InviteCards } from "../components/InviteCards";
 import { useMedia } from "../hooks/useAsync";
 import { PageHead, Empty } from "../components/ui";
@@ -87,7 +87,6 @@ function Inner({ kind }) {
   const [params, setParams] = useSearchParams();
   const [layout, setLayout] = useState("grid");
   const [showFilters, setShowFilters] = useState(false);
-  const g = useGroups(["type", "city", "price"]);
   const wide = useMedia("(min-width: 1081px)");
   const cat = useCatalog();
   const q = Object.fromEntries(params);
@@ -103,27 +102,31 @@ function Inner({ kind }) {
   const active = ["keyword", "type", "status", "min_price", "max_price", ...EXTRA[kind].map((f) => f.k)].filter((k) => q[k]);
   const trip = kind === "stay" && q.from ? `?${new URLSearchParams(Object.fromEntries(["from", "to", "guests"].filter((k) => q[k]).map((k) => [k, q[k]])))}` : "";
   const flip = (k, v) => { const cur = (q[k] || "").split("|").filter(Boolean); set(k, (cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v]).join("|")); };
+  // The same filter panel as Buy and Rent (components/SearchFilters.jsx). Counts beside every choice: each list
+  // counts what matches all the other filters, so picking one choice never empties the rest of its list.
+  const match = (x, except) => (except === "keyword" || !kw || `${x.name} ${x.city} ${x.area}`.toLowerCase().includes(kw))
+    && (except === "type" || !q.type || String(x.type).toLowerCase() === q.type.toLowerCase())
+    && (except === "status" || !q.status || x.status === q.status)
+    && (except === "price" || ((!q.min_price || x.price >= Number(q.min_price)) && (!q.max_price || x.price <= Number(q.max_price))))
+    && EXTRA[kind].every((f) => except === f.k || !q[f.k] || f.test(x.raw, q[f.k]));
+  const countBy = (except, test) => all.filter((x) => match(x, except) && test(x)).length;
+  const same = (a, b) => String(a || "").toLowerCase() === String(b || "").toLowerCase();
+  const types = [...new Set([...meta.types, ...all.map((x) => x.type).filter(Boolean)])];
+  const goTo = useNavigate();
+  const PURPOSE_PAGES = { sale: "/sale", rent: "/rent", stay: "/stays", project: "/project", invest: "/investment/explore" };
+  const setMany = (o) => { const n = new URLSearchParams(params); for (const [k, v] of Object.entries(o)) v ? n.set(k, v) : n.delete(k); setParams(n); };
   const filters = (
-    <aside className="filters" key={params.toString()}>
-      <div className="field filter-kw"><Search size={16} className="filter-kw-ico" />
-        <input className="input" aria-label="Keyword" placeholder={kind === "stay" ? "Where are you going?" : "Name, area or city"} defaultValue={q.keyword || ""}
-          onKeyDown={(e) => e.key === "Enter" && set("keyword", e.currentTarget.value)} onBlur={(e) => e.currentTarget.value !== (q.keyword || "") && set("keyword", e.currentTarget.value)} /></div>
-      <FScroll><div className="fx-list">
-        <FGroup label="Type" count={q.type ? 1 : 0} open={g.isOpen("type") || !!q.type} onToggle={() => g.toggle("type")}>
-          <Opts options={[["", "Any type"], ...meta.types.map((t) => [t, t])]} value={q.type} onPick={(v) => set("type", v)} /></FGroup>
-        {meta.statuses && <FGroup label="Status" count={q.status ? 1 : 0} open={g.isOpen("status") || !!q.status} onToggle={() => g.toggle("status")}>
-          <Opts options={[["", "All"], ...meta.statuses.map((v) => [v, v])]} value={q.status} onPick={(v) => set("status", v)} /></FGroup>}
-        <FGroup label="City" count={cities.includes(q.keyword) ? 1 : 0} open={g.isOpen("city") || cities.includes(q.keyword)} onToggle={() => g.toggle("city")}>
-          <Opts options={[["", "All cities"], ...cities.map((c) => [c, c])]} value={cities.includes(q.keyword) ? q.keyword : ""} onPick={(v) => set("keyword", v)} /></FGroup>
-        <FGroup label={kind === "stay" ? "Price per night (Rs.)" : kind === "invest" ? "Minimum amount (Rs.)" : "Price (Rs.)"} count={(q.min_price ? 1 : 0) + (q.max_price ? 1 : 0)} open={g.isOpen("price") || !!(q.min_price || q.max_price)} onToggle={() => g.toggle("price")}>
-          <PriceRange min={q.min_price} max={q.max_price} onMin={(v) => set("min_price", v)} onMax={(v) => set("max_price", v)} /></FGroup>
-        {EXTRA[kind].map((f) => { const vals = (q[f.k] || "").split("|").filter(Boolean); return (
-          <FGroup key={f.k} label={f.label} count={f.seg ? (q[f.k] ? 1 : 0) : vals.length} open={g.isOpen(f.k) || !!q[f.k]} onToggle={() => g.toggle(f.k)}>
-            {f.seg ? <Opts options={f.seg} value={q[f.k]} onPick={(v) => set(f.k, v)} /> : <Opts multi options={f.multi.map((v) => [v, v])} value={vals} onPick={(v) => flip(f.k, v)} />}
-          </FGroup>); })}
-      </div></FScroll>
-      {active.length > 0 && <div className="fx-foot"><button className="btn btn-outline btn-block" onClick={() => setParams({})}><X size={15} /> Clear filters ({active.length})</button></div>}
-    </aside>
+    <FilterRail placeholder={kind === "stay" ? "Where are you going?" : "Name, area or city"} keyword={q.keyword || ""} onKeyword={(v) => set("keyword", v)}
+      active={active.length} onClear={() => setParams({})} groups={[
+        { title: "Purpose", options: [["sale", "Buy"], ["rent", "Rent"], ["stay", "Stay"], ["project", "Projects"], ["invest", "Invest"]].map(([v, l]) => [v, l, null]), value: kind, onPick: (v) => goTo(v ? PURPOSE_PAGES[v] : "/search") },
+        { title: "Type", options: types.map((t) => [t, t, countBy("type", (x) => same(x.type, t))]), value: q.type || "", onPick: (v) => set("type", v) },
+        meta.statuses && { title: "Status", options: meta.statuses.map((s) => [s, s, countBy("status", (x) => x.status === s)]), value: q.status || "", onPick: (v) => set("status", v) },
+        cities.length > 0 && { title: "City", limit: 8, options: cities.map((c) => [c, c, countBy("keyword", (x) => same(x.city, c))]), value: cities.includes(q.keyword) ? q.keyword : "", onPick: (v) => set("keyword", v) },
+        { title: kind === "stay" ? "Price per night (Rs.)" : kind === "invest" ? "Minimum amount (Rs.)" : "Price (Rs.)", price: { min: q.min_price || "", max: q.max_price || "", ranges: PRICE_RANGES[kind], onRange: (a, b) => setMany({ min_price: a, max_price: b }) } },
+        ...EXTRA[kind].map((f) => (f.seg
+          ? { title: f.label, options: f.seg.filter(([v]) => v).map(([v, l]) => [v, l, countBy(f.k, (x) => f.test(x.raw, v))]), value: q[f.k] || "", onPick: (v) => set(f.k, v) }
+          : { title: f.label, multi: true, options: f.multi.map((v) => [v, v, countBy(f.k, (x) => f.test(x.raw, v))]), value: (q[f.k] || "").split("|").filter(Boolean), onPick: (v) => flip(f.k, v) })),
+      ]} />
   );
   return (
     <>

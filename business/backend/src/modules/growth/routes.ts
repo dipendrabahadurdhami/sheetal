@@ -11,7 +11,8 @@ import { z } from "zod";
 import { dbOf } from "@sheetal/backend-core/lib/db";
 import { AppError, badRequest, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
 import { Vault } from "@sheetal/backend-core/lib/vault";
-import { aiClient, creditsUsed, extractLeads, type AiClient } from "@sheetal/backend-core/lib/ai";
+import { aiFor, creditsUsed, extractLeads, type AiClient } from "@sheetal/backend-core/lib/ai";
+import { requireAiFeature } from "@sheetal/backend-core/domain/ai-features";
 import { buildIcal } from "@sheetal/backend-core/lib/ical";
 import { metaSignatureOk, readMetaWebhook } from "@sheetal/backend-core/lib/meta";
 import { leadPeople, notify } from "@sheetal/backend-core/lib/notify";
@@ -21,21 +22,23 @@ import type { Fetch } from "@sheetal/backend-core/lib/payments";
 import { branchFor, branchView, inView, workspaceOf, type Workspace } from "../access.js";
 import { headOffice } from "@sheetal/backend-core/domain/branches";
 
-type Ai = { client: AiClient; model: string; credits: Record<string, number> };
+type Ai = { client: AiClient; model: string; credits: Record<string, number>; own?: boolean; cap?: number };
 const SITES = ["booking", "airbnb", "agoda", "expedia", "other"] as const;
 
 export async function growthRoutes(app: FastifyInstance, opts: { ai?: Ai; fetch?: Fetch }) {
   const db = () => dbOf(app);
   const vault = new Vault(app.config.SECRETS_KEY, app.config.NODE_ENV === "production");
   const need = (ws: Workspace, ...perms: string[]) => { if (!perms.some(ws.can)) throw forbidden("Your role can't do this."); };
-  const ai = async () => opts.ai ?? (await aiClient(db(), vault));
+  // The business's own AI key when it saved one, else Sheetal's.
+  const ai = async (ws: Workspace) => opts.ai ?? (await aiFor(db(), vault, ws.tenantId));
 
   // ───── AI: leads from pasted text ─────
   app.post("/ai/extract-leads", { bodyLimit: 300_000, config: { rateLimit: { max: 30, timeWindow: "1 hour" } } }, async (request) => {
     const ws = workspaceOf(request);
     need(ws, "leads.view", "messages.reply");
     const b = z.object({ text: z.string().trim().min(20, "Paste a bit more text.").max(60_000, "That's too long; paste up to about 10 pages at a time."), save: z.boolean().default(false) }).parse(request.body);
-    const a = await ai();
+    await requireAiFeature(db(), ws.member.tenant.plan.name, "lead_finder");
+    const a = await ai(ws);
     if (!a) throw new AppError(503, "ai_off", "AI isn't switched on yet. Sheetal is setting it up.");
     const r = await extractLeads(db(), a, { text: b.text, tenantId: ws.tenantId, planName: ws.member.tenant.plan.name, userId: ws.user.id });
     let saved = 0;
@@ -52,9 +55,9 @@ export async function growthRoutes(app: FastifyInstance, opts: { ai?: Ai; fetch?
 
   app.get("/ai/usage", async (request) => {
     const ws = workspaceOf(request);
-    const a = await ai();
-    const limit = a?.credits[ws.member.tenant.plan.name] ?? 0;
-    return { data: { enabled: !!a, used: await creditsUsed(db(), ws.tenantId), limit } };
+    const a = await ai(ws);
+    const limit = a?.own ? (a.cap || -1) : (a?.credits[ws.member.tenant.plan.name] ?? 0);
+    return { data: { enabled: !!a, own: !!a?.own, used: await creditsUsed(db(), ws.tenantId, new Date(), !!a?.own), limit } };
   });
 
   // ───── Analytics ─────

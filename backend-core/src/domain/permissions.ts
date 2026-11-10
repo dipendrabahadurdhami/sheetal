@@ -17,8 +17,11 @@ export const BUSINESS_PERMS: PermGroup[] = [
   { module: "projects", types: ["developer"], perms: ["projects.manage", "progress.post", "visits.manage", "reservations.manage"] },
   { module: "collect", types: ["developer", "agency"], perms: ["collect.payments", "collect.refund"] },
   { module: "listings", types: ["agency"], perms: ["listings.manage", "leads.view", "leads.assign", "viewings.manage"] },
+  { module: "rentals", types: ["agency"], perms: ["rentals.view", "rentals.manage"] },
   { module: "investments", types: ["sponsor"], perms: ["investments.manage", "investors.view", "updates.post"] },
-  { module: "money", types: "all", perms: ["invoices.view", "invoices.create", "payouts.view"] },
+  { module: "agreements", types: "all", perms: ["agreements.manage"] },
+  { module: "people", types: "all", perms: ["people.view", "people.manage"] },
+  { module: "money", types: "all", perms: ["invoices.view", "invoices.create", "payouts.view", "expenses.view", "expenses.manage"] },
   { module: "customers", types: "all", perms: ["customers.view", "messages.reply", "reviews.reply"] },
   { module: "admin", types: "all", perms: ["team.view", "team.manage", "roles.manage", "settings.business", "billing.manage"] },
 ];
@@ -43,7 +46,7 @@ const TEMPLATES: Record<BusinessType, [string, string[] | null][]> = {
     ["frontdesk", ["overview.view", "bookings.view", "bookings.create", "bookings.edit", "calendar.view", "pos.frontdesk", "pos.extras", "shift.close", "customers.view", "messages.reply"]],
     ["cashier", ["pos.restaurant", "pos.extras", "shift.close"]],
     ["housekeeping", ["calendar.view"]],
-    ["accountant", ["overview.view", "bookings.view", "invoices.view", "invoices.create", "payouts.view"]],
+    ["accountant", ["overview.view", "bookings.view", "invoices.view", "invoices.create", "payouts.view", "expenses.view", "expenses.manage"]],
   ],
   host: [
     ["owner", ["*"]],
@@ -52,21 +55,21 @@ const TEMPLATES: Record<BusinessType, [string, string[] | null][]> = {
   ],
   developer: [
     ["owner", ["*"]],
-    ["sales_manager", ["overview.view", "projects.manage", "visits.manage", "reservations.manage", "collect.payments", "customers.view", "messages.reply", "team.view", "invoices.view"]],
+    ["sales_manager", ["overview.view", "projects.manage", "visits.manage", "reservations.manage", "collect.payments", "customers.view", "messages.reply", "team.view", "invoices.view", "agreements.manage", "people.view", "people.manage"]],
     ["sales_exec", ["visits.manage", "reservations.manage", "customers.view", "messages.reply"]],
     ["site_engineer", ["progress.post"]],
-    ["accountant", ["overview.view", "collect.payments", "collect.refund", "invoices.view", "invoices.create", "payouts.view"]],
+    ["accountant", ["overview.view", "collect.payments", "collect.refund", "invoices.view", "invoices.create", "payouts.view", "expenses.view", "expenses.manage"]],
   ],
   agency: [
     ["owner", ["*"]],
-    ["branch_manager", ["overview.view", "listings.manage", "leads.view", "leads.assign", "viewings.manage", "collect.payments", "customers.view", "messages.reply", "reviews.reply", "team.view"]],
+    ["branch_manager", ["overview.view", "listings.manage", "leads.view", "leads.assign", "viewings.manage", "collect.payments", "customers.view", "messages.reply", "reviews.reply", "team.view", "expenses.view", "expenses.manage", "rentals.view", "rentals.manage", "agreements.manage", "people.view", "people.manage"]],
     ["agent", ["listings.manage", "leads.view", "viewings.manage", "messages.reply"]],
-    ["accountant", ["overview.view", "collect.payments", "invoices.view", "invoices.create", "payouts.view"]],
+    ["accountant", ["overview.view", "collect.payments", "invoices.view", "invoices.create", "payouts.view", "expenses.view", "expenses.manage", "rentals.view", "rentals.manage"]],
   ],
   sponsor: [
     ["owner", ["*"]],
     ["investor_relations", ["overview.view", "investors.view", "updates.post", "messages.reply"]],
-    ["accountant", ["overview.view", "invoices.view", "payouts.view"]],
+    ["accountant", ["overview.view", "invoices.view", "payouts.view", "expenses.view", "expenses.manage"]],
   ],
 };
 

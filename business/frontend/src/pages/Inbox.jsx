@@ -1,6 +1,7 @@
 // The Inbox: one place for every conversation, each also a lead in the pipeline.
 // How it works: signed in, conversations are the business's leads (website enquiries, chat channels, the lead finder)
-// for the branches in view; stage, assignee and follow-up changes and replies go to the business API.
+// for the branches in view; stage, assignee and follow-up changes and replies go to the business API. Online-form
+// leads show their form, and requirement forms the listings that matched. "Make agreement" starts one from the lead.
 
 import React, { useState } from "react";
 import { DataActions } from "@sheetal/shared/components/DataIO";
@@ -96,12 +97,18 @@ export function Inbox({ tenant }) {
                 <dt>{t("inbox.value")}</dt><dd className="tnum">{c.value ? rsShort(c.value) : "—"}</dd>
                 <dt>{t("inbox.listing")}</dt><dd className="tnum">{c.listing ? <a href="#" onClick={(e) => { e.preventDefault(); navigate("/business/listings"); }}>{c.listing}</a> : "—"}</dd>
                 <dt>{t("inbox.tags")}</dt><dd>{c.tags?.length ? c.tags.join(", ") : "—"}</dd>
+                {c.kind === "form" && c.details?.formTitle && <><dt>Form</dt><dd><a href="#" onClick={(e) => { e.preventDefault(); navigate("/business/forms/responses"); }}>{c.details.formTitle}</a></dd></>}
                 {c.email && <><dt>Email</dt><dd><a href={`mailto:${c.email}`}>{c.email}</a></dd></>}
                 {c.phone && <><dt>Phone</dt><dd className="tnum"><a href={`tel:${c.phone}`}>{c.phone}</a></dd></>}
               </dl>
+              {Array.isArray(c.details?.matches) && <div className="pf-stack tight">
+                <b className="pf-subhead" style={{ margin: 0 }}>Listings that match</b>
+                {c.details.matches.length ? c.details.matches.map((m) => <a key={m.id} href="#" className="small" onClick={(e) => { e.preventDefault(); navigate("/business/listings"); }}><span className="tnum">{m.code}</span> · {m.title}{m.price != null ? ` · ${rsShort(m.price)}` : ""}</a>)
+                  : <span className="small muted">None of your listings match yet.</span>}
+              </div>}
               <div className="pf-stack tight">
                 <Button variant="outline" icon="calendar-plus" onClick={() => { toast(t("inbox.toastVisit")); navigate(tenant.type === "hotel" || tenant.type === "host" ? "/business/bookings" : "/business/agreements"); }}>{t("inbox.bookVisit")}</Button>
-                <Button variant="outline" icon="file-pen-line" onClick={() => navigate("/business/agreements")}>{t("inbox.makeAgreement")}</Button>
+                <Button variant="outline" icon="file-pen-line" onClick={() => navigate(live ? `/business/agreements/new/lead/${c.id}` : "/business/agreements")}>{t("inbox.makeAgreement")}</Button>
                 <Button variant="outline" icon="link" onClick={() => toast(t("inbox.toastPayLink"))}>{t("inbox.payLink")}</Button>
               </div>
             </aside>

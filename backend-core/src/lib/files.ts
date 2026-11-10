@@ -1,4 +1,5 @@
-// Private files people send: payment proofs, CVs and business verification documents.
+// Private files people send: payment proofs, CVs, business verification documents, expense receipts and online-form
+// uploads.
 // Where it fits: saved by the website and business APIs; opened by staff through the admin API, or by the business's
 // own settings people for verification documents.
 // How it works: kept in MEDIA_DIR/private/<kind>, which is never served publicly; checked by their first bytes and
@@ -11,8 +12,8 @@ import { join } from "node:path";
 import { AppError, badRequest } from "./errors.js";
 import { photoKind } from "./photos.js";
 
-export type PrivateKind = "proofs" | "cv" | "kyc";
-const MAX = { proofs: 8 * 1024 * 1024, cv: 5 * 1024 * 1024, kyc: 10 * 1024 * 1024 };
+export type PrivateKind = "proofs" | "cv" | "kyc" | "expenses" | "forms" | "ota";
+const MAX = { proofs: 8 * 1024 * 1024, cv: 5 * 1024 * 1024, kyc: 10 * 1024 * 1024, expenses: 8 * 1024 * 1024, forms: 5 * 1024 * 1024, ota: 8 * 1024 * 1024 };
 
 const docKind = (b: Buffer) => {
   if (b.subarray(0, 5).toString("latin1") === "%PDF-") return "pdf";
@@ -31,9 +32,9 @@ export async function savePrivateFile(mediaDir: string | undefined, kind: Privat
   if (!mediaDir) throw new AppError(503, "storage_off", "File uploads aren't set up on this server yet.");
   if (data.length > MAX[kind]) throw badRequest(`Files can be up to ${MAX[kind] / 1024 / 1024} MB.`);
   const doc = docKind(data);
-  // CVs may be Word files; verification documents a PDF or a photo; payment proofs a photo.
-  const ext = photoKind(data) ?? (kind === "cv" ? doc : kind === "kyc" && doc === "pdf" ? "pdf" : null);
-  if (!ext) throw badRequest(kind === "cv" ? "Send your CV as a PDF, Word file or photo." : kind === "kyc" ? "Send the document as a PDF or a photo (JPG, PNG or WebP)." : "Send a JPG, PNG or WebP picture of the payment.");
+  // CVs may be Word files; verification documents, receipts and form uploads a PDF or a photo; payment proofs a photo.
+  const ext = photoKind(data) ?? (kind === "cv" ? doc : (kind === "kyc" || kind === "expenses" || kind === "forms" || kind === "ota") && doc === "pdf" ? "pdf" : null);
+  if (!ext) throw badRequest(kind === "cv" ? "Send your CV as a PDF, Word file or photo." : kind === "kyc" ? "Send the document as a PDF or a photo (JPG, PNG or WebP)." : kind === "expenses" ? "Send the receipt as a PDF or a photo (JPG, PNG or WebP)." : kind === "forms" || kind === "ota" ? "Send the file as a PDF or a photo (JPG, PNG or WebP)." : "Send a JPG, PNG or WebP picture of the payment.");
   const name = `${randomBytes(12).toString("base64url")}.${ext}`;
   const dir = join(mediaDir, "private", kind);
   await mkdir(dir, { recursive: true });

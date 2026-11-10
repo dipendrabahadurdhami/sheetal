@@ -4,6 +4,7 @@
 // business), lands in its head office, and waits for Sheetal's review (staff are notified).
 // Rules: plan limits apply; photos are checked to be real images; upgrade requests go to Sheetal's team.
 
+import { platformSettings } from "@sheetal/backend-core/domain/platform";
 import type { FastifyInstance } from "fastify";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -34,7 +35,8 @@ export async function postingRoutes(app: FastifyInstance) {
     const m = user.memberships.find((x) => x.status === "active" && hasPerm(x.role.perms, "listings.manage"));
     if (m) return { tenantId: m.tenantId, plan: m.tenant.plan };
     const db = dbOf(app);
-    const t = await db.$transaction((tx) => createWorkspace(tx, { ownerId: user.id, name: user.userName, type: "agency", email: user.email, phone: user.phone ?? undefined }));
+    const { trialDays } = await platformSettings(db);
+    const t = await db.$transaction((tx) => createWorkspace(tx, { ownerId: user.id, name: user.userName, type: "agency", email: user.email, phone: user.phone ?? undefined, trialDays }));
     return { tenantId: t.id, plan: (await db.plan.findUniqueOrThrow({ where: { id: t.planId } })) };
   }
 

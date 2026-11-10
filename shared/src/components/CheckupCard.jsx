@@ -10,13 +10,16 @@ import { Icon } from "../core/icons";
 import { EXTEND_OPTIONS, addMonths, checkupsOf, daysBetween } from "../data/checkups";
 
 const today = TODAY.slice(0, 10);
+// Signed-in apps also save each check-up on their server (business/frontend/src/liveSettings.js).
+let sync = null;
+export const registerCheckupSync = (fn) => { sync = fn; };
 
 export function useCheckups(tid) {
   const { db, update } = useStore();
   const { settings, log } = checkupsOf(db, tid);
   const me = db.session?.userName || "Team member";
   // Record what was done and change the listing to match.
-  const act = (listing, action, opts = {}) => update((d) => {
+  const act = (listing, action, opts = {}) => { sync?.(tid, listing, action, opts); update((d) => {
     d.checkups = d.checkups || {};
     const c = d.checkups[tid] = d.checkups[tid] || { log: [] };
     c.log = c.log || [];
@@ -37,7 +40,7 @@ export function useCheckups(tid) {
       l.updated = today;
     }
     c.log.unshift({ id: `ck${Date.now()}`, at: TODAY, listingId: listing.id, title: listing.title, action, by: me, detail: detail.trim() });
-  });
+  }); };
   return { settings, log, act, me };
 }
 

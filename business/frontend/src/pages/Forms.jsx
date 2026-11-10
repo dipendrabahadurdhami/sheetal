@@ -1,5 +1,7 @@
-// Online forms: templates, a drag-and-drop builder, publishing, responses, and the public form page (/business/f/:slug).
-// Where it fits: sample data for now (marked Preview).
+// Online forms: templates, a drag-and-drop builder, publishing, responses, and the sample public form page
+// (/business/f/:slug).
+// Where it fits: the sample workspace. Signed in, LiveForms.jsx uses the same builder (BuilderCore) and form page
+// (shared/src/components/FormView.jsx) on the business API.
 
 import React, { useEffect, useRef, useState } from "react";
 import { useStore } from "@sheetal/shared/core/store";
@@ -11,6 +13,7 @@ import {
   CHOICE, DESTS, DEST_LABEL, FIELD_TYPES, FONTS, PALETTE, PLACES, SWATCHES, formFromTemplate, formLimits, formLink, formsOf, makeField, monthResponses,
   placeLabels, responsesOf, slugify, templatesFor,
 } from "@sheetal/shared/core/forms";
+import { FormView } from "@sheetal/shared/components/FormView";
 import { defaultTenantSettings } from "./BusinessSettings";
 import { emptyOps } from "@sheetal/shared/demo/ops";
 
@@ -20,7 +23,7 @@ const RANGE = ["number", "money"];
 const CHARS = ["short", "long"];
 const INPUTS = { short: "text", phone: "tel", email: "email", number: "number", money: "text", date: "date", time: "time" };
 const nowIso = () => new Date().toISOString().slice(0, 16);
-const fontCss = (k) => (FONTS.find((x) => x[0] === k) || FONTS[0])[2];
+export { FormView };
 
 function ensure(d, tenant) {
   d.forms = d.forms || {}; d.formResponses = d.formResponses || {};
@@ -140,28 +143,43 @@ function PublishModal({ tenant, id, onClose }) {
 function Builder({ tenant, id }) {
   const { db, forms, setForms, ts } = useFormsData(tenant);
   const { navigate } = useRouter();
-  const toast = useToast();
+  const [share, setShare] = useState(false);
   const form = forms.find((x) => x.id === id);
-  const [f, setF] = useState(() => (form ? structuredClone(form) : null));
+  if (!form) return <section className="card pf-empty-card"><Empty icon="file-text" title="This form was deleted" action={<Button onClick={() => navigate("/business/forms")}>All forms</Button>} /></section>;
+  const save = (v) => setForms((list) => { const i = list.findIndex((x) => x.id === v.id); if (i >= 0) list[i] = { ...v, slug: uniqueSlug(list, slugify(v.slug), v.id) }; });
+  return (
+    <>
+      <BuilderCore tenant={tenant} initial={form} ts={ts} districts={db.catalog?.districts || []} linkOf={(f) => formLink(db, tenant, f)} onSave={save}
+        onPublish={(v) => { save({ ...v, status: "live" }); setShare(true); }} />
+      {share && <PublishModal tenant={tenant} id={id} onClose={() => setShare(false)} />}
+    </>
+  );
+}
+
+/** The drag-and-drop builder. It keeps its own copy of the form and calls onSave(form) a moment after each change
+ *  (onSave may return a promise with the saved { slug }); onPublish(form) publishes (return false if it didn't). */
+export function BuilderCore({ tenant, initial, ts, districts, linkOf, onSave, onPublish, settingsExtra, barExtra }) {
+  const toast = useToast();
+  const [f, setF] = useState(() => structuredClone(initial));
   const [sel, setSel] = useState(null);
   const [panel, setPanel] = useState(false);
   const [drag, setDrag] = useState(null);
   const [over, setOver] = useState(null);
   const [tplOpen, setTplOpen] = useState(false);
   const [preview, setPreview] = useState(false);
-  const [share, setShare] = useState(false);
   const [saved, setSaved] = useState(true);
+  const [saveErr, setSaveErr] = useState("");
   const latest = useRef(f); const dirty = useRef(false); const first = useRef(true);
-  const save = (v) => setForms((list) => { const i = list.findIndex((x) => x.id === v.id); if (i >= 0) list[i] = { ...v, slug: uniqueSlug(list, slugify(v.slug), v.id) }; });
+  const save = (v) => Promise.resolve(onSave(v)).then((r) => { setSaveErr(""); if (r?.slug && r.slug !== latest.current.slug) setF((x) => ({ ...x, slug: r.slug })); return true; }).catch((e) => { setSaveErr(e?.message || "Not saved"); return false; });
   useEffect(() => {
     latest.current = f;
     if (first.current) { first.current = false; return undefined; }
     dirty.current = true; setSaved(false);
-    const tm = setTimeout(() => { save(latest.current); dirty.current = false; setSaved(true); }, 400);
+    const tm = setTimeout(() => { dirty.current = false; save(latest.current).then(() => setSaved(true)); }, 400);
     return () => clearTimeout(tm);
   }, [f]);
   useEffect(() => () => { if (dirty.current && latest.current) save(latest.current); }, []);
-  if (!f) return <section className="card pf-empty-card"><Empty icon="file-text" title="This form was deleted" action={<Button onClick={() => navigate("/business/forms")}>All forms</Button>} /></section>;
+  const publish = async () => { dirty.current = false; if (!(await save(latest.current))) { toast("Fix the form first: it isn't saved."); return; } const ok = await onPublish(latest.current); if (ok !== false) patch({ status: "live" }); };
 
   const patch = (p) => setF((x) => ({ ...x, ...p }));
   const setFields = (fn) => setF((x) => ({ ...x, fields: fn(x.fields.slice()) }));
@@ -175,7 +193,7 @@ function Builder({ tenant, id }) {
   const applyTpl = (key) => { const t = formFromTemplate(key, tenant, ts); setF((x) => ({ ...x, tpl: key, title: t.title, desc: t.desc, fields: t.fields, dest: t.dest, places: t.places, thanks: t.thanks, slug: x.status === "draft" ? t.slug : x.slug })); setSel(null); setTplOpen(false); toast(key ? `${t.title} template applied` : "Started a blank form"); };
   const selF = f.fields.find((x) => x.id === sel);
   const asked = f.fields.filter((x) => !FIELD_TYPES[x.type].noAnswer);
-  const link = formLink(db, tenant, f);
+  const link = linkOf(f);
   const st = f.style || {};
 
   return (
@@ -197,11 +215,12 @@ function Builder({ tenant, id }) {
       <section className="fb-canvas" onDragOver={(e) => { if (drag) { e.preventDefault(); if (over == null) setOver(f.fields.length); } }} onDrop={(e) => { e.preventDefault(); dropAt(over ?? f.fields.length); }}>
         <div className="fb-bar">
           <Link to="/business/forms" className="fb-back"><Icon name="arrow-left" size={16} />All forms</Link>
-          <span className="small muted">{asked.length} fields · {saved ? "saved" : "saving…"} · answers go to {DEST_LABEL[f.dest]}</span>
+          <span className="small muted">{asked.length} fields · {saveErr ? <span className="fb-accent">not saved: {saveErr}</span> : saved ? "saved" : "saving…"} · answers go to {DEST_LABEL[f.dest]}</span>
           <div className="pf-row-actions">
             <Button variant="outline" size="sm" icon="layout-grid" onClick={() => setTplOpen((o) => !o)}>Templates</Button>
             <Button variant="outline" size="sm" icon="eye" onClick={() => setPreview(true)}>Preview</Button>
-            <Button size="sm" icon="send" onClick={() => { save(latest.current); setShare(true); patch({ status: "live" }); }}>Publish and share</Button>
+            {barExtra}
+            <Button size="sm" icon="send" onClick={publish}>{f.status === "live" ? "Share" : "Publish and share"}</Button>
           </div>
         </div>
         {tplOpen && <div className="card fb-tplbox">
@@ -258,23 +277,22 @@ function Builder({ tenant, id }) {
       {panel && <div className="fb-scrim" onClick={() => setPanel(false)} />}
       <aside className={`fb-props ${panel ? "open" : ""}`} aria-label={selF ? "Field settings" : "Form settings"}>
         <div className="fb-props-head"><b>{selF ? FIELD_TYPES[selF.type].label : "Form settings"}</b>{selF && <button type="button" className="link small" onClick={() => setSel(null)}>Form settings</button>}<IconButton icon="x" label="Close" className="fb-props-x" onClick={() => setPanel(false)} /></div>
-        {selF ? <FieldSettings x={selF} set={(p) => updField(selF.id, p)} /> : <FormSettings f={f} patch={patch} link={link} hasPay={f.fields.some((x) => x.type === "payment")} toast={toast} />}
+        {selF ? <FieldSettings x={selF} set={(p) => updField(selF.id, p)} /> : <FormSettings f={f} patch={patch} link={link} hasPay={f.fields.some((x) => x.type === "payment")} toast={toast} extra={settingsExtra} />}
       </aside>
 
       {preview && <div className="fb-preview" role="dialog" aria-modal="true" aria-label="Preview">
-        <PreviewFrame form={f} tenant={tenant} host={link.url.replace("https://", "")} onClose={() => setPreview(false)} districts={db.catalog?.districts || []} />
+        <PreviewFrame form={f} tenant={tenant} host={link.url.replace(/^https?:\/\//, "")} onClose={() => setPreview(false)} districts={districts} />
       </div>}
-      {share && <PublishModal tenant={tenant} id={f.id} onClose={() => setShare(false)} />}
     </div>
   );
 }
 
-function FieldPreview({ x }) {
+export function FieldPreview({ x }) {
   if (INPUTS[x.type]) return <div className="fb-pv-line">{x.ph || FIELD_TYPES[x.type].label}</div>;
   if (x.type === "long") return <div className="fb-pv-box">{x.ph}</div>;
   if (CHOICE.includes(x.type)) return <div className="fb-pv-opts">{x.opts.map((o, i) => <span key={i}><i className={x.type === "multi" ? "sq" : x.type === "single" ? "ci" : "dd"} />{o}</span>)}</div>;
   if (x.type === "rating") return <div className="fb-pv-stars">{[1, 2, 3, 4, 5].map((s) => <Icon key={s} name="star" size={22} />)}</div>;
-  if (x.type === "file") return <div className="fb-pv-file"><Icon name="upload" size={18} />Upload a file · up to 10 MB</div>;
+  if (x.type === "file") return <div className="fb-pv-file"><Icon name="upload" size={18} />Upload a file · PDF or photo, up to 5 MB</div>;
   if (x.type === "location") return <div className="fb-pv-2"><div className="fb-pv-line">District</div><div className="fb-pv-line">Area</div></div>;
   if (x.type === "payment") return <div className="fb-pv-pay"><span className="fb-ph">your QR</span><span className="small muted">Pay {rs(x.amount)} by Fonepay, eSewa or bank, then upload the screenshot. You confirm it in Responses.</span></div>;
   if (x.type === "section") return <span className="small muted">Groups the questions below under this heading.</span>;
@@ -312,12 +330,13 @@ function readImage(file, toast, cb) {
   const r = new FileReader(); r.onload = () => cb(r.result); r.readAsDataURL(file);
 }
 
-function FormSettings({ f, patch, link, hasPay, toast }) {
+function FormSettings({ f, patch, link, hasPay, toast, extra }) {
   const st = f.style || {};
   const sty = (p) => patch({ style: { ...st, ...p } });
   const pay = f.pay || {};
   return (
     <div className="pf-stack">
+      {extra}
       <Field label="Answers go to"><Seg value={f.dest} onChange={(v) => patch({ dest: v })} options={DESTS.map(([id, label]) => ({ id, label }))} label="Answers go to" /></Field>
       <Field label="Show this form on"><div className="pf-stack tight">{PLACES.map(([k, label, sub]) => <Checkbox key={k} checked={!!f.places?.[k]} label={label} sub={sub} onChange={(v) => patch({ places: { ...f.places, [k]: v } })} />)}</div></Field>
       <Field label="Link" hint={link.url}><div className="fb-slug"><span className="small muted">/f/</span><Input value={f.slug} onChange={(e) => patch({ slug: slugify(e.target.value) })} /></div></Field>
@@ -359,113 +378,6 @@ function PreviewFrame({ form, tenant, host, onClose, districts }) {
   );
 }
 
-// ---------- The form people fill in (public page and preview) ----------
-const blank = (v) => v == null || v === "" || (Array.isArray(v) && !v.length) || (typeof v === "object" && !Array.isArray(v) && !Object.values(v).some(Boolean));
-function check(x, v) {
-  const T = FIELD_TYPES[x.type];
-  if (T.noAnswer) return null;
-  if (x.type === "payment") return x.required && !v?.shot ? "Upload the payment screenshot" : null;
-  if (blank(v)) return x.required ? (x.type === "file" ? "Upload a file" : CHOICE.includes(x.type) || x.type === "rating" ? "Pick an answer" : "This question is required") : null;
-  if (x.type === "location" && x.required && !v.district) return "Pick a district";
-  if (x.type === "phone" && String(v).replace(/\D/g, "").length < 10) return "Enter a 10-digit mobile number";
-  if (x.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) return "Enter an email like you@example.com";
-  if (RANGE.includes(x.type)) { const n = Number(String(v).replace(/[^\d.]/g, "")); if (x.min && n < Number(x.min)) return `Minimum is ${x.type === "money" ? rs(x.min) : x.min}`; if (x.max && n > Number(x.max)) return `Maximum is ${x.type === "money" ? rs(x.max) : x.max}`; }
-  return null;
-}
-const show = (x, v, districts) => {
-  if (blank(v)) return "";
-  if (Array.isArray(v)) return v.join(", ");
-  if (x.type === "location") return [v.area, (districts.find((d) => d.id === v.district) || {}).en].filter(Boolean).join(", ");
-  if (x.type === "payment") return `${rs(x.amount)} · screenshot ${v.shot}`;
-  if (x.type === "rating") return `${v} of 5`;
-  if (x.type === "money") return rs(String(v).replace(/\D/g, ""));
-  return String(v);
-};
-
-export function FormView({ form, tenant, preview, mobile, districts = [], onSubmit }) {
-  const st = form.style || {};
-  const pages = form.fields.reduce((acc, x) => { if (x.type === "page") acc.push([]); else acc[acc.length - 1].push(x); return acc; }, [[]]).filter((p, i, a) => p.length || a.length === 1);
-  const [step, setStep] = useState(0);
-  const [vals, setVals] = useState({});
-  const [errs, setErrs] = useState({});
-  const [sent, setSent] = useState(false);
-  const top = useRef(null);
-  const cur = pages[Math.min(step, pages.length - 1)] || [];
-  const last = step >= pages.length - 1;
-  const setV = (fid, v) => { setVals((o) => ({ ...o, [fid]: v })); if (errs[fid]) setErrs((o) => ({ ...o, [fid]: null })); };
-  const go = (s) => { setStep(s); window.scrollTo({ top: 0, behavior: "smooth" }); };
-  const next = (e) => {
-    e.preventDefault();
-    const er = {}; cur.forEach((x) => { const m = check(x, vals[x.id]); if (m) er[x.id] = m; });
-    setErrs(er);
-    if (Object.keys(er).length) { const el = document.getElementById(`q-${Object.keys(er)[0]}-wrap`); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 24, behavior: "smooth" }); return; }
-    if (!last) { go(step + 1); return; }
-    if (!preview && onSubmit) onSubmit(form.fields.filter((x) => !FIELD_TYPES[x.type].noAnswer).map((x) => ({ x, v: vals[x.id], text: show(x, vals[x.id], districts) })));
-    setSent(true); window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-  const anyReq = form.fields.some((x) => x.required);
-  const vars = { "--fa": st.accent || SWATCHES[0], "--fr": st.corners === "square" ? "4px" : "16px", fontFamily: fontCss(st.font) };
-  return (
-    <div className={`pform ${mobile ? "is-mobile" : ""}`} style={vars} ref={top}>
-      <div className="pform-card pform-top">
-        <div className="pform-head">
-          <div className="pform-head-row">
-            <span className="pform-logo">{st.logoUrl ? <img src={st.logoUrl} alt="" /> : st.logo || initials(tenant?.name || "")}</span>
-            <div className="pform-head-text">
-              {tenant?.name && <span className="pform-biz">{tenant.name}</span>}
-              <h1>{form.title}</h1>{form.desc && <p>{form.desc}</p>}
-              {!sent && (pages.length > 1 || anyReq) && <div className="pform-meta">{pages.length > 1 && <span>Step {step + 1} of {pages.length}</span>}{anyReq && <span className="pform-req">* Required</span>}</div>}
-            </div>
-          </div>
-          {!sent && pages.length > 1 && <div className="pform-progress" aria-hidden="true"><i style={{ width: `${((step + 1) / pages.length) * 100}%` }} /></div>}
-        </div>
-      </div>
-      {sent ? (
-        <div className="pform-card pform-done">
-          <span className="pform-done-ico"><Icon name="circle-check" size={40} /></span>
-          <h2>Thank you</h2><p>{form.thanks}</p>
-          <button type="button" className="pform-link" onClick={() => { setSent(false); setVals({}); setErrs({}); setStep(0); }}>Submit another response</button>
-        </div>
-      ) : (
-        <form className="pform-card pform-body" onSubmit={next} noValidate>
-          <div className="pform-grid">{cur.map((x) => <Question key={x.id} x={x} v={vals[x.id]} set={(v) => setV(x.id, v)} err={errs[x.id]} form={form} districts={districts} />)}</div>
-          <div className="pform-actions">
-            {step > 0 && <button type="button" className="pform-btn ghost" onClick={() => go(step - 1)}><Icon name="arrow-left" size={16} />Back</button>}
-            <button type="submit" className="pform-btn">{last ? st.button || "Submit" : "Next"}{!last && <Icon name="arrow-right" size={16} />}</button>
-          </div>
-          {preview && <span className="pform-note">Preview: answers are not saved.</span>}
-        </form>
-      )}
-    </div>
-  );
-}
-
-function Question({ x, v, set, err, form, districts }) {
-  const id = `q-${x.id}`;
-  const cls = `pform-q ${x.half ? "half" : ""} ${err ? "err" : ""}`;
-  if (x.type === "section") return <div className={`${cls} pform-section`}><h2>{x.label}</h2>{x.help && <span className="pform-help">{x.help}</span>}</div>;
-  const label = <span className="pform-label" id={`${id}-l`}>{x.label}{x.required && <span className="pform-star"> *</span>}</span>;
-  const desc = x.help ? <span className="pform-help">{x.help}</span> : null;
-  let input = null;
-  if (INPUTS[x.type]) input = <input id={id} className="pform-in" type={INPUTS[x.type]} inputMode={x.type === "money" ? "numeric" : undefined} placeholder={x.ph} value={v || ""} maxLength={x.type === "short" && x.max ? Number(x.max) : undefined}
-    aria-labelledby={`${id}-l`} aria-invalid={!!err} onChange={(e) => { const t = e.target.value; if (x.type === "money") { const d = t.replace(/\D/g, ""); set(d ? Number(d).toLocaleString("en-IN") : ""); } else set(x.type === "phone" ? t.replace(/[^\d+ -]/g, "") : t); }} />;
-  else if (x.type === "long") input = <><textarea id={id} className="pform-in area" rows={4} placeholder={x.ph} value={v || ""} maxLength={x.max ? Number(x.max) : undefined} aria-labelledby={`${id}-l`} aria-invalid={!!err} onChange={(e) => set(e.target.value)} />{x.max && <span className="pform-count">{(v || "").length} / {x.max}</span>}</>;
-  else if (x.type === "single") input = <div className="pform-opts" role="radiogroup" aria-labelledby={`${id}-l`}>{x.opts.map((o) => <label key={o} className="pform-opt"><input type="radio" name={id} checked={v === o} onChange={() => set(o)} />{o}</label>)}</div>;
-  else if (x.type === "multi") input = <div className="pform-opts" role="group" aria-labelledby={`${id}-l`}>{x.opts.map((o) => { const a = v || []; return <label key={o} className="pform-opt"><input type="checkbox" checked={a.includes(o)} onChange={(e) => set(e.target.checked ? [...a, o] : a.filter((y) => y !== o))} />{o}</label>; })}</div>;
-  else if (x.type === "dropdown") input = <select id={id} className="pform-in" value={v || ""} aria-labelledby={`${id}-l`} onChange={(e) => set(e.target.value)}><option value="">Choose</option>{x.opts.map((o) => <option key={o} value={o}>{o}</option>)}</select>;
-  else if (x.type === "rating") input = <div className="pform-stars" role="radiogroup" aria-labelledby={`${id}-l`}>{[1, 2, 3, 4, 5].map((s) => <button key={s} type="button" role="radio" aria-checked={v === s} aria-label={`${s} of 5`} className={v >= s ? "on" : ""} onClick={() => set(s)}><Icon name="star" size={30} /></button>)}</div>;
-  else if (x.type === "file") input = <label className="pform-file"><Icon name="upload" size={22} />{v ? <b>{v}</b> : "Click to upload"}<small>PDF, Word or image · up to 10 MB</small><input type="file" onChange={(e) => set(e.target.files[0]?.name || "")} /></label>;
-  else if (x.type === "location") { const o = v || {}; input = <div className="pform-two"><select className="pform-in" value={o.district || ""} aria-label="District" onChange={(e) => set({ ...o, district: e.target.value })}><option value="">District</option>{districts.map((d) => <option key={d.id} value={d.id}>{d.en}</option>)}</select><input className="pform-in" placeholder="Area or tole" aria-label="Area" value={o.area || ""} onChange={(e) => set({ ...o, area: e.target.value })} /></div>; }
-  else if (x.type === "payment") { const p = form.pay || {}; input = (
-    <div className="pform-pay">
-      {p.qrUrl ? <img src={p.qrUrl} alt="Payment QR" /> : <span className="pform-qr">Fonepay QR</span>}
-      <div className="pform-pay-text"><span>Scan and pay <b>{rs(x.amount)}</b>, then upload the screenshot.</span>
-        {p.esewa && <span>eSewa: <b>{p.esewa}</b></span>}{p.bank && <span className="pform-bank">{p.bank}</span>}
-        <label className="pform-file sm"><Icon name="upload" size={18} />{v?.shot ? <b>{v.shot}</b> : "Payment screenshot"}<input type="file" accept="image/*" onChange={(e) => set({ shot: e.target.files[0]?.name || "" })} /></label></div>
-    </div>); }
-  return <div className={cls} id={id + "-wrap"}>{label}{desc}{input}{err && <span className="pform-err" role="alert"><Icon name="circle-alert" size={14} />{err}</span>}</div>;
-}
-
 // /business/f/:slug?b=tenantId — no Shell, no Sheetal branding.
 export function PublicForm({ slug }) {
   const { db, update } = useStore();
@@ -483,12 +395,12 @@ export function PublicForm({ slug }) {
   const submit = (ans) => {
     const nameA = ans.find((a) => a.x.type === "short" && /name/i.test(a.x.label) && a.text);
     const phoneA = ans.find((a) => a.x.type === "phone" && a.text);
-    const payA = ans.find((a) => a.x.type === "payment" && a.v?.shot);
+    const payA = ans.find((a) => a.x.type === "payment" && a.v?.name);
     const rest = ans.filter((a) => a.text && a !== nameA && a !== phoneA && a !== payA);
     const at = nowIso();
     const r = { id: `fr-${Math.random().toString(36).slice(2, 9)}`, formId: form.id, formTitle: form.title, dest: form.dest, at, name: nameA?.text || "Form visitor", phone: phoneA?.text || "",
       answers: ans.filter((a) => a.text).map((a) => [a.x.label, a.text]), summary: rest.slice(0, 3).map((a) => a.text).join(" · ") || form.title,
-      pay: payA ? { amount: payA.x.amount, shot: payA.v.shot, status: "to_confirm" } : null };
+      pay: payA ? { amount: payA.x.amount, shot: payA.v.name, status: "to_confirm" } : null };
     update((d) => {
       ensure(d, tenant);
       d.formResponses[tenant.id].unshift(r);

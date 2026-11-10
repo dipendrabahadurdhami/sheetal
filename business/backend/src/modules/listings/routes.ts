@@ -16,6 +16,9 @@ import { AppError, badRequest, forbidden, notFound } from "@sheetal/backend-core
 import { isPhotoName, mediaBase, photoUrl, savePhoto } from "@sheetal/backend-core/lib/photos";
 import { hasPerm } from "@sheetal/backend-core/domain/permissions";
 import { COUNTED, LISTING_KINDS, LISTING_PERMS, kindsFor, listingCap, purposeOf } from "@sheetal/backend-core/domain/listings";
+import { catalogKindsNow, warmCatalog } from "@sheetal/backend-core/lib/catalog";
+import { listingCode, prefixFor } from "@sheetal/backend-core/domain/codes";
+import { effectiveLimits } from "@sheetal/backend-core/domain/addons";
 import { branchFor, branchView, inView, workspaceOf, type Workspace } from "../access.js";
 
 const LIVE: ListingStatus[] = ["published", "sold", "rented"];
@@ -59,6 +62,8 @@ const BranchPick = z.object({ branchId: z.string().max(40).nullish() });
 export async function listingRoutes(app: FastifyInstance) {
   const base = mediaBase(app.config);
   const db = () => dbOf(app);
+  // Which kinds each business type may list, as staff set them in Admin → Listing setup.
+  if (app.db) warmCatalog(app.db).catch(() => {});
 
   function canList(ws: Workspace) {
     if (!LISTING_PERMS.some(ws.can)) throw forbidden("Your role can't manage listings.");
@@ -75,7 +80,7 @@ export async function listingRoutes(app: FastifyInstance) {
   }
 
   async function checkRoom(tenantId: string, plan: Workspace["member"]["tenant"]["plan"], adding = 1) {
-    const cap = listingCap(plan);
+    const cap = listingCap(await effectiveLimits(db(), tenantId, plan));
     if (cap === -1) return;
     const used = await db().listing.count({ where: { tenantId, status: { in: COUNTED } } });
     if (used + adding > cap) {
@@ -162,8 +167,8 @@ export async function listingRoutes(app: FastifyInstance) {
     const counts: Record<string, number> = Object.fromEntries(byStatus.map((g) => [g.status === "pending" ? "in_review" : g.status, g._count]));
     counts.all = byStatus.filter((g) => g.status !== "archived").reduce((a, g) => a + g._count, 0);
     const meta = {
-      cap: listingCap(plan), used,
-      kinds: kindsFor(ws.member.tenant.type, plan), listedKinds: byKind.map((g) => g.kind), counts,
+      cap: listingCap(await effectiveLimits(db(), ws.tenantId, plan)), used,
+      kinds: kindsFor(ws.member.tenant.type, plan, catalogKindsNow(app.db)), listedKinds: byKind.map((g) => g.kind), counts,
     };
 
     if (!q.page) {
@@ -207,7 +212,7 @@ export async function listingRoutes(app: FastifyInstance) {
   });
 
   // ───── Photos (uploaded one by one as they are picked, then listed by name in the summary) ─────
-  app.post("/listing-photos", { bodyLimit: 12 * 1024 * 1024, config: { rateLimit: { max: 120, timeWindow: "1 hour" } } }, async (request) => {
+  app.post("/listing-photos", { bodyLimit: 28 * 1024 * 1024, config: { rateLimit: { max: 120, timeWindow: "1 hour" } } }, async (request) => {
     const ws = workspaceOf(request);
     canList(ws);
     const { data } = z.object({ data: z.string().min(16).max(11 * 1024 * 1024) }).parse(request.body);
@@ -221,7 +226,7 @@ export async function listingRoutes(app: FastifyInstance) {
     canList(ws);
     const b = Body.parse(request.body);
     const t = ws.member.tenant;
-    if (!kindsFor(t.type, t.plan).includes(b.kind)) throw forbidden("This business can't list that kind of property on its plan.");
+    if (!kindsFor(t.type, t.plan, catalogKindsNow(app.db)).includes(b.kind)) throw forbidden("This business can't list that kind of property on its plan.");
     if (b.submit) checkSubmit(b.summary);
     // The branch it belongs to: the one picked in the form, else the branch open in the panel.
     const branchId = branchFor(await branchView(db(), request, ws), BranchPick.parse(request.body).branchId);
@@ -235,7 +240,7 @@ export async function listingRoutes(app: FastifyInstance) {
         private: { form: { ...b.values, photos: undefined } } as Prisma.InputJsonValue,
         photos: { create: photos.map((file, sort) => ({ file, sort })) },
       } });
-      return tx.listing.update({ where: { id: l.id }, data: { code: `SP-${String(l.id).padStart(4, "0")}`, slug: `${slugify(l.title)}-${l.id}` }, include: { photos: true, branch: { select: { id: true, name: true } } } });
+      return tx.listing.update({ where: { id: l.id }, data: { code: listingCode(await prefixFor(tx, ws.tenantId), l.id), slug: `${slugify(l.title)}-${l.id}` }, include: { photos: true, branch: { select: { id: true, name: true } } } });
     });
     await audit(ws, request.ip, b.submit ? "listing.submitted" : "listing.draft_saved", created.code);
     if (b.submit) await notifyStaff(dbOf(app), "moderation.listings", { type: "review", title: "Listing to review", message: `${created.title} · ${ws.member.tenant.name}`, link: "/admin/moderation" });
@@ -254,7 +259,7 @@ export async function listingRoutes(app: FastifyInstance) {
     // Moving it to another of the person's branches takes its enquiries along.
     const asked = BranchPick.parse(request.body).branchId;
     const branchId = asked && asked !== l.branchId ? branchFor(await branchView(db(), request, ws), asked) : null;
-    if (b.kind !== l.kind && !kindsFor(t.type, t.plan).includes(b.kind)) throw forbidden("This business can't list that kind of property on its plan.");
+    if (b.kind !== l.kind && !kindsFor(t.type, t.plan, catalogKindsNow(app.db)).includes(b.kind)) throw forbidden("This business can't list that kind of property on its plan.");
     // What the website shows never changes without a check: edits to a live or paused listing must be sent for review.
     if (!b.submit && (LIVE.includes(l.status) || l.status === "paused")) throw badRequest("Send the changes to Sheetal for review; a live listing can't change without a check.");
     if (b.submit) checkSubmit(b.summary);
@@ -329,12 +334,12 @@ export async function listingRoutes(app: FastifyInstance) {
     const copy = await db().$transaction(async (tx) => {
       const { id: _id, code: _c, slug: _s, createdAt: _a, updatedAt: _u, photos, branch: _b, ...rest } = l;
       const c = await tx.listing.create({ data: {
-        ...rest, details: rest.details as Prisma.InputJsonValue, private: rest.private as Prisma.InputJsonValue, suggest: undefined,
+        ...rest, details: rest.details as Prisma.InputJsonValue, private: rest.private as Prisma.InputJsonValue, suggest: undefined, reviewHold: false, reviewConflict: undefined,
         code: tmp(), slug: tmp(), title: `${l.title} (copy)`.slice(0, 150), status: "draft", userId: ws.user.id, views: 0, featured: false,
         legacyId: null, publishedAt: null, submittedAt: null, reviewedAt: null, reviewedBy: null, reviewNote: null, lastCheckedAt: null, lastCheckedBy: null, checkDueAt: null,
         photos: { create: photos.map((p) => ({ file: p.file, sort: p.sort })) },
       } });
-      return tx.listing.update({ where: { id: c.id }, data: { code: `SP-${String(c.id).padStart(4, "0")}`, slug: `${slugify(c.title)}-${c.id}` }, include: { photos: true, branch: { select: { id: true, name: true } } } });
+      return tx.listing.update({ where: { id: c.id }, data: { code: listingCode(await prefixFor(tx, ws.tenantId), c.id), slug: `${slugify(c.title)}-${c.id}` }, include: { photos: true, branch: { select: { id: true, name: true } } } });
     });
     await audit(ws, request.ip, "listing.duplicated", copy.code, ws.tenantId, { from: l.code });
     return { message: "Copy saved as a draft.", data: row(copy, 0) };
@@ -360,7 +365,7 @@ export async function listingRoutes(app: FastifyInstance) {
     return {
       data: ws.user.memberships
         .filter((m) => m.tenantId !== ws.tenantId && m.status === "active" && LISTING_PERMS.some((p) => hasPerm(m.role.perms, p)))
-        .map((m) => ({ id: m.tenantId, name: m.tenant.name, type: m.tenant.type, plan: m.tenant.plan.name, allowed: kindsFor(m.tenant.type, m.tenant.plan).includes(l.kind as never) })),
+        .map((m) => ({ id: m.tenantId, name: m.tenant.name, type: m.tenant.type, plan: m.tenant.plan.name, allowed: kindsFor(m.tenant.type, m.tenant.plan, catalogKindsNow(app.db)).includes(l.kind as never) })),
     };
   });
 
@@ -373,7 +378,7 @@ export async function listingRoutes(app: FastifyInstance) {
     const target = ws.user.memberships.find((m) => m.tenantId === tenantId && m.status === "active");
     if (!target || !LISTING_PERMS.some((p) => hasPerm(target.role.perms, p))) throw forbidden("You can only move listings into a business where you manage listings.");
     if (target.tenant.status === "suspended" || target.tenant.status === "cancelled") throw badRequest("That business isn't active.");
-    if (!kindsFor(target.tenant.type, target.tenant.plan).includes(l.kind as never)) throw badRequest(`${target.tenant.name} can't list this kind of property on its plan.`);
+    if (!kindsFor(target.tenant.type, target.tenant.plan, catalogKindsNow(app.db)).includes(l.kind as never)) throw badRequest(`${target.tenant.name} can't list this kind of property on its plan.`);
     if (COUNTED.includes(l.status)) await checkRoom(tenantId, target.tenant.plan);
     // It lands in the other business's first open branch (its head office); it can be moved from there.
     const into = await db().branch.findFirst({ where: { tenantId, status: "open" }, orderBy: [{ sort: "asc" }, { createdAt: "asc" }] });

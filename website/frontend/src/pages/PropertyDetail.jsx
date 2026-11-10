@@ -153,6 +153,9 @@ export default function PropertyDetail() {
             </section>
           )}
 
+          <MoreDetails p={p} />
+          <StayRooms p={p} />
+
           {vid && (
             <section id="video" className="detail-section">
               <h3>Video tour</h3>
@@ -214,5 +217,42 @@ export default function PropertyDetail() {
       {box !== null && <Lightbox images={imgs} index={box} onClose={() => setBox(null)} />}
       {ai && <AskAi open={ai} onClose={() => setAi(false)} start={p} />}
     </>
+  );
+}
+
+// Rooms, beds, bathrooms and the other stay details the host chose in the listing form (business panel).
+function StayRooms({ p }) {
+  const rooms = Array.isArray(p.rooms) ? p.rooms : [];
+  const sleeping = Array.isArray(p.sleeping) ? p.sleeping : [];
+  const arr = (x) => (Array.isArray(x) ? x : []).filter(Boolean);
+  const lists = [["Bathroom", [p.bathroom_type, ...arr(p.bathroom_items)]], ["Kitchen and dining", p.kitchen], ["Views", p.views], ["Safety", p.safety], ["Accessibility", p.accessibility], ["House rules", p.house_rules]]
+    .map(([l, x]) => [l, arr(x)]).filter(([, x]) => x.length);
+  const times = [p.check_in && `Check-in from ${p.check_in}`, p.check_out && `check-out by ${p.check_out}`, p.cancellation && `${p.cancellation} cancellation`].filter(Boolean).join(" · ");
+  if (!rooms.length && !sleeping.length && !lists.length && !times) return null;
+  const bedText = (r) => [r.bed && (r.beds > 1 ? `${r.beds} × ${r.bed} bed` : `${r.bed} bed`), r.bathroom && `${r.bathroom} bathroom`].filter(Boolean).join(" · ");
+  return (
+    <section id="rooms" className="detail-section">
+      <h3>{rooms.length ? "Rooms" : "Where you'll sleep"}</h3>
+      {rooms.length > 0 && <div className="facts">{rooms.map((r, i) => (
+        <div key={i}><span>{[r.type, r.count > 1 && `${r.count} rooms`].filter(Boolean).join(" · ")}</span>
+          <b>{[bedText(r), r.guests && `up to ${r.guests} guests`, r.view, r.size && `${r.size} sq ft`, Number(r.price) > 0 && `${fmtPrice(r.price)} / night`].filter(Boolean).join(" · ")}</b>
+          {arr(r.amenities).length > 0 && <small className="muted">{arr(r.amenities).join(", ")}</small>}</div>
+      ))}</div>}
+      {sleeping.length > 0 && <div className="facts">{sleeping.map((r, i) => <div key={i}><span>{r.room}</span><b>{bedText(r)}</b></div>)}</div>}
+      {lists.map(([l, x]) => <div key={l} style={{ marginTop: 16 }}><b className="small">{l}</b><div className="amenities">{x.map((a) => <div key={a}><Check size={18} />{a}</div>)}</div></div>)}
+      {times && <p className="muted small" style={{ marginTop: 12 }}>{times}</p>}
+    </section>
+  );
+}
+
+// The extra facts the listing form asks for each type (floor, society fee, land shape…) and fields Sheetal added.
+function MoreDetails({ p }) {
+  const rows = (Array.isArray(p.more) ? p.more : []).filter((r) => Array.isArray(r) && r[0] && r[1]);
+  if (!rows.length) return null;
+  return (
+    <section id="more" className="detail-section">
+      <h3>More details</h3>
+      <div className="facts">{rows.map(([l, v]) => <div key={l}><span>{l}</span><b>{v}</b></div>)}</div>
+    </section>
   );
 }

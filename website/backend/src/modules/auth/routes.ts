@@ -11,6 +11,7 @@ import { emails } from "@sheetal/backend-core/lib/mailer";
 import { checkPassword, hashPassword, newToken, sha256 } from "@sheetal/backend-core/lib/secrets";
 import { createWorkspace } from "@sheetal/backend-core/modules/accounts/workspace";
 import { userJson } from "@sheetal/backend-core/modules/auth/present";
+import { platformSettings } from "@sheetal/backend-core/domain/platform";
 import { createSession, requireUser, revokeAllSessions, revokeSession, userForToken } from "@sheetal/backend-core/modules/auth/sessions";
 
 const email = z.email("Enter a valid email address.").transform((s) => s.trim().toLowerCase());
@@ -19,7 +20,7 @@ const name = z.string().trim().min(2, "Enter your name.").max(60);
 
 const VERIFY_HOURS = 48;
 const RESET_HOURS = 1;
-const MAX_FAILS = 5;           // wrong passwords per email…
+const MAX_FAILS = 5;           // wrong passwords per email (Admin → Settings → Security can change it; 0 = off)…
 const FAIL_WINDOW = 15 * 60;   // …within 15 minutes, then a pause
 
 const strict = (max: number) => ({ config: { rateLimit: { max, timeWindow: "1 minute" } } });
@@ -53,7 +54,8 @@ export async function authRoutes(app: FastifyInstance) {
     const body = z.object({ email, password: z.string().min(1, "Enter your password.") }).parse(request.body);
     const failKey = `login-fail:${body.email}`;
     const fails = (await app.cache.get<number>(failKey)) ?? 0;
-    if (fails >= MAX_FAILS) throw new AppError(429, "locked", "Too many wrong passwords. Please wait 15 minutes or reset your password.");
+    const max = await platformSettings(db()).then((p) => p.maxLoginAttempts).catch(() => MAX_FAILS);
+    if (max > 0 && fails >= max) throw new AppError(429, "locked", "Too many tries. Wait 15 minutes or reset your password.");
 
     const user = await db().user.findUnique({ where: { email: body.email } });
     if (user && !user.passwordHash) {
@@ -82,9 +84,10 @@ export async function authRoutes(app: FastifyInstance) {
     }).refine((b) => b.password === b.password_confirmation, { path: ["password_confirmation"], message: "Passwords do not match." }).parse(request.body);
 
     if (await db().user.findUnique({ where: { email: body.email } })) throw conflict("This email is already registered. Log in or reset your password.");
+    const { trialDays } = await platformSettings(db());
     const user = await db().$transaction(async (tx) => {
       const u = await tx.user.create({ data: { email: body.email, userName: body.user_name, passwordHash: await hashPassword(body.password), userType: (body.user_type || "user").toLowerCase() } });
-      await createWorkspace(tx, { ownerId: u.id, name: body.user_name, type: "agency", email: body.email });
+      await createWorkspace(tx, { ownerId: u.id, name: body.user_name, type: "agency", email: body.email, trialDays });
       return u;
     });
     await app.mailer.send(emails.verify(user.email, user.userName, await emailLink(user.id, "verify_email")));

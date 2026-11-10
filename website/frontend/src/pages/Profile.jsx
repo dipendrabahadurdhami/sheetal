@@ -5,7 +5,8 @@ import { useSEO } from "../utils/seo";
 import { Link, useSearchParams } from "react-router-dom";
 import { MessagesSquare } from "lucide-react";
 import { Messages } from "./Account";
-import { LayoutGrid, Home, Heart, Bell, Crown, Settings, LogIn, Plus, Trash2, CheckCircle2, Eye, CalendarCheck, PieChart, Building2, Receipt } from "lucide-react";
+import { LayoutGrid, Home, Heart, Bell, Crown, Settings, LogIn, Plus, Trash2, CheckCircle2, Eye, CalendarCheck, PieChart, Building2, Receipt, KeyRound } from "lucide-react";
+import { MyRentals } from "./MyRentals";
 import PlatformProfileTab from "../market/ProfileTabs";
 import { useApp } from "../context/AppContext";
 import { api } from "../api/endpoints";
@@ -17,10 +18,10 @@ import { POST_TYPES, STATUS, FREE_PER_TYPE, hasPlan, myPosts, saveSitePosts, sit
 import { agentName, fmtPrice, images, isSold, linkOf, titleOf, timeAgo } from "../utils/format";
 import { PeriodPicker, PlanCards } from "../components/PlanCards";
 
-const TABS = [["overview", "Overview", LayoutGrid], ["orders", "My bookings", CalendarCheck], ["investments", "My investments", PieChart], ["enquiries", "Project enquiries", Building2], ["payments", "My payments", Receipt], ["listings", "My properties", Home], ["saved", "Saved", Heart], ["messages", "Messages", MessagesSquare], ["alerts", "Notifications", Bell], ["plan", "Plan", Crown], ["settings", "Settings", Settings]];
+const TABS = [["overview", "Overview", LayoutGrid], ["orders", "My bookings", CalendarCheck], ["investments", "My investments", PieChart], ["enquiries", "Project enquiries", Building2], ["payments", "My payments", Receipt], ["rentals", "My rentals", KeyRound], ["listings", "My properties", Home], ["saved", "Saved", Heart], ["messages", "Messages", MessagesSquare], ["alerts", "Notifications", Bell], ["plan", "Plan", Crown], ["settings", "Settings", Settings]];
 
 // Side menu groups (keys from TABS)
-const NAV_GROUPS = [["Activity", ["overview", "orders", "investments", "enquiries", "payments"]], ["Selling", ["listings", "plan"]], ["Inbox", ["messages", "alerts", "saved"]], ["Account", ["settings"]]];
+const NAV_GROUPS = [["Activity", ["overview", "orders", "investments", "enquiries", "payments", "rentals"]], ["Selling", ["listings", "plan"]], ["Inbox", ["messages", "alerts", "saved"]], ["Account", ["settings"]]];
 const SETTINGS = [["profile", "Profile"], ["security", "Sign-in and security"], ["notifications", "Notifications"], ["language", "Language and display"], ["kyc", "ID check"], ["data", "Your data"]];
 
 function MyListings({ toast }) {
@@ -242,6 +243,7 @@ export default function Profile() {
         {["orders", "investments", "enquiries", "payments"].includes(tab) && <PlatformProfileTab key={tab} tab={tab} />}
         {tab === "saved" && <><Saved /><h3 style={{ marginTop: 32 }}>Stays, projects and investments</h3><PlatformProfileTab tab="saved" /></>}
         {tab === "alerts" && <Alerts />}
+        {tab === "rentals" && <MyRentals />}
         {tab === "messages" && <Messages />}
         {tab === "plan" && <Plan user={user} toast={toast} />}
         {tab === "settings" && <AccountSettings user={user} loadUser={loadUser} toast={toast} sec={params.get("s") || "profile"} setSec={(s) => setParams({ tab: "settings", s })} />}

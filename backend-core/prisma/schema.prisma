@@ -156,6 +156,11 @@ model Tenant {
   /// The last renewal reminder sent ("<renewsAt date>:<days before>"), so each is sent once.
   remindedFor      String?      @map("reminded_for")
   emailVerified    Boolean      @default(false) @map("email_verified")
+  /// The business's own settings by section (payments, notifications, listings, documents, branding, checkups);
+  /// secrets inside are sealed with SECRETS_KEY (business/backend/src/modules/settings).
+  settings         Json         @default("{}")
+  /// The start of this business's listing codes (ER in ER-0123); empty = the initials of its name (domain/codes.ts).
+  codePrefix       String?      @map("code_prefix")
   createdAt        DateTime     @default(now()) @map("created_at")
   updatedAt        DateTime     @updatedAt @map("updated_at")
 
@@ -164,6 +169,9 @@ model Tenant {
   invites          Invite[]
   branches         Branch[]
   verificationDocs VerificationDoc[]
+  forms            Form[]
+  agreements       Agreement[]
+  supportTickets   SupportTicket[]
 
   @@index([type])
   @@index([coveredById])
@@ -197,6 +205,16 @@ model Branch {
   posBills  PosBill[]
   rateDays  RateDay[]
   roomRules RoomRule[]
+  bizInvoices BizInvoice[]
+  expenses    Expense[]
+  recurringExpenses RecurringExpense[]
+  rentOwners  RentOwner[]
+  rentUnits   RentUnit[]
+  forms       Form[]
+  agreements  Agreement[]
+  stockItems  StockItem[]
+  attendance    Attendance[]
+  leaveRequests LeaveRequest[]
 
   @@unique([tenantId, name])
   @@map("branches")
@@ -322,6 +340,8 @@ model Listing {
   id            Int            @id @default(autoincrement())
   /// Shown to people and used in links: SP-0006.
   code          String         @unique
+  /// Codes this listing had before (a business changed its prefix); they still find it on the website.
+  oldCodes      String[]       @default([]) @map("old_codes")
   slug          String         @unique
   tenantId      String?        @map("tenant_id")
   /// The branch it belongs to (see Branch); null = no business, or shared by all branches where noted.
@@ -384,6 +404,10 @@ model Listing {
   checkDueAt    DateTime?      @map("check_due_at")
   lastCheckedAt DateTime?      @map("last_checked_at")
   lastCheckedBy String?        @map("last_checked_by")
+  /// A reviewer changed something today: off the website until the changes are decided (the team keeps working on it).
+  reviewHold     Boolean       @default(false) @map("review_hold")
+  /// Fields reviewers disagreed on, waiting for the owner: { field: [{ value, by: [userId] }] }.
+  reviewConflict Json?         @map("review_conflict")
   /// Sheetal's review: when it was sent for review, who decided, and the note sent back when changes are needed.
   submittedAt   DateTime?      @map("submitted_at")
   reviewedAt    DateTime?      @map("reviewed_at")
@@ -742,6 +766,68 @@ model Notification {
   @@map("notifications")
 }
 
+// ───────────── Support (Message Sheetal) ─────────────
+
+/// Where a ticket stands: open = waiting for Sheetal, waiting = Sheetal answered, closed.
+enum SupportStatus {
+  open
+  waiting
+  closed
+}
+
+/// Who wrote a support message: the business, Sheetal's staff, or a staff-only note (never shown to the business).
+enum SupportFrom {
+  business
+  staff
+  note
+}
+
+/// A business's message thread to Sheetal (Business → Help → Message Sheetal; answered in Admin → Inbox → Support).
+/// Rules: any member can open one; owners and people with settings.business see all of the business's tickets, others
+/// only their own (userId). A new business message or a reopen sets status "open"; a staff reply sets "waiting".
+model SupportTicket {
+  id               String        @id @default(cuid())
+  /// Short public number: SUP-0007.
+  seq              Int           @unique @default(autoincrement())
+  tenantId         String        @map("tenant_id")
+  /// The member who opened it; staff replies tell this person (bell and email).
+  userId           String        @map("user_id")
+  subject          String
+  status           SupportStatus @default(open)
+  /// The staff member handling it (a user id); null = nobody yet. Set to the first replier.
+  assigneeId       String?       @map("assignee_id")
+  /// When the last message (not a note) came in or went out; the inbox sorts on it.
+  lastAt           DateTime      @default(now()) @map("last_at")
+  /// When the business / Sheetal's staff last opened it; a newer lastAt counts as unread.
+  readByBusinessAt DateTime?     @map("read_by_business_at")
+  readByStaffAt    DateTime?     @map("read_by_staff_at")
+  createdAt        DateTime      @default(now()) @map("created_at")
+
+  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  messages SupportMessage[]
+
+  @@index([tenantId, lastAt])
+  @@index([tenantId, userId, lastAt])
+  @@index([status, lastAt])
+  @@index([assigneeId, lastAt])
+  @@map("support_tickets")
+}
+
+/// One message in a ticket. `from` says who wrote it; userId is the writer (null only if never recorded).
+model SupportMessage {
+  id        String      @id @default(cuid())
+  ticketId  String      @map("ticket_id")
+  from      SupportFrom
+  userId    String?     @map("user_id")
+  body      String
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt])
+  @@map("support_messages")
+}
+
 // ───────────── Blog and careers ─────────────
 
 model BlogCategory {
@@ -874,6 +960,11 @@ model Invoice {
   billedTo    Json      @default("{}") @map("billed_to")
   periodStart DateTime? @map("period_start")
   periodEnd   DateTime? @map("period_end")
+  /// plan (a plan period, with the add-ons that renew with it), addon (add-ons bought for the rest of the period) or
+  /// boost (paid boosts on the website, domain/promote.ts) or banner (home page banners, domain/banners.ts)
+  kind        String    @default("plan")
+  /// Add-on lines: [{ id, name, qty, price, months }] (price a month per unit, VAT included).
+  addons      Json      @default("[]")
   dueAt       DateTime  @map("due_at")
   paidAt      DateTime? @map("paid_at")
   createdBy   String?   @map("created_by")
@@ -1064,6 +1155,7 @@ model MenuItem {
   price     Int
   active    Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at")
+  stockRecipes StockRecipe[]
 
   @@index([tenantId, outlet])
   @@map("menu_items")
@@ -1233,6 +1325,8 @@ model AiUsage {
   inputTok  Int      @map("input_tokens")
   outputTok Int      @map("output_tokens")
   credits   Int
+  /// Made with the business's own AI key (not counted against the plan's credits).
+  own       Boolean  @default(false)
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([tenantId, createdAt])
@@ -1300,4 +1394,940 @@ model OtaFeed {
 
   @@index([tenantId])
   @@map("ota_feeds")
+}
+
+// ───────────── Customer invoices (a business's own, not Sheetal's plan bills above) ─────────────
+
+/// An invoice or credit note a business gives its own customer. Drafts have no number; the tax number
+/// (INV-2083-84-0001, CN-…) is set when it is sent, counted per business and fiscal year, and never reused.
+/// Amounts are whole rupees; a credit note is stored positive and shown negative.
+model BizInvoice {
+  id           String       @id @default(cuid())
+  /// Shown on a draft (DRAFT-0007) until it has its number.
+  seq          Int          @default(autoincrement())
+  tenantId     String       @map("tenant_id")
+  branchId     String       @map("branch_id")
+  branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  /// invoice or credit
+  kind         String       @default("invoice")
+  no           String?
+  /// Fiscal year the number belongs to, e.g. 2083-84.
+  fy           String?
+  /// A credit note points at the invoice it reduces.
+  creditForId  String?      @map("credit_for_id")
+  /// draft, sent or cancelled
+  status       String       @default("draft")
+  toName       String       @map("to_name")
+  toPhone      String?      @map("to_phone")
+  toPan        String?      @map("to_pan")
+  /// The "booking or order" the person typed; a booking code (BK-0001) is also linked in bookingId.
+  order        String?
+  bookingId    String?      @map("booking_id")
+  issuedOn     DateTime     @db.Date @map("issued_on")
+  dueOn        DateTime     @db.Date @map("due_on")
+  vatPct       Int          @default(13) @map("vat_pct")
+  /// [{ what, qty, rate }], rupees before VAT.
+  lines        Json
+  subtotal     Int
+  vat          Int
+  total        Int
+  notes        String?
+  /// Why a credit note was issued.
+  reason       String?
+  cancelReason String?      @map("cancel_reason")
+  sentAt       DateTime?    @map("sent_at")
+  cancelledAt  DateTime?    @map("cancelled_at")
+  createdBy    String?      @map("created_by")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+  receipts     BizReceipt[]
+
+  @@unique([tenantId, no])
+  @@index([tenantId, status, issuedOn])
+  @@index([branchId])
+  @@index([tenantId, bookingId])
+  @@map("biz_invoices")
+}
+
+/// Money received against a customer invoice (RC-2083-84-0001).
+model BizReceipt {
+  id        String     @id @default(cuid())
+  tenantId  String     @map("tenant_id")
+  invoiceId String     @map("invoice_id")
+  no        String
+  amount    Int
+  /// cash, fonepay, esewa, khalti, card, bank, other; "sheetal" = Sheetal collected it (set by the system, never by hand;
+  /// the money reaches the business through a payout, so the profit view leaves it out).
+  method    String
+  paidOn    DateTime   @db.Date @map("paid_on")
+  /// Where it came from, so it is never counted twice (gp:<guest payment id> for a booking's front-desk payment).
+  ref       String?
+  note      String?
+  createdBy String?    @map("created_by")
+  createdAt DateTime   @default(now()) @map("created_at")
+  invoice   BizInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, no])
+  @@unique([invoiceId, ref])
+  @@index([invoiceId])
+  @@map("biz_receipts")
+}
+
+/// The last number given out per business and kind of document and fiscal year (key "INV:2083-84").
+model DocCounter {
+  tenantId String @map("tenant_id")
+  key      String
+  last     Int    @default(0)
+
+  @@id([tenantId, key])
+  @@map("doc_counters")
+}
+
+/// One listing check-up by one team member on one day (Nepal time): all correct, skipped, or changed (with the new
+/// values). Changes of a day are decided together: the value most reviewers chose wins, otherwise the owner picks.
+model ListingReview {
+  id        String   @id @default(cuid())
+  tenantId  String   @map("tenant_id")
+  branchId  String?  @map("branch_id")
+  listingId Int      @map("listing_id")
+  userId    String   @map("user_id")
+  /// YYYY-MM-DD in Nepal time.
+  day       String
+  /// ok, change, skip
+  action    String
+  changes   Json     @default("{}")
+  decided   Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, day])
+  @@index([listingId, day])
+  @@index([userId, day])
+  @@index([tenantId, action, decided])
+  @@map("listing_reviews")
+}
+
+// ───────────── Payouts (money Sheetal collects for a business and pays out to its bank) ─────────────
+
+/// One payment Sheetal collected for a business (a guest's online payment, a rent, an instalment, a site booking)
+/// and the commission taken from it. It waits here (payoutId empty) until a payout run puts it into a payout.
+/// A refund is a negative amount. The same payment is never counted twice (tenant + source + ref).
+model PayoutItem {
+  id          String   @id @default(cuid())
+  tenantId    String   @map("tenant_id")
+  branchId    String   @map("branch_id")
+  payoutId    String?  @map("payout_id")
+  payout      Payout?  @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+  /// booking, reservation, commitment, rent, ota, other
+  source      String
+  /// What it came from (BK-0007, a receipt number), so it is never counted twice.
+  ref         String
+  what        String
+  /// Whole rupees collected.
+  gross       Int
+  /// The commission taken, in hundredths of a percent (1000 = 10%), as it was when collected.
+  feeBp       Int      @map("fee_bp")
+  fee         Int
+  net         Int
+  collectedOn DateTime @db.Date @map("collected_on")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([tenantId, source, ref])
+  @@index([tenantId, payoutId])
+  @@index([payoutId])
+  @@index([tenantId, branchId, collectedOn])
+  @@map("payout_items")
+}
+
+/// A transfer from Sheetal to a business's bank, for one branch. "batch" payouts are made by a payout run from the
+/// waiting items; "manual" ones are entered by staff (a settlement paid outside the run). pending → paid or failed;
+/// a failed payout gives its items back, so the next run picks them up again.
+model Payout {
+  id          String       @id @default(cuid())
+  /// PO-0001
+  seq         Int          @unique @default(autoincrement())
+  tenantId    String       @map("tenant_id")
+  branchId    String       @map("branch_id")
+  /// batch or manual
+  kind        String       @default("batch")
+  /// pending, paid or failed
+  status      String       @default("pending")
+  gross       Int
+  fee         Int
+  net         Int
+  periodFrom  DateTime?    @db.Date @map("period_from")
+  periodTo    DateTime?    @db.Date @map("period_to")
+  scheduledOn DateTime     @db.Date @map("scheduled_on")
+  paidOn      DateTime?    @db.Date @map("paid_on")
+  /// The bank's transfer reference.
+  bankRef     String?      @map("bank_ref")
+  /// Where it goes, as it was when the payout was made: { bank, holder, account, branch }.
+  bank        Json         @default("{}")
+  note        String?
+  failReason  String?      @map("fail_reason")
+  createdBy   String?      @map("created_by")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  items       PayoutItem[]
+
+  @@index([tenantId, status, scheduledOn])
+  @@index([tenantId, branchId])
+  @@index([status, scheduledOn])
+  @@map("payouts")
+}
+
+// ───────────── Expenses and profit ─────────────
+
+/// Money a business spent (salaries, rent, repairs…), for one branch. "draft" = made by a recurring expense and not
+/// confirmed yet; only "confirmed" ones count in profit. "skipped" keeps a draft the business dismissed, so that month
+/// is never added again.
+model Expense {
+  id          String            @id @default(cuid())
+  /// EX-0007
+  seq         Int               @default(autoincrement())
+  tenantId    String            @map("tenant_id")
+  branchId    String            @map("branch_id")
+  branch      Branch            @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  /// draft, confirmed or skipped
+  status      String            @default("confirmed")
+  spentOn     DateTime          @db.Date @map("spent_on")
+  /// An id from the "expenseCategories" list (Admin → Listing setup): salaries, rent, other…
+  category    String
+  amount      Int
+  vendor      String?
+  note        String?
+  /// cash, bank, fonepay, esewa, khalti, card, other
+  method      String            @default("cash")
+  /// A private photo or PDF (MEDIA_DIR/private/expenses), opened only through the expenses API.
+  receiptFile String?           @map("receipt_file")
+  recurringId String?           @map("recurring_id")
+  recurring   RecurringExpense? @relation(fields: [recurringId], references: [id], onDelete: SetNull)
+  /// The month a recurring expense made this for (2026-11): one per recurring expense and month.
+  forMonth    String?           @map("for_month")
+  createdBy   String?           @map("created_by")
+  confirmedBy String?           @map("confirmed_by")
+  confirmedAt DateTime?         @map("confirmed_at")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  @@unique([recurringId, forMonth])
+  @@index([tenantId, status, spentOn])
+  @@index([branchId])
+  @@map("expenses")
+}
+
+/// An expense that repeats every month (rent, salaries). A daily job adds it as a draft on its day of the month; the
+/// business confirms it (the amount can be changed first). Paused ones add nothing; stopped ones are kept as history.
+model RecurringExpense {
+  id         String    @id @default(cuid())
+  tenantId   String    @map("tenant_id")
+  branchId   String    @map("branch_id")
+  branch     Branch    @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  /// active, paused or stopped
+  status     String    @default("active")
+  category   String
+  amount     Int
+  vendor     String?
+  note       String?
+  method     String    @default("cash")
+  /// The day of the month it falls on (1 to 28).
+  dayOfMonth Int       @map("day_of_month")
+  /// The first month it is added for (2026-11).
+  startMonth String    @map("start_month")
+  createdBy  String?   @map("created_by")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  expenses   Expense[]
+
+  @@index([tenantId, status])
+  @@index([branchId])
+  @@map("recurring_expenses")
+}
+
+// ───────────── Rentals (homes and shops an agency manages for owners) ─────────────
+
+/// A landlord whose homes or shops the agency manages. The management fee is taken from the rent collected for them;
+/// the rest is the owner's money (never the agency's income).
+model RentOwner {
+  id         String           @id @default(cuid())
+  tenantId   String           @map("tenant_id")
+  branchId   String           @map("branch_id")
+  branch     Branch           @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  name       String
+  phone      String?
+  email      String?
+  /// Management fee in hundredths of a percent (800 = 8%).
+  feeBp      Int              @default(800) @map("fee_bp")
+  /// Where the owner is paid (bank and account, as printed on the statement).
+  bank       String?
+  note       String?
+  createdAt  DateTime         @default(now()) @map("created_at")
+  updatedAt  DateTime         @updatedAt @map("updated_at")
+  units      RentUnit[]
+  statements OwnerStatement[]
+
+  @@index([tenantId, branchId])
+  @@map("rent_owners")
+}
+
+/// A flat, room, shop or house of an owner. "property" is the building or house it is in (units are grouped by it).
+model RentUnit {
+  id        String       @id @default(cuid())
+  tenantId  String       @map("tenant_id")
+  branchId  String       @map("branch_id")
+  branch    Branch       @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  ownerId   String       @map("owner_id")
+  owner     RentOwner    @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  property  String
+  name      String
+  kind      String       @default("Flat")
+  rent      Int
+  /// vacant, let or repair
+  status    String       @default("vacant")
+  /// The listing on the website: its property code finds the lease for paying rent online.
+  listingId Int?         @map("listing_id")
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+  leases    RentLease[]
+  repairs   RentRepair[]
+
+  @@index([tenantId, branchId])
+  @@index([listingId])
+  @@map("rent_units")
+}
+
+/// A tenant's lease on a unit (LS-0007). Active leases get one rent bill a month. The deposit is held and returned.
+model RentLease {
+  id              String     @id @default(cuid())
+  seq             Int        @unique @default(autoincrement())
+  tenantId        String     @map("tenant_id")
+  branchId        String     @map("branch_id")
+  unitId          String     @map("unit_id")
+  unit            RentUnit   @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  /// The person renting (named renter so it isn't mixed up with the business, which is the tenant here).
+  renter          String
+  phone           String?
+  email           String?
+  startOn         DateTime   @db.Date @map("start_on")
+  endOn           DateTime   @db.Date @map("end_on")
+  rent            Int
+  deposit         Int        @default(0)
+  /// The day of the month rent is due (1 to 28).
+  dueDay          Int        @default(7) @map("due_day")
+  /// Late fee in hundredths of a percent of the unpaid rent (200 = 2%), added once, lateAfterDays after the due day.
+  lateFeeBp       Int        @default(200) @map("late_fee_bp")
+  lateAfterDays   Int        @default(5) @map("late_after_days")
+  /// active or ended
+  status          String     @default("active")
+  endedOn         DateTime?  @db.Date @map("ended_on")
+  /// held or returned
+  depositStatus   String     @default("held") @map("deposit_status")
+  depositReturned Int?       @map("deposit_returned")
+  depositNote     String?    @map("deposit_note")
+  /// The renter's website account, linked when they find their rent while signed in.
+  userId          String?    @map("user_id")
+  createdBy       String?    @map("created_by")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+  bills           RentBill[]
+
+  @@index([tenantId, status])
+  @@index([unitId])
+  @@index([userId])
+  @@map("rent_leases")
+}
+
+/// One month's rent of a lease (RB-0007): one per lease and month. paid is the sum of its payments.
+model RentBill {
+  id         String        @id @default(cuid())
+  seq        Int           @unique @default(autoincrement())
+  tenantId   String        @map("tenant_id")
+  branchId   String        @map("branch_id")
+  leaseId    String        @map("lease_id")
+  lease      RentLease     @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  /// 2026-11
+  month      String
+  dueOn      DateTime      @db.Date @map("due_on")
+  amount     Int
+  lateFee    Int           @default(0) @map("late_fee")
+  lateWaived Boolean       @default(false) @map("late_waived")
+  paid       Int           @default(0)
+  createdAt  DateTime      @default(now()) @map("created_at")
+  updatedAt  DateTime      @updatedAt @map("updated_at")
+  payments   RentPayment[]
+
+  @@unique([leaseId, month])
+  @@index([tenantId, month])
+  @@map("rent_bills")
+}
+
+/// Rent received for a bill: recorded by staff (counts at once), or sent by the tenant online (counts once confirmed:
+/// by Sheetal when the money was paid to Sheetal, by the business when it was paid to the business).
+model RentPayment {
+  id        String   @id @default(cuid())
+  tenantId  String   @map("tenant_id")
+  branchId  String   @map("branch_id")
+  billId    String   @map("bill_id")
+  bill      RentBill @relation(fields: [billId], references: [id], onDelete: Cascade)
+  amount    Int
+  /// cash, bank, esewa, khalti, fonepay, cheque, other
+  method    String
+  paidOn    DateTime @db.Date @map("paid_on")
+  ref       String?
+  note      String?
+  /// confirmed (counts on the bill), pending (sent online, waiting to be checked) or rejected
+  status      String    @default("confirmed")
+  /// staff (recorded by the business) or online (sent by the tenant on the website)
+  source      String    @default("staff")
+  /// Who received the money: business, or sheetal (then it reaches the business with its payout)
+  collectedBy String    @default("business") @map("collected_by")
+  /// The tenant's screenshot (a private file).
+  proofFile   String?   @map("proof_file")
+  userId      String?   @map("user_id")
+  reviewedBy  String?   @map("reviewed_by")
+  reviewedAt  DateTime? @map("reviewed_at")
+  reviewNote  String?   @map("review_note")
+  createdBy String?  @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, paidOn])
+  @@index([billId])
+  @@index([status, collectedBy])
+  @@map("rent_payments")
+}
+
+/// A repair on a unit (WO-0007). When done, its cost comes off the owner's statement for that month.
+model RentRepair {
+  id        String    @id @default(cuid())
+  seq       Int       @unique @default(autoincrement())
+  tenantId  String    @map("tenant_id")
+  branchId  String    @map("branch_id")
+  unitId    String    @map("unit_id")
+  unit      RentUnit  @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  title     String
+  /// urgent, normal or low
+  priority  String    @default("normal")
+  vendor    String?
+  cost      Int       @default(0)
+  /// open, assigned or done
+  status    String    @default("open")
+  doneOn    DateTime? @db.Date @map("done_on")
+  createdBy String?   @map("created_by")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@index([tenantId, status])
+  @@map("rent_repairs")
+}
+
+/// An owner's statement for a month, saved by the agency: rent collected − management fee − repairs = owed to the
+/// owner. Saving it counts the fee in the agency's profit (domain/expenses.ts profitRows).
+model OwnerStatement {
+  id        String    @id @default(cuid())
+  tenantId  String    @map("tenant_id")
+  branchId  String    @map("branch_id")
+  ownerId   String    @map("owner_id")
+  owner     RentOwner @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  /// 2026-11
+  month     String
+  collected Int
+  fee       Int
+  repairs   Int
+  payable   Int
+  createdBy String?   @map("created_by")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@unique([ownerId, month])
+  @@index([tenantId, month])
+  @@map("owner_statements")
+}
+
+/// Add-ons a business owns (domain/addons.ts): qty counts now; renewQty is what renews with the plan.
+model TenantAddon {
+  id        String   @id @default(cuid())
+  tenantId  String   @map("tenant_id")
+  /// seats, listings, featured or outlets
+  addonId   String   @map("addon_id")
+  qty       Int      @default(0)
+  renewQty  Int      @default(0) @map("renew_qty")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, addonId])
+  @@map("tenant_addons")
+}
+
+// ───────────── Online forms ─────────────
+
+/// A form a business builds in Business → Forms (domain/forms.ts checks the fields). A live form is open to anyone at
+/// SITE_URL/f/<slug>; each response becomes an Inbox lead (kind "form").
+model Form {
+  id          String         @id @default(cuid())
+  tenantId    String         @map("tenant_id")
+  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  /// The branch whose team gets the leads.
+  branchId    String?        @map("branch_id")
+  branch      Branch?        @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  /// draft or live
+  status      String         @default("draft")
+  /// In the public link; unique across Sheetal.
+  slug        String         @unique
+  title       String
+  description String         @default("")
+  /// The template it started from (job, req, book…), or null.
+  tpl         String?
+  /// The builder's fields: [{ id, type, label, required, ph, help, half, min, max, opts, amount }].
+  fields      Json           @default("[]")
+  /// Where answers go: leads, jobs or requirements (all become Inbox leads; requirements are matched to listings).
+  dest        String         @default("leads")
+  /// The team member each new lead is given to; null = unassigned.
+  assigneeId  String?        @map("assignee_id")
+  thanks      String         @default("")
+  /// Look (accent, logo, font, corners, button text) and where it shows (profile, listing, job, link).
+  style       Json           @default("{}")
+  places      Json           @default("{}")
+  /// Payment details shown on Payment fields: QR picture, eSewa ID, bank details.
+  pay         Json           @default("{}")
+  createdBy   String?        @map("created_by")
+  publishedAt DateTime?      @map("published_at")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+  responses   FormResponse[]
+
+  @@index([tenantId, createdAt])
+  @@index([branchId])
+  @@map("forms")
+}
+
+/// One filled-in form: answers [{ id, label, type, value, text }], the person's name, phone and email taken from them,
+/// and the Inbox lead it made. Uploaded files are private (MEDIA_DIR/private/forms), named in the answer's value.
+model FormResponse {
+  id        String   @id @default(cuid())
+  formId    String   @map("form_id")
+  form      Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  tenantId  String   @map("tenant_id")
+  answers   Json     @default("[]")
+  name      String
+  phone     String?
+  email     String?
+  /// Payment fields: the amount and whether the business confirmed it (to_confirm, confirmed, rejected).
+  payAmount Int?     @map("pay_amount")
+  payStatus String?  @map("pay_status")
+  leadId    String?  @map("lead_id")
+  ip        String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, createdAt])
+  @@index([formId, createdAt])
+  @@map("form_responses")
+}
+
+// ───────────── Agreements ─────────────
+
+/// An agreement a business sends for e-signing (AG-0007), from a template in domain/agreements.ts. While a draft, the
+/// wording (bodyEn/bodyNe with {{placeholders}}), values and signers can change. Sending fills the texts (textEn/textNe)
+/// and freezes them with their SHA-256 (hash); after that nothing about it changes except the signatures.
+model Agreement {
+  id          String            @id @default(cuid())
+  seq         Int               @unique @default(autoincrement())
+  tenantId    String            @map("tenant_id")
+  tenant      Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branchId    String?           @map("branch_id")
+  branch      Branch?           @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  /// rent, sale, management, booking or blank
+  kind        String
+  title       String
+  /// en, ne or both (two separate copies, one in each language)
+  lang        String            @default("both")
+  /// The filled-in fields of the template; text fields hold { en, ne }.
+  values      Json              @default("{}")
+  bodyEn      String            @default("") @map("body_en")
+  bodyNe      String            @default("") @map("body_ne")
+  /// draft, sent, signed or cancelled
+  status      String            @default("draft")
+  /// The final texts as sent, and their fingerprint.
+  textEn      String?           @map("text_en")
+  textNe      String?           @map("text_ne")
+  hash        String?
+  /// Where it was made from (for links back).
+  leaseId     String?           @map("lease_id")
+  leadId      String?           @map("lead_id")
+  listingId   Int?              @map("listing_id")
+  createdBy   String?           @map("created_by")
+  sentAt      DateTime?         @map("sent_at")
+  signedAt    DateTime?         @map("signed_at")
+  cancelledAt DateTime?         @map("cancelled_at")
+  cancelNote  String?           @map("cancel_note")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+  signers     AgreementSigner[]
+
+  @@index([tenantId, status, createdAt])
+  @@index([branchId])
+  @@index([leaseId])
+  @@index([leadId])
+  @@map("agreements")
+}
+
+/// A person who signs an agreement: a party (p1, p2) or a witness. They get a private link (only its SHA-256 is kept)
+/// and sign with a 6-digit code sent to their email (10 minutes, 5 tries, 5 codes per link).
+model AgreementSigner {
+  id          String    @id @default(cuid())
+  agreementId String    @map("agreement_id")
+  agreement   Agreement @relation(fields: [agreementId], references: [id], onDelete: Cascade)
+  /// p1, p2 or witness
+  role        String
+  name        String
+  nameNe      String    @default("") @map("name_ne")
+  email       String    @default("")
+  phone       String    @default("")
+  address     String    @default("")
+  addressNe   String    @default("") @map("address_ne")
+  /// Citizenship or passport number.
+  idNo        String    @default("") @map("id_no")
+  sort        Int       @default(0)
+  /// pending or signed
+  status      String    @default("pending")
+  tokenHash   String?   @unique @map("token_hash")
+  otpHash     String?   @map("otp_hash")
+  otpExpires  DateTime? @map("otp_expires")
+  otpTries    Int       @default(0) @map("otp_tries")
+  otpSends    Int       @default(0) @map("otp_sends")
+  otpSentAt   DateTime? @map("otp_sent_at")
+  /// The name the person typed when signing, and how, when and from where they signed.
+  signedName  String?   @map("signed_name")
+  signedAt    DateTime? @map("signed_at")
+  channel     String?
+  ip          String?
+  userAgent   String?   @map("user_agent")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([agreementId])
+  @@map("agreement_signers")
+}
+
+// ───────────── Promote ─────────────
+
+/// A paid boost (BS-0007): a listing shown first in one place on the website (home, search or city) for some days
+/// (domain/promote.ts). It holds a spot from when it is made until it is paid (or the payment window passes); once
+/// paid it runs on its dates by itself. It can move to another listing of the business for the days left, or stop
+/// (no refund). Gift boosts (source "gift") came free with the move from the old website.
+model Boost {
+  id        String    @id @default(cuid())
+  seq       Int       @unique @default(autoincrement())
+  tenantId  String    @map("tenant_id")
+  listingId Int       @map("listing_id")
+  /// home, search or city
+  place     String
+  /// For city boosts: the city in lower case (the listing's city when it was bought).
+  city      String    @default("")
+  days      Int
+  startOn   DateTime  @db.Date @map("start_on")
+  endOn     DateTime  @db.Date @map("end_on")
+  /// Rs. a day when bought (VAT included) and the total.
+  price     Int       @default(0)
+  total     Int       @default(0)
+  /// The "boost" invoice it is paid with; null for gifts.
+  invoiceId String?   @map("invoice_id")
+  /// paid or gift
+  source    String    @default("paid")
+  /// awaiting (not paid yet), paid, stopped (ended early, no refund) or void (never paid)
+  status    String    @default("awaiting")
+  /// Times shown in its place, and opened from there.
+  views     Int       @default(0)
+  clicks    Int       @default(0)
+  /// Listings it was on before a move: [{ listingId, code, at }].
+  history   Json      @default("[]")
+  createdBy String?   @map("created_by")
+  paidAt    DateTime? @map("paid_at")
+  stoppedAt DateTime? @map("stopped_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@index([place, status, startOn, endOn])
+  @@index([tenantId, createdAt])
+  @@index([listingId])
+  @@index([invoiceId])
+  @@map("boosts")
+}
+
+/// A home page banner (BN-0007): the picture behind the title and search (domain/banners.ts). Businesses book days and
+/// pay ("banner" invoice); staff check the picture before it shows. Sheetal's own banners (source "staff", no business)
+/// are free and show when paid ones leave a spot.
+model Banner {
+  id         String    @id @default(cuid())
+  seq        Int       @unique @default(autoincrement())
+  /// The business that booked it; null for Sheetal's own.
+  tenantId   String?   @map("tenant_id")
+  /// paid or staff
+  source     String    @default("paid")
+  /// Pictures as sent (MEDIA_DIR/banner/main): 1920 × 600 for computers, 1080 × 1080 for phones.
+  desktop    String
+  mobile     String
+  link       String
+  title      String    @default("")
+  button     String    @default("")
+  days       Int
+  startOn    DateTime  @db.Date @map("start_on")
+  endOn      DateTime  @db.Date @map("end_on")
+  price      Int       @default(0)
+  total      Int       @default(0)
+  invoiceId  String?   @map("invoice_id")
+  /// awaiting (not paid), review (paid, picture to check), rejected (picture to change), approved, stopped, void
+  status     String    @default("awaiting")
+  reviewNote String?   @map("review_note")
+  reviewedBy String?   @map("reviewed_by")
+  approvedAt DateTime? @map("approved_at")
+  views      Int       @default(0)
+  clicks     Int       @default(0)
+  createdBy  String?   @map("created_by")
+  paidAt     DateTime? @map("paid_at")
+  stoppedAt  DateTime? @map("stopped_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  @@index([status, startOn, endOn])
+  @@index([tenantId, createdAt])
+  @@index([invoiceId])
+  @@map("banners")
+}
+
+// ───────────── Stock ─────────────
+
+/// Something a branch keeps and counts (domain/stock.ts): bottles in the bar, rice in the kitchen, towels, minibar snacks.
+/// Quantities are whole numbers in the smallest unit you count in (bottle, kg, piece, ml). Never changed directly:
+/// every change is a StockMove.
+model StockItem {
+  id        String   @id @default(cuid())
+  tenantId  String   @map("tenant_id")
+  branchId  String   @map("branch_id")
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  name      String
+  /// kitchen, bar, minibar, housekeeping or store
+  place     String
+  unit      String
+  qty       Int      @default(0)
+  /// Marked low when qty is below this (0 = never).
+  min       Int      @default(0)
+  /// Rs. per unit (average of what was bought).
+  cost      Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  moves     StockMove[]
+  recipes   StockRecipe[]
+
+  @@unique([tenantId, branchId, name, place])
+  @@index([tenantId, branchId, active])
+  @@map("stock_items")
+}
+
+/// One change to a stock item. qty is signed (+ in, - out); after is what was left.
+model StockMove {
+  id        String    @id @default(cuid())
+  tenantId  String    @map("tenant_id")
+  branchId  String    @map("branch_id")
+  itemId    String    @map("item_id")
+  item      StockItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  /// in, out, sale, waste or count
+  kind      String
+  qty       Int
+  after     Int       @default(0)
+  cost      Int       @default(0)
+  note      String?
+  /// The POS bill id when kind is sale.
+  ref       String?
+  userId    String?   @map("user_id")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([tenantId, branchId, createdAt])
+  @@index([itemId, createdAt])
+  @@index([ref])
+  @@map("stock_moves")
+}
+
+/// What one sale of a menu item uses: qty of a stock item. At another branch that sells the same shared menu item, the
+/// stock item with the same name and place there is used.
+model StockRecipe {
+  id         String    @id @default(cuid())
+  tenantId   String    @map("tenant_id")
+  menuItemId String    @map("menu_item_id")
+  menuItem   MenuItem  @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  itemId     String    @map("item_id")
+  item       StockItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  qty        Int
+
+  @@unique([menuItemId, itemId])
+  @@index([tenantId])
+  @@map("stock_recipes")
+}
+
+// ───────────── People: attendance and leave ─────────────
+
+/// One check-in (and check-out) of a person at a branch. day is the Nepal day of the check-in (midnight UTC).
+model Attendance {
+  id        String    @id @default(cuid())
+  tenantId  String    @map("tenant_id")
+  branchId  String    @map("branch_id")
+  branch    Branch    @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  userId    String    @map("user_id")
+  day       DateTime  @db.Date
+  inAt      DateTime  @map("in_at")
+  outAt     DateTime? @map("out_at")
+  inLat     Float?    @map("in_lat")
+  inLng     Float?    @map("in_lng")
+  outLat    Float?    @map("out_lat")
+  outLng    Float?    @map("out_lng")
+  /// Checked in after the start time (set for the first check-in of the day).
+  late      Boolean   @default(false)
+  note      String?
+  /// app (the person checked in) or manual (a manager added or fixed it).
+  source    String    @default("app")
+  editedBy  String?   @map("edited_by")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([tenantId, branchId, day])
+  @@index([tenantId, userId, day])
+  @@map("attendance")
+}
+
+/// A kind of leave a business gives (casual, sick…) and the days a person gets a year. 0 days = no limit.
+model LeaveType {
+  id          String   @id @default(cuid())
+  tenantId    String   @map("tenant_id")
+  name        String
+  daysPerYear Int      @default(0) @map("days_per_year")
+  paid        Boolean  @default(true)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([tenantId, name])
+  @@map("leave_types")
+}
+
+/// A request for leave. days counts the days asked for without the weekly off day (Saturday); a half day is 0.5.
+model LeaveRequest {
+  id        String    @id @default(cuid())
+  tenantId  String    @map("tenant_id")
+  branchId  String    @map("branch_id")
+  branch    Branch    @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  userId    String    @map("user_id")
+  typeId    String    @map("type_id")
+  fromDay   DateTime  @map("from_day") @db.Date
+  toDay     DateTime  @map("to_day") @db.Date
+  days      Float
+  halfDay   Boolean   @default(false) @map("half_day")
+  reason    String?
+  /// pending, approved, rejected or cancelled
+  status    String    @default("pending")
+  decidedBy String?   @map("decided_by")
+  decidedAt DateTime? @map("decided_at")
+  note      String?
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([tenantId, status])
+  @@index([tenantId, userId, fromDay])
+  @@index([tenantId, branchId, fromDay])
+  @@map("leave_requests")
+}
+
+// ───────────── Developer keys ─────────────
+
+/// A key a business's developer uses to call the public API (/v1/public). Only the SHA-256 of the key is kept.
+model ApiKey {
+  id         String    @id @default(cuid())
+  tenantId   String    @map("tenant_id")
+  name       String
+  /// The first 8 characters after "sk_live_", shown so a key can be recognised.
+  prefix     String
+  hash       String    @unique
+  /// listings.read, leads.write, bookings.read
+  scopes     String[]
+  lastUsedAt DateTime? @map("last_used_at")
+  createdBy  String    @map("created_by")
+  revokedAt  DateTime? @map("revoked_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@map("api_keys")
+}
+
+/// A business's request to sell a listing on another site (Booking.com, Airbnb…) through Sheetal's partner account.
+/// Sheetal's channel team works the queue in Admin → Channels. (Calendar sync with the sites is OtaFeed.)
+model OtaRequest {
+  id            String   @id @default(cuid())
+  /// Shown as OTA-0001.
+  seq           Int      @unique @default(autoincrement())
+  tenantId      String   @map("tenant_id")
+  branchId      String?  @map("branch_id")
+  listingId     Int?     @map("listing_id")
+  /// booking, airbnb, agoda, expedia, trip, google
+  channel       String
+  /// requested, setting_up, needs_info, live, paused, rejected
+  status        String   @default("requested")
+  /// Mark-up in % the business asked for on that site's price.
+  price         Int      @default(0)
+  /// What the business told the team when asking.
+  note          String?
+  /// The question to the business when the status is needs_info, or the reason when rejected.
+  ask           String?
+  otaPropertyId String?  @map("ota_property_id")
+  url           String?
+  /// [{ at, who, what }]
+  log           Json     @default("[]")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId, status])
+  @@index([status, createdAt])
+  @@index([listingId])
+  @@map("ota_requests")
+}
+
+/// Whether Sheetal's partner account on a site is connected (one row per site).
+model OtaAccount {
+  id        String   @id @default(cuid())
+  channel   String   @unique
+  /// connected or not_connected
+  status    String   @default("not_connected")
+  note      String?
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("ota_accounts")
+}
+
+/// The wording of a message the system sends. A row replaces the built-in text (domain/templates.ts); no row = built-in.
+model MessageTemplate {
+  id        String   @id @default(cuid())
+  key       String
+  /// email, sms or whatsapp
+  channel   String
+  /// en or ne
+  lang      String   @default("en")
+  subject   String   @default("")
+  /// Text with {{placeholders}}.
+  body      String
+  active    Boolean  @default(true)
+  updatedBy String?  @map("updated_by")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([key, channel, lang])
+  @@map("message_templates")
+}
+
+/// One expiry reminder that was sent, so it is never sent twice (kind + refId is the identity).
+model ReminderLog {
+  id        String   @id @default(cuid())
+  /// plan_renewal_3, listing_stale, boost_ending, banner_ending…
+  kind      String
+  /// What it was about: tenantId:renewal date, listingId:updated date, boost id, banner id.
+  refId     String   @map("ref_id")
+  tenantId  String?  @map("tenant_id")
+  /// The Nepal day it was sent.
+  day       String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([kind, refId])
+  @@index([day])
+  @@map("reminder_logs")
 }

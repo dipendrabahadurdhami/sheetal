@@ -1,5 +1,7 @@
 // The website's pages and routes, inside the shared header, footer and tab bar.
 // How it works: one route per page; /business and /admin are separate apps, so links there do a full page load.
+// A business's online form (/f/:slug) and the agreement signing page (/sign/:token) open on their own, without the
+// site header and footer. The main site sits inside SiteGate (Google tags and the maintenance page).
 
 import PlatformApp from "./market/PlatformApp";
 import { config as platformConfig } from "@sheetal/shared/core/config";
@@ -11,7 +13,7 @@ import { Routes, Route, Navigate, useLocation, useParams } from "react-router-do
 import { Header, Footer, TabBar, SourceBadge, WhatsAppButton } from "./components/Layout";
 import { AuthModal } from "./components/AuthModal";
 import { Onboarding } from "./components/Onboarding";
-import { Analytics } from "./utils/seo";
+import { SiteGate } from "./components/SiteGate";
 import Home from "./pages/Home";
 import Listings from "./pages/Listings";
 import PropertyDetail from "./pages/PropertyDetail";
@@ -34,6 +36,8 @@ import Tools from "./pages/Tools";
 import About from "./pages/About";
 import { Requirement, Demands, DemandDetail } from "./pages/Requirement";
 import { Legal, NotFound } from "./pages/Static";
+import PublicForm from "./pages/PublicForm";
+import SignAgreement from "./pages/SignAgreement";
 
 function ScrollTop() {
   const { pathname } = useLocation();
@@ -64,10 +68,11 @@ export default function App() {
   const { pathname } = useLocation();
   const bare = pathname === "/map";
   if (/^\/(admin|business)(\/|$)/.test(pathname)) return <PlatformApp />;
+  if (/^\/f\/[^/]+\/?$/.test(pathname)) return <Routes><Route path="/f/:slug" element={<PublicForm />} /></Routes>;
+  if (/^\/sign\/[^/]+\/?$/.test(pathname)) return <Routes><Route path="/sign/:token" element={<SignAgreement />} /></Routes>;
   return (
-    <>
+    <SiteGate>
       <ScrollTop />
-      <Analytics />
       <Header />
       <main>
         <Routes>
@@ -150,6 +155,6 @@ export default function App() {
       {!bare && <WhatsAppButton />}
       <AuthModal />
       <Onboarding />
-    </>
+    </SiteGate>
   );
 }

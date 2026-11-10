@@ -14,6 +14,7 @@ import { newToken, sha256 } from "@sheetal/backend-core/lib/secrets";
 import { requireUser, revokeAllSessions, type SessionUser } from "@sheetal/backend-core/modules/auth/sessions";
 import { BUSINESS_TYPES, hasPerm, PLATFORM_ROLES } from "@sheetal/backend-core/domain/permissions";
 import { createWorkspace } from "@sheetal/backend-core/modules/accounts/workspace";
+import { notify } from "@sheetal/backend-core/lib/notify";
 
 export interface Staff { user: SessionUser; role: string; can: (perm: string) => boolean }
 
@@ -93,9 +94,9 @@ export async function adminRoutes(app: FastifyInstance) {
     if (isNew || !user.passwordHash) {
       const token = newToken();
       await db.emailToken.create({ data: { userId: user.id, purpose: "reset_password", tokenHash: sha256(token), expiresAt: new Date(Date.now() + 48 * 3600e3) } });
-      await app.mailer.send({ to: b.email, subject: `${b.name} is ready on Sheetal Property`, text: `Namaste ${b.owner},\n\nSheetal Property has set up ${b.name} for you on the free Starter plan.\n\nSet your password within 48 hours:\n${site}/reset-password/${token}\n\nThen open your business panel at ${site}/business\n\nSheetal Property` });
+      await app.mailer.send({ to: b.email, subject: `${b.name} is ready on Sheetal Property`, text: `Namaste ${b.owner},\n\nSheetal Property has set up ${b.name} for you on the free Starter plan.\n\nSet your password within 48 hours:\n${site}/reset-password/${token}\n\nThen open your business panel at ${site}/business\n\nSheetal Property`, template: { key: "tenant_ready_new", vars: { name: b.owner, business: b.name, link: `${site}/reset-password/${token}`, site } } });
     } else {
-      await app.mailer.send({ to: b.email, subject: `${b.name} is ready on Sheetal Property`, text: `Namaste ${user.userName},\n\nSheetal Property has set up ${b.name} for you on the free Starter plan. Sign in as usual and pick it in your business panel:\n${site}/business\n\nSheetal Property` });
+      await app.mailer.send({ to: b.email, subject: `${b.name} is ready on Sheetal Property`, text: `Namaste ${user.userName},\n\nSheetal Property has set up ${b.name} for you on the free Starter plan. Sign in as usual and pick it in your business panel:\n${site}/business\n\nSheetal Property`, template: { key: "tenant_ready_existing", vars: { name: user.userName, business: b.name, link: `${site}/business`, site } } });
     }
     await audit(s, request, "admin.tenant_created", b.name, tenant.id, { owner: b.email });
     return { status: 200, message: `${b.name} is set up. ${b.email} has been emailed.`, data: { id: tenant.id } };
@@ -167,7 +168,7 @@ export async function adminRoutes(app: FastifyInstance) {
 
   app.patch<{ Params: { id: string } }>("/admin/upgrades/:id", async (request) => {
     const s = staffOf(request, "plans.manage");
-    const b = z.object({ status: z.enum(["done", "declined"]), apply: z.boolean().default(true) }).parse(request.body);
+    const b = z.object({ status: z.enum(["done", "declined"]), apply: z.boolean().default(true), note: z.string().trim().max(300).optional() }).parse(request.body);
     const db = dbOf(app);
     const r = await db.upgradeRequest.findUnique({ where: { id: request.params.id } });
     if (!r || r.status !== "pending") throw notFound("Request not found or already handled.");
@@ -180,7 +181,17 @@ export async function adminRoutes(app: FastifyInstance) {
         await syncCovered(tx, r.tenantId);
       }
     });
-    await audit(s, request, b.status === "done" ? "admin.upgrade_done" : "admin.upgrade_declined", r.planId, r.tenantId);
+    await audit(s, request, b.status === "done" ? "admin.upgrade_done" : "admin.upgrade_declined", r.planId, r.tenantId, b.note ? { note: b.note } : undefined);
+    // Tell the business: the person who asked and the owner (once, if they are the same person).
+    const plan = await db.plan.findUnique({ where: { id: r.planId }, select: { name: true } });
+    const owner = await db.membership.findFirst({ where: { tenantId: r.tenantId, role: { key: "owner" }, status: "active" }, select: { userId: true } });
+    const planName = plan?.name ?? r.planId;
+    const applied = b.status === "done" && b.apply;
+    await notify(db, [...new Set([r.userId, owner?.userId].filter((x): x is string => !!x))], {
+      tenantId: r.tenantId, type: "billing", link: "/business/billing",
+      title: b.status === "declined" ? `Upgrade to ${planName} not approved` : applied ? `You are now on ${planName}` : `Upgrade to ${planName} handled`,
+      message: b.status === "declined" ? (b.note || "Contact Sheetal if you have questions.") : applied ? `Your ${planName} plan is active for ${r.months} ${r.months === 1 ? "month" : "months"}.` : "Sheetal has handled your request.",
+    });
     return { status: 200, message: b.status === "done" ? "Plan changed." : "Request declined." };
   });
 
@@ -205,7 +216,7 @@ export async function adminRoutes(app: FastifyInstance) {
       // New staff set their own password from a link; nobody else ever knows it.
       const token = newToken();
       await db.emailToken.create({ data: { userId: user.id, purpose: "reset_password", tokenHash: sha256(token), expiresAt: new Date(Date.now() + 48 * 3600e3) } });
-      await app.mailer.send({ to: b.email, subject: "You've been added to the Sheetal Property team", text: `${s.user.userName} added you to Sheetal Property's staff as ${b.role.replace(/_/g, " ")}.\n\nSet your password within 48 hours:\n${app.config.SITE_URL.replace(/\/$/, "")}/reset-password/${token}\n\nThen sign in at ${app.config.SITE_URL.replace(/\/$/, "")}/admin` });
+      await app.mailer.send({ to: b.email, subject: "You've been added to the Sheetal Property team", text: `${s.user.userName} added you to Sheetal Property's staff as ${b.role.replace(/_/g, " ")}.\n\nSet your password within 48 hours:\n${app.config.SITE_URL.replace(/\/$/, "")}/reset-password/${token}\n\nThen sign in at ${app.config.SITE_URL.replace(/\/$/, "")}/admin`, template: { key: "staff_added", vars: { inviter: s.user.userName, role: b.role.replace(/_/g, " "), link: `${app.config.SITE_URL.replace(/\/$/, "")}/reset-password/${token}`, site: app.config.SITE_URL.replace(/\/$/, "") } } });
     }
     await audit(s, request, "admin.staff_added", b.email, undefined, { role: b.role });
     return { status: 200, message: `${b.email} added as ${b.role.replace(/_/g, " ")}.` };
@@ -227,15 +238,82 @@ export async function adminRoutes(app: FastifyInstance) {
   });
 
   // ───── Audit log ─────
+  // Filters: words in the action or target (q), who did it (actorId), kind (the part before the dot: billing,
+  // support, tenant...), Nepal dates from/to (inclusive) and business (tenantId). GET /admin/audit.csv gives the same
+  // rows as a spreadsheet (with a BOM so Excel shows Nepali names). Rules: staff with audit.view only.
+  const Day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use a date like 2026-11-10.");
+  const AuditQuery = z.object({
+    tenantId: z.string().max(40).optional(),
+    actorId: z.string().max(40).optional(),
+    kind: z.string().regex(/^[a-z_]{1,30}$/, "Pick a kind from the list.").optional(),
+    q: z.string().trim().max(100).optional(),
+    from: Day.optional(),
+    to: Day.optional(),
+    page: z.coerce.number().int().min(1).default(1),
+  });
+  /** Start of a Nepal day; refuses dates that don't exist (2026-02-30). */
+  const nepalDayStart = (day: string) => {
+    const [y, m, d] = day.split("-").map(Number) as [number, number, number];
+    const check = new Date(Date.UTC(y, m - 1, d));
+    if (check.getUTCFullYear() !== y || check.getUTCMonth() !== m - 1 || check.getUTCDate() !== d) throw badRequest(`${day} is not a real date.`);
+    return new Date(`${day}T00:00:00+05:45`);
+  };
+  const auditWhere = (q: z.infer<typeof AuditQuery>): Prisma.AuditLogWhereInput => {
+    const createdAt: { gte?: Date; lt?: Date } = {};
+    if (q.from) createdAt.gte = nepalDayStart(q.from);
+    if (q.to) createdAt.lt = new Date(nepalDayStart(q.to).getTime() + 864e5);
+    return {
+      ...(q.tenantId ? { tenantId: q.tenantId } : {}),
+      ...(q.actorId ? { actorId: q.actorId } : {}),
+      ...(q.kind ? { action: { startsWith: `${q.kind}.` } } : {}),
+      ...(q.q ? { OR: [{ action: { contains: q.q, mode: "insensitive" as const } }, { target: { contains: q.q, mode: "insensitive" as const } }] } : {}),
+      ...(q.from || q.to ? { createdAt } : {}),
+    };
+  };
+  /** Adds who did it and the business name to each row. */
+  const withNames = async (rows: { actorId: string | null; tenantId: string | null }[]) => {
+    const db = dbOf(app);
+    const [users, tenants] = await Promise.all([
+      db.user.findMany({ where: { id: { in: [...new Set(rows.map((r) => r.actorId).filter((x): x is string => !!x))] } }, select: { id: true, userName: true, email: true } }),
+      db.tenant.findMany({ where: { id: { in: [...new Set(rows.map((r) => r.tenantId).filter((x): x is string => !!x))] } }, select: { id: true, name: true } }),
+    ]);
+    return { who: new Map(users.map((u) => [u.id, u])), biz: new Map(tenants.map((t) => [t.id, t.name])) };
+  };
+
   app.get("/admin/audit", async (request) => {
     staffOf(request, "audit.view");
-    const q = z.object({ tenantId: z.string().max(40).optional(), page: z.coerce.number().int().min(1).default(1) }).parse(request.query);
-    const where = q.tenantId ? { tenantId: q.tenantId } : {};
+    const q = AuditQuery.parse(request.query);
+    const where = auditWhere(q);
     const per = 100;
     const db = dbOf(app);
-    const [total, rows] = await Promise.all([db.auditLog.count({ where }), db.auditLog.findMany({ where, orderBy: { createdAt: "desc" }, skip: (q.page - 1) * per, take: per })]);
-    const users = await db.user.findMany({ where: { id: { in: rows.map((r) => r.actorId).filter((x): x is string => !!x) } }, select: { id: true, userName: true, email: true } });
-    const who = new Map(users.map((u) => [u.id, u]));
-    return { data: rows.map((r) => ({ ...r, actor: r.actorId ? who.get(r.actorId) ?? null : null })), meta: { total, current_page: q.page, last_page: Math.max(1, Math.ceil(total / per)), per_page: per } };
+    const [total, rows, kindRows, staff] = await Promise.all([
+      db.auditLog.count({ where }),
+      db.auditLog.findMany({ where, orderBy: { createdAt: "desc" }, skip: (q.page - 1) * per, take: per }),
+      db.$queryRaw<{ kind: string }[]>`SELECT DISTINCT split_part(action, '.', 1) AS kind FROM audit_logs ORDER BY kind`,
+      db.user.findMany({ where: { platformRole: { not: null } }, select: { id: true, userName: true }, orderBy: { userName: "asc" } }),
+    ]);
+    const { who, biz } = await withNames(rows);
+    return {
+      data: rows.map((r) => ({ ...r, actor: r.actorId ? who.get(r.actorId) ?? null : null, tenant: r.tenantId ? biz.get(r.tenantId) ?? null : null })),
+      meta: { total, current_page: q.page, last_page: Math.max(1, Math.ceil(total / per)), per_page: per },
+      kinds: kindRows.map((k) => k.kind).filter(Boolean),
+      staff,
+    };
+  });
+
+  app.get("/admin/audit.csv", async (request, reply) => {
+    staffOf(request, "audit.view");
+    const q = AuditQuery.parse(request.query);
+    const rows = await dbOf(app).auditLog.findMany({ where: auditWhere(q), orderBy: { createdAt: "desc" }, take: 20000 });
+    const { who, biz } = await withNames(rows);
+    const cell = (v: unknown) => { const t = String(v ?? ""); return /[",\r\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
+    const nepal = (d: Date) => new Date(d.getTime() + 5.75 * 3_600_000).toISOString().slice(0, 16).replace("T", " ");
+    const lines = [["When (Nepal)", "Who", "Email", "Action", "Target", "Business", "IP"].join(",")];
+    for (const r of rows) {
+      const u = r.actorId ? who.get(r.actorId) : undefined;
+      lines.push([nepal(r.createdAt), u?.userName ?? "System", u?.email ?? "", r.action, r.target ?? "", r.tenantId ? biz.get(r.tenantId) ?? "" : "", r.ip ?? ""].map(cell).join(","));
+    }
+    reply.header("content-type", "text/csv; charset=utf-8").header("content-disposition", `attachment; filename="audit-log.csv"`);
+    return "\uFEFF" + lines.join("\r\n") + "\r\n";
   });
 }

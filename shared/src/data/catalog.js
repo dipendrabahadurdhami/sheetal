@@ -1,7 +1,8 @@
 // Listing options: every choice a listing form can offer (kinds, categories, facilities, areas and units).
 // Where it fits: the listing wizard, filters and the website's listing pages.
 // How it works: each item is { id, en, ne, icon }; land areas convert between ropani-aana and bigha-kattha and sq ft.
-// Rules: the admin Catalog page doesn't change this list yet (marked Preview); edit it here.
+// Rules: these are the built-in options. Admin → Listing setup saves changes on the server, and the panels lay them
+// over this list with mergeCatalog() (the server sends only the lists staff changed).
 
 const o = (id, en, ne, icon) => ({ id, en, ne, icon });
 
@@ -25,6 +26,20 @@ export const CATALOG = {
     o("apartment", "Apartment", "अपार्टमेन्ट", "building"),
     o("land", "Land", "जग्गा", "map"),
     o("commercial", "Commercial", "व्यावसायिक", "store"),
+  ],
+  // What a business spent money on (Business → Expenses). Staff can change the list in Admin → Listing setup. Keep in
+  // step with EXPENSE_CATEGORIES in backend-core/src/domain/expenses.ts (the server's built-in list).
+  expenseCategories: [
+    o("salaries", "Salaries", "तलब", "users"),
+    o("rent", "Rent", "भाडा", "key-round"),
+    o("utilities", "Utilities", "बिजुली, पानी र इन्टरनेट", "zap"),
+    o("repairs", "Repairs and maintenance", "मर्मत सम्भार", "wrench"),
+    o("marketing", "Marketing", "मार्केटिङ", "megaphone"),
+    o("supplies", "Supplies", "सामग्री", "shopping-bag"),
+    o("travel", "Fuel and travel", "इन्धन र यात्रा", "car"),
+    o("commissions", "Commissions", "कमिसन", "hand-coins"),
+    o("taxes", "Taxes and fees", "कर र शुल्क", "receipt"),
+    o("other", "Other", "अन्य", "circle-check"),
   ],
   propertyTypes: {
     house: [o("bungalow", "Bungalow", "बंगला", "house"), o("residential_house", "Residential house", "आवासीय घर", "house"), o("duplex", "Duplex", "डुप्लेक्स", "house-plus"), o("newari", "Traditional Newari house", "परम्परागत नेवारी घर", "landmark"), o("villa", "Villa", "भिला", "trees")],
@@ -155,3 +170,27 @@ export function sqftToHill(sq) {
   let p = Math.floor(sq / AREA.paisa); sq -= p * AREA.paisa;
   return { ropani: r, aana: a, paisa: p, daam: Math.round(sq / AREA.daam) };
 }
+
+/** The options staff changed in Admin → Listing setup (GET /catalog) laid over the built-in list. */
+export function mergeCatalog(base, stored) {
+  if (!stored) return base;
+  const out = { ...base };
+  for (const [k, items] of Object.entries(stored.lists || {})) {
+    if (Array.isArray(items)) out[k] = items;
+    // Grouped lists (property types per category, areas per district) change group by group.
+    else if (items && typeof items === "object") out[k] = { ...(base[k] || {}), ...items };
+  }
+  if (stored.kindsByType) out.kindsByType = { ...base.kindsByType, ...stored.kindsByType };
+  if (stored.forms) out.forms = stored.forms;
+  return out;
+}
+
+// ── Fuller built-in lists (catalogMore.js): every district and its areas, more property types, room, bed, bathroom
+// and amenity choices. They are added here once, so everything works with no setup. ──
+import { MORE_AREAS, MORE_OPTIONS, MORE_TYPES } from "./catalogMore";
+// Icons the platform's icon set has (core/icons.jsx); others become the closest one it has.
+const ICON_FIX = { "door-closed": "door-open", package: "archive", "plug-zap": "zap", "shopping-basket": "shopping-bag", pill: "hospital", factory: "warehouse", tent: "tent-tree", tractor: "sprout", fan: "air-vent", refrigerator: "cooking-pot", footprints: "users", "washing-machine": "shirt", toilet: "droplets", "shower-head": "droplets", bath: "droplets", wind: "air-vent", "glass-water": "droplet", microwave: "cooking-pot", luggage: "briefcase", presentation: "users", siren: "bell-ring", "fire-extinguisher": "flame", cross: "hospital", accessibility: "users", "wine-off": "ban", salad: "leaf", fuel: "car", home: "house" };
+const addTo = (list, rows) => { for (const [id, en, ne, icon] of rows) if (!list.some((x) => x.id === id)) list.push(o(id, en, ne, ICON_FIX[icon] || icon || "circle-check")); return list; };
+for (const [key, rows] of Object.entries(MORE_OPTIONS)) CATALOG[key] = addTo(CATALOG[key] || [], rows);
+for (const [cat, rows] of Object.entries(MORE_TYPES)) CATALOG.propertyTypes[cat] = addTo(CATALOG.propertyTypes[cat] || [], rows);
+for (const [d, names] of Object.entries(MORE_AREAS)) CATALOG.areas[d] = [...new Set([...(CATALOG.areas[d] || []), ...names])];

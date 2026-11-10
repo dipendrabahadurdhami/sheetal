@@ -2,7 +2,9 @@
 // Where it fits: the Import/Export buttons on list pages, and Settings → Import and export.
 // How it works: each kind has its own template with only the columns that page needs; rows are checked column by
 // column (text, number, date, phone, email, choice, stars) before anything is added.
-// Rules: works in the browser only for now (marked Preview when signed in).
+// Rules: signed in to the business API, listings and leads import to the server and listings, leads, rooms, bookings
+// and the team export from it (registerDataServer, see business/frontend/src/liveSettings.js); other kinds still work
+// in the browser.
 
 import React, { useMemo, useState } from "react";
 import { Badge, Button, Checkbox, Drawer, Input, useToast } from "../core/ui";
@@ -40,6 +42,9 @@ TEMPLATES.units = { ...TEMPLATES.rooms, label: "Units" };
 TEMPLATES.staff = { ...TEMPLATES.team, label: "Staff" };
 
 const DAY = TODAY.slice(0, 10);
+// An app's server for some kinds: { canExport(kind, tid), canImport(kind, tid), fetchRows(kind, tid), importRows(kind, tid, rows) }.
+let server = null;
+export const registerDataServer = (s) => { server = s; };
 const cap = (s) => (s ? String(s)[0].toUpperCase() + String(s).slice(1) : "");
 const enumOpts = (hint) => String(hint || "").split(/,\s*/).filter(Boolean);
 const head = (c) => c[0];
@@ -173,9 +178,17 @@ export function DataActions({ kind, size, onlyExport = false, rows, onImport }) 
   const [open, setOpen] = useState(false);
   const T = TEMPLATES[kind];
   const src = SOURCES[kind];
-  const list = rows || (src ? src.get(db) : []);
-  const put = onImport || (src ? (r) => update((d) => src.put(d, r)) : null);
-  const exp = () => { if (!list.length) { toast(`No ${T.label.toLowerCase()} to export yet`); return; } exportCSV(kind, list); toast(`${list.length} ${T.label.toLowerCase()} exported`); };
+  const tid = db.session?.tenantId;
+  const remote = !rows && !!server?.canExport(kind, tid);
+  const remoteIn = !onImport && !!server?.canImport(kind, tid);
+  const list = rows || (src && !remote ? src.get(db) : []);
+  const put = onImport || (remoteIn ? (r) => server.importRows(kind, tid, r).then((m) => m && toast(m)).catch((e) => toast(e.message)) : src && !remote ? (r) => update((d) => src.put(d, r)) : null);
+  const exp = async () => {
+    let out = list;
+    if (remote) { try { out = await server.fetchRows(kind, tid); } catch (e) { toast(e.message); return; } }
+    if (!out.length) { toast(`No ${T.label.toLowerCase()} to export yet`); return; }
+    exportCSV(kind, out); toast(`${out.length} ${T.label.toLowerCase()} exported`);
+  };
   return (
     <>
       {!onlyExport && put && <Button variant="outline" size={size} icon="upload" onClick={() => setOpen(true)}>Import</Button>}

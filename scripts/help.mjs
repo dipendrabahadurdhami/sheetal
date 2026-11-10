@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const GROUPS = [
   ["Run it on this computer (four terminals, in this order)", [
+    ["start", "Starts everything in one window: database, the three APIs, the website and panels, and the mail server."],
     ["db:local", "Starts the local PostgreSQL database on port 5433. Start this first and keep it open."],
     ["dev:api", "Starts the three APIs: website :4000, business :4001, admin :4002. Restarts on code changes."],
     ["dev", "Starts the website, business panel and admin panel on http://localhost:5173."],
@@ -26,12 +27,24 @@ const GROUPS = [
     ["test:watch", "Re-runs the shared front-end tests on every save."],
     ["doctor", "Checks this computer is ready: Node version, settings files, database, ports, photo folder."],
     ["check:comments", "Proves a documentation change touched comments only (compares the code before and after)."],
+    ["qc", "Quick check while working: lint the apps and typecheck the shared code, without the tests."],
+    ["dc", "Same as check (a short name for it)."],
   ]],
   ["Database", [
     ["db:migrate", "Applies new database migrations (after pulling changes that touch backend-core/prisma)."],
     ["db:seed", "Adds the starting data: plans, the super admin and the Sheetal Property business (first setup)."],
     ["backup", "Exports the database to OneDrive\\Sheetal-Backups and copies new photos. Add -- --no-photos for the database only."],
     ["restore", "Lists database backups; `npm run restore -- <name> --yes` puts one back (replaces all data)."],
+    ["listings:tidy", "Fills empty listing fields from each title and description and writes a short description. Try -- --dry-run first."],
+    ["expenses:roles", "Gives the Expenses permissions to the owner-made manager and accountant roles of existing businesses (run once after the Expenses update)."],
+    ["rentals:roles", "Gives the Rentals permissions to the branch manager and accountant roles of existing agencies (run once after the Rentals update)."],
+    ["promote:gift", "Gives listings that were featured on the old website a free 30-day home-page boost (run once after the Promote update)."],
+    ["agreements:roles", "Gives the Agreements permission to the managers (hotel manager, agency branch manager, developer sales manager) of existing businesses (run once after the Agreements update)."],
+    ["people:roles", "Gives the People permissions (people.view, people.manage) to the managers (hotel manager, agency branch manager, developer sales manager) of existing businesses (run once after the People update)."],
+    ["accounts:test", "Makes test accounts on this computer (staff, every business type and plan with its team, website users) plus sample data, and saves the list to test-accounts.csv. Never on the live site."],
+    ["listings:codes", "Gives every business without one its property code prefix (its initials, Everest Realty → ER) and changes its listing codes; old codes keep working. Try -- --dry-run first."],
+    ["payouts:sample", "Adds sample collected payments to a business so the Payouts pages can be tested. Try -- --help first."],
+    ["photos:resize", "Makes every photo in MEDIA_DIR the new sizes (main 1920 px, thumbnail 800 px). Try -- --dry-run first."],
   ]],
   ["Build and release", [
     ["build", "Builds the website and both panels into dist/ (with the sitemap)."],

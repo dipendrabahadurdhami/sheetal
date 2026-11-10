@@ -107,6 +107,8 @@ export async function engageRoutes(app: FastifyInstance) {
       // A requirement fee proof waits for Sheetal's team.
       if (feeData.feeStatus === "pending") await notifyStaff(db, "moderation.listings", { type: "requirement", title: "Requirement fee to check", message: `${b.name} · Rs. ${feeData.feeAmount}`, link: "/admin/demand" });
       if (tenantId) await notify(db, await leadPeople(db, tenantId, branchId), { tenantId, type: "lead", title: `New enquiry from ${b.name}`, message: listing ? `${listing.title} (${listing.code})` : message.slice(0, 140), link: "/business/inbox" });
+      // No business behind it: a lead for Sheetal's own team (Admin → Inbox → Leads).
+      else await notifyStaff(db, "tenants.view", { type: "lead", title: `New lead for Sheetal: ${b.name}`, message: message.slice(0, 140), link: "/admin/leads" });
 
       // Let the business know by email (their Inbox shows it too).
       const to = tenantId ? (await db.tenant.findUnique({ where: { id: tenantId }, select: { email: true } }))?.email : null;

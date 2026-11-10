@@ -9,6 +9,8 @@ import { useApp } from "../context/AppContext";
 import { PageHead, SectionHead } from "../components/ui";
 import { fmtFull, fmtPrice } from "../utils/format";
 import { useSEO } from "../utils/seo";
+import { isLivePath } from "../api/client";
+import { PayRentLive } from "./PayRentLive";
 
 const BANKS = [["nabil", "Nabil Bank"], ["nic", "NIC Asia"], ["global", "Global IME"], ["laxmi", "Laxmi Sunrise"], ["nibl", "NIMB"], ["mega", "Mega Bank"], ["nepal", "Nepal Bank"]];
 
@@ -426,7 +428,12 @@ export function ManagementService() {
   );
 }
 
+// With the rent API on, tenants find their lease and pay on the server; otherwise the old form sends a message.
 export function PayRent() {
+  return isLivePath("rent/find") ? <PayRentLive /> : <PayRentForm />;
+}
+
+function PayRentForm() {
   useSEO("Pay rent online", "Pay rent by Fonepay, eSewa, IME Pay or bank transfer.");
   const { toast } = useApp();
   const [f, setF] = useState({ code: "", name: "", phone: "", month: new Date().toISOString().slice(0, 7), amount: "", method: "Fonepay", ref: "" });

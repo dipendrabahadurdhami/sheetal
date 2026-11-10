@@ -1,5 +1,5 @@
-// Admin screens for ads, AI settings, analytics and website orders (sample data, marked Preview where not live).
-// Rules: the business panel keeps its own copy of the ad slots and ranking (SLOTS, RANK); change both together.
+// Admin screens for AI settings (sample, signed out), analytics and website orders (sample data, marked Preview where not live).
+// Rules: the old sample Ads screen is gone; boosts and banners are in Admin → Promote (LivePromote.jsx).
 
 import React, { useState } from "react";
 import { useT } from "@sheetal/shared/core/i18n";
@@ -9,80 +9,6 @@ import { Badge, Button, Input, PageHead, Panel, Seg, Stat, Table, Tabs, ToggleRo
 import { Icon } from "@sheetal/shared/core/icons";
 import { Donut, Line } from "@sheetal/shared/core/charts";
 
-/* ───────── Ads, boosts and search ranking ───────── */
-export const SLOTS = [
-  { id: "home_hero", icon: "image", price: 2500, unit: "day", stock: 3 },
-  { id: "home_featured", icon: "star", price: 900, unit: "day", stock: 8 },
-  { id: "search_top", icon: "arrow-up-to-line", price: 600, unit: "day", stock: 6 },
-  { id: "area_page", icon: "map-pin", price: 400, unit: "day", stock: 10 },
-  { id: "listing_side", icon: "panel-right", price: 300, unit: "day", stock: 12 },
-  { id: "newsletter", icon: "mail", price: 5000, unit: "issue", stock: 2 },
-  { id: "social", icon: "megaphone", price: 3500, unit: "post", stock: 6 },
-];
-export const RANK = [
-  { id: "verified", w: 20 }, { id: "photos", w: 15 }, { id: "response", w: 15 }, { id: "reviews", w: 15 },
-  { id: "fresh", w: 10 }, { id: "complete", w: 10 }, { id: "plan", w: 5 }, { id: "boost", w: 10 },
-];
-const CAMPAIGNS = [];
-const tone = { live: "done", review: "action", ended: "neutral", paused: "progress" };
-
-export function AdminAds() {
-  const t = useT();
-  const { db, update } = useStore();
-  const toast = useToast();
-  const [tab, setTab] = useState("queue");
-  const slots = db.adSlots || SLOTS;
-  const rank = db.rankWeights || RANK;
-  const all = db.campaigns || CAMPAIGNS;
-  const set = (fn) => update((d) => { d.campaigns = d.campaigns || structuredClone(CAMPAIGNS); d.adSlots = d.adSlots || structuredClone(SLOTS); d.rankWeights = d.rankWeights || structuredClone(RANK); fn(d); });
-  const totalW = rank.reduce((s, r) => s + r.w, 0);
-  return (
-    <>
-      <PageHead title={t("ads.adminTitle")} sub={t("ads.adminSub")} />
-      <div className="pf-stats">
-        <Stat label={t("ads.revenue")} value={rs(all.reduce((s, c) => s + c.spend, 0))} note={t("ads.thisMonth")} to="/admin/billing" />
-        <Stat label={t("ads.live")} value={all.filter((c) => c.status === "live").length} note={t("ads.campaigns")} />
-        <Stat label={t("ads.toReview")} value={all.filter((c) => c.status === "review").length} note={t("hr.waiting")} tone="action" noteIcon="circle-alert" />
-        <Stat label={t("ads.leads")} value={all.reduce((s, c) => s + c.leads, 0)} note={t("ads.fromAds")} />
-      </div>
-      <Tabs value={tab} onChange={setTab} tabs={[{ id: "queue", label: t("ads.campaigns"), icon: "rocket" }, { id: "slots", label: t("ads.slots"), icon: "layout-grid" }, { id: "rank", label: t("ads.rankRules"), icon: "trending-up" }]} />
-      {tab === "queue" && <section className="card pf-panel"><Table rows={all} minWidth={880} columns={[
-        { key: "t", label: t("listings.listing"), render: (c) => <span className="pf-two"><b>{c.title}</b><small>{db.tenants.find((x) => x.id === c.tenantId)?.name} · {t(`slot.${c.slot}`)}</small></span> },
-        { key: "d", label: t("hr.dates"), num: true, render: (c) => `${fdate(c.from)} – ${fdate(c.to)}` },
-        { key: "s", label: t("ads.spend"), num: true, align: "right", render: (c) => rs(c.spend) },
-        { key: "l", label: t("ads.leads"), num: true, align: "right", render: (c) => c.leads },
-        { key: "st", label: t("common.status"), render: (c) => <Badge tone={tone[c.status]}>{t(`ads.s_${c.status}`)}</Badge> },
-        { key: "x", label: "", align: "right", render: (c) => <div className="pf-row-actions">
-          {c.status === "review" && <><Button variant="outline" size="sm" onClick={() => set((d) => { d.campaigns.find((x) => x.id === c.id).status = "ended"; })}>{t("common.reject")}</Button><Button size="sm" onClick={() => { set((d) => { d.campaigns.find((x) => x.id === c.id).status = "live"; }); toast(t("ads.toastLive")); }}>{t("common.approve")}</Button></>}
-          {c.status === "live" && <Button variant="ghost" size="sm" onClick={() => set((d) => { d.campaigns.find((x) => x.id === c.id).status = "paused"; })}>{t("ads.pause")}</Button>}
-          {c.status === "paused" && <Button variant="ghost" size="sm" onClick={() => set((d) => { d.campaigns.find((x) => x.id === c.id).status = "live"; })}>{t("ads.resume")}</Button>}
-        </div> },
-      ]} /></section>}
-      {tab === "slots" && <section className="card pf-panel"><Table rows={slots} minWidth={720} columns={[
-        { key: "n", label: t("ads.slot"), render: (s) => <span className="pf-person"><span className="pf-li-ico"><Icon name={s.icon} size={16} /></span><span className="pf-two"><b>{t(`slot.${s.id}`)}</b><small>{t(`slot.${s.id}Sub`)}</small></span></span> },
-        { key: "p", label: t("addon.price"), render: (s) => <div className="pf-unit" style={{ maxWidth: 200 }}><span>Rs.</span><input className="input tnum" value={s.price} onChange={(e) => set((d) => { d.adSlots.find((x) => x.id === s.id).price = Number(e.target.value.replace(/\D/g, "")); })} aria-label={t("addon.price")} /><span>/ {t(`ads.u_${s.unit}`)}</span></div> },
-        { key: "k", label: t("ads.stock"), render: (s) => <div className="pf-counter"><button onClick={() => set((d) => { const x = d.adSlots.find((y) => y.id === s.id); x.stock = Math.max(1, x.stock - 1); })} aria-label="−"><Icon name="minus" size={15} /></button><b className="tnum">{s.stock}</b><button onClick={() => set((d) => { d.adSlots.find((y) => y.id === s.id).stock += 1; })} aria-label="+"><Icon name="plus" size={15} /></button></div> },
-      ]} /></section>}
-      {tab === "rank" && <div className="pf-split">
-        <Panel title={t("ads.rankRules")} sub={t("ads.rankSub", { n: totalW })} className="grow" pad><div className="pf-stack">
-          {rank.map((r) => (
-            <div key={r.id} className="pf-rank-row">
-              <span className="pf-two"><b>{t(`rank.${r.id}`)}</b><small>{t(`rank.${r.id}Sub`)}</small></span>
-              <input type="range" min="0" max="40" value={r.w} className="range" aria-label={t(`rank.${r.id}`)} onChange={(e) => set((d) => { d.rankWeights.find((x) => x.id === r.id).w = Number(e.target.value); })} />
-              <b className="tnum">{Math.round((r.w / totalW) * 100)}%</b>
-            </div>
-          ))}
-        </div></Panel>
-        <Panel title={t("ads.rankHow")} className="side" pad><div className="pf-stack">
-          <p className="small">{t("ads.rankHowText")}</p>
-          <div className="pf-note"><Icon name="info" size={16} />{t("ads.rankFair")}</div>
-        </div></Panel>
-      </div>}
-    </>
-  );
-}
-
-/* ───────── Website traffic ───────── */
 export function AdminAnalytics() {
   const t = useT();
   const days = ["24", "25", "26", "27", "28", "1", "2"];

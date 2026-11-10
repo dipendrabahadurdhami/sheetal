@@ -16,7 +16,8 @@ export { mediaBase };
 const num = (v: bigint | number | null | undefined) => (v == null ? null : Number(v));
 
 /** What a card, list or map needs. */
-export function listingCard(l: ListingRow, base: string) {
+/** `sponsored` is the place a paid boost shows the listing in (home, search or city), for the "Sponsored" label. */
+export function listingCard(l: ListingRow, base: string, sponsored: string | null = null) {
   const purpose = l.purpose === "rent" ? "Rent" : "Sale";
   const cover = l.photos[0]?.file;
   const point = validLatLng(l.lat, l.lng);
@@ -61,6 +62,7 @@ export function listingCard(l: ListingRow, base: string) {
     property_status: STATUS_LABEL[l.status] ?? "AVAILABLE",
     sold: l.status === "sold" || l.status === "rented" ? 1 : 0,
     is_featured: l.featured,
+    sponsored,
     views: l.views,
     feature_image: cover ? photoUrl(base, "main", cover) : null,
     thumbnail: cover ? photoUrl(base, "thumbnail", cover) : null,

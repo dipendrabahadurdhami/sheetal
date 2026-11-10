@@ -32,8 +32,8 @@ export async function billingRoutes(app: FastifyInstance, opts: { fetch?: Fetch 
   function payer(ws: Workspace) {
     if (!ws.can("billing.manage")) throw forbidden("Only people who manage billing can pay for the plan.");
   }
-  const invoiceJson = (i: { id: string; seq: number; createdAt: Date; planId: string; months: number; subtotal: number; vat: number; total: number; status: string; dueAt: Date; paidAt: Date | null; periodStart: Date | null; periodEnd: Date | null; billedTo: unknown }, plans: Map<string, string>) => ({
-    id: i.id, number: invoiceNumber(i), plan: plans.get(i.planId) ?? i.planId, planId: i.planId, months: i.months, subtotal: i.subtotal, vat: i.vat, total: i.total, status: i.status,
+  const invoiceJson = (i: { id: string; seq: number; createdAt: Date; planId: string; months: number; kind?: string; addons?: unknown; subtotal: number; vat: number; total: number; status: string; dueAt: Date; paidAt: Date | null; periodStart: Date | null; periodEnd: Date | null; billedTo: unknown }, plans: Map<string, string>) => ({
+    id: i.id, number: invoiceNumber(i), kind: i.kind ?? "plan", addons: i.addons ?? [], plan: i.kind === "addon" ? "Add-ons" : i.kind === "boost" ? "Boost" : i.kind === "banner" ? "Home banner" : plans.get(i.planId) ?? i.planId, planId: i.planId, months: i.months, subtotal: i.subtotal, vat: i.vat, total: i.total, status: i.status,
     issuedAt: i.createdAt, dueAt: i.dueAt, paidAt: i.paidAt, periodStart: i.periodStart, periodEnd: i.periodEnd, billedTo: i.billedTo,
   });
 
@@ -91,7 +91,7 @@ export async function billingRoutes(app: FastifyInstance, opts: { fetch?: Fetch 
       const plan = await db().plan.findFirst({ where: { id: b.planId, type: t.type, active: true } });
       if (!plan || !plan.price) throw badRequest("Choose a paid plan for this business.");
       // One open invoice per plan and period: reuse it instead of piling up copies.
-      invoice = await db().invoice.findFirst({ where: { tenantId: t.id, status: "open", planId: plan.id, months: b.months } })
+      invoice = await db().invoice.findFirst({ where: { tenantId: t.id, status: "open", planId: plan.id, months: b.months, kind: "plan" } })
         ?? await createInvoice(db(), { tenant: t, plan, months: b.months, by: ws.user.id, vatRate: (await billingSettings(db())).vatRate });
     }
     const g = await gw();
@@ -130,11 +130,11 @@ export async function billingRoutes(app: FastifyInstance, opts: { fetch?: Fetch 
     const user = requireUser(request);
     const p = await db().payment.findFirst({ where: { id: request.params.id, tenantId: { in: user.memberships.filter((m) => m.status === "active").map((m) => m.tenantId) } }, include: { invoice: true } });
     if (!p) throw notFound("Payment not found.");
-    if (p.status === "paid") return { message: "Paid. Thank you!", data: { status: "paid", tenantId: p.tenantId } };
+    if (p.status === "paid") return { message: "Paid. Thank you!", data: { status: "paid", tenantId: p.tenantId, kind: p.invoice.kind } };
     const b = z.object({ data: z.string().max(5000).optional(), pidx: z.string().max(100).optional(), query: z.record(z.string(), z.string().max(500)).optional(), failed: z.boolean().optional() }).parse(request.body ?? {});
     if (b.failed) {
       await db().payment.update({ where: { id: p.id }, data: { status: "failed", note: "Cancelled or failed at the gateway" } });
-      return { message: "The payment didn't go through. You can try again.", data: { status: "failed" } };
+      return { message: "The payment didn't go through. You can try again.", data: { status: "failed", kind: p.invoice.kind } };
     }
     const g = await gw();
     let v: Verified;
@@ -147,10 +147,10 @@ export async function billingRoutes(app: FastifyInstance, opts: { fetch?: Fetch 
     else throw badRequest("Nothing to check for this payment.");
     if (!v.ok) {
       await db().payment.update({ where: { id: p.id }, data: { status: "failed", note: v.reason, raw: (v.raw ?? undefined) as object | undefined } });
-      return { message: `${v.reason} You haven't been charged twice; try again or use another method.`, data: { status: "failed" } };
+      return { message: `${v.reason} You haven't been charged twice; try again or use another method.`, data: { status: "failed", kind: p.invoice.kind } };
     }
     await applyPayment(db(), app.mailer, { paymentId: p.id, providerRef: v.providerRef, raw: v.raw, siteUrl: site });
-    return { message: "Paid. Thank you! Your plan is active.", data: { status: "paid", tenantId: p.tenantId } };
+    return { message: p.invoice.kind === "banner" ? "Paid. Thank you! Sheetal checks your banner picture next; it then shows on its dates." : p.invoice.kind === "boost" ? "Paid. Thank you! Your boost runs on its dates." : p.invoice.kind === "addon" ? "Paid. Thank you! Your add-ons count now." : "Paid. Thank you! Your plan is active.", data: { status: "paid", tenantId: p.tenantId, kind: p.invoice.kind } };
   });
 
   /** Bank transfer: the proof goes to Sheetal, who confirms it in the admin panel. */
@@ -165,7 +165,7 @@ export async function billingRoutes(app: FastifyInstance, opts: { fetch?: Fetch 
     await db().payment.update({ where: { id: p.id }, data: { status: "pending_review", proofFile, providerRef: b.reference || null } });
     await app.mailer.send({ to: app.config.SUPPORT_EMAIL, subject: `Bank transfer to check: ${invoiceNumber(p.invoice)} (Rs. ${p.amount.toLocaleString("en-IN")})`, text: `${ws.member.tenant.name} sent a bank transfer proof for ${invoiceNumber(p.invoice)}${b.reference ? `, reference ${b.reference}` : ""}.\nConfirm it in the admin panel: Billing → Payments.` });
     await notifyStaff(db(), "billing.view", { type: "billing", title: `Bank transfer to check: ${invoiceNumber(p.invoice)}`, message: `${ws.member.tenant.name} · Rs. ${p.amount.toLocaleString("en-IN")}`, link: "/admin/billing" });
-    return { message: "Proof sent. Sheetal confirms bank transfers within a working day; your plan starts then." };
+    return { message: p.invoice.kind === "banner" ? "Proof sent. Sheetal confirms the transfer and checks your banner picture within a working day; it then shows on its dates." : p.invoice.kind === "boost" ? "Proof sent. Sheetal confirms bank transfers within a working day; your boost starts by itself then." : "Proof sent. Sheetal confirms bank transfers within a working day; your plan starts then." };
   });
 
   /** What one price would be split into, for showing VAT before paying. */

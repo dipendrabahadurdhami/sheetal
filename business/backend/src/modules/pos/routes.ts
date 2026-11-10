@@ -11,6 +11,7 @@ import { z } from "zod";
 import { dbOf } from "@sheetal/backend-core/lib/db";
 import { badRequest, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
 import { hotelBill } from "@sheetal/backend-core/domain/money";
+import { reverseSale, saleMoves } from "@sheetal/backend-core/domain/stock";
 import { branchFor, branchView, inView, workspaceOf, type BranchView, type Workspace } from "../access.js";
 
 const METHODS = ["cash", "fonepay", "card", "esewa", "khalti", "room"] as const;
@@ -121,6 +122,8 @@ export async function posRoutes(app: FastifyInstance) {
       const pb = await tx.posBill.create({ data: { tenantId: ws.tenantId, branchId, shiftId: shift?.id, outlet: b.outlet, lines, ...bill, method: b.method, bookingId: booking?.id, byUserId: ws.user.id } });
       // On the room: the amount before service and VAT goes on the folio; those are added once, on the room bill.
       if (booking) await tx.folioLine.create({ data: { bookingId: booking.id, kind: "pos", what: `${b.outlet} bill ${billCode(pb)}`, amount: subtotal - b.discount, byUserId: ws.user.id } });
+      // Stock: what the menu items use (their recipes) goes out with the sale.
+      await saleMoves(tx, pb.id, ws.user.id);
       return pb;
     });
     return { message: booking ? `Put on room ${booking.room?.no} (${booking.guestName}).` : `Paid: Rs. ${bill.total.toLocaleString("en-IN")}.`, data: { ...created, code: billCode(created) } };
@@ -134,6 +137,8 @@ export async function posRoutes(app: FastifyInstance) {
     if (!pb || pb.status !== "paid") throw notFound("Bill not found.");
     await db().$transaction(async (tx) => {
       await tx.posBill.update({ where: { id: pb.id }, data: { status: "void", voidNote: note } });
+      // Stock: put back what the sale took out.
+      await reverseSale(tx, pb.id, ws.user.id);
       if (pb.bookingId) await tx.folioLine.create({ data: { bookingId: pb.bookingId, kind: "pos", what: `Void ${billCode(pb)}: ${note}`, amount: -(pb.subtotal - pb.discount), byUserId: ws.user.id } });
     });
     await db().auditLog.create({ data: { actorId: ws.user.id, tenantId: ws.tenantId, action: "pos.void", target: `${billCode(pb)} Rs. ${pb.total}: ${note}`, ip: request.ip } });

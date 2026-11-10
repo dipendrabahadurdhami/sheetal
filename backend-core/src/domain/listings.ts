@@ -15,8 +15,11 @@ const KINDS_BY_TYPE: Record<BusinessType, ListingKind[]> = {
 };
 
 /** Kinds a business may list: its type's kinds, or all of them on a plan with all_kinds (Pro). */
-export function kindsFor(type: string, plan: Pick<Plan, "features">): ListingKind[] {
+export function kindsFor(type: string, plan: Pick<Plan, "features">, byType?: Record<string, string[]>): ListingKind[] {
   if ((plan.features as Record<string, boolean>)?.all_kinds) return [...LISTING_KINDS];
+  // What Sheetal staff set in Admin → Listing setup (lib/catalog.ts), when they changed it.
+  const staff = byType?.[type]?.filter((k): k is ListingKind => (LISTING_KINDS as readonly string[]).includes(k));
+  if (staff) return staff;
   return KINDS_BY_TYPE[type as BusinessType] ?? ["sell"];
 }
 

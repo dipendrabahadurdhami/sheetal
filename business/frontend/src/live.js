@@ -246,3 +246,9 @@ export function useBrand(colors) {
     return () => { root.classList.remove("has-brand"); for (const k of Object.keys(vars)) root.style.removeProperty(k); };
   }, [key]);
 }
+
+/** Saves one settings section (payments, notifications, listings, documents, branding, checkups) on the server. */
+export const saveSettings = (section, value) => bizApi("PUT", `/workspace/settings/${section}`, value);
+
+/** Uploads a payment QR image; returns its address. */
+export const uploadQr = async (file) => (await bizApi("POST", "/workspace/settings/qr", { data: await fileToBase64(file) })).data.url;

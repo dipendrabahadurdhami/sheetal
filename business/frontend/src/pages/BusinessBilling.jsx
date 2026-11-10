@@ -12,9 +12,12 @@ import { PERIODS, planFeatureList, priceFor, savingFor } from "@sheetal/shared/c
 import { BusinessAddons } from "@sheetal/shared/components/Addons";
 import { isLive } from "../live";
 import { LiveBilling } from "./LiveBilling";
+import { LiveAddons } from "./LiveAddons";
 
 export function BusinessBilling({ tenant, canManage }) {
-  return isLive(tenant.id) ? <LiveBilling tenant={tenant} canManage={canManage} /> : <SampleBilling tenant={tenant} canManage={canManage} />;
+  // Buying an add-on makes an invoice: the billing panel loads again to show it.
+  const [tick, setTick] = useState(0);
+  return isLive(tenant.id) ? <><LiveBilling key={tick} tenant={tenant} canManage={canManage} /><LiveAddons tenant={tenant} onChange={() => setTick((n) => n + 1)} /></> : <SampleBilling tenant={tenant} canManage={canManage} />;
 }
 
 function SampleBilling({ tenant, canManage }) {

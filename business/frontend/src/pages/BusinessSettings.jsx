@@ -1,10 +1,13 @@
 // Business settings: profile, branding, payments, notifications, listing defaults and documents.
-// How it works: signed in, the profile saves on the server (it shows on the website, bills and invoices) and branding
-// uses BrandFromLogo; the other tabs are still saved in the browser (marked Preview).
+// How it works: signed in, every tab saves on the server: the profile (it shows on the website, bills and invoices),
+// branding through BrandFromLogo plus the receipt texts, and payments, notifications, listing defaults and documents
+// as settings sections (business/backend/src/modules/settings). A Khalti key comes back as "••••••••" and can only be
+// replaced. Sample workspaces keep their settings in the browser.
 
 import React, { useState } from "react";
-import { isLive, profileOf, saveProfile } from "../live";
+import { isLive, profileOf, saveProfile, saveSettings, uploadQr } from "../live";
 import { BrandFromLogo } from "./BrandFromLogo";
+import { CodePrefix } from "./CodePrefix";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
 import { Badge, Field, Input, PageHead, Panel, SaveBar, Select, Seg, ToggleRow, useToast } from "@sheetal/shared/core/ui";
@@ -29,45 +32,81 @@ export const defaultTenantSettings = (tenant) => ({
   documents: { defaultLang: "both", witnesses: 2, esign: "otp", stampSlot: true, bsDates: true },
 });
 
+const isObj = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+/** `over` laid on `base`, object by object (saved settings over the defaults, so new defaults show up). */
+export function mergeSettings(base, over) {
+  if (!isObj(over)) return base;
+  const out = { ...base };
+  for (const [k, v] of Object.entries(over)) out[k] = isObj(v) && isObj(base?.[k]) ? mergeSettings(base[k], v) : v;
+  return out;
+}
+
+// The tabs saved as settings sections on the server (the profile has its own endpoint).
+const SERVER_SECTIONS = ["branding", "payments", "notifications", "listings", "documents"];
+
 export function BusinessSettings({ tenant, tab: tabProp }) {
   const t = useT();
   const { db, update } = useStore();
   const toast = useToast();
-  const saved = db.tenantSettings[tenant.id] || defaultTenantSettings(tenant);
+  const saved = mergeSettings(defaultTenantSettings(tenant), db.tenantSettings[tenant.id]);
+  const savedKey = JSON.stringify(saved);
   const [s, setS] = useState(() => structuredClone(saved));
   const tab = ["profile", "branding", "payments", "notifications", "listings", "documents", "voice"].includes(tabProp) ? tabProp : "profile";
   const [adv, setAdv] = useState(false);
   const plan = db.plans.find((p) => p.id === tenant.planId);
   const allowOwn = db.platformSettings.ownGatewayTypes?.includes?.(tenant.type) ?? true;
-  const set = (path, v) => setS((x) => { const n = structuredClone(x); const ks = path.split("."); let o = n; ks.slice(0, -1).forEach((k) => (o = o[k])); o[ks.at(-1)] = v; return n; });
+  const set = (path, v) => setS((x) => { const n = structuredClone(x); const ks = path.split("."); let o = n; ks.slice(0, -1).forEach((k) => (o = o[k] = o[k] ?? {})); o[ks.at(-1)] = v; return n; });
   const get = (path) => path.split(".").reduce((o, k) => o?.[k], s);
-  const dirty = JSON.stringify(s) !== JSON.stringify(saved);
+  const dirty = JSON.stringify(s) !== savedKey;
   const [busy, setBusy] = useState(false);
   const [errs, setErrs] = useState({});
+  // When the saved settings change (loaded from the server, or just saved), the form follows unless it has edits.
+  const lastSaved = React.useRef(savedKey);
+  const adopt = React.useRef(false);
+  React.useEffect(() => {
+    if (adopt.current || JSON.stringify(s) === lastSaved.current) setS(structuredClone(saved));
+    adopt.current = false;
+    lastSaved.current = savedKey;
+  }, [savedKey]);
+
   const save = async () => {
-    // Signed in: the profile is saved on the server (it shows on the website, bills and invoices); the other
-    // settings stay with the panel for now.
-    if (isLive(tenant.id) && JSON.stringify(s.profile) !== JSON.stringify(saved.profile)) {
-      setBusy(true);
-      try {
+    if (!isLive(tenant.id)) {
+      update((d) => { d.tenantSettings[tenant.id] = s; });
+      toast(t("settings.toastSaved"));
+      return;
+    }
+    setBusy(true);
+    try {
+      let msg = t("settings.toastSaved");
+      if (JSON.stringify(s.profile) !== JSON.stringify(saved.profile)) {
         const r = await saveProfile(s.profile);
         const p = r.data;
+        msg = r.message;
         update((d) => {
           const x = d.tenants.find((y) => y.id === tenant.id);
           if (x) Object.assign(x, { name: p.name, city: p.city || "", address: p.address || "", phone: p.phone || "", email: p.email || "", pan: p.pan || "", vatRegistered: p.vatRegistered, website: p.website || "" });
-          d.tenantSettings[tenant.id] = { ...s, profile: profileOf(x) };
+          d.tenantSettings[tenant.id] = { ...mergeSettings(defaultTenantSettings(x || tenant), d.tenantSettings[tenant.id]), profile: profileOf(x || tenant) };
         });
-        setErrs({});
-        toast(r.message);
-      } catch (e) {
-        setErrs(Object.fromEntries(Object.entries(e.errors || {}).map(([k, m]) => [k, [].concat(m)[0]])));
-        toast(e.message);
-      } finally { setBusy(false); }
-      return;
-    }
-    update((d) => { d.tenantSettings[tenant.id] = s; });
-    toast(t("settings.toastSaved"));
+      }
+      for (const sec of SERVER_SECTIONS) {
+        if (JSON.stringify(s[sec]) === JSON.stringify(saved[sec])) continue;
+        const r = await saveSettings(sec, s[sec]);
+        msg = r.message;
+        update((d) => { d.tenantSettings[tenant.id] = { ...mergeSettings(defaultTenantSettings(tenant), d.tenantSettings[tenant.id]), [sec]: r.data }; });
+      }
+      adopt.current = true;
+      setErrs({});
+      toast(msg);
+    } catch (e) {
+      setErrs(Object.fromEntries(Object.entries(e.errors || {}).map(([k, m]) => [k, [].concat(m)[0]])));
+      toast(e.message);
+    } finally { setBusy(false); }
   };
+  const pickQr = async (k, file) => {
+    if (!isLive(tenant.id)) { set(`payments.own.${k}.qr`, file.name); return; }
+    try { set(`payments.own.${k}.qr`, await uploadQr(file)); toast("QR uploaded. Save to keep it."); } catch (e) { toast(e.message); }
+  };
+  const qrLabel = (k) => { const q = get(`payments.own.${k}.qr`); return q ? (String(q).startsWith("http") ? "Change QR" : q) : t("pay.uploadQr"); };
   React.useEffect(() => setAdv(false), [tab]);
 
   return (
@@ -139,7 +178,7 @@ export function BusinessSettings({ tenant, tab: tabProp }) {
                     {get(`payments.own.${k}.on`) && k !== "cash" && (
                       <div className="pf-gateway-body">
                         {k !== "bankQr" && <Field label={t("pay.merchantId")}><Input className="input tnum" value={get(`payments.own.${k}.${k === "khalti" ? "key" : "merchant"}`) || ""} onChange={(e) => set(`payments.own.${k}.${k === "khalti" ? "key" : "merchant"}`, e.target.value)} placeholder={t("pay.merchantPh")} /></Field>}
-                        {(k === "fonepay" || k === "bankQr") && <Field label={t("pay.qr")}><label className="btn btn-outline"><input type="file" accept="image/*" hidden onChange={(e) => e.target.files[0] && set(`payments.own.${k}.qr`, e.target.files[0].name)} /><Icon name="qr-code" size={16} />{get(`payments.own.${k}.qr`) || t("pay.uploadQr")}</label></Field>}
+                        {(k === "fonepay" || k === "bankQr") && <Field label={t("pay.qr")}><label className="btn btn-outline"><input type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files[0]; e.target.value = ""; if (f) pickQr(k, f); }} /><Icon name="qr-code" size={16} />{qrLabel(k)}</label></Field>}
                         <Badge tone={get(`payments.own.${k}.${k === "khalti" ? "key" : "merchant"}`) || get(`payments.own.${k}.qr`) ? "done" : "action"}>{get(`payments.own.${k}.${k === "khalti" ? "key" : "merchant"}`) || get(`payments.own.${k}.qr`) ? t("pay.connected") : t("pay.notConnected")}</Badge>
                       </div>
                     )}
@@ -159,7 +198,7 @@ export function BusinessSettings({ tenant, tab: tabProp }) {
                 <div role="row" className="head"><span role="columnheader">{t("notif.event")}</span>{["app", "email", "wa"].map((c) => <span key={c} role="columnheader">{t(`notif.${c}`)}</span>)}</div>
                 {Object.keys(s.notifications).filter((k) => typeof s.notifications[k] === "object").map((ev) => (
                   <div role="row" key={ev}><span role="cell">{t(`notif.ev_${ev}`)}</span>{["app", "email", "wa"].map((c) => (
-                    <span role="cell" key={c}><input type="checkbox" checked={s.notifications[ev][c]} onChange={(e) => set(`notifications.${ev}.${c}`, e.target.checked)} aria-label={`${t(`notif.ev_${ev}`)} ${t(`notif.${c}`)}`} /></span>
+                    <span role="cell" key={c}><input type="checkbox" checked={!!s.notifications[ev][c]} onChange={(e) => set(`notifications.${ev}.${c}`, e.target.checked)} aria-label={`${t(`notif.ev_${ev}`)} ${t(`notif.${c}`)}`} /></span>
                   ))}</div>
                 ))}
               </div>
@@ -168,6 +207,7 @@ export function BusinessSettings({ tenant, tab: tabProp }) {
             </>}
 
             {tab === "listings" && <>
+              {isLive(tenant.id) && <CodePrefix tenantId={tenant.id} />}
               <Field label={t("bsettings.defaultVisibility")} hint={t("bsettings.defaultVisibilityHint")}>
                 <Seg value={get("listings.defaultVisibility")} onChange={(v) => set("listings.defaultVisibility", v)} options={["public", "unlisted", "private"].map((x) => ({ id: x, label: t(`vis.${x}`) }))} />
               </Field>
@@ -185,7 +225,7 @@ export function BusinessSettings({ tenant, tab: tabProp }) {
             </>}
           </div>
         </Panel>
-      <SaveBar dirty={dirty} onSave={save} onDiscard={() => setS(structuredClone(saved))} />
+      <SaveBar dirty={dirty && !busy} onSave={save} onDiscard={() => setS(structuredClone(saved))} />
     </>
   );
 }

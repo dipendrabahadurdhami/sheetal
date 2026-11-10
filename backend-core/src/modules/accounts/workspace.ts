@@ -1,6 +1,8 @@
 // Creating a business workspace: the business, its ready-made roles, its owner and its head office branch.
 // Where it fits: sign-up, posting from the website, adding a business in the panel or the admin panel, and tests.
-// How it works: one transaction; the business starts on its type's free Starter plan unless a plan is given.
+// How it works: one transaction; the business starts on its type's free Starter plan unless a plan is given. With
+// trialDays above 0 (platform settings) a new business tries its type's Business plan: status "trial", renewsAt that
+// many days ahead. When the trial ends without a payment the billing cycle moves it to Starter (domain/billing.ts).
 
 import type { Prisma } from "@prisma/client";
 import { roleTemplatesFor, type BusinessType } from "../../domain/permissions.js";
@@ -18,11 +20,12 @@ export async function createRoles(tx: Tx, tenantId: string, type: BusinessType) 
   return Object.fromEntries(rows.map((r) => [r.key, r]));
 }
 
-export async function createWorkspace(tx: Tx, opts: { ownerId: string; name: string; type: BusinessType; planId?: string; email?: string; phone?: string; city?: string; period?: number; renewsAt?: Date; emailVerified?: boolean }) {
+export async function createWorkspace(tx: Tx, opts: { ownerId: string; name: string; type: BusinessType; planId?: string; email?: string; phone?: string; city?: string; period?: number; renewsAt?: Date; emailVerified?: boolean; trialDays?: number }) {
+  const trial = opts.trialDays && opts.trialDays > 0 && !opts.renewsAt ? new Date(Date.now() + opts.trialDays * 864e5) : undefined;
   const tenant = await tx.tenant.create({
     data: {
-      name: opts.name, type: opts.type, planId: opts.planId ?? starterPlanId(opts.type), email: opts.email, phone: opts.phone, city: opts.city,
-      status: "active", period: opts.period ?? 1, renewsAt: opts.renewsAt, emailVerified: opts.emailVerified ?? false,
+      name: opts.name, type: opts.type, planId: opts.planId ?? (trial ? `${opts.type}-business` : starterPlanId(opts.type)), email: opts.email, phone: opts.phone, city: opts.city,
+      status: trial ? "trial" : "active", period: opts.period ?? 1, renewsAt: opts.renewsAt ?? trial, emailVerified: opts.emailVerified ?? false,
     },
   });
   const roles = await createRoles(tx, tenant.id, opts.type);
