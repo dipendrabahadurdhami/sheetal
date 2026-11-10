@@ -3,6 +3,7 @@
 // How it works: each field is { key, type, label, hint, required, requiredWhen, visibleWhen, readOnlyWhen, min, max, maxLength, options,
 // accept, maxMB, columns } (docs/architecture/FRONTEND-KIT.md section 6). `values` / `onChange(patch)` hold the data; `errors` is
 // { field: [message] } straight from ApiError.errors (422) and is also summarised at the top. mode "view" shows the values as a facts list.
+// Extras used by Expenses: `labelWhen`, `minLength` (while required), and options { from, label } for English-only screens.
 // Rules: the rules themselves live in formRules.js (tested without a browser). Client checks are for speed only; the server is the judge.
 // Every control has a <label for>, errors use aria-describedby, and the first invalid field gets focus after a failed save.
 
@@ -11,13 +12,16 @@ import { Icon } from "@sheetal/shared/core/icons";
 import { useLang, useT } from "@sheetal/shared/core/i18n";
 import { fdate, rs } from "@sheetal/shared/core/format";
 import { Input, Select, Seg, Textarea, ToggleRow } from "../primitives.jsx";
-import { digits, fieldState, firstInvalidKey, visibleFields } from "./formRules.js";
+import { digits, evalRule, fieldState, firstInvalidKey, visibleFields } from "./formRules.js";
 
 /** A label that may be a string or { en, ne }. */
 export const labelOf = (label, lang = "en") => (label && typeof label === "object" ? label[lang] || label.en || "" : label || "");
 
-/** Options as [{ id, label }]: from the field's own list, or { from: "categories" } read out of `context`. Items may use label, en or name. */
+/** Options as [{ id, label }]: from the field's own list, or { from: "categories" } read out of `context`. Items may use label, en or name;
+ *  { from: "categories", label: "en" } always uses that key (a screen that is English-only). */
 export function optionsOf(field, context = {}, lang = "en") {
+  const fixed = field.options && !Array.isArray(field.options) ? field.options.label : null;
+  if (fixed) return (context[field.options.from] || []).map((o) => ({ id: o.id, label: o[fixed] ?? o.id }));
   const raw = Array.isArray(field.options) ? field.options : field.options?.from ? context[field.options.from] || [] : field.type === "branch" ? context.branches || [] : [];
   return raw.map((o) => ({ id: o.id, label: labelOf(o.label ?? (lang === "ne" ? o.ne : null) ?? o.en ?? o.name ?? o.id, lang) }));
 }
@@ -33,7 +37,7 @@ function Control({ f, id, value, onChange, disabled, error, describedBy, options
       return <Input {...common} className="input tnum" inputMode="numeric" placeholder={f.placeholder} value={value ?? ""} onChange={(e) => onChange(digits(e.target.value).slice(0, f.maxLength || 15))} />;
     case "money":
       return (
-        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span className="pf-money">
           <span className="muted" aria-hidden="true">Rs.</span>
           <Input {...common} className="input tnum" inputMode="numeric" placeholder={f.placeholder} value={value ?? ""} onChange={(e) => onChange(digits(e.target.value).slice(0, 12))} />
         </span>
@@ -65,7 +69,7 @@ function FileControl({ f, id, value, onChange, disabled, describedBy, t }) {
   return (
     <>
       <input id={id} type="file" accept={f.accept} disabled={disabled} onChange={pick} aria-describedby={describedBy} />
-      {local && <small style={{ color: "var(--problem, #b42318)" }} role="alert">{local}</small>}
+      {local && <small className="pf-error" role="alert">{local}</small>}
       {saved && <small className="muted">{t("kit.fileSaved")} <button type="button" className="link" onClick={() => onChange(null)}>{t("kit.remove")}</button></small>}
       {value && !saved && <small className="muted">{value.name} <button type="button" className="link" onClick={() => onChange(null)}>{t("kit.remove")}</button></small>}
     </>
@@ -114,7 +118,8 @@ export function FormBuilder({ fields, values, onChange, errors = {}, mode = "edi
     const id = `fb-${f.key}`;
     const err = errors[f.key]?.[0];
     const hintId = f.hint || err ? `${id}-note` : undefined;
-    const label = labelOf(f.label, lang);
+    // labelWhen: { when: rule, label } swaps the label while the rule holds (Expenses: "What is it for?" once the category is Other).
+    const label = labelOf(f.labelWhen && evalRule(f.labelWhen.when, values) ? f.labelWhen.label : f.label, lang);
     const options = optionsOf(f, context, lang);
     const ro = disabled || st.readOnly;
     const hint = f.hint;
@@ -140,7 +145,7 @@ export function FormBuilder({ fields, values, onChange, errors = {}, mode = "edi
         <div className="pf-note" role="alert">
           <Icon name="circle-alert" size={16} />
           <span>{t("kit.fixErrors")}
-            <ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>{summary.map(([k, m]) => { const f = fields.find((x) => x.key === k); return <li key={k}>{f ? `${labelOf(f.label, lang)}: ` : ""}{m[0]}</li>; })}</ul>
+            <ul>{summary.map(([k, m]) => { const f = fields.find((x) => x.key === k); return <li key={k}>{f ? `${labelOf(f.label, lang)}: ` : ""}{m[0]}</li>; })}</ul>
           </span>
         </div>
       )}

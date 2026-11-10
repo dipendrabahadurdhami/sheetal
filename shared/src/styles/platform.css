@@ -1612,3 +1612,25 @@ html.has-brand[data-theme~="bars"] .pf-top .btn-primary { color: var(--brand-acc
 .pf-doc-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .pf-doc-list li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--r); }
 .pf-doc-list li .pf-two { flex: 1; min-width: 0; }
+/* Kit tables and forms (P1-FE-2): classes that replace the inline styles FE-1 left in packages/ui/src/crud. */
+.pf-toolbar-note { margin: 0; flex: 1 1 100%; }
+.pf-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 12px; padding: 14px 20px; }
+.pf-drawer-sm { width: min(360px, 100%); } .pf-drawer-lg { width: min(640px, 100%); }
+.pf-skel { height: 14px; border-radius: 6px; background: var(--surface); animation: pf-skel 1.2s ease-in-out infinite; }
+@keyframes pf-skel { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+.pf-pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 20px; flex-wrap: wrap; }
+.pf-bulk { display: flex; align-items: center; gap: 10px; padding: 10px 20px; background: var(--accent-soft); flex-wrap: wrap; }
+.pf-money { position: relative; display: flex; align-items: center; gap: 8px; }
+.pf-cards { display: grid; gap: 10px; padding: 14px 16px; }
+.pf-card-row { display: flex; flex-direction: column; gap: 6px; padding: 14px; border: 1px solid var(--line); border-radius: var(--r); background: var(--card); text-align: left; width: 100%; color: var(--text); }
+button.pf-card-row { cursor: pointer; }
+.pf-card-skel { display: grid; gap: 8px; padding: 14px; border: 1px solid var(--line); border-radius: var(--r); }
+.pf-card-line { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; }
+.pf-card-title { font-weight: 700; color: var(--text-strong); }
+.pf-card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.pf-note ul { margin: 6px 0 0; padding-left: 18px; }
+@media (max-width: 640px) {
+  .pf-card-actions .btn, .pf-row-actions .btn, .pf-drawer-foot .btn, .pf-toolbar .btn { min-height: 44px; }
+  .pf-toolbar > * { flex: 1 1 100%; }
+  .pf-drawer-sm, .pf-drawer-lg { width: 100%; }
+}
