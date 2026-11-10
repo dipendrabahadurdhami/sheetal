@@ -64,6 +64,7 @@ export abstract class BaseService<T extends BusinessEntity, C extends object, U 
   }
 
   async create(ctx: BusinessContext, raw: unknown): Promise<T> {
+    this.refuseReadOnly(ctx);
     this.requireApp(ctx);
     ctx.permissions.require(this.deps.permissions.create);
     const input = this.parse(this.deps.schemas.create, raw);
@@ -77,6 +78,7 @@ export abstract class BaseService<T extends BusinessEntity, C extends object, U 
   }
 
   async update(ctx: BusinessContext, id: string, raw: unknown): Promise<T> {
+    this.refuseReadOnly(ctx);
     this.requireApp(ctx);
     const scope = ctx.permissions.require(this.deps.permissions.update);
     const version = this.versionOf(raw);
@@ -92,6 +94,7 @@ export abstract class BaseService<T extends BusinessEntity, C extends object, U 
 
   /** Soft delete. */
   async remove(ctx: BusinessContext, id: string, version?: number): Promise<void> {
+    this.refuseReadOnly(ctx);
     this.requireApp(ctx);
     const scope = ctx.permissions.require(this.deps.permissions.delete);
     await this.inTransaction(ctx, async (tx) => {
@@ -103,6 +106,7 @@ export abstract class BaseService<T extends BusinessEntity, C extends object, U 
   }
 
   async restore(ctx: BusinessContext, id: string): Promise<T> {
+    this.refuseReadOnly(ctx);
     this.requireApp(ctx);
     const scope = ctx.permissions.require(this.deps.permissions.delete);
     return this.inTransaction(ctx, async (tx) => {
@@ -133,6 +137,7 @@ export abstract class BaseService<T extends BusinessEntity, C extends object, U 
     event?: (result: R) => { name: string; payload: object };
     run: (ctx: BusinessContext, scope: DataScope) => Promise<R>;   // runs inside the transaction
   }): Promise<R> {
+    this.refuseReadOnly(ctx);
     this.requireApp(ctx);
     const granted = ctx.permissions.require(a.permission);
     if (a.approval) throw new Error(`Action "${a.name}" asks for an approval, but approvals are built in a later task; refusing to run it unchecked.`);
@@ -162,6 +167,12 @@ export abstract class BaseService<T extends BusinessEntity, C extends object, U 
   protected requireLimit(ctx: BusinessContext, key: string, used: number): void {
     const limit = ctx.entitlements.limit(this.deps.app, key);
     if (limit !== null && used >= limit) throw planLimit("app_limit", `Your plan allows ${limit} here. Upgrade to add more.`, { limit, key });
+  }
+
+  /** A read-only staff support session is refused before anything else (input checks, version, permissions), so it always gets the same
+   *  clear answer. inTransaction() checks again for custom actions. */
+  protected refuseReadOnly(ctx: BusinessContext): void {
+    if (ctx.impersonation?.readOnly) throw forbidden("This is a read-only support session. Changes are not allowed.");
   }
 
   /** Joins the caller's transaction if there is one, otherwise starts one. Every write (create, update, remove, restore,
