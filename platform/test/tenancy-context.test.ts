@@ -11,6 +11,7 @@ import {
 } from "../src/tenancy/context.js";
 import { PERMISSION_CATALOG } from "../src/tenancy/permissions.generated.js";
 import { oldNamesOf } from "../src/tenancy/aliases.js";
+import { reconcileOldNames } from "../src/tenancy/branch-links.js";
 import type { BranchInfo } from "../src/core/context.js";
 
 const A: BranchInfo = { id: "b-head", name: "Head office", status: "open" };
@@ -80,6 +81,33 @@ describe("BranchScope", () => {
     expect(accessOfMember({ scopes: ["x"], allBranches: false, branches: [], role: agent })).toEqual({ allowed: [], names: [] });
     expect(accessOfMember({ scopes: ["Pokhara"], role: agent })).toEqual({ allowed: [], names: ["Pokhara"] });   // an object with only the old column
     expect(accessOfMember({ scopes: null, role: agent })).toEqual({ allowed: "all", names: "all" });
+  });
+});
+
+describe("rows written only the old way (fail closed, Lead fix after the first CI run)", () => {
+  const branches = [{ id: "b-head", name: "Head office" }, { id: "b-pokhara", name: "Pokhara" }];
+  const role = { perms: ["expenses.view"] };
+
+  it("reads a list of names with the flag left at 'all' as limited to those names, never every branch", () => {
+    const m = reconcileOldNames({ scopes: ["pokhara"], allBranches: true, branches: [], role }, branches);
+    expect(m.allBranches).toBe(false);
+    expect(m.branches).toEqual([{ branchId: "b-pokhara", branch: { name: "Pokhara" } }]);
+    expect(accessOfMember(m)).toEqual({ allowed: ["b-pokhara"], names: ["Pokhara"] });
+  });
+
+  it("gives a stale name no branch at all, and leaves owners, 'all' and rows written the new way unchanged", () => {
+    expect(reconcileOldNames({ scopes: ["Mustang"], allBranches: true, branches: [], role }, branches)).toMatchObject({ allBranches: false, branches: [] });
+    const owner = { scopes: ["Pokhara"], allBranches: true, branches: [], role: { perms: ["*"] } };
+    expect(reconcileOldNames(owner, branches)).toBe(owner);
+    const everyone = { scopes: "all", allBranches: true, branches: [], role };
+    expect(reconcileOldNames(everyone, branches)).toBe(everyone);
+    const newWay = { scopes: ["Pokhara"], allBranches: false, branches: [{ branchId: "b-pokhara", branch: { name: "Pokhara" } }], role };
+    expect(reconcileOldNames(newWay, branches)).toBe(newWay);
+  });
+
+  it("without the business's branches, accessOfMember still fails closed (no ids)", () => {
+    expect(accessOfMember({ scopes: ["Pokhara"], allBranches: true, branches: [], role })).toEqual({ allowed: [], names: ["Pokhara"] });
+    expect(accessOfMember({ scopes: "all", allBranches: true, branches: [], role })).toEqual({ allowed: "all", names: "all" });
   });
 });
 

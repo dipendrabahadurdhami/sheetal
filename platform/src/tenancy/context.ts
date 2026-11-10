@@ -153,7 +153,12 @@ export function accessOfMember(m: { scopes: unknown; role: { perms: readonly str
     const names = Array.isArray(s) ? s.filter((x): x is string => typeof x === "string") : "all";
     return { allowed: names === "all" ? "all" : [], names };
   }
-  if (m.allBranches) return { allowed: "all", names: "all" };
+  if (m.allBranches) {
+    // Written only the old way (a list of names, flag left at its default): never "every branch". Callers that have the business's
+    // branches use reconcileOldNames() first; without them this fails closed (no ids, the names for display).
+    if (Array.isArray(m.scopes)) return { allowed: [], names: m.scopes.filter((x): x is string => typeof x === "string") };
+    return { allowed: "all", names: "all" };
+  }
   const links = m.branches ?? [];
   return { allowed: links.map((l) => l.branchId), names: links.map((l) => l.branch?.name).filter((n): n is string => typeof n === "string") };
 }

@@ -64,6 +64,20 @@ export function accessFromNames(branches: readonly { id: string; name: string }[
   return { all: false, ids: hits.map((h) => h.id), names: hits.map((h) => h.name) };
 }
 
+/**
+ * Fail-closed reading while both ways are stored (Lead, P1-BE-3 review). A row written only the OLD way (a list of names in `scopes`, with
+ * `allBranches` left at its default `true` and no link rows) must never mean "every branch": that would quietly widen access. Such a row is
+ * read as limited to the branches its names match, exactly as the old code read it. Owners ("*") are always every branch. Rows written the
+ * new way (both columns in step) are returned unchanged. Remove when `scopes` is frozen (ACCESS.md section 3.4, step 5).
+ */
+export function reconcileOldNames<M extends { scopes: unknown; allBranches: boolean; role: { perms: readonly string[] }; branches: readonly { branchId: string; branch?: { name: string } }[] }>(
+  m: M, branches: readonly { id: string; name: string }[],
+): M {
+  if (m.role.perms.includes("*") || !m.allBranches || !Array.isArray(m.scopes)) return m;
+  const a = accessFromNames(branches, m.scopes);
+  return { ...m, allBranches: false, branches: a.ids.map((id, i) => ({ branchId: id, branch: { name: a.names[i]! } })) };
+}
+
 /** The two columns to save on a Membership or Invite. */
 export function accessColumns(a: ResolvedAccess, ownerRole: boolean): { scopes: Prisma.InputJsonValue; allBranches: boolean } {
   return { scopes: a.all ? "all" : a.names, allBranches: a.all || ownerRole };

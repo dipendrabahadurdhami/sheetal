@@ -269,10 +269,14 @@ export async function teamRoutes(app: FastifyInstance) {
     if (!inv || inv.status !== "pending" || inv.expiresAt < new Date()) throw new AppError(410, "invite_invalid", "This invitation has expired or was already used. Ask for a new one.");
     if (inv.email !== user.email) throw forbidden(`This invitation is for ${inv.email}. Sign in with that email to accept it.`);
     // The membership gets the invitation's branch access: the same flag and the same branch rows, and the old names computed from them.
+    // An invitation written only the old way (a list of names, flag left at "all") is read by its names, never as every branch.
+    const oldWay = inv.allBranches && Array.isArray(inv.scopes);
     const links = inv.branches.map((l) => ({ id: l.branchId, name: l.branch.name }));
-    const access: ResolvedAccess = inv.allBranches ? EVERY_BRANCH : { all: false, ids: links.map((l) => l.id), names: links.map((l) => l.name) };
+    const access: ResolvedAccess = oldWay
+      ? accessFromNames(await db.branch.findMany({ where: { tenantId: inv.tenantId }, select: { id: true, name: true } }), inv.scopes)
+      : inv.allBranches ? EVERY_BRANCH : { all: false, ids: links.map((l) => l.id), names: links.map((l) => l.name) };
     await db.$transaction(async (tx) => {
-      const cols = { scopes: inv.allBranches ? (inv.scopes as object) : access.names, allBranches: inv.allBranches };
+      const cols = { scopes: access.all ? (inv.scopes as object) : access.names, allBranches: access.all };
       const m = await tx.membership.upsert({ where: { userId_tenantId: { userId: user.id, tenantId: inv.tenantId } }, create: { userId: user.id, tenantId: inv.tenantId, roleId: inv.roleId, ...cols }, update: { roleId: inv.roleId, ...cols, status: "active" } });
       await setLinks(tx, "membership", m.id, access, false);
       await tx.invite.update({ where: { id: inv.id }, data: { status: "accepted" } });

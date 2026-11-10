@@ -11,6 +11,7 @@ import type { Membership, Plan, Role, Tenant, User } from "@prisma/client";
 import { newToken, sha256 } from "../../lib/secrets.js";
 import { unauthorized } from "../../lib/errors.js";
 import { platformSettings } from "../../domain/platform.js";
+import { reconcileOldNames } from "@sheetal/platform/tenancy/branch-links";
 
 /** The default; Admin → Settings → Security can change it (sessionDays). */
 export const SESSION_DAYS = 30;
@@ -47,8 +48,8 @@ export async function createSession(app: FastifyInstance, userId: string, reques
 
 const loadUser = (app: FastifyInstance, userId: string) => app.db!.user.findUnique({
   where: { id: userId },
-  include: { memberships: { where: { status: "active" }, include: { tenant: { include: { plan: true } }, role: true, branches: { select: { branchId: true, branch: { select: { name: true } } } } }, orderBy: { createdAt: "asc" } } },
-});
+  include: { memberships: { where: { status: "active" }, include: { tenant: { include: { plan: true, branches: { select: { id: true, name: true } } } }, role: true, branches: { select: { branchId: true, branch: { select: { name: true } } } } }, orderBy: { createdAt: "asc" } } },
+}).then((u) => u && { ...u, memberships: u.memberships.map((m) => reconcileOldNames(m, m.tenant.branches)) });
 
 export async function userForToken(app: FastifyInstance, token: string): Promise<{ user: SessionUser; hash: string } | null> {
   const hash = sha256(token);
