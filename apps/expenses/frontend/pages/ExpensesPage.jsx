@@ -17,7 +17,8 @@ import { ProfitTab } from "./ProfitTab.jsx";
 
 export function ExpensesPage({ tenant, api = bizApi }) {
   const [tab, setTab] = useState("expenses");
-  const { meta } = useApiList("/expenses", {}, { api, tenantId: tenant?.id });
+  // Only the page facts (canManage, drafts, categories) are needed here: one row is enough, the facts come in `meta` (QA, P1-FE-2 fix 1).
+  const { meta } = useApiList("/expenses", { per: 1 }, { api, tenantId: tenant?.id });
   const drafts = meta?.drafts || 0;
   const canManage = !!meta?.canManage;
   const can = useMemo(() => () => canManage, [canManage]);
