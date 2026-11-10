@@ -14,7 +14,9 @@ const SCHEMA_TAGS_COMPLETE = true;   // P1-OPS-2 tagged all 91 models (10 Nov 20
 const STRICT_TAGS = SCHEMA_TAGS_COMPLETE || process.argv.includes("--strict-tags");
 const VERBOSE = process.argv.includes("--verbose");
 // Models with a branchId column that deliberately are NOT branch work: EventOutbox.branchId is only a label (MODEL-OWNERS.md).
-const BRANCH_LABEL_ONLY = new Set(["EventOutbox"]);
+// Models whose branchId is a label or a link, not branch work: they never block deleting a branch.
+// MembershipBranch / InviteBranch are who-works-where links; deleting the branch deletes them (P1-DB-2).
+const BRANCH_LABEL_ONLY = new Set(["EventOutbox", "MembershipBranch", "InviteBranch"]);
 
 const errors = [];
 const warnings = [];
