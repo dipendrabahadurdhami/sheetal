@@ -98,9 +98,9 @@ export default {
   "kit.pageOf": "पृष्ठ {page} / {pages}", "kit.rows": "{n} पङ्क्ति", "kit.selected": "{n} छानिए", "kit.clearSel": "छनोट हटाउनुहोस्",
   "kit.selectRow": "यो पङ्क्ति छान्नुहोस्", "kit.selectAll": "यो पृष्ठका सबै पङ्क्ति छान्नुहोस्", "kit.sortBy": "{label} अनुसार क्रमबद्ध गर्नुहोस्",
   "kit.discardTitle": "परिवर्तन खारेज गर्ने?", "kit.discardText": "तपाईंले लेखेको हराउनेछ।", "kit.discard": "खारेज गर्नुहोस्",
-  "kit.fixErrors": "सुरक्षित गर्नु अघि यी सच्याउनुहोस्:", "kit.required": "यो आवश्यक छ।", "kit.tooLong": "{n} अक्षर भन्दा कम राख्नुहोस्।",
+  "kit.fixErrors": "सुरक्षित गर्नु अघि यी सच्याउनुहोस्:", "kit.required": "यो आवश्यक छ।", "kit.tooLong": "{n} अक्षर भन्दा कम राख्नुहोस्।", "kit.tooShort": "कम्तीमा {n} अक्षर लेख्नुहोस्।",
   "kit.tooSmall": "कम्तीमा {n} हुनुपर्छ।", "kit.tooBig": "बढीमा {n} हुनुपर्छ।", "kit.fileTooBig": "त्यो फाइल {n} MB भन्दा ठूलो छ।", "kit.fileType": "त्यो प्रकारको फाइल मिल्दैन।",
   "kit.fileSaved": "एउटा फाइल सुरक्षित छ। बदल्न अर्को फाइल छान्नुहोस्, वा", "kit.fileNotSaved": "सुरक्षित भयो, तर फाइल भएन: {why}", "kit.remove": "हटाउनुहोस्",
-  "kit.choose": "छान्नुहोस्…", "kit.conflict": "अरू कसैले यो परिवर्तन गरेको छ। फेरि लोड गर्नुहोस्।", "kit.reload": "फेरि लोड गर्नुहोस्", "kit.add": "{what} थप्नुहोस्", "kit.edit": "{what} परिवर्तन गर्नुहोस्", "kit.save": "सुरक्षित गर्नुहोस्",
+  "kit.choose": "छान्नुहोस्…", "kit.conflict": "अरू कसैले यो परिवर्तन गरेको छ। पछिल्लो हेर्न फेरि लोड गर्नुहोस्।", "kit.reload": "फेरि लोड गर्नुहोस्", "kit.add": "{what} थप्नुहोस्", "kit.edit": "{what} परिवर्तन गर्नुहोस्", "kit.save": "सुरक्षित गर्नुहोस्",
   "kit.deleted": "मेटाइयो", "kit.deleteTitle": "“{name}” मेटाउने?", "kit.deleteText": "यो फिर्ता गर्न सकिँदैन।", "kit.nothing": "यहाँ अहिले केही छैन", "kit.allMonths": "सबै महिना",
 };

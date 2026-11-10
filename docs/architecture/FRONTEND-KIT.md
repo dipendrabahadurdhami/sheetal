@@ -121,7 +121,7 @@ Today: `Drawer({ open, onClose, title, sub, children, footer })`, closes on Esc 
 
 ```js
 <Drawer open onClose title sub footer
-  size="md"                 // "sm" 360 | "md" 480 (default, today's width) | "lg" 640
+  size="md"                 // "sm" 360 | "md" 560 (default: the .pf-drawer width in platform.css) | "lg" 640; set by the classes pf-drawer-sm / pf-drawer-lg
   dirty={false}             // when true, Esc / scrim / close ask "Discard your changes?" (Confirm) first
   busy={false}              // blocks closing while a save is running
   initialFocus="first-field"// focus moves into the drawer; returns to the opener on close
@@ -465,3 +465,14 @@ message from the 402 when the plan does not include it. Admin → Settings → B
 - Vitest (root) for pure functions: `checkTheme` (a table of colour pairs), `FormBuilder` rules (`requiredWhen`, `visibleWhen`), CSV cell guard, `useApiList` race.
 - A hand-test script per page in CHANGES: role × branch × viewport (phone width) × Nepali font on.
 - Lint rule: no `import … from "@sheetal/shared/demo"` inside `apps/**/frontend`.
+
+
+## 10. Added by P1-FE-2 (Expenses)
+
+- `resource.versioned: true`: CrudPage sends the row's `version` on change (PUT), on a mode such as Confirm, on row actions (body) and on delete (`?version=`). A 409 shows "Someone changed this. Reload to see the latest." and reloads the list. No silent retry. The requests live in `crud/saveFlow.js` (no React, tested).
+- `resource.titles { create, edit }`, `addLabel`; `list.columns` may be a function `(rows, meta, context) => columns`; `list.note`; `view.facts(row, context)`, `view.canEdit(row)`.
+- `rowActions`: `label` and `confirm` may be functions of the row; `edit: true` opens the form, `remove: true` asks to delete, `refresh: false` skips the reload (opening a receipt), `first: true` puts it before the mode buttons, `danger`, `when(row)`, `perm`, `run(row, api, { version })`.
+- `remove { title(row), text, confirmLabel(row) }`; `afterSave.file { field, upload, remove, failText }`; `modes[x] { title, submitLabel, note, when, submit(row, body, api) }`.
+- `CrudPage` props: `extraContext` (merged into the context that feeds option lists, e.g. categories).
+- Fields: `minLength` (while required), `labelWhen { when, label }`, `options { from, label }` (fixed label key).
+- Styles: skeleton, phone cards, pager, bulk bar, drawer widths are classes in platform.css (`pf-skel`, `pf-cards`, `pf-card-*`, `pf-pager`, `pf-bulk`, `pf-money`, `pf-drawer-sm|lg`); under 640 px every button is at least 44 px high.

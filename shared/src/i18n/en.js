@@ -251,9 +251,9 @@ export default {
   "kit.pageOf": "Page {page} of {pages}", "kit.rows": "{n} rows", "kit.selected": "{n} selected", "kit.clearSel": "Clear selection",
   "kit.selectRow": "Select this row", "kit.selectAll": "Select all rows on this page", "kit.sortBy": "Sort by {label}",
   "kit.discardTitle": "Discard your changes?", "kit.discardText": "What you typed will be lost.", "kit.discard": "Discard",
-  "kit.fixErrors": "Please fix these before saving:", "kit.required": "This is required.", "kit.tooLong": "Keep it under {n} characters.",
+  "kit.fixErrors": "Please fix these before saving:", "kit.required": "This is required.", "kit.tooLong": "Keep it under {n} characters.", "kit.tooShort": "Write at least {n} characters.",
   "kit.tooSmall": "Must be at least {n}.", "kit.tooBig": "Must be at most {n}.", "kit.fileTooBig": "That file is over {n} MB.", "kit.fileType": "That file type isn't allowed.",
   "kit.fileSaved": "A file is saved. Choose a file to replace it, or", "kit.fileNotSaved": "Saved, but the file wasn't: {why}", "kit.remove": "remove it",
-  "kit.choose": "Choose…", "kit.conflict": "Someone else changed this. Reload.", "kit.reload": "Reload", "kit.add": "Add {what}", "kit.edit": "Change {what}", "kit.save": "Save",
+  "kit.choose": "Choose…", "kit.conflict": "Someone changed this. Reload to see the latest.", "kit.reload": "Reload", "kit.add": "Add {what}", "kit.edit": "Change {what}", "kit.save": "Save",
   "kit.deleted": "Deleted", "kit.deleteTitle": "Delete “{name}”?", "kit.deleteText": "This can't be undone.", "kit.nothing": "Nothing here yet", "kit.allMonths": "All months",
 };
