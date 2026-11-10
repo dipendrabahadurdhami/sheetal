@@ -1,6 +1,7 @@
 // Drawer with the extras: sizes, "discard your changes?", a block while saving, and a focus trap.
+// Sizes are classes in platform.css: pf-drawer-sm (360 px), default (today's width, 560 px), pf-drawer-lg (640 px).
 // Where it fits: CrudPage's form drawer. The plain Drawer in primitives.jsx is unchanged and screens keep using it; this one is new.
-// How it works: same markup and classes as the plain Drawer. size "sm" 360, "md" 480 (today's width), "lg" 640 px. While `dirty`, Esc / the
+// How it works: same markup and classes as the plain Drawer. size "sm" 360, "md" (default, today's width), "lg" 640 px. While `dirty`, Esc / the
 // background / the close button ask first. While `busy`, nothing closes it. Focus moves into the drawer when it opens, Tab stays inside,
 // and focus goes back to whatever opened it when it closes.
 // Rules: a behaviour improvement, not a visual change. A screen reader still sees role="dialog" aria-modal="true".
@@ -9,7 +10,6 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useT } from "@sheetal/shared/core/i18n";
 import { Confirm, IconButton } from "../primitives.jsx";
 
-const WIDTH = { sm: 360, lg: 640 };
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
 export function Drawer({ open, onClose, title, sub, children, footer, size = "md", dirty = false, busy = false, initialFocus = "first-field" }) {
@@ -55,8 +55,7 @@ export function Drawer({ open, onClose, title, sub, children, footer, size = "md
   return (
     <>
       <div className="pf-scrim" onClick={requestClose} />
-      <aside ref={ref} className="pf-drawer" role="dialog" aria-modal="true" aria-label={title} aria-busy={busy || undefined} tabIndex={-1} onKeyDown={trap}
-        style={WIDTH[size] ? { width: WIDTH[size], maxWidth: "100vw" } : undefined}>
+      <aside ref={ref} className={`pf-drawer${size === "sm" ? " pf-drawer-sm" : size === "lg" ? " pf-drawer-lg" : ""}`} role="dialog" aria-modal="true" aria-label={title} aria-busy={busy || undefined} tabIndex={-1} onKeyDown={trap}>
         <div className="pf-drawer-head">
           <div><h3>{title}</h3>{sub && <span className="small muted">{sub}</span>}</div>
           <IconButton icon="x" label={t("common.close")} onClick={requestClose} disabled={busy} />

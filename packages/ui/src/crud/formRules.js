@@ -1,7 +1,7 @@
 // The rules behind FormBuilder, with no React in them: which fields show, which are required, what a form's values must look like.
 // Where it fits: FormBuilder and CrudPage call these; they are plain functions so they can be tested without a browser.
 // How it works: a field definition (docs/architecture/FRONTEND-KIT.md section 6) may carry visibleWhen / requiredWhen / readOnlyWhen
-// rules. A rule is { key, eq } | { key, in: [...] } | { key, notEmpty: true|false } looking at another field's value.
+// rules; `minLength` applies only while the field is required (so "Other needs a note" can ask for 3 letters). A rule is { key, eq } | { key, in: [...] } | { key, notEmpty: true|false } looking at another field's value.
 // Rules: client checks are only for speed (required, length, digits, size). The server is the judge and its 422 errors are shown under
 // the fields; nothing here decides what may be saved.
 
@@ -50,6 +50,7 @@ export function defaultValues(fields, defaults = {}) {
 const MESSAGES = {
   "kit.required": "This is required.",
   "kit.tooLong": "Keep it under {n} characters.",
+  "kit.tooShort": "Write at least {n} characters.",
   "kit.tooSmall": "Must be at least {n}.",
   "kit.tooBig": "Must be at most {n}.",
   "kit.fileTooBig": "That file is over {n} MB.",
@@ -76,6 +77,7 @@ export function validateFields(fields, values, { t } = {}) {
     const hasFile = f.type === "file" && (v instanceof Object && (v.existing || (typeof File !== "undefined" && v instanceof File) || v.size != null));
     if (st.required && f.type !== "toggle" && (f.type === "file" ? !hasFile : isEmpty(v))) { push(f.key, say(t, "kit.required")); continue; }
     if (isEmpty(v) && f.type !== "file") continue;
+    if (st.required && f.minLength && typeof v === "string" && v.trim().length < f.minLength) push(f.key, say(t, "kit.tooShort", { n: f.minLength }));
     if (f.maxLength && typeof v === "string" && v.length > f.maxLength) push(f.key, say(t, "kit.tooLong", { n: f.maxLength }));
     if (f.type === "int" || f.type === "money") {
       const n = Number(v);

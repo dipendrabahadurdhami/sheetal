@@ -2,14 +2,14 @@
   "name": "@sheetal/app-expenses",
   "private": true,
   "version": "0.1.0",
-  "description": "Expenses app: manifest and backend (moved in by P1-BE-5); the screens come with P1-FE-2",
+  "description": "Expenses app: manifest, backend (P1-BE-5) and the Expenses screens (P1-FE-2)",
   "type": "module",
   "engines": {
     "node": ">=22"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests backend"
   },
   "dependencies": {
     "@sheetal/backend-core": "*",
@@ -24,6 +24,7 @@
   "exports": {
     "./backend": "./backend/index.ts",
     "./backend/*": "./backend/*.ts",
+    "./frontend": "./frontend/index.js",
     "./manifest": "./app.manifest.ts"
   }
 }

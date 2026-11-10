@@ -7,12 +7,12 @@ import React from "react";
 import { Button, Drawer } from "../primitives.jsx";
 
 // Read-only view of one record. facts: [[label, value], ...]; empty values are left out.
-export function ViewDrawer({ open, onClose, title, sub, facts = [], children, onEdit, onDelete, actions }) {
+export function ViewDrawer({ open, onClose, title, sub, facts = [], children, onEdit, onDelete, actions, deleteLabel = "Delete" }) {
   const shown = facts.filter(([, v]) => v !== undefined && v !== null && v !== "" && v !== false);
   return (
     <Drawer open={open} onClose={onClose} title={title} sub={sub}
       footer={(onEdit || onDelete || actions) && <>
-        {onDelete && <Button variant="ghost" className="pf-danger pf-foot-left" icon="trash-2" onClick={onDelete}>Delete</Button>}
+        {onDelete && <Button variant="ghost" className="pf-danger pf-foot-left" icon="trash-2" onClick={onDelete}>{deleteLabel}</Button>}
         {actions}
         {onEdit && <Button icon="pencil" onClick={onEdit}>Edit</Button>}
       </>}>
