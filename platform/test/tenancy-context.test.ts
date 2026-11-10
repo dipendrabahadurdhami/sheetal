@@ -105,6 +105,22 @@ describe("rows written only the old way (fail closed, Lead fix after the first C
     expect(reconcileOldNames(newWay, branches)).toBe(newWay);
   });
 
+  it("a person promoted from limited to every branch is stored as 'all' (not a list), so they are never narrowed (QA confirm 1)", async () => {
+    const { accessColumns, EVERY_BRANCH } = await import("../src/tenancy/branch-links.js");
+    const stored = { ...accessColumns(EVERY_BRANCH, false), branches: [], role };
+    expect(stored).toMatchObject({ scopes: "all", allBranches: true });
+    expect(reconcileOldNames(stored, branches)).toBe(stored);
+    expect(accessOfMember(stored)).toEqual({ allowed: "all", names: "all" });
+  });
+
+  it("flag 'all' with link rows present: the links win for anyone but an owner (QA confirm 2)", () => {
+    const odd = { scopes: "all", allBranches: true, branches: [{ branchId: "b-pokhara", branch: { name: "Pokhara" } }], role };
+    expect(reconcileOldNames(odd, branches)).toMatchObject({ allBranches: false, branches: odd.branches });
+    expect(accessOfMember(odd)).toEqual({ allowed: ["b-pokhara"], names: ["Pokhara"] });
+    const owner = { ...odd, role: { perms: ["*"] } };
+    expect(accessOfMember(owner)).toEqual({ allowed: "all", names: "all" });
+  });
+
   it("without the business's branches, accessOfMember still fails closed (no ids)", () => {
     expect(accessOfMember({ scopes: ["Pokhara"], allBranches: true, branches: [], role })).toEqual({ allowed: [], names: ["Pokhara"] });
     expect(accessOfMember({ scopes: "all", allBranches: true, branches: [], role })).toEqual({ allowed: "all", names: "all" });

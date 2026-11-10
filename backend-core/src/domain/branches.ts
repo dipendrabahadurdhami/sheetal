@@ -30,6 +30,7 @@ export function worksAt(a: unknown, b: unknown, c?: unknown): boolean {
   const member = a as MemberBranches;
   const branchId = b as string | null | undefined;
   if (member.role.perms.includes("*") || !branchId) return true;
+  if (member.allBranches && member.branches.length) return member.branches.some((l) => l.branchId === branchId);   // inconsistent: links win
   if (member.allBranches) {
     // A row written only the old way (a list of names, flag left at "all") is never "every branch" (fail closed, P1-BE-3): it works at a
     // branch only when the caller gives the branch name and the list has it.

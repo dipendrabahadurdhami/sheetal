@@ -73,7 +73,10 @@ export function accessFromNames(branches: readonly { id: string; name: string }[
 export function reconcileOldNames<M extends { scopes: unknown; allBranches: boolean; role: { perms: readonly string[] }; branches: readonly { branchId: string; branch?: { name: string } }[] }>(
   m: M, branches: readonly { id: string; name: string }[],
 ): M {
-  if (m.role.perms.includes("*") || !m.allBranches || !Array.isArray(m.scopes)) return m;
+  if (m.role.perms.includes("*") || !m.allBranches) return m;
+  // Flag "all" but link rows present: an inconsistent state (only an owner sent a list can have it). The links win: narrower is safer.
+  if (m.branches.length) return { ...m, allBranches: false };
+  if (!Array.isArray(m.scopes)) return m;
   const a = accessFromNames(branches, m.scopes);
   return { ...m, allBranches: false, branches: a.ids.map((id, i) => ({ branchId: id, branch: { name: a.names[i]! } })) };
 }

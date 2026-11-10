@@ -153,6 +153,10 @@ export function accessOfMember(m: { scopes: unknown; role: { perms: readonly str
     const names = Array.isArray(s) ? s.filter((x): x is string => typeof x === "string") : "all";
     return { allowed: names === "all" ? "all" : [], names };
   }
+  if (m.allBranches && m.branches?.length) {
+    // Flag "all" but link rows present (inconsistent; only an owner sent a list can have it): the links win, narrower is safer.
+    return { allowed: m.branches.map((l) => l.branchId), names: m.branches.map((l) => l.branch?.name).filter((n): n is string => typeof n === "string") };
+  }
   if (m.allBranches) {
     // Written only the old way (a list of names, flag left at its default): never "every branch". Callers that have the business's
     // branches use reconcileOldNames() first; without them this fails closed (no ids, the names for display).
