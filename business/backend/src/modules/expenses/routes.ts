@@ -12,6 +12,7 @@
 // skipped, so the job can't add it again.
 
 import type { FastifyInstance, FastifyRequest } from "fastify";
+import { startJobs, type JobSpec } from "@sheetal/platform/jobs/registry";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { dbOf } from "@sheetal/backend-core/lib/db";
@@ -226,11 +227,10 @@ export async function expenseRoutes(app: FastifyInstance) {
 
 /** Adds recurring expenses as drafts every 6 hours (and shortly after start). Safe to repeat: one draft per month. The
  *  page also adds due drafts when it opens, so nothing waits for the job. */
-export function startExpenseJob(app: FastifyInstance) {
-  const run = () => generateDueExpenses(dbOf(app), { today: nepalDay() })
-    .then((n) => { if (n) app.log.info({ drafts: n }, "recurring expenses"); })
-    .catch((e) => app.log.error({ err: e }, "recurring expenses failed"));
-  const first = setTimeout(run, 45_000);
-  const every = setInterval(run, 6 * 3600_000);
-  app.addHook("onClose", async () => { clearTimeout(first); clearInterval(every); });
-}
+export const expenseJob = (app: FastifyInstance): JobSpec => ({
+  id: "expenses.recurring", everyMs: 6 * 3600_000, firstRunMs: 45_000, failMessage: "recurring expenses failed",
+  run: () => generateDueExpenses(dbOf(app), { today: nepalDay() })
+    .then((n) => { if (n) app.log.info({ drafts: n }, "recurring expenses"); }),
+});
+/** The old entry point, kept as a shim over the jobs registry (it starts the job on its own, as before). */
+export function startExpenseJob(app: FastifyInstance) { startJobs(app, [expenseJob(app)], { enabled: true }); }

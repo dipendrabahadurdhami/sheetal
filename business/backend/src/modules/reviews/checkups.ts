@@ -17,9 +17,10 @@
 // Rules: a branch's reviews stay in that branch; staff see only their branches (inView); the day is Nepal time.
 
 import type { FastifyInstance } from "fastify";
+import { type JobSpec } from "@sheetal/platform/jobs/registry";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
+import { dbOf, type Db } from "@sheetal/backend-core/lib/db";
 import { badRequest, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
 import { LISTING_PERMS } from "@sheetal/backend-core/domain/listings";
 import { hasPerm } from "@sheetal/backend-core/domain/permissions";
@@ -57,6 +58,41 @@ const DEFAULTS = { perDay: 5, recent: "1m", expiring: "1m", extendMonths: 3, rev
 /** A person's level when the owner hasn't set one: owners High, managers Medium, everyone else Low. */
 const defaultLevel = (perms: string[]) => (perms.includes("*") ? "high" : perms.includes("settings.business") || perms.includes("leads.assign") ? "medium" : "low");
 const groupsOf = (a: z.infer<typeof Access> | undefined, perms: string[]) => (a?.level === "custom" ? a.groups ?? [] : LEVELS[a?.level ?? defaultLevel(perms)] ?? []);
+
+/** Takes the votes of the day's changes and applies the winners; a field with no winner is left for the owner. */
+export async function decideChanges(db: Db, tenantId: string, before: string | null) {
+  const reviews = await db.listingReview.findMany({ where: { tenantId, action: "change", decided: false, ...(before ? { day: { lt: before } } : {}) } });
+  const byListing = new Map<number, typeof reviews>();
+  for (const r of reviews) byListing.set(r.listingId, [...(byListing.get(r.listingId) ?? []), r]);
+  let applied = 0, conflicts = 0;
+  for (const [listingId, list] of byListing) {
+    const votes = new Map<string, Map<string, string[]>>();
+    for (const r of list) for (const [k, x] of Object.entries(r.changes as Record<string, unknown>)) {
+      const m = votes.get(k) ?? new Map<string, string[]>(); m.set(String(x), [...(m.get(String(x)) ?? []), r.userId]); votes.set(k, m);
+    }
+    const data: Prisma.ListingUpdateInput = {};
+    const open: Record<string, { value: string; by: string[] }[]> = {};
+    for (const [k, m] of votes) {
+      const ranked = [...m].sort((a, b) => b[1].length - a[1].length);
+      const [top, second] = ranked;
+      if (top && (!second || top[1].length > second[1].length)) Object.assign(data, valueFor(k, top[0]));
+      else open[k] = ranked.map(([value, by]) => ({ value, by }));
+    }
+    const conflict = Object.keys(open).length ? open : null;
+    await db.listing.update({ where: { id: listingId }, data: { ...data, reviewHold: !!conflict, reviewConflict: conflict ? (conflict as Prisma.InputJsonValue) : Prisma.DbNull } });
+    await db.listingReview.updateMany({ where: { id: { in: list.map((r) => r.id) } }, data: { decided: true } });
+    if (conflict) conflicts++; else applied++;
+  }
+  return { applied, conflicts };
+}
+
+const valueFor = (k: string, x: string): Prisma.ListingUpdateInput => {
+  const t = FIELDS[k];
+  if (t === "money") return { price: BigInt(Math.round(Number(x.replace(/[^\d.]/g, "")) || 0)) };
+  if (t === "int") return { [k]: Math.round(Number(x)) || null } as Prisma.ListingUpdateInput;
+  if (t === "status") return ["published", "sold", "rented"].includes(x) ? { status: x as "published" } : {};
+  return { [k]: x } as Prisma.ListingUpdateInput;
+};
 
 export async function reviewRoutes(app: FastifyInstance) {
   const db = () => dbOf(app);
@@ -159,38 +195,7 @@ export async function reviewRoutes(app: FastifyInstance) {
   });
 
   // ───── Deciding the changes ─────
-  async function decide(tenantId: string, before: string | null) {
-    const reviews = await db().listingReview.findMany({ where: { tenantId, action: "change", decided: false, ...(before ? { day: { lt: before } } : {}) } });
-    const byListing = new Map<number, typeof reviews>();
-    for (const r of reviews) byListing.set(r.listingId, [...(byListing.get(r.listingId) ?? []), r]);
-    let applied = 0, conflicts = 0;
-    for (const [listingId, list] of byListing) {
-      const votes = new Map<string, Map<string, string[]>>();
-      for (const r of list) for (const [k, x] of Object.entries(r.changes as Record<string, unknown>)) {
-        const m = votes.get(k) ?? new Map<string, string[]>(); m.set(String(x), [...(m.get(String(x)) ?? []), r.userId]); votes.set(k, m);
-      }
-      const data: Prisma.ListingUpdateInput = {};
-      const open: Record<string, { value: string; by: string[] }[]> = {};
-      for (const [k, m] of votes) {
-        const ranked = [...m].sort((a, b) => b[1].length - a[1].length);
-        const [top, second] = ranked;
-        if (top && (!second || top[1].length > second[1].length)) Object.assign(data, valueFor(k, top[0]));
-        else open[k] = ranked.map(([value, by]) => ({ value, by }));
-      }
-      const conflict = Object.keys(open).length ? open : null;
-      await db().listing.update({ where: { id: listingId }, data: { ...data, reviewHold: !!conflict, reviewConflict: conflict ? (conflict as Prisma.InputJsonValue) : Prisma.DbNull } });
-      await db().listingReview.updateMany({ where: { id: { in: list.map((r) => r.id) } }, data: { decided: true } });
-      if (conflict) conflicts++; else applied++;
-    }
-    return { applied, conflicts };
-  }
-  const valueFor = (k: string, x: string): Prisma.ListingUpdateInput => {
-    const t = FIELDS[k];
-    if (t === "money") return { price: BigInt(Math.round(Number(x.replace(/[^\d.]/g, "")) || 0)) };
-    if (t === "int") return { [k]: Math.round(Number(x)) || null } as Prisma.ListingUpdateInput;
-    if (t === "status") return ["published", "sold", "rented"].includes(x) ? { status: x as "published" } : {};
-    return { [k]: x } as Prisma.ListingUpdateInput;
-  };
+  const decide = (tenantId: string, before: string | null) => decideChanges(db(), tenantId, before);
 
   app.post("/checkups/decide", async (request) => {
     const ws = workspaceOf(request);
@@ -233,16 +238,16 @@ export async function reviewRoutes(app: FastifyInstance) {
     const U = new Map(users.map((u) => [u.id, u.userName])), L = new Map(listings.map((l) => [l.id, l]));
     return { data: rows.map((r) => ({ id: r.id, day: r.day, at: r.createdAt.toISOString(), by: U.get(r.userId) ?? "Team member", listing: L.get(r.listingId)?.code, title: L.get(r.listingId)?.title, action: r.action, changes: r.changes, decided: r.decided })) };
   });
-
-  // Yesterday's (and older) changes are decided on their own, every 15 minutes, in the business API.
-  if (app.config.NODE_ENV !== "test" && process.env.JOBS !== "off" && app.db) {
-    const run = async () => {
-      const today = nepalDay();
-      const tenants = await db().listingReview.findMany({ where: { action: "change", decided: false, day: { lt: today } }, distinct: ["tenantId"], select: { tenantId: true } });
-      for (const t of tenants) await decide(t.tenantId, today).catch((e) => app.log.error(e, "checkup decide failed"));
-    };
-    const timer = setInterval(() => { run().catch(() => {}); }, 15 * 60 * 1000);
-    timer.unref();
-    app.addHook("onClose", async () => clearInterval(timer));
-  }
+  // Yesterday's (and older) changes are decided on their own every 15 minutes: see reviewCheckupJob() below (jobs registry).
 }
+
+/** Decides yesterday's (and older) changes on their own, every 15 minutes, in the business API. No first run at start: the first run is after 15 minutes, as before. */
+export const reviewCheckupJob = (app: FastifyInstance): JobSpec => ({
+  id: "reviews.checkups", everyMs: 15 * 60 * 1000, firstRunMs: null,
+  run: async () => {
+    const db = dbOf(app);
+    const today = nepalDay();
+    const tenants = await db.listingReview.findMany({ where: { action: "change", decided: false, day: { lt: today } }, distinct: ["tenantId"], select: { tenantId: true } });
+    for (const t of tenants) await decideChanges(db, t.tenantId, today).catch((e) => app.log.error(e, "checkup decide failed"));
+  },
+});

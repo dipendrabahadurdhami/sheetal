@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@sheetal/backend-core": "*",
+    "@sheetal/platform": "*",
     "fastify": "^5.12.7",
     "zod": "^4.6.7",
     "@prisma/client": "^6.19.3"

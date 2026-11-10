@@ -5,7 +5,10 @@
 // Rules: an event name is "<app>.<resource>.<past-tense verb>" in lower case. The payload is small JSON (ids and paisa
 // amounts, no secrets, no files). Platform events with no business (nightly billing run, demo cleanup, staff actions) are
 // allowed: tenantId and businessId are then null.
-// NOT built here (P1-BE-4): the dispatcher, retries, dead letters. start() and drain() say so instead of pretending.
+// Delivery (P1-BE-4): platform/src/jobs/dispatcher.ts reads the outbox rows and calls the handlers registered here. A handler is
+// registered for business events (it gets a SystemContext of the event's business and never sees another business) or, with
+// `platform: true`, for platform events with no business (it gets a context with no business at all). A business event is never
+// handed to a platform handler, and the other way round. Without an attached dispatcher, start() and drain() say so instead of pretending.
 
 import type { Prisma } from "@prisma/client";
 import { randomUUID } from "node:crypto";
@@ -26,17 +29,27 @@ export interface DomainEvent<P = unknown> {
 export interface EventHandlerOptions {
   id: string;                    // unique handler id, e.g. "invoicing.on-expense-confirmed". Used for "run once per event".
   app: string;                   // the app that owns the handler; must list the event in manifest.events.consumes
+  /** true = this handler is for platform events (no business, tenantId null) and gets a PlatformEventContext. Default false. */
+  platform?: boolean;
 }
 
 export type EventHandler<P = unknown> = (e: DomainEvent<P>, ctx: SystemContext) => Promise<void>;
 
+/** What a platform handler runs with: the basics of a context (database, log, transaction) with the handler as the actor, and no business. */
+export type PlatformEventContext = BaseContext & { readonly actor: { kind: "system"; job: string } };
+export type PlatformEventHandler<P = unknown> = (e: DomainEvent<P>, ctx: PlatformEventContext) => Promise<void>;
+
+/** What the dispatcher offers the bus (platform/src/jobs/dispatcher.ts). */
+export interface AttachedDispatcher { start(): void; drain(): Promise<unknown> }
+
 export interface EventBus {
   /** Writes an EventOutbox row inside ctx.tx (so it commits or rolls back with the change). */
   publish<P>(ctx: BaseContext, name: string, payload: P, v?: number, opts?: { branchId?: string | null }): Promise<void>;
-  subscribe<P>(pattern: string, handler: EventHandler<P>, opts: EventHandlerOptions): () => void;
-  /** Starts the dispatcher (a job in platform/jobs). Built in P1-BE-4. */
+  subscribe<P>(pattern: string, handler: EventHandler<P>, opts: EventHandlerOptions & { platform?: false }): () => void;
+  subscribe<P>(pattern: string, handler: PlatformEventHandler<P>, opts: EventHandlerOptions & { platform: true }): () => void;
+  /** Starts the attached dispatcher on its own timer (scripts, workers). The APIs list dispatcher.job() in their jobs registry instead. */
   start(): void;
-  /** Tests: deliver everything waiting now and wait for it. Built in P1-BE-4. */
+  /** Tests: deliver everything waiting now and wait for it. */
   drain(): Promise<void>;
 }
 
@@ -53,7 +66,7 @@ export function matchesPattern(pattern: string, name: string): boolean {
   return p.length === n.length && p.every((seg, i) => seg === "*" || seg === n[i]);
 }
 
-export interface Subscription { pattern: string; handler: EventHandler<never>; opts: EventHandlerOptions }
+export interface Subscription { pattern: string; handler: (e: DomainEvent<never>, ctx: never) => Promise<void>; opts: EventHandlerOptions }
 
 export interface OutboxBusOptions {
   /** Whether the app may publish this event name (the manifest's events.publishes; P1-BE-2 supplies it). Without it, any
@@ -65,6 +78,7 @@ export interface OutboxBusOptions {
 
 export class OutboxEventBus implements EventBus {
   private readonly subs: Subscription[] = [];
+  private dispatcher: AttachedDispatcher | null = null;
   constructor(private readonly o: OutboxBusOptions = {}) {}
 
   async publish<P>(ctx: BaseContext, name: string, payload: P, v = 1, opts: { branchId?: string | null } = {}): Promise<void> {
@@ -88,17 +102,28 @@ export class OutboxEventBus implements EventBus {
     });
   }
 
-  /** Registers a handler. Returns a function that removes it. The dispatcher (P1-BE-4) reads handlersFor(). */
-  subscribe<P>(pattern: string, handler: EventHandler<P>, opts: EventHandlerOptions): () => void {
+  /** Registers a handler. Returns a function that removes it. The dispatcher reads handlersFor(). */
+  subscribe<P>(pattern: string, handler: EventHandler<P>, opts: EventHandlerOptions & { platform?: false }): () => void;
+  subscribe<P>(pattern: string, handler: PlatformEventHandler<P>, opts: EventHandlerOptions & { platform: true }): () => void;
+  subscribe<P>(pattern: string, handler: EventHandler<P> | PlatformEventHandler<P>, opts: EventHandlerOptions): () => void {
     if (!pattern.split(".").every((s) => s === "*" || /^[a-z][a-z0-9-]*$/.test(s))) throw new Error(`"${pattern}" is not a valid event pattern.`);
     if (this.subs.some((s) => s.opts.id === opts.id)) throw new Error(`Event handler "${opts.id}" is already registered.`);
-    const sub: Subscription = { pattern, handler: handler as EventHandler<never>, opts };
+    const sub: Subscription = { pattern, handler: handler as Subscription["handler"], opts };
     this.subs.push(sub);
     return () => { const i = this.subs.indexOf(sub); if (i >= 0) this.subs.splice(i, 1); };
   }
 
   handlersFor(name: string): readonly Subscription[] { return this.subs.filter((s) => matchesPattern(s.pattern, name)); }
 
-  start(): void { throw new Error("The event dispatcher is built in P1-BE-4; events are only written to the outbox for now."); }
-  async drain(): Promise<void> { throw new Error("The event dispatcher is built in P1-BE-4; there is nothing to drain yet."); }
+  /** Connects the dispatcher (createDispatcher in platform/src/jobs/dispatcher.ts calls this). */
+  attach(d: AttachedDispatcher): void { this.dispatcher = d; }
+
+  start(): void {
+    if (!this.dispatcher) throw new Error("No event dispatcher is attached to this bus (P1-BE-4): build one with createDispatcher() from platform/src/jobs/dispatcher.ts.");
+    this.dispatcher.start();
+  }
+  async drain(): Promise<void> {
+    if (!this.dispatcher) throw new Error("No event dispatcher is attached to this bus (P1-BE-4): there is nothing to drain.");
+    await this.dispatcher.drain();
+  }
 }

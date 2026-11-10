@@ -10,6 +10,7 @@
 // Reorder at, Cost (Rs.)).
 
 import type { FastifyInstance } from "fastify";
+import { startJobs, type JobSpec } from "@sheetal/platform/jobs/registry";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { dbOf } from "@sheetal/backend-core/lib/db";
@@ -227,11 +228,10 @@ export async function stockRoutes(app: FastifyInstance) {
 }
 
 /** Tells the people who run stock which items are low, once a day each (checked every 6 hours; safe to repeat). */
-export function startStockJob(app: FastifyInstance) {
-  const run = () => runLowStock(dbOf(app), { today: nepalDay() })
-    .then((r) => { if (r.notes) app.log.info(r, "low stock"); })
-    .catch((e) => app.log.error({ err: e }, "low stock failed"));
-  const first = setTimeout(run, 70_000);
-  const every = setInterval(run, 6 * 3600_000);
-  app.addHook("onClose", async () => { clearTimeout(first); clearInterval(every); });
-}
+export const stockJob = (app: FastifyInstance): JobSpec => ({
+  id: "stock.low", everyMs: 6 * 3600_000, firstRunMs: 70_000, failMessage: "low stock failed",
+  run: () => runLowStock(dbOf(app), { today: nepalDay() })
+    .then((r) => { if (r.notes) app.log.info(r, "low stock"); }),
+});
+/** The old entry point, kept as a shim over the jobs registry (it starts the job on its own, as before). */
+export function startStockJob(app: FastifyInstance) { startJobs(app, [stockJob(app)], { enabled: true }); }

@@ -10,6 +10,7 @@
 // rent is the owner's money, never the agency's income, and a deposit is held and returned, never income.
 
 import type { FastifyInstance, FastifyRequest } from "fastify";
+import { startJobs, type JobSpec } from "@sheetal/platform/jobs/registry";
 import { z } from "zod";
 import { dbOf } from "@sheetal/backend-core/lib/db";
 import { badRequest, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
@@ -379,12 +380,11 @@ export async function rentalRoutes(app: FastifyInstance) {
 
 /** Makes rent bills and late fees every 6 hours (and shortly after start). Safe to repeat. The Rentals page also runs
  *  it when it opens, so nothing waits for the job. */
-export function startRentJob(app: FastifyInstance) {
-  const run = () => runRentBills(dbOf(app), { today: nepalDay() })
-    .then((r) => { if (r.bills || r.lateFees) app.log.info(r, "rent bills"); })
-    .catch((e) => app.log.error({ err: e }, "rent bills failed"));
-  const first = setTimeout(run, 50_000);
-  const every = setInterval(run, 6 * 3600_000);
-  app.addHook("onClose", async () => { clearTimeout(first); clearInterval(every); });
-}
+export const rentJob = (app: FastifyInstance): JobSpec => ({
+  id: "rentals.bills", everyMs: 6 * 3600_000, firstRunMs: 50_000, failMessage: "rent bills failed",
+  run: () => runRentBills(dbOf(app), { today: nepalDay() })
+    .then((r) => { if (r.bills || r.lateFees) app.log.info(r, "rent bills"); }),
+});
+/** The old entry point, kept as a shim over the jobs registry (it starts the job on its own, as before). */
+export function startRentJob(app: FastifyInstance) { startJobs(app, [rentJob(app)], { enabled: true }); }
 
