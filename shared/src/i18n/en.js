@@ -246,4 +246,14 @@ export default {
   "help.g_ag1": "Make a bainā agreement", "help.g_ag2": "How signing by SMS works", "help.g_ag3": "Papers you need for registration",
   "help.g_pay1": "Sheetal collects vs your own QR", "help.g_pay2": "When payouts arrive", "help.g_pay3": "Refund a guest",
   "help.g_team1": "Invite your staff", "help.g_team2": "Make a custom role", "help.g_team3": "Turn on two-step sign-in",
+  // Front-end kit (DataTable, FormBuilder, CrudPage; packages/ui)
+  "kit.retry": "Try again", "kit.loadError": "Couldn't load this list.", "kit.loading": "Loading…", "kit.prev": "Previous", "kit.next": "Next",
+  "kit.pageOf": "Page {page} of {pages}", "kit.rows": "{n} rows", "kit.selected": "{n} selected", "kit.clearSel": "Clear selection",
+  "kit.selectRow": "Select this row", "kit.selectAll": "Select all rows on this page", "kit.sortBy": "Sort by {label}",
+  "kit.discardTitle": "Discard your changes?", "kit.discardText": "What you typed will be lost.", "kit.discard": "Discard",
+  "kit.fixErrors": "Please fix these before saving:", "kit.required": "This is required.", "kit.tooLong": "Keep it under {n} characters.",
+  "kit.tooSmall": "Must be at least {n}.", "kit.tooBig": "Must be at most {n}.", "kit.fileTooBig": "That file is over {n} MB.", "kit.fileType": "That file type isn't allowed.",
+  "kit.fileSaved": "A file is saved. Choose a file to replace it, or", "kit.fileNotSaved": "Saved, but the file wasn't: {why}", "kit.remove": "remove it",
+  "kit.choose": "Choose…", "kit.conflict": "Someone else changed this. Reload.", "kit.reload": "Reload", "kit.add": "Add {what}", "kit.edit": "Change {what}", "kit.save": "Save",
+  "kit.deleted": "Deleted", "kit.deleteTitle": "Delete “{name}”?", "kit.deleteText": "This can't be undone.", "kit.nothing": "Nothing here yet", "kit.allMonths": "All months",
 };
