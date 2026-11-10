@@ -739,7 +739,8 @@ model Review {
   /// Starts at 1 and goes up by 1 on every change; a save made on an older version is refused (KERNEL.md section 6).
   version   Int       @default(1)
   /// Soft delete (Sheetal removes a review for good, e.g. spam or a legal request). Empty = not deleted.
-  /// "Hidden" is a status and stays visible to the business; deleted rows are hidden from every query.
+  /// "Hidden" is a status: like every non-published review it is not listed in the business panel or on the website. Deleted rows
+  /// are hidden from every query and kept.
   deletedAt DateTime? @map("deleted_at")
   deletedBy String?   @map("deleted_by")
   createdAt DateTime  @default(now()) @map("created_at")
