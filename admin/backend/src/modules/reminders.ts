@@ -6,6 +6,7 @@
 // Rules: settings.platform; every change is audited; this job and the billing cycle never both send the same day's plan reminder.
 
 import type { FastifyInstance } from "fastify";
+import { startJobs, type JobSpec } from "@sheetal/platform/jobs/registry";
 import { z } from "zod";
 import { dbOf } from "@sheetal/backend-core/lib/db";
 import { planReminders, recentReminders, reminderSettings, runReminders, saveReminderSettings, type ReminderSettings } from "@sheetal/backend-core/domain/reminders";
@@ -52,13 +53,13 @@ export async function adminReminderRoutes(app: FastifyInstance) {
 }
 
 /** Checks every hour and sends today's reminders after 9 am Nepal time (in this process only, like the billing cycle). */
-export function startReminderJob(app: FastifyInstance) {
-  const run = async () => {
+export const reminderJob = (app: FastifyInstance): JobSpec => ({
+  id: "reminders.expiry", everyMs: 3600_000, firstRunMs: 120_000, failMessage: "expiry reminders failed",
+  run: async () => {
     if (new Date(Date.now() + 5.75 * 3_600_000).getUTCHours() < 9) return;
     const out = await runReminders(dbOf(app), app.mailer, { siteUrl: app.config.SITE_URL });
     if (out.plan + out.listings + out.boosts + out.banners) app.log.info(out, "expiry reminders");
-  };
-  const first = setTimeout(() => run().catch((e) => app.log.error({ err: e }, "expiry reminders failed")), 120_000);
-  const every = setInterval(() => run().catch((e) => app.log.error({ err: e }, "expiry reminders failed")), 3600_000);
-  app.addHook("onClose", async () => { clearTimeout(first); clearInterval(every); });
-}
+  },
+});
+/** The old entry point, kept as a shim over the jobs registry (it starts the job on its own, as before). */
+export function startReminderJob(app: FastifyInstance) { startJobs(app, [reminderJob(app)], { enabled: true }); }

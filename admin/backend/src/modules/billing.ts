@@ -5,6 +5,7 @@
 // Rules: gateway keys are write-only: once saved they are never shown again.
 
 import type { FastifyInstance } from "fastify";
+import { startJobs, type JobSpec } from "@sheetal/platform/jobs/registry";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { dbOf } from "@sheetal/backend-core/lib/db";
@@ -201,11 +202,10 @@ export async function adminBillingRoutes(app: FastifyInstance) {
 }
 
 /** Runs the renewal cycle every 6 hours (and shortly after start). Only one API process should run it: the admin API. */
-export function startBillingJob(app: FastifyInstance) {
-  const run = () => runBillingCycle(dbOf(app), app.mailer, { siteUrl: app.config.SITE_URL })
-    .then((r) => app.log.info(r, "billing cycle"))
-    .catch((e) => app.log.error({ err: e }, "billing cycle failed"));
-  const first = setTimeout(run, 30_000);
-  const every = setInterval(run, 6 * 3600_000);
-  app.addHook("onClose", async () => { clearTimeout(first); clearInterval(every); });
-}
+export const billingJob = (app: FastifyInstance): JobSpec => ({
+  id: "billing.renewal", everyMs: 6 * 3600_000, firstRunMs: 30_000, failMessage: "billing cycle failed",
+  run: () => runBillingCycle(dbOf(app), app.mailer, { siteUrl: app.config.SITE_URL })
+    .then((r) => { app.log.info(r, "billing cycle"); }),
+});
+/** The old entry point, kept as a shim over the jobs registry (it starts the job on its own, as before). */
+export function startBillingJob(app: FastifyInstance) { startJobs(app, [billingJob(app)], { enabled: true }); }
