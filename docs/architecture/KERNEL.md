@@ -512,7 +512,7 @@ Delivery rules:
 1. **Outbox.** `publish` inserts `EventOutbox(id, name, v, payload Json, tenantId, branchId, actor Json, requestId, createdAt, dispatchedAt, attempts, lastError)`
    in the same transaction as the change. A dispatcher job (runs every few seconds, and once right after a commit) reads
    rows with `dispatchedAt IS NULL`, calls handlers, and sets `dispatchedAt`.
-2. **At least once, in order per business.** A handler can see an event twice, so it must be safe to repeat. The table
+2. **At least once; in creation order within one batch.** A handler can see an event twice, so it must be safe to repeat, and it must not rely on order (strict order per business would let one failing event block the whole business; QA and Lead, P1-BE-4). The table
    `EventDelivery(eventId, handlerId)` with a unique key makes "run once per handler" a database fact.
 3. **Failures** retry with a growing delay, up to 8 times, then stay in the outbox as dead letters. Admin → System status
    lists them. One failing handler never blocks the others.

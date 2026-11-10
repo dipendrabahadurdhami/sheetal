@@ -29,21 +29,25 @@ import { settingsRoutes } from "./modules/settings/routes.js";
 import { dataRoutes } from "./modules/data/routes.js";
 import { invoicingRoutes } from "./modules/invoicing/routes.js";
 import { payoutRoutes } from "./modules/payouts/routes.js";
-import { expenseRoutes, startExpenseJob } from "./modules/expenses/routes.js";
-import { rentalRoutes, startRentJob } from "./modules/rentals/routes.js";
+import { expenseRoutes } from "./modules/expenses/routes.js";
+import { rentalRoutes } from "./modules/rentals/routes.js";
 import { listingCodeRoutes } from "./modules/listings/codes.js";
 import { formRoutes } from "./modules/forms/routes.js";
 import { agreementRoutes } from "./modules/agreements/routes.js";
 import { promoteRoutes } from "./modules/promote/routes.js";
 import { bannerRoutes } from "./modules/promote/banners.js";
 import { overviewRoutes } from "./modules/overview/routes.js";
-import { startStockJob, stockRoutes } from "./modules/stock/routes.js";
+import { stockRoutes } from "./modules/stock/routes.js";
 import { peopleRoutes } from "./modules/people/routes.js";
 import { devKeyRoutes } from "./modules/devkeys/routes.js";
 import { aiAccountRoutes } from "./modules/aiaccount/routes.js";
 import { reviewRoutes as checkupRoutes } from "./modules/reviews/checkups.js";
 import { notificationRoutes } from "@sheetal/backend-core/modules/notifications";
 import { workspaceOf } from "./modules/access.js";
+import { CONSUMERS, businessJobs, eventsOf } from "./jobs.js";
+import { registerConsumers } from "@sheetal/platform/jobs/consumers";
+import { APPS } from "@sheetal/platform/tenancy/apps.generated";
+import { jobsOn, startJobs } from "@sheetal/platform/jobs/registry";
 import type { AiClient } from "@sheetal/backend-core/lib/ai";
 import type { Fetch } from "@sheetal/backend-core/lib/payments";
 import type { Resolver } from "./modules/mail/dns.js";
@@ -84,11 +88,15 @@ export async function buildApp(config: Config, deps: AppDeps & { resolver?: Reso
   await app.register(growthRoutes, { prefix: "/v1", ai: deps.ai, fetch: deps.fetch });
   await app.register(otaRoutes, { prefix: "/v1" });
   await app.register(supportRoutes, { prefix: "/v1" });
-  // Recurring expenses are added as drafts by a background job in this process. JOBS=off turns it off.
-  if (config.NODE_ENV !== "test" && process.env.JOBS !== "off" && app.db) startExpenseJob(app);
-  // Rent bills and late fees are made the same way.
-  if (config.NODE_ENV !== "test" && process.env.JOBS !== "off" && app.db) startRentJob(app);
-  // Low-stock alerts, once a day per person and branch.
-  if (config.NODE_ENV !== "test" && process.env.JOBS !== "off" && app.db) startStockJob(app);
+  // Background jobs of this process (recurring expenses, rent bills, low-stock alerts, listing check-ups, the event dispatcher) are
+  // started by one registry (src/jobs.ts). JOBS=off turns them all off. The event bus is where apps will subscribe their handlers.
+  // The bus stays on the app (app.events) so the apps moved onto the kernel (P1-BE-5 onwards) subscribe to the same bus the dispatcher
+  // runs. registerConsumers() runs at boot so a manifest that lists a handler with no code (or code with no manifest entry) stops the start.
+  if (app.db) {
+    const events = eventsOf(app);
+    app.decorate("events", events);
+    registerConsumers(events.bus, APPS, CONSUMERS);
+    startJobs(app, businessJobs(app, events), { enabled: jobsOn(config.NODE_ENV, true) });
+  }
   return app;
 }

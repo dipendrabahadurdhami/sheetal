@@ -12,7 +12,7 @@ import { adminRoutes } from "./modules/routes.js";
 import { adminListingRoutes } from "./modules/listings.js";
 import { adminPlanRoutes } from "./modules/plans.js";
 import { adminContentRoutes } from "./modules/content.js";
-import { adminBillingRoutes, startBillingJob } from "./modules/billing.js";
+import { adminBillingRoutes } from "./modules/billing.js";
 import { adminPayoutRoutes } from "./modules/payouts.js";
 import { adminRentPaymentRoutes } from "./modules/rent-payments.js";
 import { adminAddonRoutes } from "./modules/addons.js";
@@ -20,12 +20,14 @@ import { adminEarningsRoutes } from "./modules/earnings.js";
 import { adminDashboardRoutes } from "./modules/dashboard.js";
 import { adminPromoteRoutes } from "./modules/promote.js";
 import { adminLeadRoutes } from "./modules/leads.js";
-import { adminInsightRoutes, startOtaJob } from "./modules/insight.js";
+import { adminInsightRoutes } from "./modules/insight.js";
 import { adminPlatformRoutes } from "./modules/platform.js";
 import { adminChannelRoutes } from "./modules/channels.js";
 import { adminAiFeatureRoutes } from "./modules/ai-features.js";
 import { adminTemplateRoutes } from "./modules/templates.js";
-import { adminReminderRoutes, startReminderJob } from "./modules/reminders.js";
+import { adminReminderRoutes } from "./modules/reminders.js";
+import { adminJobs } from "./jobs.js";
+import { jobsOn, startJobs } from "@sheetal/platform/jobs/registry";
 import type { Fetch } from "@sheetal/backend-core/lib/payments";
 import { notificationRoutes } from "@sheetal/backend-core/modules/notifications";
 import { adminVerificationRoutes } from "./modules/verification.js";
@@ -58,7 +60,7 @@ export async function buildApp(config: Config, deps: AppDeps & { fetch?: Fetch }
   await app.register(adminSupportRoutes, { prefix: "/v1" });
   // The bell: work for Sheetal staff (notes without a business that lead into the admin panel).
   await app.register(async (a) => notificationRoutes(a, "/admin/notifications", (request) => ({ userId: staffOf(request).user.id, tenantId: null, link: { startsWith: "/admin" } })), { prefix: "/v1" });
-  // The renewal cycle and calendar sync run in this process only. JOBS=off turns them off.
-  if (config.NODE_ENV !== "test" && process.env.JOBS !== "off" && app.db) { startBillingJob(app); startOtaJob(app); startReminderJob(app); }
+  // The renewal cycle, calendar sync and expiry reminders run in this process only, started by one registry (src/jobs.ts). JOBS=off turns them off.
+  startJobs(app, adminJobs(app), { enabled: jobsOn(config.NODE_ENV, !!app.db) });
   return app;
 }

@@ -6,6 +6,7 @@
 // Rules: AI, Meta and captcha secret keys are write-only; email text (with one-time links) is only shown outside production.
 
 import type { FastifyInstance } from "fastify";
+import { startJobs, type JobSpec } from "@sheetal/platform/jobs/registry";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { dbOf } from "@sheetal/backend-core/lib/db";
@@ -168,14 +169,14 @@ export async function adminInsightRoutes(app: FastifyInstance) {
 }
 
 /** Syncs every calendar feed every 2 hours (in this process only, like the billing cycle). */
-export function startOtaJob(app: FastifyInstance) {
-  const run = async () => {
+export const otaJob = (app: FastifyInstance): JobSpec => ({
+  id: "ota.calendar-sync", everyMs: 2 * 3600_000, firstRunMs: 60_000, failMessage: "calendar sync failed",
+  run: async () => {
     const feeds = await dbOf(app).otaFeed.findMany({ select: { id: true } });
     let ok = 0, failed = 0;
     for (const f of feeds) await syncOtaFeed(dbOf(app), f.id).then(() => ok++).catch(() => failed++);
     if (feeds.length) app.log.info({ ok, failed }, "calendar sync");
-  };
-  const first = setTimeout(() => run().catch((e) => app.log.error({ err: e }, "calendar sync failed")), 60_000);
-  const every = setInterval(() => run().catch((e) => app.log.error({ err: e }, "calendar sync failed")), 2 * 3600_000);
-  app.addHook("onClose", async () => { clearTimeout(first); clearInterval(every); });
-}
+  },
+});
+/** The old entry point, kept as a shim over the jobs registry (it starts the job on its own, as before). */
+export function startOtaJob(app: FastifyInstance) { startJobs(app, [otaJob(app)], { enabled: true }); }
