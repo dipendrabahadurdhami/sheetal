@@ -1,0 +1,14 @@
+{
+  "name": "@sheetal/ui",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Shared screen kit: primitives, CrudPage, DataTable, FormBuilder, theme (empty for now; code moves in at step 9)",
+  "type": "module",
+  "peerDependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "exports": {
+    ".": "./src/index.js"
+  }
+}

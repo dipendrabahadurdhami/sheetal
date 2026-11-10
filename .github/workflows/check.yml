@@ -1,5 +1,9 @@
-# GitHub Actions: runs `npm run check` (lint + typecheck + all tests) on every push and pull request.
+# GitHub Actions: runs `npm run check` (command list, manifest and import-rule checks, lint, typecheck, all tests)
+# on every push and pull request.
 # Where it fits: this is the "main always green" rule from docs/GIT-WORKFLOW.md. A red cross here = do not merge.
+# Workspaces: the root package.json lists the new folders (platform, packages/*, apps/*) next to the old ones, so one
+# `npm ci` installs them all and `npm run check` covers them. When a workspace is added, package-lock.json must be
+# committed with it, or `npm ci` below fails (that is the point: the lock file and the workspaces must agree).
 # How the tests get a database: backend-core/test/setup-db.ts starts its own throwaway PostgreSQL (embedded-postgres)
 # on a free port, migrates it and deletes it at the end. It does not read DATABASE_URL. The PostgreSQL 16 service
 # below is therefore a spare: it makes the runner look like the real setup and is ready if a test ever needs a
@@ -69,6 +73,15 @@ jobs:
         run: |
           if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
+      # Fails early, with a clear message, if a workspace folder or its link in node_modules is missing.
+      - name: Confirm the workspaces are installed
+        run: |
+          for p in platform packages/ui packages/sdk packages/config apps/expenses apps/reviews; do
+            test -f "$p/package.json" || { echo "Missing workspace folder: $p"; exit 1; }
+          done
+          npm ls @sheetal/platform @sheetal/ui @sheetal/sdk @sheetal/config @sheetal/app-expenses @sheetal/app-reviews --depth=0
+
+      # The Prisma schema stays in backend-core/prisma until step 14 of docs/architecture/FOLDERS-AND-MOVE-PLAN.md.
       - name: Generate the Prisma client
         run: npx prisma generate
         working-directory: backend-core

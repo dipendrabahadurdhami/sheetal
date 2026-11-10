@@ -1,0 +1,11 @@
+{
+  "name": "@sheetal/config",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Constants both sides read: generated permissions, colour maths, kernel i18n keys (empty for now; code arrives at steps 3 and 9)",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js",
+    "./*": "./src/*.js"
+  }
+}

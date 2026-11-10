@@ -18,6 +18,7 @@
   },
   "include": [
     "shared/src",
+    "packages/*/src",
     "website/frontend/src",
     "admin/frontend/src",
     "business/frontend/src"
