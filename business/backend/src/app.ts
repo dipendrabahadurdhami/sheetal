@@ -23,7 +23,7 @@ import { growthRoutes } from "./modules/growth/routes.js";
 import { otaRoutes } from "./modules/ota/routes.js";
 import { supportRoutes } from "./modules/support/routes.js";
 import { branchRoutes } from "./modules/branches/routes.js";
-import { reviewRoutes } from "./modules/reviews/routes.js";
+import { reviewRoutes } from "@sheetal/app-reviews/backend";
 import { verificationRoutes } from "./modules/verification/routes.js";
 import { settingsRoutes } from "./modules/settings/routes.js";
 import { dataRoutes } from "./modules/data/routes.js";
@@ -56,7 +56,7 @@ export async function buildApp(config: Config, deps: AppDeps & { resolver?: Reso
   const app = await buildBaseApp(config, deps);
   await app.register(teamRoutes, { prefix: "/v1" });
   await app.register(branchRoutes, { prefix: "/v1" });
-  await app.register(reviewRoutes, { prefix: "/v1" });
+  await app.register(reviewRoutes, { prefix: "/v1", contextOf: businessContextOf });
   await app.register(verificationRoutes, { prefix: "/v1" });
   await app.register(settingsRoutes, { prefix: "/v1" });
   await app.register(dataRoutes, { prefix: "/v1" });
