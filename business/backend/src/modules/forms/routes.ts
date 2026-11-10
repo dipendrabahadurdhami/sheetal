@@ -69,11 +69,11 @@ export async function formRoutes(app: FastifyInstance) {
   const checkAssignee = async (tenantId: string, userId: string | null | undefined, branchId: string | null) => {
     if (!userId) return null;
     const [m, br] = await Promise.all([
-      db().membership.findFirst({ where: { tenantId, userId, status: "active" }, include: { role: true } }),
+      db().membership.findFirst({ where: { tenantId, userId, status: "active" }, include: { role: true, branches: { select: { branchId: true } } } }),
       branchId ? db().branch.findUnique({ where: { id: branchId }, select: { name: true } }) : null,
     ]);
     if (!m) throw badRequest("Pick someone in your team to get the leads.");
-    if (!worksAt(m.scopes, m.role.perms, br?.name)) throw badRequest(`They don't work at ${br?.name}. Give them that branch on the Team page first.`);
+    if (!worksAt(m, branchId, br?.name)) throw badRequest(`They don't work at ${br?.name}. Give them that branch on the Team page first.`);
     if (!m.role.perms.includes("*") && !["leads.view", "messages.reply"].some((p) => m.role.perms.includes(p))) throw badRequest("Their role can't see leads. Pick someone who can, or leave it unassigned.");
     return userId;
   };

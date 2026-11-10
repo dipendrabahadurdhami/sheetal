@@ -81,11 +81,11 @@ export async function leadRoutes(app: FastifyInstance, opts: { fetch?: Fetch } =
       if (b.assignee) {
         // Only to someone in the team who works at the lead's branch.
         const [m, br] = await Promise.all([
-          db().membership.findFirst({ where: { tenantId: ws.tenantId, userId: b.assignee, status: "active" }, include: { role: true } }),
+          db().membership.findFirst({ where: { tenantId: ws.tenantId, userId: b.assignee, status: "active" }, include: { role: true, branches: { select: { branchId: true } } } }),
           l.branchId ? db().branch.findUnique({ where: { id: l.branchId }, select: { name: true } }) : null,
         ]);
         if (!m) throw badRequest("Pick someone in your team.");
-        if (!worksAt(m.scopes, m.role.perms, br?.name)) throw badRequest(`They don't work at ${br?.name}. Give them that branch on the Team page first.`);
+        if (!worksAt(m, l.branchId, br?.name)) throw badRequest(`They don't work at ${br?.name}. Give them that branch on the Team page first.`);
       }
     }
     await db().lead.update({
