@@ -689,6 +689,10 @@ model Review {
   reply     String?
   repliedAt DateTime? @map("replied_at")
   repliedBy String?   @map("replied_by")
+  /// Who last changed the row (kernel columns, KERNEL.md section 6.1). The writer of a review is userId; createdBy is the
+  /// same person for reviews written through the kernel, empty for older rows.
+  createdBy String?   @map("created_by")
+  updatedBy String?   @map("updated_by")
   /// Starts at 1 and goes up by 1 on every change; a save made on an older version is refused (KERNEL.md section 6).
   version   Int       @default(1)
   /// Soft delete (Sheetal removes a review for good, e.g. spam or a legal request). Empty = not deleted.
