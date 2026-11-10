@@ -1,81 +1,30 @@
 // Permissions, role templates and business types for the screens.
 // Where it fits: menus and buttons hide what a role can't do (the server checks again).
-// How it works: can(role, perm) and canAny(role, perms); labels come from i18n (perm.*, role.*).
-// Rules: keep in step with backend-core/src/domain/permissions.ts; a test fails if they differ.
+// How it works: can(role, perm) and canAny(role, perms); labels come from i18n (perm.*, role.*). Since P1-BE-2 the lists come from
+// @sheetal/config/permissions (generated from the app manifests by `npm run gen:permissions`); the names and values are the old ones.
+// can() also accepts the new `app.resource.action` name of an old permission and the other way round (the alias layer, ACCESS.md 6.3).
+// Rules: do not edit the lists here (change a manifest and run the generator). Stored roles still hold the OLD names.
 
-export const BUSINESS_TYPES = {
-  hotel: { icon: "bed-double" },
-  host: { icon: "house" },
-  developer: { icon: "building-2" },
-  agency: { icon: "briefcase" },
-  sponsor: { icon: "hand-coins" },
-};
+import {
+  BUSINESS_TYPE_DEFS, LEGACY_ALIASES, LEGACY_BUSINESS_GROUPS, LEGACY_PLATFORM_ALIASES, LEGACY_PLATFORM_GROUPS, LEGACY_PLATFORM_ROLES, LEGACY_TEMPLATES,
+} from "@sheetal/config/permissions";
+
+export const BUSINESS_TYPES = BUSINESS_TYPE_DEFS;
+
+// Old permission name -> the new names it stands for (ACCESS.md section 6). Added in P1-BE-2.
+export { LEGACY_ALIASES, LEGACY_PLATFORM_ALIASES };
 
 // Business workspace permissions. `types` = which business types see the group.
-export const BUSINESS_PERMS = [
-  { module: "overview", types: "all", perms: ["overview.view"] },
-  { module: "bookings", types: ["hotel", "host"], perms: ["bookings.view", "bookings.create", "bookings.edit", "bookings.cancel"] },
-  { module: "calendar", types: ["hotel", "host"], perms: ["calendar.view", "calendar.edit"] },
-  { module: "pos", types: ["hotel", "host"], perms: ["pos.frontdesk", "pos.restaurant", "pos.extras", "pos.discount", "pos.void", "shift.close"] },
-  { module: "projects", types: ["developer"], perms: ["projects.manage", "progress.post", "visits.manage", "reservations.manage"] },
-  { module: "collect", types: ["developer", "agency"], perms: ["collect.payments", "collect.refund"] },
-  { module: "listings", types: ["agency"], perms: ["listings.manage", "leads.view", "leads.assign", "viewings.manage"] },
-  { module: "rentals", types: ["agency"], perms: ["rentals.view", "rentals.manage"] },
-  { module: "investments", types: ["sponsor"], perms: ["investments.manage", "investors.view", "updates.post"] },
-  { module: "agreements", types: "all", perms: ["agreements.manage"] },
-  { module: "people", types: "all", perms: ["people.view", "people.manage"] },
-  { module: "money", types: "all", perms: ["invoices.view", "invoices.create", "payouts.view", "expenses.view", "expenses.manage"] },
-  { module: "customers", types: "all", perms: ["customers.view", "messages.reply", "reviews.reply"] },
-  { module: "admin", types: "all", perms: ["team.view", "team.manage", "roles.manage", "settings.business", "billing.manage"] },
-];
+export const BUSINESS_PERMS = LEGACY_BUSINESS_GROUPS;
 
 // Sheetal staff permissions for /admin.
-export const PLATFORM_PERMS = [
-  { module: "pdash", types: "all", perms: ["dashboard.view"] },
-  { module: "tenants", types: "all", perms: ["tenants.view", "tenants.manage", "tenants.suspend", "tenants.impersonate"] },
-  { module: "pbilling", types: "all", perms: ["plans.manage", "billing.view", "billing.refund"] },
-  { module: "content", types: "all", perms: ["content.edit", "content.publish"] },
-  { module: "moderation", types: "all", perms: ["moderation.listings", "moderation.kyc"] },
-  { module: "system", types: "all", perms: ["staff.view", "staff.manage", "roles.manage", "settings.platform", "audit.view"] },
-];
+export const PLATFORM_PERMS = LEGACY_PLATFORM_GROUPS;
 
 export const permsForType = (type) => BUSINESS_PERMS.filter((g) => g.types === "all" || g.types.includes(type));
 export const permsForTypes = (types) => BUSINESS_PERMS.filter((g) => g.types === "all" || types.some((x) => g.types.includes(x)));
 const allOf = (groups) => groups.flatMap((g) => g.perms);
 
-const T = {
-  hotel: [
-    ["owner", ["*"]],
-    ["manager", null],
-    ["frontdesk", ["overview.view", "bookings.view", "bookings.create", "bookings.edit", "calendar.view", "pos.frontdesk", "pos.extras", "shift.close", "customers.view", "messages.reply"]],
-    ["cashier", ["pos.restaurant", "pos.extras", "shift.close"]],
-    ["housekeeping", ["calendar.view"]],
-    ["accountant", ["overview.view", "bookings.view", "invoices.view", "invoices.create", "payouts.view", "expenses.view", "expenses.manage"]],
-  ],
-  host: [
-    ["owner", ["*"]],
-    ["cohost", ["overview.view", "bookings.view", "bookings.create", "bookings.edit", "calendar.view", "calendar.edit", "pos.extras", "customers.view", "messages.reply", "reviews.reply"]],
-    ["cleaner", ["calendar.view"]],
-  ],
-  developer: [
-    ["owner", ["*"]],
-    ["sales_manager", ["overview.view", "projects.manage", "visits.manage", "reservations.manage", "collect.payments", "customers.view", "messages.reply", "team.view", "invoices.view", "agreements.manage", "people.view", "people.manage"]],
-    ["sales_exec", ["visits.manage", "reservations.manage", "customers.view", "messages.reply"]],
-    ["site_engineer", ["progress.post"]],
-    ["accountant", ["overview.view", "collect.payments", "collect.refund", "invoices.view", "invoices.create", "payouts.view", "expenses.view", "expenses.manage"]],
-  ],
-  agency: [
-    ["owner", ["*"]],
-    ["branch_manager", ["overview.view", "listings.manage", "leads.view", "leads.assign", "viewings.manage", "collect.payments", "customers.view", "messages.reply", "reviews.reply", "team.view", "expenses.view", "expenses.manage", "rentals.view", "rentals.manage", "agreements.manage", "people.view", "people.manage"]],
-    ["agent", ["listings.manage", "leads.view", "viewings.manage", "messages.reply"]],
-    ["accountant", ["overview.view", "collect.payments", "invoices.view", "invoices.create", "payouts.view", "expenses.view", "expenses.manage", "rentals.view", "rentals.manage"]],
-  ],
-  sponsor: [
-    ["owner", ["*"]],
-    ["investor_relations", ["overview.view", "investors.view", "updates.post", "messages.reply"]],
-    ["accountant", ["overview.view", "invoices.view", "payouts.view", "expenses.view", "expenses.manage"]],
-  ],
-};
+const T = LEGACY_TEMPLATES;
 
 export function roleTemplatesFor(type) {
   const all = allOf(permsForType(type));
@@ -85,15 +34,34 @@ export function roleTemplatesFor(type) {
   }));
 }
 
-export const PLATFORM_ROLE_TEMPLATES = [
-  { key: "super_admin", perms: ["*"] },
-  { key: "operations", perms: ["dashboard.view", "tenants.view", "tenants.manage", "tenants.suspend", "tenants.impersonate", "moderation.listings", "moderation.kyc", "audit.view", "staff.view"] },
-  { key: "finance", perms: ["dashboard.view", "tenants.view", "plans.manage", "billing.view", "billing.refund"] },
-  { key: "content_editor", perms: ["content.edit", "content.publish", "moderation.listings"] },
-  { key: "support", perms: ["dashboard.view", "tenants.view", "tenants.impersonate", "audit.view"] },
-].map((r) => ({ ...r, system: true, name: null }));
+export const PLATFORM_ROLE_TEMPLATES = Object.entries(LEGACY_PLATFORM_ROLES).map(([key, perms]) => ({ key, perms, system: true, name: null }));
 
-export const can = (role, perm) => !!role && (role.perms.includes("*") || role.perms.includes(perm));
+// ── The alias layer: the same rule as platform/src/tenancy/aliases.ts (a test runs both on the same cases). ──
+const oldToNew = new Map();   // old name -> list of sets of new names (business set and/or staff set)
+const newToOld = new Map();   // new name -> old names that give it
+for (const map of [LEGACY_ALIASES, LEGACY_PLATFORM_ALIASES]) {
+  for (const [old, news] of Object.entries(map)) {
+    oldToNew.set(old, [...(oldToNew.get(old) || []), news]);
+    for (const n of news) newToOld.set(n, [...(newToOld.get(n) || []), old]);
+  }
+}
+// Does the list hold this exact name, with or without a ":scope" suffix?
+function holds(perms, name) {
+  for (const p of perms) {
+    if (p === name) return true;
+    if (p.length > name.length && p.charCodeAt(name.length) === 58 && p.startsWith(name)) return true;
+  }
+  return false;
+}
+function hasPerm(perms, perm) {
+  if (perms.includes("*") || holds(perms, perm)) return true;
+  const sets = oldToNew.get(perm);
+  if (sets && sets.some((set) => set.every((n) => holds(perms, n)))) return true;
+  const olds = newToOld.get(perm);
+  return !!olds && olds.some((o) => holds(perms, o));
+}
+
+export const can = (role, perm) => !!role && hasPerm(role.perms, perm);
 export const canAny = (role, perms) => perms.some((p) => can(role, p));
 export const roleName = (role, t) => (!role ? "—" : role.system ? t(`role.${role.key}`) : role.name);
 export const roleDesc = (role, t) => (!role ? "" : role.system ? t(`roledesc.${role.key}`) : role.desc || "");
