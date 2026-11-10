@@ -346,7 +346,7 @@ describe("dual write: names and ids stay in step", () => {
 describe("seats", () => {
   it("refuses to make a paused member active again at the seat limit (Starter: just you)", async () => {
     const db = app.db!;
-    await db.membership.create({ data: { tenantId: ids.tiny, userId: ids.extra!, roleId: await roleId("agent", ids.tiny), status: "paused" } });
+    await db.membership.create({ data: { tenantId: ids.tiny!, userId: ids.extra!, roleId: await roleId("agent", ids.tiny), status: "paused" } });
     const r = await call("solo", "PATCH", `/team/members/${ids.extra}`, { status: "active" }, ids.tiny);
     expect(r.statusCode).toBe(402);
     expect(r.json()).toMatchObject({ code: "seat_limit", message: "The Starter plan is just you. Upgrade to add your team." });
@@ -357,7 +357,7 @@ describe("seats", () => {
     const db = app.db!;
     await db.tenant.update({ where: { id: ids.tiny }, data: { planId: "agency-two-seats" } });
     // 1 active (solo) + 1 paused (extra): room for extra.
-    await db.invite.create({ data: { tenantId: ids.tiny, email: "wait@tiny.test", roleId: await roleId("agent", ids.tiny), tokenHash: "h-wait", expiresAt: new Date(Date.now() + 864e5) } });
+    await db.invite.create({ data: { tenantId: ids.tiny!, email: "wait@tiny.test", roleId: await roleId("agent", ids.tiny), tokenHash: "h-wait", expiresAt: new Date(Date.now() + 864e5) } });
     // 1 active + 1 pending = 2 seats taken: no room.
     const full = await call("solo", "PATCH", `/team/members/${ids.extra}`, { status: "active" }, ids.tiny);
     expect(full.statusCode).toBe(402);
