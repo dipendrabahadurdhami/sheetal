@@ -4,14 +4,19 @@ import react from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
 import tseslint from "typescript-eslint";
 
-// The three APIs and their shared core.
-const API = ["backend-core/**", "website/backend/**", "business/backend/**", "admin/backend/**", "mail-server/**"];
+// The three APIs and their shared core, plus the new server-side folders (platform, and each app's backend/ and src/).
+const API = [
+  "backend-core/**", "website/backend/**", "business/backend/**", "admin/backend/**", "mail-server/**",
+  "platform/**", "apps/**/backend/**", "apps/**/src/**",
+];
+// Single TypeScript files that sit outside those folders (the manifest of each app).
+const TS_FILES = ["apps/*/app.manifest.ts"];
 
 export default [
   { ignores: ["**/dist/**", "**/node_modules/**", "backend-core/.pgdata/**", ".foundation-*-backup/**", "foundation-1*/**"] },
   {
     files: ["**/*.{js,jsx,ts,tsx}"],
-    ignores: API,
+    ignores: [...API, ...TS_FILES],
     languageOptions: { ecmaVersion: 2022, sourceType: "module", globals: { ...globals.browser, ...globals.node }, parserOptions: { ecmaFeatures: { jsx: true } } },
     settings: { react: { version: "18.3" } },
     plugins: { react, "react-hooks": reactHooks },
@@ -29,9 +34,9 @@ export default [
     },
   },
   // APIs: TypeScript rules (strict types are also checked by tsc).
-  ...tseslint.configs.recommended.map((c) => ({ ...c, files: API.map((d) => `${d}/*.ts`) })),
+  ...tseslint.configs.recommended.map((c) => ({ ...c, files: [...API.map((d) => `${d}/*.ts`), ...TS_FILES] })),
   {
-    files: API.map((d) => `${d}/*.ts`),
+    files: [...API.map((d) => `${d}/*.ts`), ...TS_FILES],
     rules: { "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", caughtErrors: "none" }] },
   },
   { files: [...API.map((d) => `${d}/*.mjs`), "scripts/build-api.mjs"], languageOptions: { ecmaVersion: 2023, sourceType: "module", globals: { ...globals.node } }, rules: js.configs.recommended.rules },
