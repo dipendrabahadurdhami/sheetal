@@ -73,7 +73,7 @@ export async function formRoutes(app: FastifyInstance) {
       branchId ? db().branch.findUnique({ where: { id: branchId }, select: { name: true } }) : null,
     ]);
     if (!m) throw badRequest("Pick someone in your team to get the leads.");
-    if (!worksAt(m, branchId)) throw badRequest(`They don't work at ${br?.name}. Give them that branch on the Team page first.`);
+    if (!worksAt(m, branchId, br?.name)) throw badRequest(`They don't work at ${br?.name}. Give them that branch on the Team page first.`);
     if (!m.role.perms.includes("*") && !["leads.view", "messages.reply"].some((p) => m.role.perms.includes(p))) throw badRequest("Their role can't see leads. Pick someone who can, or leave it unassigned.");
     return userId;
   };

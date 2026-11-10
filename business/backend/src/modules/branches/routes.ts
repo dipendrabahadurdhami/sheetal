@@ -45,7 +45,7 @@ export async function branchRoutes(app: FastifyInstance) {
       db().branch.findMany({ where: { tenantId: ws.tenantId }, orderBy: [{ sort: "asc" }, { createdAt: "asc" }] }),
       db().room.groupBy({ by: ["branchId"], where: { tenantId: ws.tenantId, active: true }, _count: true }),
       db().listing.groupBy({ by: ["branchId"], where: { tenantId: ws.tenantId, status: { notIn: ["removed", "archived"] } }, _count: true }),
-      db().membership.findMany({ where: { tenantId: ws.tenantId, status: "active" }, select: { allBranches: true, branches: { select: { branchId: true } }, role: { select: { perms: true } } } }),
+      db().membership.findMany({ where: { tenantId: ws.tenantId, status: "active" }, select: { scopes: true, allBranches: true, branches: { select: { branchId: true } }, role: { select: { perms: true } } } }),
     ]);
     const mine = rows.filter((b) => ws.inBranch(b.name));
     return {
@@ -57,7 +57,7 @@ export async function branchRoutes(app: FastifyInstance) {
           rooms: rooms.find((r) => r.branchId === b.id)?._count ?? 0,
           listings: listings.find((r) => r.branchId === b.id)?._count ?? 0,
           // People who work here: those limited to this branch, plus everyone with all branches.
-          staff: members.filter((m) => worksAt(m, b.id)).length,
+          staff: members.filter((m) => worksAt(m, b.id, b.name)).length,
         })),
       },
     };

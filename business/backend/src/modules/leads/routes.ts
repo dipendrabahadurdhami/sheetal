@@ -85,7 +85,7 @@ export async function leadRoutes(app: FastifyInstance, opts: { fetch?: Fetch } =
           l.branchId ? db().branch.findUnique({ where: { id: l.branchId }, select: { name: true } }) : null,
         ]);
         if (!m) throw badRequest("Pick someone in your team.");
-        if (!worksAt(m, l.branchId)) throw badRequest(`They don't work at ${br?.name}. Give them that branch on the Team page first.`);
+        if (!worksAt(m, l.branchId, br?.name)) throw badRequest(`They don't work at ${br?.name}. Give them that branch on the Team page first.`);
       }
     }
     await db().lead.update({
