@@ -21,6 +21,7 @@ import { posRoutes } from "./modules/pos/routes.js";
 import { projectRoutes } from "./modules/projects/routes.js";
 import { growthRoutes } from "./modules/growth/routes.js";
 import { otaRoutes } from "./modules/ota/routes.js";
+import { supportRoutes } from "./modules/support/routes.js";
 import { branchRoutes } from "./modules/branches/routes.js";
 import { reviewRoutes } from "./modules/reviews/routes.js";
 import { verificationRoutes } from "./modules/verification/routes.js";
@@ -82,6 +83,7 @@ export async function buildApp(config: Config, deps: AppDeps & { resolver?: Reso
   await app.register(projectRoutes, { prefix: "/v1" });
   await app.register(growthRoutes, { prefix: "/v1", ai: deps.ai, fetch: deps.fetch });
   await app.register(otaRoutes, { prefix: "/v1" });
+  await app.register(supportRoutes, { prefix: "/v1" });
   // Recurring expenses are added as drafts by a background job in this process. JOBS=off turns it off.
   if (config.NODE_ENV !== "test" && process.env.JOBS !== "off" && app.db) startExpenseJob(app);
   // Rent bills and late fees are made the same way.

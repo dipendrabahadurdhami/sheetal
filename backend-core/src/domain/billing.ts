@@ -226,7 +226,7 @@ export async function runBillingCycle(db: Db, mailer: Mailer, o: { siteUrl: stri
   const now = o.now ?? new Date();
   const s = await billingSettings(db);
   const site = o.siteUrl.replace(/\/$/, "");
-  const out = { reminded: 0, pastDue: 0, downgraded: 0 };
+  const out = { reminded: 0, pastDue: 0, downgraded: 0, trialsEnded: 0 };
   const tenants = await db.tenant.findMany({ where: { renewsAt: { not: null }, status: { in: ["active", "trial", "past_due"] }, plan: { price: { gt: 0 } } }, include: { plan: true } });
 
   for (const t of tenants) {
@@ -252,6 +252,20 @@ export async function runBillingCycle(db: Db, mailer: Mailer, o: { siteUrl: stri
           `${t.plan.name} renews in ${daysLeft} day${daysLeft > 1 ? "s" : ""}`, { key: "plan_renews", vars: { plan: t.plan.name, in: `${daysLeft} day${daysLeft > 1 ? "s" : ""}`, until: day(renews) } });
         out.reminded++;
       }
+      continue;
+    }
+
+    // A free trial that ends unpaid moves straight to Starter: no grace period, no unpaid invoice left behind.
+    if (t.status === "trial" && renews <= now) {
+      await db.$transaction([
+        db.tenant.update({ where: { id: t.id }, data: { planId: starterPlanId(t.type as BusinessType), status: "active", period: 1, renewsAt: null, graceUntil: null, remindedFor: null } }),
+        db.invoice.updateMany({ where: { tenantId: t.id, status: "open" }, data: { status: "void" } }),
+        endAddons(db, t.id),
+        db.auditLog.create({ data: { tenantId: t.id, action: "billing.trial_ended", target: t.name } }),
+      ]);
+      await syncCovered(db, t.id);
+      await tell(`${t.name}: free trial ended`, `${t.name}'s free trial of ${t.plan.name} ended on ${day(renews)}, so the business is on the free Starter plan now. Your listings and data stay; Starter's limits apply to anything new. Choose a plan any time to get everything back.`, "Your free trial has ended");
+      out.trialsEnded++;
       continue;
     }
 

@@ -30,6 +30,7 @@ import type { Fetch } from "@sheetal/backend-core/lib/payments";
 import { notificationRoutes } from "@sheetal/backend-core/modules/notifications";
 import { adminVerificationRoutes } from "./modules/verification.js";
 import { adminCatalogRoutes } from "./modules/catalog.js";
+import { adminSupportRoutes } from "./modules/support.js";
 import { staffOf } from "./modules/routes.js";
 
 export async function buildApp(config: Config, deps: AppDeps & { fetch?: Fetch } = {}): Promise<FastifyInstance> {
@@ -54,6 +55,7 @@ export async function buildApp(config: Config, deps: AppDeps & { fetch?: Fetch }
   await app.register(adminReminderRoutes, { prefix: "/v1" });
   await app.register(adminVerificationRoutes, { prefix: "/v1" });
   await app.register(adminCatalogRoutes, { prefix: "/v1" });
+  await app.register(adminSupportRoutes, { prefix: "/v1" });
   // The bell: work for Sheetal staff (notes without a business that lead into the admin panel).
   await app.register(async (a) => notificationRoutes(a, "/admin/notifications", (request) => ({ userId: staffOf(request).user.id, tenantId: null, link: { startsWith: "/admin" } })), { prefix: "/v1" });
   // The renewal cycle and calendar sync run in this process only. JOBS=off turns them off.
