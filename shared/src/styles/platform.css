@@ -1634,3 +1634,21 @@ button.pf-card-row { cursor: pointer; }
   .pf-toolbar > * { flex: 1 1 100%; }
   .pf-drawer-sm, .pf-drawer-lg { width: 100%; }
 }
+/* Reviews page (P1-FE-3): the list of review cards, one column; a pickable star; the reply box. */
+.pf-review-list { display: grid; gap: 12px; padding: 14px 20px; }
+.pf-review { display: flex; flex-direction: column; gap: 8px; padding: 16px; border: 1px solid var(--line); border-radius: var(--r); background: var(--card); }
+.pf-review-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.pf-review-text { margin: 0; overflow-wrap: anywhere; }
+.pf-review-box { display: grid; gap: 8px; margin-top: 2px; }
+.pf-review-box .textarea { width: 100%; }
+.pf-review-code { font-weight: 600; color: var(--text-strong); }
+.pf-star-pick { display: inline-flex; padding: 2px; margin: 0; border: 0; background: transparent; color: inherit; cursor: pointer; border-radius: 4px; }
+.pf-star-pick:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.pf-reviews-stars { padding: 4px 0; }
+@media (max-width: 640px) {
+  .pf-review-list { padding: 12px; }
+  .pf-review-box .btn, .pf-review-reply .btn { min-height: 44px; }
+  .pf-review-box .pf-row-actions, .pf-review-reply .pf-row-actions { justify-content: stretch; }
+  .pf-review-box .pf-row-actions .btn { flex: 1 1 auto; }
+}
+.pf-start { justify-content: flex-start; }

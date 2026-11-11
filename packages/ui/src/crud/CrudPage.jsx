@@ -4,6 +4,7 @@
 // form (fields, toForm, toBody), view, modes, rowActions, remove, empty, titles, afterSave. The list loads with useApiList, so it reloads on
 // branch change. Saving maps the server's 422 errors onto the fields and toasts the server's message. With `versioned: true` every change to an
 // existing record sends the version it loaded; a 409 shows "Someone changed this. Reload to see the latest." and reloads the list (saveFlow.js).
+// Layout "cards": `renderCard(row, { open, edit, remove, reload, meta, api })` draws each record (Reviews); `list.gridClass` sets the wrapper class.
 // Rules: buttons the person may not use are not shown (the server checks again); `can(perm)` is passed in because the permission helper
 // lives outside this package. No business data is kept in the browser store. Branch choices are read from the store only to fill the
 // branch drop-down (as the old Live pages did), and only shown when "All branches" is picked and the business has several.
@@ -171,9 +172,11 @@ export function CrudPage({
 
   if (perms.read && !can(perms.read)) return <Empty icon="lock" title={t("noaccess.title")}>{t("noaccess.text")}</Empty>;
 
-  const emptyNode = resource.empty ? <Empty icon={resource.empty.icon} title={resource.empty.title}>{resource.empty.sub}</Empty> : <Empty icon="search" title={t("kit.nothing")} />;
+  // `empty` may be a function of the filters (Reviews: "No reviews yet" for All, "Nothing here" for the others).
+  const emptyDef = typeof resource.empty === "function" ? resource.empty(filters) : resource.empty;
+  const emptyNode = emptyDef ? <Empty icon={emptyDef.icon} title={emptyDef.title}>{emptyDef.sub}</Empty> : <Empty icon="search" title={t("kit.nothing")} />;
   const openRow = (row) => setViewing(row);
-  const rowActionsFor = (row) => ({ open: () => openRow(row), edit: () => canUpdate && openEdit(row), remove: () => canDelete && setDeleting(row), reload: done });
+  const rowActionsFor = (row) => ({ open: () => openRow(row), edit: () => canUpdate && openEdit(row), remove: () => canDelete && setDeleting(row), reload: done, meta, api });
   const editorFields = editor ? fieldsFor(editor) : [];
   const modeDef = editor?.mode ? modes[editor.mode] : null;
   const labelOne = resource.label?.one || "";
@@ -187,8 +190,8 @@ export function CrudPage({
       <section className="card pf-panel">
         {filterBar}
         {layout === "cards"
-          ? (rows === null && !error ? <p className="muted pf-pad">{t("kit.loading")}</p> : error ? <DataTable columns={[]} rows={null} error={error} onRetry={refresh} />
-            : rows.length === 0 ? emptyNode : <div className="pf-card-grid">{rows.map((r) => <React.Fragment key={r.id}>{renderCard(r, rowActionsFor(r))}</React.Fragment>)}</div>)
+          ? (rows === null && !error ? <p className="muted pf-pad">{resource.loadingText || t("kit.loading")}</p> : error ? <DataTable columns={[]} rows={null} error={error} onRetry={refresh} />
+            : rows.length === 0 ? emptyNode : <div className={list.gridClass || "pf-card-grid"}>{rows.map((r) => <React.Fragment key={r.id}>{renderCard(r, rowActionsFor(r))}</React.Fragment>)}</div>)
           : <DataTable columns={columns} rows={rows} loading={loading} error={error} onRetry={refresh} empty={emptyNode} mobile="cards" primary={list.primary || columns[0]?.key}
               secondary={list.secondary || []} onRowClick={view.facts || canUpdate ? openRow : undefined} minWidth={list.minWidth || 720}
               sort={sort} onSort={list.sortable === false ? undefined : (field, dir) => { setSort({ field, dir }); setPg({ ...pg, page: 1 }); }}
