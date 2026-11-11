@@ -47,6 +47,7 @@ const GROUPS = [
     ["people:roles", "Gives the People permissions (people.view, people.manage) to the managers (hotel manager, agency branch manager, developer sales manager) of existing businesses (run once after the People update)."],
     ["accounts:test", "Makes test accounts on this computer (staff, every business type and plan with its team, website users) plus sample data, and saves the list to test-accounts.csv. Never on the live site."],
     ["listings:codes", "Gives every business without one its property code prefix (its initials, Everest Realty → ER) and changes its listing codes; old codes keep working. Try -- --dry-run first."],
+    ["reviews:sample", "Adds sample website reviews (one answered, two low, one on a listing) to the test agency so Business → Reviews can be tried. Never on the live site."],
     ["payouts:sample", "Adds sample collected payments to a business so the Payouts pages can be tested. Try -- --help first."],
     ["photos:resize", "Makes every photo in MEDIA_DIR the new sizes (main 1920 px, thumbnail 800 px). Try -- --dry-run first."],
   ]],
