@@ -1,6 +1,6 @@
 // Overview dashboard, and the Team and Roles hubs.
-// How it works: the team and roles screens use the shared TeamPanel and RoleEditor; signed in, their actions go to the
-// business API.
+// How it works: the team screen uses the shared TeamPanel; signed in, its actions go to the business API. Roles: signed in = LiveRoles (new permission
+// names with scopes, from the app manifests); the sample workspace = the old shared RoleEditor.
 
 import { SetupPanel } from "./Setup";
 import { isLive, liveTeam } from "../live";
@@ -20,6 +20,8 @@ import { Structure } from "./Structure";
 import { Icon } from "@sheetal/shared/core/icons";
 import { TeamPanel } from "@sheetal/shared/components/TeamPanel";
 import { RoleEditor } from "@sheetal/shared/components/RoleEditor";
+import { LiveRoles } from "./LiveRoles";
+import { worksAt } from "../access/branchAccess";
 
 const KPIS = {
   hotel: [["kpi.occupancy", "79%", "kpi.occupancyNote"], ["kpi.revenueMonth", "Rs. 3.12 Lakh", "kpi.vsLast"], ["kpi.arrivals", "3", "kpi.arrivalsNote"], ["kpi.rating", "4.7", "kpi.ratingNote"]],
@@ -107,15 +109,16 @@ export function TeamHub({ tenant, role, start = "members" }) {
 export function BusinessTeam({ tenant, role, embedded }) {
   const { db, update } = useStore();
   const toast = useToast();
-  const live = isLive(tenant.id) ? liveTeam(toast) : null;
+  // Signed in: branch access is sent and filtered by branch ID (access/branchAccess.js); the screen still shows the names.
+  const live = isLive(tenant.id) ? liveTeam(toast, db.branches?.[tenant.id] || []) : null;
   const plan = db.plans.find((p) => p.id === tenant.planId);
   const tid = tenant.id;
-  const { branch } = useBranch();
+  const { branch, branchId } = useBranch();
   const log = (d, what) => { (d.activity[tid] = d.activity[tid] || []).unshift({ id: uid("a"), who: d.session.userName, what, at: new Date().toISOString() }); };
   return (
     <>
       {!embedded && <PageHeadT k="team" />}
-      <TeamPanel members={(db.members[tid] || []).filter((m) => branch === "all" || m.scopes === "all" || m.scopes.includes(branch))} invites={db.invites[tid] || []} roles={db.tenantRoles[tid]} groups={permsForTypes(typesFor(tenant, plan))}
+      <TeamPanel members={(db.members[tid] || []).filter((m) => (live ? worksAt(m, branchId, branch) : branch === "all" || m.scopes === "all" || m.scopes.includes(branch)))} invites={db.invites[tid] || []} roles={db.tenantRoles[tid]} groups={permsForTypes(typesFor(tenant, plan))}
         scopes={{ label: useT()(`scope.${tenant.type}`), options: tenant.scopes }} seats={{ limit: plan.limits.seats, plan: plan.name }}
         canManage={can(role, "team.manage")} activity={db.activity[tid] || []}
         onInvite={(list) => update((d) => { list.forEach((i) => { (d.invites[tid] = d.invites[tid] || []).unshift({ id: uid("i"), ...i, by: d.session.userName, sent: TODAY, expires: `${inDays(7)}T10:00`, status: "pending" }); log(d, `invited ${i.email}`); }); })}
@@ -138,6 +141,8 @@ export function BusinessRoles({ tenant, role, embedded }) {
   const plan = db.plans.find((p) => p.id === tenant.planId);
   const counts = {};
   (db.members[tid] || []).forEach((m) => { counts[m.roleId] = (counts[m.roleId] || 0) + 1; });
+  // Signed in: the role screen on the new permission names with scopes (stage 1.2). The sample workspace keeps the old editor.
+  if (live) return <>{!embedded && <PageHeadT k="roles" />}<LiveRoles key={tid} tenant={tenant} canManage={can(role, "roles.manage")} customAllowed={plan.features.custom_roles} /></>;
   return (
     <>
       {!embedded && <PageHeadT k="roles" />}

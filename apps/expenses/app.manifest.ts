@@ -90,7 +90,7 @@ const manifest = {
     {
       id: "expenses",
       label: { en: "Expenses", ne: "खर्च" },
-      icon: "receipt",
+      icon: "chart-pie",
       path: "/business/expenses",
       group: "money",
       order: 40,

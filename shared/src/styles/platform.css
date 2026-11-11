@@ -1652,3 +1652,15 @@ button.pf-card-row { cursor: pointer; }
   .pf-review-box .pf-row-actions .btn { flex: 1 1 auto; }
 }
 .pf-start { justify-content: flex-start; }
+
+/* Role screen on the new permission names (stage 1.2): one block per app, a scope picker beside a ticked permission. */
+.pf-rbox-app { margin-top: 18px; }
+.pf-rbox-apphead { font-size: 14px; font-weight: 700; margin: 0 0 6px; }
+.pf-rbox-app > .pf-hint { margin: 0 0 8px; }
+.pf-rbox-perm { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.pf-rbox-perm .select { width: auto; min-width: 150px; padding-block: 4px; font-size: 12.5px; }
+
+/* Approvals inbox and rules (stage 1.2): text on the left, buttons on the right, wrapping on a phone. */
+.pf-approvals li { align-items: flex-start; flex-wrap: wrap; }
+.pf-approvals li > div:first-child { display: flex; flex-direction: column; gap: 3px; min-width: 220px; flex: 1; }
+.pf-approvals .pf-row-actions { flex-wrap: wrap; }
