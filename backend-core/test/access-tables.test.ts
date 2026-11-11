@@ -45,8 +45,8 @@ describe("migration 20261112090000_access_tables", () => {
     const r = await rows<{ data_type: string; is_nullable: string; column_default: string | null }>(
       db, `SELECT data_type, is_nullable, column_default FROM information_schema.columns WHERE table_name = 'roles' AND column_name = 'perms_v1'`);
     expect(r).toHaveLength(1);
-    expect(r[0].data_type).toBe("ARRAY");
-    expect(r[0].column_default).toMatch(/ARRAY\[\]/);
+    expect(r[0]!.data_type).toBe("ARRAY");
+    expect(r[0]!.column_default).toMatch(/ARRAY\[\]/);
   });
 
   it("creates the three tables with their keys and indexes", async () => {
@@ -57,11 +57,11 @@ describe("migration 20261112090000_access_tables", () => {
       "impersonation_sessions_pkey", "impersonation_sessions_staff_id_ended_at_idx", "impersonation_sessions_tenant_id_ended_at_idx",
     ]);
     const unique = await rows<{ def: string }>(db, `SELECT indexdef AS def FROM pg_indexes WHERE indexname = 'approval_rules_tenant_id_action_key'`);
-    expect(unique[0].def).toMatch(/UNIQUE INDEX .*\(tenant_id, action\)/);
+    expect(unique[0]!.def).toMatch(/UNIQUE INDEX .*\(tenant_id, action\)/);
     const inbox = await rows<{ def: string }>(db, `SELECT indexdef AS def FROM pg_indexes WHERE indexname = 'approval_requests_tenant_id_status_created_at_idx'`);
-    expect(inbox[0].def).toMatch(/\(tenant_id, status, created_at\)/);
+    expect(inbox[0]!.def).toMatch(/\(tenant_id, status, created_at\)/);
     const expiry = await rows<{ def: string }>(db, `SELECT indexdef AS def FROM pg_indexes WHERE indexname = 'approval_requests_status_expires_at_idx'`);
-    expect(expiry[0].def).toMatch(/\(status, expires_at\)/);
+    expect(expiry[0]!.def).toMatch(/\(status, expires_at\)/);
   });
 
   it("keeps money in paisa (bigint) and has no foreign key on branch_id, maker_id or checker_id", async () => {
@@ -85,7 +85,7 @@ describe("migration 20261112090000_access_tables", () => {
   it("limits the request status to the seven known values", async () => {
     const c = await rows<{ def: string }>(db, `SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conname = 'approval_requests_status_check'`);
     expect(c).toHaveLength(1);
-    for (const s of ["pending", "approved", "executed", "failed", "rejected", "cancelled", "expired"]) expect(c[0].def).toContain(`'${s}'`);
+    for (const s of ["pending", "approved", "executed", "failed", "rejected", "cancelled", "expired"]) expect(c[0]!.def).toContain(`'${s}'`);
     await rolledBack(async (tx) => {
       await exec(tx, `INSERT INTO plans (id, type, name, price, limits, features) VALUES ('p', 'agent', 'T', 0, '{}'::jsonb, '{}'::jsonb)`);
       await exec(tx, `INSERT INTO tenants (id, name, type, plan_id, updated_at) VALUES ('t', 'T', 'agent', 'p', now())`);
@@ -99,9 +99,9 @@ describe("migration 20261112090000_access_tables", () => {
 
   it("inserts no rows", async () => {
     for (const t of ["approval_rules", "approval_requests", "impersonation_sessions"]) {
-      expect((await rows<{ n: number }>(db, `SELECT count(*)::int AS n FROM ${t}`))[0].n, t).toBe(0);
+      expect((await rows<{ n: number }>(db, `SELECT count(*)::int AS n FROM ${t}`))[0]!.n, t).toBe(0);
     }
-    expect((await rows<{ n: number }>(db, `SELECT count(*)::int AS n FROM roles WHERE coalesce(cardinality(perms_v1), 0) > 0`))[0].n).toBe(0);
+    expect((await rows<{ n: number }>(db, `SELECT count(*)::int AS n FROM roles WHERE coalesce(cardinality(perms_v1), 0) > 0`))[0]!.n).toBe(0);
   });
 
   it("keeps the impersonation trail when the business goes, and refuses to delete a staff user who has sessions", async () => {
