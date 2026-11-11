@@ -5,7 +5,10 @@
 // shell, or from backend-core/.env (then the repo-root .env). Run from the repo root:
 //     node backend-core/scripts/check-branch-links.mjs
 // It prints (a) every limited member (and pending invite) whose old names and new links differ, (b) the people left with
-// no branch, (c) counts. Business names and emails are masked to their first 2 letters.
+// no branch, (c) counts, (d) owners that still carry a branch list or link rows (added by P1-DB-3, a QA follow-up from BE-4).
+// Business names and emails are masked to their first 2 letters.
+// Section (d) is a REPORT only: the code treats an owner (a role that holds "*") as all branches whatever the list says, so nothing is
+// wrong in the data; the owner can be tidied on the Team page if you want the list gone. It never changes the exit code.
 // Exit code: 0 when (a) holds only stale-name rows (a name that matches no single branch, dropped on purpose);
 // 1 when a row differs for any other reason (a name that should have linked but did not, or a link with no old name),
 // or the database cannot be read.
@@ -30,6 +33,18 @@ const db = new PrismaClient();
 
 const mask = (s) => (s ? `${String(s).slice(0, 2)}***` : "(none)");
 const lowerSet = (xs) => [...new Set(xs.filter((x) => typeof x === "string").map((x) => x.toLowerCase()))].sort();
+
+// Section (d) query. The test (test/access-tables.test.ts) reads it from between the two marker lines, so it checks what really runs.
+// OWNERS SQL START
+const OWNERS_SQL = `
+    SELECT m.id, t.name AS business, u.email, m.scopes, m.all_branches,
+           (SELECT count(*) FROM membership_branches mb WHERE mb.membership_id = m.id)::int AS links
+      FROM memberships m JOIN roles r ON r.id = m.role_id JOIN tenants t ON t.id = m.tenant_id JOIN users u ON u.id = m.user_id
+     WHERE '*' = ANY (r.perms)
+       AND (jsonb_typeof(m.scopes) = 'array' OR m.all_branches = false
+            OR EXISTS (SELECT 1 FROM membership_branches mb WHERE mb.membership_id = m.id))
+     ORDER BY t.name, u.email`;
+// OWNERS SQL END
 
 // Step 4 query of ACCESS.md, widened to also return who and what: limited people whose old names (lower-case, no
 // repeats) are not the same set as the names of the branches they are linked to.
@@ -115,6 +130,12 @@ try {
            (SELECT count(*) FROM invite_branches)::int AS invite_links`);
   console.log(`  members: ${c.members}   limited members: ${c.limited_members}   member link rows: ${c.member_links}`);
   console.log(`  invites: ${c.invites}   pending: ${c.pending_invites}   limited: ${c.limited_invites}   invite link rows: ${c.invite_links}`);
+
+  console.log("\n(d) Owners (a role that holds \"*\") that still carry a branch list or link rows. Report only: owners always see every branch");
+  const owners = await db.$queryRawUnsafe(OWNERS_SQL);
+  for (const o of owners) console.log(`  owner member ${o.id}  business ${mask(o.business)}  email ${mask(o.email)}  old names: ${JSON.stringify(o.scopes)}   limited flag: ${o.all_branches ? "no" : "yes"}   link rows: ${o.links}`);
+  if (owners.length === 0) console.log("  none");
+  else console.log(`  ${owners.length} owner(s) listed. Nothing to fix: this does not change the result below.`);
 
   console.log(`\n${exitCode === 0 ? "PASS" : "FAIL"}: ${exitCode === 0 ? "every difference is a stale name dropped on purpose" : "at least one difference is not a stale name (see PROBLEM above)"}`);
 } catch (e) {
