@@ -1,5 +1,5 @@
 // Expenses page: Business → Expenses, with the Expenses, Recurring and Profit tabs, built on the shared list-page kit.
-// Where it fits: shown at /business/expenses by business/frontend/src/pages/BusinessApp.jsx (LiveExpenses.jsx is a one-line re-export of this).
+// Where it fits: shown at /business/expenses by business/frontend/src/pages/BusinessApp.jsx.
 // How it works: the page loads the plain /expenses list once for the facts every tab needs: whether the person may change things (`canManage`), how many
 // drafts wait, and the category list. The first two tabs are CrudPage screens described in resources/expense.jsx and resources/recurring.jsx; Profit is
 // ProfitTab. Changes send the row's version; a stale one shows "Someone changed this. Reload to see the latest." and reloads (see the kit's saveFlow.js).
