@@ -476,3 +476,11 @@ message from the 402 when the plan does not include it. Admin → Settings → B
 - `CrudPage` props: `extraContext` (merged into the context that feeds option lists, e.g. categories).
 - Fields: `minLength` (while required), `labelWhen { when, label }`, `options { from, label }` (fixed label key).
 - Styles: skeleton, phone cards, pager, bulk bar, drawer widths are classes in platform.css (`pf-skel`, `pf-cards`, `pf-card-*`, `pf-pager`, `pf-bulk`, `pf-money`, `pf-drawer-sm|lg`); under 640 px every button is at least 44 px high.
+
+
+## 11. Added by P1-FE-3 (Reviews)
+
+- `Stars` is in `packages/ui` (`@sheetal/ui/stars`, also exported from `@sheetal/ui`): `<Stars value size onPick label />`. Read-only it is one image with the label "3.5 out of 5 stars"; with `onPick` it is a radio group of five buttons ("1 star" … "5 stars"). The value is rounded to the nearest whole star. The website keeps its own `Stars` (different icon library and `.stars` CSS, so not a drop-in).
+- `CrudPage` in card layout: `renderCard(row, { open, edit, remove, reload, meta, api })` (new: `meta`, `api`); `list.gridClass` names the wrapper class; `resource.empty` may be a function of the filters `(filters) => ({ icon, title, sub })`; `resource.loadingText` replaces "Loading…".
+- A read-only resource has no `form` and no `remove`; a write that is not create / change / delete (a reply) is sent with `runRowAction`, so `resource.versioned` puts the version in the body.
+- Classes in platform.css: `pf-review-list`, `pf-review`, `pf-review-head`, `pf-review-text`, `pf-review-box`, `pf-review-code`, `pf-star-pick`, `pf-start`.

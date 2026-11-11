@@ -41,7 +41,7 @@ import { AddBusiness } from "./AddBusiness";
 import { POS, Bookings } from "./POS";
 import { LiveBookings, LiveFrontDesk, LiveInvestors, LivePOS, LiveProjects, LiveCalendar } from "./LiveOps";
 import { LiveAnalytics, LiveChannels } from "./LiveGrowth";
-import { LiveReviews } from "./LiveReviews";
+import { ReviewsPage } from "@sheetal/app-reviews/frontend";
 import { Verification } from "./Verification";
 import { Inbox } from "./Inbox";
 import { Forms } from "./Forms";
@@ -282,7 +282,7 @@ export default function BusinessApp() {
         { path: "/business/projects", render: () => guard(any("projects.manage", "progress.post"), (isLive(tenant.id) ? <LiveProjects key={tenant.id} tenant={tenant} role={role} /> : <Projects key={tenant.id} tenant={tenant} />)) },
         { path: "/business/collections", render: () => guard(can(role, "collect.payments"), (isLive(tenant.id) ? <LiveProjects key={tenant.id + "c"} tenant={tenant} role={role} /> : <Collections key={tenant.id} tenant={tenant} />)) },
         { path: "/business/investors", render: () => guard(can(role, "investors.view"), (isLive(tenant.id) ? <LiveInvestors key={tenant.id} tenant={tenant} role={role} /> : <Investors key={tenant.id} tenant={tenant} />)) },
-        { path: "/business/reviews", render: () => guard(any("reviews.reply", "customers.view"), (isLive(tenant.id) ? <LiveReviews key={tenant.id} tenant={tenant} /> : <Reviews key={tenant.id} tenant={tenant} />)) },
+        { path: "/business/reviews", render: () => guard(any("reviews.reply", "customers.view"), (isLive(tenant.id) ? <ReviewsPage key={tenant.id} tenant={tenant} /> : <Reviews key={tenant.id} tenant={tenant} />)) },
         { path: "/business/expenses", render: () => paid(can(role, "expenses.view"), (isLive(tenant.id) ? <ExpensesPage key={tenant.id} tenant={tenant} /> : <Expenses key={tenant.id} tenant={tenant} />)) },
         { path: "/business/rentals", render: () => guard(any("rentals.view", "rentals.manage"), (isLive(tenant.id) ? <LiveRentals key={tenant.id} tenant={tenant} /> : <Rentals key={tenant.id} tenant={tenant} />)) },
         { path: "/business/rentals/:tab", render: ({ tab }) => guard(any("rentals.view", "rentals.manage"), (isLive(tenant.id) ? <LiveRentals key={tenant.id} tenant={tenant} tab={tab} /> : <Rentals key={tenant.id} tenant={tenant} tab={tab} />)) },
