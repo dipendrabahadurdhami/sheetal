@@ -1,7 +1,7 @@
 // Admin API (port 4002): everything the super-admin panel (/admin) needs, for Sheetal staff only.
 // Where it fits: server.ts starts it; tests build it with buildApp(); the admin panel calls it under /v1/admin.
 // How it works: the shared base app (backend-core) plus modules for businesses and staff, plans, listing review,
-// content, billing, payouts, analytics and system status, platform settings and connections (Google, WhatsApp, Cloudflare), business verification and the staff notification bell. It also
+// content, billing, payouts, analytics and system status, platform settings and connections (Google, WhatsApp, Cloudflare), business verification, support sessions (log in as a business, read-only by default) and the staff notification bell. It also
 // runs two background jobs: plan renewals (every 6 hours) and calendar sync (every 2 hours).
 // Rules: every route starts with staffOf(request, permission); businesses get nothing here.
 
@@ -33,6 +33,7 @@ import { notificationRoutes } from "@sheetal/backend-core/modules/notifications"
 import { adminVerificationRoutes } from "./modules/verification.js";
 import { adminCatalogRoutes } from "./modules/catalog.js";
 import { adminSupportRoutes } from "./modules/support.js";
+import { adminImpersonationRoutes } from "./modules/impersonation.js";
 import { staffOf } from "./modules/routes.js";
 
 export async function buildApp(config: Config, deps: AppDeps & { fetch?: Fetch } = {}): Promise<FastifyInstance> {
@@ -58,6 +59,7 @@ export async function buildApp(config: Config, deps: AppDeps & { fetch?: Fetch }
   await app.register(adminVerificationRoutes, { prefix: "/v1" });
   await app.register(adminCatalogRoutes, { prefix: "/v1" });
   await app.register(adminSupportRoutes, { prefix: "/v1" });
+  await app.register(adminImpersonationRoutes, { prefix: "/v1" });
   // The bell: work for Sheetal staff (notes without a business that lead into the admin panel).
   await app.register(async (a) => notificationRoutes(a, "/admin/notifications", (request) => ({ userId: staffOf(request).user.id, tenantId: null, link: { startsWith: "/admin" } })), { prefix: "/v1" });
   // The renewal cycle, calendar sync and expiry reminders run in this process only, started by one registry (src/jobs.ts). JOBS=off turns them off.

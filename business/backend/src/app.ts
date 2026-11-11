@@ -5,7 +5,8 @@
 // analytics, channels, calendar sync), reviews and verification, settings and check-ups, import and export, customer invoices, payouts, expenses and profit, rentals, online forms, agreements, promote (boosts and home banners), stock, and the
 // notification bell.
 // Rules: every route starts from workspaceOf() (modules/access.ts), so it always acts inside one business the
-// person belongs to, with their role, and only on the branches they work at.
+// person belongs to, with their role, and only on the branches they work at. A Sheetal support session (a token from the admin API, read-only by
+// default) is accepted by the hook registered right after the base app, and then looks like a sign-in to that one business (platform/src/support).
 
 import type { FastifyInstance } from "fastify";
 import type { Config } from "@sheetal/backend-core/config";
@@ -44,7 +45,12 @@ import { aiAccountRoutes } from "./modules/aiaccount/routes.js";
 import { reviewRoutes as checkupRoutes } from "./modules/reviews/checkups.js";
 import { notificationRoutes } from "@sheetal/backend-core/modules/notifications";
 import { businessContextOf, workspaceOf } from "./modules/access.js";
-import { CONSUMERS, businessJobs, eventsOf } from "./jobs.js";
+import { CONSUMERS, businessJobs, eventsOf, platformJobs } from "./jobs.js";
+import { effectiveLimits } from "@sheetal/backend-core/domain/addons";
+import { ApprovalService } from "@sheetal/platform/approvals/service";
+import { approvalRoutes } from "@sheetal/platform/approvals/routes";
+import { registerSupportSessions } from "@sheetal/platform/support/hooks";
+import { supportSessionRoutes } from "@sheetal/platform/support/routes";
 import { registerConsumers } from "@sheetal/platform/jobs/consumers";
 import { APPS } from "@sheetal/platform/tenancy/apps.generated";
 import { jobsOn, startJobs } from "@sheetal/platform/jobs/registry";
@@ -54,6 +60,13 @@ import type { Resolver } from "./modules/mail/dns.js";
 
 export async function buildApp(config: Config, deps: AppDeps & { resolver?: Resolver; fetch?: Fetch; ai?: { client: AiClient; model: string; credits: Record<string, number> } } = {}): Promise<FastifyInstance> {
   const app = await buildBaseApp(config, deps);
+  // Before any route: a hook only covers the routes registered after it. Support-session tokens (read-only by default) are recognised here.
+  registerSupportSessions(app);
+  // Maker-checker approvals (P1-BE-7): the gate for services that name an `approval` on an action, the inbox and rules routes. Every rule is OFF in Phase 1.
+  const approvals = new ApprovalService({ tenancy: { effectiveLimits: (db, tenantId, plan) => effectiveLimits(db, tenantId, plan) } });
+  app.decorate("approvals", approvals);
+  await app.register(approvalRoutes, { prefix: "/v1", contextOf: businessContextOf, service: approvals });
+  await app.register(supportSessionRoutes, { prefix: "/v1" });
   await app.register(teamRoutes, { prefix: "/v1" });
   await app.register(branchRoutes, { prefix: "/v1" });
   await app.register(reviewRoutes, { prefix: "/v1", contextOf: businessContextOf });
@@ -97,7 +110,7 @@ export async function buildApp(config: Config, deps: AppDeps & { resolver?: Reso
     const events = eventsOf(app);
     app.decorate("events", events);
     registerConsumers(events.bus, APPS, CONSUMERS);
-    startJobs(app, businessJobs(app, events), { enabled: jobsOn(config.NODE_ENV, true) });
+    startJobs(app, [...businessJobs(app, events), ...platformJobs(app)], { enabled: jobsOn(config.NODE_ENV, true) });
   }
   return app;
 }

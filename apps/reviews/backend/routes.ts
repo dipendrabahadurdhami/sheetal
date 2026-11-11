@@ -9,7 +9,7 @@
 
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { BusinessContext } from "@sheetal/platform/core/context";
-import { busOf } from "./host.js";
+import { busOf } from "@sheetal/platform/core/host";
 import { ReviewController } from "./review.controller.js";
 import { ReviewService } from "./review.service.js";
 import { phaseOneContext } from "./scope.js";
@@ -21,5 +21,5 @@ export interface ReviewRoutesOptions {
 
 export async function reviewRoutes(app: FastifyInstance, opts: ReviewRoutesOptions) {
   const contextOf = async (req: FastifyRequest) => phaseOneContext(await opts.contextOf(req));
-  new ReviewController(new ReviewService({ bus: busOf(app) }), contextOf).register(app);
+  new ReviewController(new ReviewService({ bus: busOf(app, "reviews") }), contextOf).register(app);
 }

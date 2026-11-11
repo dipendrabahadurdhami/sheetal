@@ -36,7 +36,9 @@ export interface BusinessContext extends BaseContext {
   readonly branches: BranchScope;
   readonly permissions: PermissionSet;
   readonly entitlements: Entitlements;
-  readonly impersonation: { staffId: string; reason: string; expiresAt: Date; readOnly: boolean } | null;
+  readonly impersonation: { staffId: string; reason: string; expiresAt: Date; readOnly: boolean; sessionId?: string } | null;
+  /** Set only while an approved request runs again (ACCESS.md 9.4 step 5): the action is not held a second time, and its audit row carries both ids. */
+  readonly approval?: { id: string; checkerId: string };
 }
 
 export interface StaffContext extends BaseContext {

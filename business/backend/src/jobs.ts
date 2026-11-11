@@ -19,6 +19,8 @@ import { expenseJob } from "@sheetal/app-expenses/backend";
 import { rentJob } from "./modules/rentals/routes.js";
 import { reviewCheckupJob } from "./modules/reviews/checkups.js";
 import { stockJob } from "./modules/stock/routes.js";
+import { approvalExpiryJob } from "@sheetal/platform/approvals/jobs";
+import type { ApprovalService } from "@sheetal/platform/approvals/service";
 
 /**
  * The bus the apps of this API subscribe to, and its dispatcher. One per process. Apps register their handlers on `bus` from their
@@ -38,10 +40,18 @@ export function eventsOf(app: FastifyInstance) {
 export const CONSUMERS: ConsumerImpls = {};
 
 declare module "fastify" {
-  interface FastifyInstance { events?: ReturnType<typeof eventsOf> }
+  interface FastifyInstance { events?: ReturnType<typeof eventsOf>; approvals?: ApprovalService }
 }
 
 /** Every background job of the business API, in start order. `events` is what eventsOf(app) returned (the same bus the apps subscribed to). */
 export function businessJobs(app: FastifyInstance, events: ReturnType<typeof eventsOf>): JobSpec[] {
   return [expenseJob(app), rentJob(app), stockJob(app), reviewCheckupJob(app), events.dispatcher.job()];
+}
+
+/**
+ * Jobs that belong to the platform, not to one app (P1-BE-7): today the approvals expiry. Listed apart from businessJobs() on purpose, so that list (and the test
+ * that pins it) stays as the apps' own jobs; app.ts starts both lists in one registry.
+ */
+export function platformJobs(app: FastifyInstance): JobSpec[] {
+  return [approvalExpiryJob(dbOf(app), app.log)];
 }
