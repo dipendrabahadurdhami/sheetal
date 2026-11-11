@@ -51,6 +51,8 @@ import { ApprovalService } from "@sheetal/platform/approvals/service";
 import { approvalRoutes } from "@sheetal/platform/approvals/routes";
 import { registerSupportSessions } from "@sheetal/platform/support/hooks";
 import { supportSessionRoutes } from "@sheetal/platform/support/routes";
+import { registerDemoGuard } from "@sheetal/platform/demo/guard";
+import { DEMO_ALLOW, demoRoutes } from "./modules/demo/routes.js";
 import { registerConsumers } from "@sheetal/platform/jobs/consumers";
 import { APPS } from "@sheetal/platform/tenancy/apps.generated";
 import { jobsOn, startJobs } from "@sheetal/platform/jobs/registry";
@@ -62,6 +64,9 @@ export async function buildApp(config: Config, deps: AppDeps & { resolver?: Reso
   const app = await buildBaseApp(config, deps);
   // Before any route: a hook only covers the routes registered after it. Support-session tokens (read-only by default) are recognised here.
   registerSupportSessions(app);
+  // "Try the demo" (stage 1.2): a demo visitor may only change what DEMO_ALLOW lists; everything that reaches outside (invitations, mail, payments, uploads) is refused.
+  registerDemoGuard(app, { allow: DEMO_ALLOW });
+  await app.register(demoRoutes, { prefix: "/v1", fetch: deps.fetch });
   // Maker-checker approvals (P1-BE-7): the gate for services that name an `approval` on an action, the inbox and rules routes. Every rule is OFF in Phase 1.
   const approvals = new ApprovalService({ tenancy: { effectiveLimits: (db, tenantId, plan) => effectiveLimits(db, tenantId, plan) } });
   app.decorate("approvals", approvals);

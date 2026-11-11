@@ -10,6 +10,11 @@ import { useStore } from "@sheetal/shared/core/store";
 import { emptyOps } from "@sheetal/shared/demo/ops";
 import { brandTheme } from "@sheetal/shared/core/palette";
 import { bizApi, bizApiReady, fileToBase64, setActiveTenant, signedIn } from "./api";
+import { branchBody } from "./access/branchAccess";
+import { takeSupportTokenFromUrl } from "@sheetal/sdk/support";
+
+// A Sheetal support session opened from the admin panel arrives as #support=… : keep it for this tab and clean the address bar, before the first API call.
+takeSupportTokenFromUrl();
 
 const liveIds = new Set();
 let reload = null;
@@ -28,8 +33,8 @@ const toTenant = (w, prev = {}) => ({
 });
 /** The settings form's profile from the server's business record. */
 export const profileOf = (t) => ({ displayName: t.name, city: t.city || "", phone: t.phone || "", email: t.email || "", address: t.address || "", pan: t.pan || "", vatRegistered: !!t.vatRegistered, website: t.website || "" });
-const toMember = (m) => ({ id: m.id, name: m.name, email: m.email, phone: m.phone || "", roleId: m.roleId, status: m.status === "paused" ? "suspended" : m.status, lastActive: m.lastActive, scopes: m.scopes, twofa: false });
-const toInvite = (i) => ({ id: i.id, email: i.email, roleId: i.roleId, scopes: i.scopes, status: i.status, sent: i.sent, expires: i.expires, by: i.by || "" });
+const toMember = (m) => ({ id: m.id, name: m.name, email: m.email, phone: m.phone || "", roleId: m.roleId, status: m.status === "paused" ? "suspended" : m.status, lastActive: m.lastActive, scopes: m.scopes, branchIds: m.branchIds, twofa: false });
+const toInvite = (i) => ({ id: i.id, email: i.email, roleId: i.roleId, scopes: i.scopes, branchIds: i.branchIds, status: i.status, sent: i.sent, expires: i.expires, by: i.by || "" });
 const toBranch = (b) => ({ id: b.id, name: b.name, address: b.address || "", phone: b.phone || "", manager: b.manager || "", receipt: b.receipt || "", status: b.status, rooms: b.rooms, staff: b.staff, live: true });
 const toRole = (r) => ({ id: r.id, key: r.key, name: r.name || undefined, perms: r.perms, system: r.system });
 
@@ -206,12 +211,13 @@ export const liveLeads = (toast) => {
 };
 
 /** Team actions for a business from the API, with the same shape the team screens already use. */
-export const liveTeam = (toast) => {
+// Branch access goes to the server by branch ID (stage 1.2): the screen picks names, `branches` (the business's branch list) turns them into ids.
+export const liveTeam = (toast, branches = []) => {
   const run = (p) => p.then((r) => { if (r?.message) toast(r.message); liveRefresh(); return r; }).catch((e) => { toast(e.message); liveRefresh(); });
   return {
-    onInvite: (list) => run(bizApi("POST", "/team/invites", { invites: list.map((i) => ({ email: i.email, roleId: i.roleId, scopes: i.scopes || "all" })) })),
+    onInvite: (list) => run(bizApi("POST", "/team/invites", { invites: list.map((i) => ({ email: i.email, roleId: i.roleId, ...branchBody(i.scopes || "all", branches) })) })),
     onUpdateMember: (id, patch) => {
-      const body = { roleId: patch.roleId, scopes: patch.scopes, status: patch.status ? (patch.status === "suspended" ? "paused" : "active") : undefined };
+      const body = { roleId: patch.roleId, ...branchBody(patch.scopes, branches), status: patch.status ? (patch.status === "suspended" ? "paused" : "active") : undefined };
       if (Object.values(body).every((v) => v === undefined)) return; // two-step sign-in is managed per person, not here
       run(bizApi("PATCH", `/team/members/${id}`, body));
     },

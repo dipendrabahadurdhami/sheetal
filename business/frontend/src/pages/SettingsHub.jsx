@@ -12,6 +12,7 @@ export const settingsSections = (role, t) => [
     { id: "branding", to: "/business/settings/branding", icon: "palette", label: t("bsettings.branding"), perm: "settings.business", keywords: "colour color logo receipt brand" },
     { id: "branches", to: "/business/branches", icon: "git-branch", label: t("nav.branches"), perm: "settings.business", keywords: "branch office location" },
     { id: "roles", to: "/business/settings/roles", icon: "key-round", label: "Roles and access", perm: "roles.manage", keywords: "roles permissions access staff team" },
+    { id: "approvals", to: "/business/approvals/rules", icon: "shield-check", label: "Approvals", perm: "settings.business", keywords: "approval approve second person maker checker rules limit refund" },
   ] },
   { group: "Plan and money", items: [
     { id: "billing", to: "/business/billing", icon: "credit-card", label: t("nav.plan"), perm: "billing.manage", keywords: "plan subscription upgrade billing invoice starter business pro" },

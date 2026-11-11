@@ -10,6 +10,7 @@
   "exports": {
     ".": "./src/index.js",
     "./client": "./src/client.js",
-    "./hooks": "./src/hooks.js"
+    "./hooks": "./src/hooks.js",
+    "./support": "./src/support.js"
   }
 }

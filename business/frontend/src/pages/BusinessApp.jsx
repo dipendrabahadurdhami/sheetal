@@ -17,6 +17,7 @@ import { useT } from "@sheetal/shared/core/i18n";
 import { useStore } from "@sheetal/shared/core/store";
 import { Link, Routes, useRouter } from "@sheetal/shared/core/router";
 import { can, canAny, filterNav, roleName } from "@sheetal/shared/core/rbac";
+import { manifestNavItem } from "@sheetal/config/menu";
 import { Button, Select, Tabs } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { MenuButton, MenuLink, MenuSep, NoAccess, Pending, Shell } from "@sheetal/shared/layout/Shell";
@@ -36,7 +37,7 @@ import { Domains } from "./Domains";
 import { Mail } from "./Mail";
 import { canAddBusiness, isLive, useBrand, useLiveWorkspace, workRefresh } from "../live";
 import { useLiveSettings } from "../liveSettings";
-import { bizApi, setActiveBranch } from "../api";
+import { bizApi, bizApiReady, setActiveBranch, signedIn } from "../api";
 import { AddBusiness } from "./AddBusiness";
 import { POS, Bookings } from "./POS";
 import { LiveBookings, LiveFrontDesk, LiveInvestors, LivePOS, LiveProjects, LiveCalendar } from "./LiveOps";
@@ -44,6 +45,9 @@ import { LiveAnalytics, LiveChannels } from "./LiveGrowth";
 import { ReviewsPage } from "@sheetal/app-reviews/frontend";
 import { Verification } from "./Verification";
 import { Inbox } from "./Inbox";
+import { Approvals } from "./Approvals";
+import { SupportBanner } from "./SupportBanner";
+import { DemoBar, TryDemo } from "./TryDemo";
 import { Forms } from "./Forms";
 import { LiveForms } from "./LiveForms";
 import { LiveAgreements } from "./LiveAgreements";
@@ -137,7 +141,8 @@ export default function BusinessApp() {
   const ck = checkupsOf(db, tenant.id);
   const toCheck = todaysList(db.listings.filter((l) => l.tenantId === tenant.id), ck.settings, ck.log, TODAY.slice(0, 10)).length;
 
-  const nav = withoutPaid(free, filterNav([
+  // The apps on the kernel (Expenses, Reviews, Rentals) get their entry from their manifest (@sheetal/config/menu); the rest stay written here until Phase 2.
+  const nav = withoutPaid(free, filterNav(fromManifests([
     { items: [{ to: "/business", exact: true, icon: "layout-grid", key: "nav.overview", perm: "overview.view" }, { to: "/business/analytics", icon: "chart-column", key: "nav.analytics", perm: "overview.view" }] },
     // Listings first (what every business does), then the people who answer them, then day-to-day operations.
     { group: "group.listings", items: [
@@ -145,7 +150,7 @@ export default function BusinessApp() {
       { to: "/business/checkups", icon: "list-checks", key: "nav.checkups", permAny: ["listings.manage", "projects.manage", "investments.manage", "calendar.edit"], count: toCheck || undefined, countTone: "action" },
       { to: "/business/promote", icon: "rocket", key: "nav.promote", permAny: ["listings.manage", "projects.manage", "investments.manage", "calendar.edit", "billing.manage"] },
       { to: "/business/social", icon: "megaphone", key: "nav.bizSocial", permAny: ["listings.manage", "projects.manage", "investments.manage", "calendar.edit"] },
-      { to: "/business/reviews", icon: "star", key: "nav.reviews", permAny: ["reviews.reply", "customers.view"] },
+      manifestNavItem("/business/reviews"),
     ] },
     { group: "group.leads", items: [
       { to: "/business/inbox", icon: "messages-square", key: "nav.inbox", permAny: ["messages.reply", "leads.view"] },
@@ -160,7 +165,7 @@ export default function BusinessApp() {
       { to: "/business/calendar", icon: "calendar-days", key: "nav.calendar", perm: "calendar.view", types: ["hotel", "host"] },
       { to: "/business/pos", paid: true, icon: "store", key: "nav.pos", permAny: ["pos.frontdesk", "pos.restaurant", "pos.extras"], types: ["hotel", "host"] },
       { to: "/business/stock", paid: true, icon: "package", key: "nav.stock", permAny: ["pos.restaurant", "pos.extras", "settings.business"], types: ["hotel", "host"] },
-      { to: "/business/rentals", icon: "key-round", key: "nav.rentals", permAny: ["rentals.view", "rentals.manage"], types: ["agency"] },
+      manifestNavItem("/business/rentals"),
       { to: "/business/projects", icon: "building-2", key: "nav.projects", permAny: ["projects.manage", "progress.post"], types: ["developer"] },
       { to: "/business/collections", icon: "hand-coins", key: "nav.collections", perm: "collect.payments", types: ["developer", "agency"] },
       { to: "/business/investors", icon: "users", key: "nav.investors", perm: "investors.view", types: ["sponsor"] },
@@ -168,15 +173,17 @@ export default function BusinessApp() {
     { group: "group.money", items: [
       { to: "/business/invoices", icon: "receipt", key: "nav.invoices", perm: "invoices.view" },
       { to: "/business/payouts", icon: "wallet", key: "nav.payouts", perm: "payouts.view" },
-      { to: "/business/expenses", paid: true, icon: "chart-pie", key: "nav.expenses", perm: "expenses.view" },
+      manifestNavItem("/business/expenses", { paid: true }),
     ] },
     { group: "group.admin", items: [
       { to: "/business/team", icon: "users", key: "nav.team" },
       { to: can(role, "settings.business") ? "/business/settings" : "/business/billing", icon: "settings", key: "nav.settings", permAny: ["settings.business", "billing.manage"], match: ["/business/settings", "/business/billing", "/business/domains", "/business/developers", "/business/data", "/business/branches", "/business/channels", "/business/ai-accounts"] },
       { to: "/business/help", icon: "life-buoy", key: "nav.help" },
     ] },
-  ], role, types));
+  ]), role, types));
 
+  // Nobody signed in and the business API is connected: the pages on the screen kit offer a real demo business instead of the old sample screens (TryDemo.jsx).
+  const offerDemo = bizApiReady() && !signedIn();
   const guard = (ok, el) => (ok ? el : <NoAccess />);
   const paid = (ok, el) => (free ? <UpgradeNeeded /> : guard(ok, el));
   const ended = ["suspended", "cancelled"].includes(tenant.status) && s.impersonating !== tenant.id;
@@ -224,7 +231,7 @@ export default function BusinessApp() {
         ...(db.members[tenant.id] || []).map((m) => ({ icon: "user", label: m.name, sub: m.email, to: "/business/team" })),
       ]}
       style={brand ? { "--accent": brand, "--accent-ink": inkFor(brand), "--btn-bg": brand, "--btn-ink": btnInkFor(brand), "--btn-bg-hover": `color-mix(in srgb, ${brand} 82%, white)`, "--accent-soft": `color-mix(in srgb, ${brand} 10%, var(--card))` } : undefined}
-      banner={<>{role !== owner && <div className="pf-branchbar"><span>Previewing as {roleName(role, t)}. Pages this role can't use are hidden.</span><button onClick={() => update((d) => { d.session.previewRoleId = null; })}>Back to my view</button></div>}{branch !== "all" && <div className="pf-branchbar"><span>{t("br.viewing", { b: branch })}</span>{canAll && <button onClick={() => update((d) => { d.session.branchOf = { ...(d.session.branchOf || {}), [tenant.id]: "all" }; })}>{t("br.seeAll")}</button>}</div>}{s.impersonating === tenant.id && (
+      banner={<><SupportBanner tenantId={tenant.id} /><DemoBar email={s.userEmail} />{role !== owner && <div className="pf-branchbar"><span>Previewing as {roleName(role, t)}. Pages this role can't use are hidden.</span><button onClick={() => update((d) => { d.session.previewRoleId = null; })}>Back to my view</button></div>}{branch !== "all" && <div className="pf-branchbar"><span>{t("br.viewing", { b: branch })}</span>{canAll && <button onClick={() => update((d) => { d.session.branchOf = { ...(d.session.branchOf || {}), [tenant.id]: "all" }; })}>{t("br.seeAll")}</button>}</div>}{s.impersonating === tenant.id && (
         <div className="pf-imp"><Icon name="eye" size={16} /><span>{t("ws.impersonating", { name: tenant.name })}</span>
           <Button size="sm" variant="light" onClick={() => { update((d) => { d.session.impersonating = null; d.session.tenantId = d.session.memberships[0]; }); navigate(`/admin/tenants/${tenant.id}`); }}>{t("ws.backToAdmin")}</Button></div>
       )}</>}
@@ -241,6 +248,7 @@ export default function BusinessApp() {
         <span className="tiny muted">{t("preview.viewAsHint")}</span></div>}</>}
       userMenu={<>
         <MenuLink to="/business/me" icon="user">My profile</MenuLink>
+        <MenuLink to="/business/approvals" icon="shield-check">Approvals</MenuLink>
         <MenuLink to="/business/notifications" icon="bell">Notifications{notifs.unread ? ` (${notifs.unread})` : ""}</MenuLink>
         <MenuSep />
         <MenuLink to={`/site/${tenant.id}`} icon="globe">{t("menu.mySite")}</MenuLink>
@@ -256,6 +264,8 @@ export default function BusinessApp() {
       <BranchProvider key={branchId} value={{ branch, branchId, allowed, canAll, first: openBranches[0] }}>
       {ended ? <BackupOnly tenant={tenant} /> : <Routes fallback={<Pending part={2} />} routes={[
         { path: "/business", render: () => (isLive(tenant.id) ? <LiveOverview key={tenant.id} tenant={tenant} role={role} /> : <BusinessOverview tenant={tenant} role={role} />) },
+        { path: "/business/approvals", render: () => <Approvals key={tenant.id} tenant={tenant} live={isLive(tenant.id)} tab="pending" /> },
+        { path: "/business/approvals/:tab", render: ({ tab }) => <Approvals key={tenant.id + tab} tenant={tenant} live={isLive(tenant.id)} tab={["decided", "rules"].includes(tab) ? tab : "pending"} /> },
         { path: "/business/team", render: () => <TeamHub key={tenant.id + "m"} tenant={tenant} role={role} start={can(role, "team.view") ? "members" : "attendance"} /> },
         { path: "/business/roles", render: () => <TeamHub key={tenant.id + "r"} tenant={tenant} role={role} start="roles" /> },
         { path: "/business/listings", render: () => <ListingsPage tenant={tenant} canEdit={any("listings.manage", "projects.manage", "investments.manage", "calendar.edit")} /> },
@@ -282,8 +292,8 @@ export default function BusinessApp() {
         { path: "/business/projects", render: () => guard(any("projects.manage", "progress.post"), (isLive(tenant.id) ? <LiveProjects key={tenant.id} tenant={tenant} role={role} /> : <Projects key={tenant.id} tenant={tenant} />)) },
         { path: "/business/collections", render: () => guard(can(role, "collect.payments"), (isLive(tenant.id) ? <LiveProjects key={tenant.id + "c"} tenant={tenant} role={role} /> : <Collections key={tenant.id} tenant={tenant} />)) },
         { path: "/business/investors", render: () => guard(can(role, "investors.view"), (isLive(tenant.id) ? <LiveInvestors key={tenant.id} tenant={tenant} role={role} /> : <Investors key={tenant.id} tenant={tenant} />)) },
-        { path: "/business/reviews", render: () => guard(any("reviews.reply", "customers.view"), (isLive(tenant.id) ? <ReviewsPage key={tenant.id} tenant={tenant} /> : <Reviews key={tenant.id} tenant={tenant} />)) },
-        { path: "/business/expenses", render: () => paid(can(role, "expenses.view"), (isLive(tenant.id) ? <ExpensesPage key={tenant.id} tenant={tenant} /> : <Expenses key={tenant.id} tenant={tenant} />)) },
+        { path: "/business/reviews", render: () => guard(any("reviews.reply", "customers.view"), (isLive(tenant.id) ? <ReviewsPage key={tenant.id} tenant={tenant} /> : offerDemo ? <TryDemo type={tenant.type} page="Reviews" /> : <Reviews key={tenant.id} tenant={tenant} />)) },
+        { path: "/business/expenses", render: () => paid(can(role, "expenses.view"), (isLive(tenant.id) ? <ExpensesPage key={tenant.id} tenant={tenant} /> : offerDemo ? <TryDemo type={tenant.type} page="Expenses" /> : <Expenses key={tenant.id} tenant={tenant} />)) },
         { path: "/business/rentals", render: () => guard(any("rentals.view", "rentals.manage"), (isLive(tenant.id) ? <LiveRentals key={tenant.id} tenant={tenant} /> : <Rentals key={tenant.id} tenant={tenant} />)) },
         { path: "/business/rentals/:tab", render: ({ tab }) => guard(any("rentals.view", "rentals.manage"), (isLive(tenant.id) ? <LiveRentals key={tenant.id} tenant={tenant} tab={tab} /> : <Rentals key={tenant.id} tenant={tenant} tab={tab} />)) },
         { path: "/business/stock", render: () => paid(any("pos.restaurant", "pos.extras", "settings.business"), (isLive(tenant.id) ? <LiveStock key={tenant.id} tenant={tenant} /> : <Stock key={tenant.id} tenant={tenant} />)) },
@@ -313,6 +323,11 @@ export default function BusinessApp() {
 }
 
 // Starter hides paid groups and items.
+/** Drops the entries no manifest declared (manifestNavItem() answered null), so a missing manifest never breaks the menu. */
+function fromManifests(nav) {
+  return nav.map((g) => ({ ...g, items: g.items.filter(Boolean) }));
+}
+
 function withoutPaid(free, nav) {
   if (!free) return nav;
   return nav.filter((g) => !g.paid).map((g) => ({ ...g, items: g.items.filter((it) => !it.paid) })).filter((g) => g.items.length);

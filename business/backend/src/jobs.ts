@@ -20,6 +20,7 @@ import { rentJob } from "./modules/rentals/routes.js";
 import { reviewCheckupJob } from "./modules/reviews/checkups.js";
 import { stockJob } from "./modules/stock/routes.js";
 import { approvalExpiryJob } from "@sheetal/platform/approvals/jobs";
+import { demoCleanupJob } from "./modules/demo/routes.js";
 import type { ApprovalService } from "@sheetal/platform/approvals/service";
 
 /**
@@ -49,9 +50,9 @@ export function businessJobs(app: FastifyInstance, events: ReturnType<typeof eve
 }
 
 /**
- * Jobs that belong to the platform, not to one app (P1-BE-7): today the approvals expiry. Listed apart from businessJobs() on purpose, so that list (and the test
+ * Jobs that belong to the platform, not to one app (P1-BE-7): the approvals expiry and the hourly cleanup of demo businesses (stage 1.2). Listed apart from businessJobs() on purpose, so that list (and the test
  * that pins it) stays as the apps' own jobs; app.ts starts both lists in one registry.
  */
 export function platformJobs(app: FastifyInstance): JobSpec[] {
-  return [approvalExpiryJob(dbOf(app), app.log)];
+  return [approvalExpiryJob(dbOf(app), app.log), demoCleanupJob(app)];
 }
