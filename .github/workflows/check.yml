@@ -1,5 +1,5 @@
-# GitHub Actions: runs `npm run check` (command list, manifest and import-rule checks, lint, typecheck, all tests)
-# on every push and pull request.
+# GitHub Actions: on every push and pull request, checks that the schema matches the migrations, runs `npm run check`
+# (command list, manifest and import-rule checks, lint, typecheck, all tests) and `npm run build`.
 # Where it fits: this is the "main always green" rule from docs/GIT-WORKFLOW.md. A red cross here = do not merge.
 # Workspaces: the root package.json lists the new folders (platform, packages/*, apps/*) next to the old ones, so one
 # `npm ci` installs them all and `npm run check` covers them. When a workspace is added, package-lock.json must be
@@ -86,5 +86,17 @@ jobs:
         run: npx prisma generate
         working-directory: backend-core
 
+      # The schema and the migrations must agree (QA rule since P1-DB-1). The spare PostgreSQL 16 above is the shadow
+      # database. --exit-code makes a difference fail the run (exit 2) instead of only printing it.
+      - name: Schema is valid and the migrations match it
+        run: |
+          npx prisma validate
+          npx prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma --shadow-database-url "$DATABASE_URL" --exit-code
+        working-directory: backend-core
+
       - name: Lint, typecheck and test
         run: npm run check
+
+      # The three front-ends and the website must still build (QA asked for `npm run build` on every screen task).
+      - name: Build
+        run: npm run build
