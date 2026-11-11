@@ -2,14 +2,14 @@
   "name": "@sheetal/app-reviews",
   "private": true,
   "version": "0.1.0",
-  "description": "Reviews app: manifest and backend (moved in by P1-BE-6); the screens come with P1-FE-3",
+  "description": "Reviews app: manifest, backend (P1-BE-6) and the Reviews screens (P1-FE-3)",
   "type": "module",
   "engines": {
     "node": ">=22"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests backend"
   },
   "dependencies": {
     "@sheetal/platform": "*",
@@ -23,6 +23,7 @@
   "exports": {
     "./backend": "./backend/index.ts",
     "./backend/*": "./backend/*.ts",
+    "./frontend": "./frontend/index.js",
     "./manifest": "./app.manifest.ts"
   }
 }

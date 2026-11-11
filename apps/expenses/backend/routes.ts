@@ -1,5 +1,5 @@
 // Expenses, recurring expenses and profit: what a business spent, and what is left of what it received.
-// Where it fits: Business → Expenses (LiveExpenses.jsx): the Expenses, Recurring and Profit tabs. business/backend/src/app.ts registers expenseRoutes
+// Where it fits: Business → Expenses (apps/expenses/frontend/pages/ExpensesPage.jsx): the Expenses, Recurring and Profit tabs. business/backend/src/app.ts registers expenseRoutes
 // with { prefix: "/v1", contextOf: businessContextOf }; business/backend/src/modules/expenses/routes.ts is a one-line shim over this file.
 // How it works: an expense belongs to one branch, with a date, category (from the admin option list), amount, vendor, note, payment method and an optional receipt
 // (photo or PDF, kept private and opened only through this API). A recurring expense is a monthly template: a background job (and the page when it opens) adds
