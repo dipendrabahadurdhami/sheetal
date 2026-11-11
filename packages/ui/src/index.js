@@ -6,5 +6,6 @@
 // Two Drawers exist: `Drawer` is the plain one every screen uses today; `SideDrawer` is the new one with sizes, discard-changes and a focus trap.
 export * from "./primitives.jsx";
 export * from "./theme/mode.js";
+export { Stars, starsOn, starsLabel } from "./Stars.jsx";
 export { ViewDrawer, DeleteConfirm, restoreAt, useUndo, DataTable, FormBuilder, CrudPage, exportCsv, csvCell, toCsv, lastMonths, labelOf, optionsOf } from "./crud/index.js";
 export { Drawer as SideDrawer } from "./crud/Drawer.jsx";

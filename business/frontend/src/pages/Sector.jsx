@@ -1,5 +1,5 @@
 // Sample screens for sector tools: projects and instalments, collections, investors, renewals, reviews, expenses and
-// stock. Signed-in businesses use the live screens where they exist (LiveOps, LiveReviews).
+// stock. Signed-in businesses use the live screens where they exist (LiveOps, apps/reviews ReviewsPage).
 // How it works: L(key, english) keeps the text translatable.
 
 import React, { useState } from "react";
