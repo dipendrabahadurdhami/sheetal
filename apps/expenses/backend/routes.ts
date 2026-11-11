@@ -13,8 +13,9 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import { nepalDay } from "@sheetal/backend-core/domain/payouts";
 import type { BusinessContext } from "@sheetal/platform/core/context";
 import { ExpenseController, RecurringController } from "./expense.controller.js";
-import { ExpenseService, RecurringExpenseService } from "./expense.service.js";
-import { busOf, dbOf, draftEventsOf, mediaDirOf } from "./host.js";
+import { ExpenseService, RecurringExpenseService, type ExpenseServiceDeps } from "./expense.service.js";
+import { busOf } from "@sheetal/platform/core/host";
+import { dbOf, draftEventsOf, mediaDirOf } from "./host.js";
 import { generateDueExpenses } from "./recurring.js";
 import { phaseOneContext } from "./scope.js";
 
@@ -25,8 +26,10 @@ export interface ExpenseRoutesOptions {
 
 export async function expenseRoutes(app: FastifyInstance, opts: ExpenseRoutesOptions) {
   const deps = {
-    bus: busOf(app),
+    bus: busOf(app, "expenses"),
     mediaDir: () => mediaDirOf(app),
+    // The approval gate the business API decorates before it registers the apps (business/backend/src/app.ts); absent elsewhere (then nothing is ever held).
+    approvals: (app as unknown as { approvals?: ExpenseServiceDeps["approvals"] }).approvals,
     generateDue: (tenantId: string) => generateDueExpenses(dbOf(app), { today: nepalDay(), tenantId, events: draftEventsOf(app) }),
   };
   const contextOf = async (req: FastifyRequest) => phaseOneContext(await opts.contextOf(req));

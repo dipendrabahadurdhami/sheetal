@@ -58,7 +58,8 @@ export class ReviewService extends BaseService<ReviewRow, never, ReviewChange> {
     ]);
     const people = await this.reviews.userNames(ctx, [...page.rows.map((r) => r.userId), ...page.rows.map((r) => r.repliedBy).filter((x): x is string => !!x)]);
     const byId = new Map(listings.map((l) => [l.id, l]));
-    return { rows: page.rows.map((r) => present(r, byId, people)), meta: summary(all, ctx.permissions.can(REPLY)) };
+    // `meta.can` (P1-BE-7): what this person may do, so the screen stops guessing. `canReply` stays for the pages that read it.
+    return { rows: page.rows.map((r) => present(r, byId, people)), meta: { ...summary(all, ctx.permissions.can(REPLY)), can: { reply: ctx.permissions.can(REPLY) } } };
   }
 
   // ───── Reply (or take the reply down) ─────
