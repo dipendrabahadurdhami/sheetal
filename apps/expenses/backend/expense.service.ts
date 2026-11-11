@@ -11,13 +11,15 @@ import { badRequest, notFound, versionConflict } from "@sheetal/platform/core/er
 import { actorIdOf, type BusinessContext, type DataScope } from "@sheetal/platform/core/context";
 import type { EventBus } from "@sheetal/platform/core/events";
 import { BaseService, type WriteKind } from "@sheetal/platform/core/service";
+import type { ApprovalGate } from "@sheetal/platform/core/approval";
+import { Money } from "@sheetal/platform/core/money";
 import { readPrivateFile, savePrivateFile } from "@sheetal/backend-core/lib/files";
 import { dayOf } from "@sheetal/backend-core/domain/money";
 import { nepalDay } from "@sheetal/backend-core/domain/payouts";
 import { EXPENSE_METHODS, expenseCategories, expenseNo } from "./categories.js";
 import { confirmedPayload, deletedPayload, EXPENSE_EVENTS, skippedPayload, updatedPayload } from "./events.js";
 import { ExpenseRepository, RecurringExpenseRepository } from "./expense.repository.js";
-import { amountColumns, rupeesOf } from "./money.js";
+import { amountColumns, paisaOfRow, rupeesOf } from "./money.js";
 import { present } from "./presenter.js";
 import { monthSpan, monthsBetween, profitRows } from "./profit.js";
 import {
@@ -32,7 +34,13 @@ export interface ExpenseServiceDeps {
   mediaDir(): string | undefined;
   /** Adds the due drafts of one business (the page does it when it opens; creating a recurring expense does it at once). */
   generateDue(tenantId: string): Promise<unknown>;
+  /** The maker-checker gate (P1-BE-7). With it, "confirm" asks the business's rule first (OFF unless the business switches it on, ACCESS.md 9).
+   *  `register` is how the confirm runs again, as the person who asked, once a second person approves. */
+  approvals?: ApprovalGate & { register(action: string, run: (ctx: BusinessContext, payload: unknown) => Promise<unknown>): void };
 }
+
+/** The approvable action of this service (the manifest's approvals[].action). */
+export const CONFIRM_ACTION = "expenses.expense.confirm";
 
 const no = (e: { seq: number }) => expenseNo(e.seq);
 const label = (e: ExpenseRow) => `${no(e)} Rs. ${rupeesOf(e)}`;
@@ -56,6 +64,7 @@ async function checkCategory(ctx: BusinessContext, category: string, note?: stri
 export class ExpenseService extends BaseService<ExpenseRow, ExpenseCreate, ExpenseChange> {
   constructor(private readonly x: ExpenseServiceDeps) {
     super({
+      approvals: x.approvals,
       app: "expenses", resource: "expense", repo: new ExpenseRepository(),
       permissions: { read: "expenses.expense.read", create: "expenses.expense.create", update: "expenses.expense.update", delete: "expenses.expense.delete" },
       schemas: { create: CreateExpenseSchema, update: UpdateExpenseSchema },
@@ -67,6 +76,11 @@ export class ExpenseService extends BaseService<ExpenseRow, ExpenseCreate, Expen
       events: { created: EXPENSE_EVENTS.confirmed, updated: EXPENSE_EVENTS.updated, deleted: EXPENSE_EVENTS.deleted },
       bus: x.bus,
       requireVersion: false,   // Phase 1: the page does not send `version` yet; a stale one still gets 409 (P1-FE-2 makes it send it)
+    });
+    // After a second person approves, the confirm runs again as the person who asked, with what they sent (ctx.approval is set, so it is not held twice).
+    x.approvals?.register(CONFIRM_ACTION, (ctx, payload) => {
+      const p = payload as { id: string; body?: unknown };
+      return this.confirm(ctx, p.id, p.body ?? {});
     });
   }
 
@@ -137,9 +151,29 @@ export class ExpenseService extends BaseService<ExpenseRow, ExpenseCreate, Expen
 
   // ───── Confirm a draft (the amount and more can be changed first) ─────
 
-  confirm(ctx: BusinessContext, id: string, raw: unknown): Promise<ExpenseRow> {
+  /**
+   * What "confirm" tells the approval gate: the draft, its branch and the amount it would be confirmed at (for a rule with a limit).
+   * Only when the service has a gate and this is not already the approved run; a draft the person can't see gives no spec, so the action
+   * itself answers "not found" / "forbidden" exactly as before.
+   */
+  private async confirmApproval(ctx: BusinessContext, id: string, raw: unknown) {
+    if (!this.x.approvals || ctx.approval) return undefined;
+    const scope = ctx.permissions.scopeOf(CONFIRM_ACTION);
+    if (!scope) return undefined;
+    const e = await this.deps.repo.get(ctx, id, scope).catch(() => null);
+    if (!e || e.status !== "draft") return undefined;
+    const body = ConfirmBody.safeParse(raw ?? {});
+    const paisa = body.success && body.data.amount !== undefined ? Money.rupees(body.data.amount).paisa : paisaOfRow(e);
+    return {
+      action: CONFIRM_ACTION, resource: "expense", resourceId: e.id, branchId: e.branchId, amount: Money.paisa(paisa),
+      payload: { id: e.id, body: raw ?? {} }, note: `${no(e)} Rs. ${Math.round(paisa / 100)}`,
+    };
+  }
+
+  async confirm(ctx: BusinessContext, id: string, raw: unknown): Promise<ExpenseRow> {
     return this.action<ExpenseRow>(ctx, {
-      name: "confirm", permission: "expenses.expense.confirm",
+      name: "confirm", permission: CONFIRM_ACTION,
+      approval: await this.confirmApproval(ctx, id, raw),
       audit: (r) => ({ action: "expense.confirmed", target: label(r) }),
       event: (r) => ({ name: EXPENSE_EVENTS.confirmed, payload: confirmedPayload(r) }),
       run: async (tx, scope) => {
