@@ -43,11 +43,12 @@ export class RentalController extends BaseController<OwnerRow, OwnerCreate, Owne
     // ───── Owners ─────
     app.post(`${base}/owners`, async (req) => {
       const o = await s.owners.create(await this.ctxOf(req), req.body);
-      return { message: `${o.name} added.`, data: { id: o.id } };
+      return { message: `${o.name} added.`, data: { id: o.id, version: o.version } };
     });
     app.put<IdParams>(`${base}/owners/:id`, async (req) => {
-      await s.owners.update(await this.ctxOf(req), this.idOf(req), req.body);
-      return { message: "Owner saved. A new fee counts from the next statement you save." };
+      const o = await s.owners.update(await this.ctxOf(req), this.idOf(req), req.body);
+      // `version` is new and harmless (old screens ignore it): the next save sends it, so a stale page gets 409 instead of overwriting.
+      return { message: "Owner saved. A new fee counts from the next statement you save.", data: { id: o.id, version: o.version } };
     });
     app.delete<IdParams>(`${base}/owners/:id`, async (req) => {
       const o = await s.owners.discard(await this.ctxOf(req), this.idOf(req), this.versionQuery(req));

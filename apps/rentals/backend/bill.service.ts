@@ -68,9 +68,9 @@ export class BillService extends RentalService<BillRow, BillCreate, BillChange> 
       run: async (tx, scope) => {
         const version = versionIn(raw);
         const b = await this.repos.bills.get(tx, id, scope);
+        this.sameVersion(b, version, "This bill");   // a stale page first: 409 "reload", before the rules below
         if (!b.lateFee) throw badRequest("This bill has no late fee.");
         if (b.paid > b.amount) throw badRequest("Part of the late fee is already paid, so it can't be waived.");
-        this.sameVersion(b, version, "This bill");
         waived = b.lateFee;
         if (!(await this.repos.bills.transition(tx, b.id, { lateFee: b.lateFee, paid: b.paid }, { lateFee: 0, lateWaived: true }, scope))) throw badRequest("The bill changed. Open it again.");
         return this.repos.bills.get(tx, b.id, scope);
