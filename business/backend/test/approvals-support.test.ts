@@ -33,7 +33,7 @@ const newDraft = async () => {
 };
 
 beforeAll(async () => {
-  app = await buildApp(loadConfig({ NODE_ENV: "test", LOG_LEVEL: "silent", DATABASE_URL: inject("databaseUrl"), SITE_URL: "https://sheetal.test", MEDIA_DIR: media, SECRETS_KEY: "test-secrets-key" }, "business"));
+  app = await buildApp(loadConfig({ NODE_ENV: "test", LOG_LEVEL: "silent", DATABASE_URL: inject("databaseUrl"), SITE_URL: "https://sheetal.test", MEDIA_DIR: media, SECRETS_KEY: "test-secrets-key-for-support-sessions-0001" }, "business"));
   const db = app.db!;
   await db.$executeRawUnsafe(`TRUNCATE users, tenants, plans, app_settings, notifications, outbound_emails, audit_logs, event_outbox, biz_invoices, doc_counters, expenses, recurring_expenses, payouts, payout_items RESTART IDENTITY CASCADE`);
   for (const p of PLANS) await db.plan.create({ data: { id: p.id, type: p.type, name: p.name, price: p.price, limits: p.limits, features: p.features, sort: p.sort } });
