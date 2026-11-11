@@ -18,6 +18,7 @@ import { createDb } from "@sheetal/platform/db/client";
 import { makeTestContext } from "@sheetal/platform/core/testing/context";
 import { testRepositoryIsolation } from "@sheetal/platform/core/testing/isolation";
 import { OwnerRepository } from "@sheetal/app-rentals/backend/owner.repository";
+import { billEventsOf } from "@sheetal/app-rentals/backend/host";
 import { OwnerService } from "@sheetal/app-rentals/backend/owner.service";
 import { PaymentService } from "@sheetal/app-rentals/backend/bill.service";
 import { newRepos } from "@sheetal/app-rentals/backend/rental.service";
@@ -373,7 +374,8 @@ describe("the rent rules", () => {
   it("adds a late fee once, and not again after it is waived", async () => {
     const f = await leaseWithBill("rules-late");
     const db = app.db!;
-    expect(await runRentBills(db, { today: "2025-03-20", tenantId: ids.agency })).toMatchObject({ lateFees: expect.any(Number) });
+    // With the app's events (as the job runs it), so the late fee writes its event; without them the old stand-alone call adds no event.
+    expect(await runRentBills(db, { today: "2025-03-20", tenantId: ids.agency, events: billEventsOf(app) })).toMatchObject({ lateFees: expect.any(Number) });
     expect((await billOf(f.bill.id)).lateFee).toBe(400);
     expect(await runRentBills(db, { today: "2025-03-25", tenantId: ids.agency })).toMatchObject({ lateFees: 0 });
     expect((await billOf(f.bill.id)).lateFee).toBe(400);
