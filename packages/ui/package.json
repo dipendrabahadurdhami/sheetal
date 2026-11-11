@@ -13,6 +13,7 @@
     "./primitives": "./src/primitives.jsx",
     "./crud": "./src/crud/index.js",
     "./theme": "./src/theme/index.js",
-    "./theme/mode": "./src/theme/mode.js"
+    "./theme/mode": "./src/theme/mode.js",
+    "./stars": "./src/Stars.jsx"
   }
 }
