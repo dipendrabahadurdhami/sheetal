@@ -15,13 +15,14 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "@sheetal/app-expenses": "*",
+    "@sheetal/app-rentals": "*",
+    "@sheetal/app-reviews": "*",
     "@sheetal/backend-core": "*",
     "@sheetal/platform": "*",
-    "@sheetal/app-expenses": "*",
-    "@sheetal/app-reviews": "*",
     "fastify": "^5.12.7",
-    "zod": "^4.6.7",
-    "@prisma/client": "^6.19.3"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
