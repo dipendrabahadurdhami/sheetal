@@ -2,6 +2,7 @@
 // Where it fits: expenseRoutes() (routes.ts) registers these two controllers; each handler builds the context, calls ONE service method and shapes the answer.
 // How it works: ExpenseController serves /expenses (list, add, change, confirm, delete, receipt, profit); RecurringController serves /expenses/recurring.
 // Every path, verb and answer is the old one: change is PUT, create answers 200, answers look like { message, data } and the list like { data: { rows, … } }.
+// P1-BE-7: the list answers `meta.can` (per-action flags) when a page is asked for or with ?flags=1; without either the answer is the old one.
 // Rules: no business logic and no Prisma here. The standard routes of BaseController are switched off (standardRoutes: []) because the answers have their own
 // shape; the routes below are the whole API of the app. A route does nothing until app.ts registers expenseRoutes (it does, with { prefix: "/v1" }).
 
@@ -30,8 +31,10 @@ export class ExpenseController extends BaseController<ExpenseRow, ExpenseCreate,
     const base = this.cfg.basePath;
 
     app.get(base, async (req) => {
-      const { meta, ...data } = await this.expenses.overview(await this.ctxOf(req), req.query);
-      return meta ? { data, meta } : { data };   // `meta` only when the caller asked for a page (page/per): the old call's answer is unchanged
+      const { meta, can, ...data } = await this.expenses.overview(await this.ctxOf(req), req.query);
+      // `meta` only when the caller asked for a page (page/per) or for the flags (?flags=1): the old call's answer is unchanged. `meta.can` says what the person may do.
+      const flags = (req.query as { flags?: unknown } | undefined)?.flags === "1";
+      return meta || flags ? { data, meta: { ...(meta ?? {}), can } } : { data };
     });
     app.post(base, async (req) => {
       const ctx = await this.ctxOf(req);

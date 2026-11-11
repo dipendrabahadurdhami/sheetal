@@ -16,7 +16,7 @@ import { effectiveLimits } from "@sheetal/backend-core/domain/addons";
 import { badRequest, forbidden } from "@sheetal/backend-core/lib/errors";
 import { hasPerm } from "@sheetal/backend-core/domain/permissions";
 import type { BusinessContext } from "@sheetal/platform/core/context";
-import { accessOfMember, buildBusinessContext, createBranchScope, loadBranches, type TenancyDeps } from "@sheetal/platform/tenancy/context";
+import { accessOfMember, buildBusinessContext, buildSupportContext, createBranchScope, loadBranches, type TenancyDeps } from "@sheetal/platform/tenancy/context";
 
 export type Member = SessionUser["memberships"][number];
 export interface Workspace {
@@ -57,7 +57,18 @@ export function branchIdsOf(member: Pick<Member, "scopes" | "role"> & Partial<Pi
 /** The new context for this request (KERNEL.md section 5): for controllers built on the kernel. Old routes keep using workspaceOf(). */
 const deps: TenancyDeps = { effectiveLimits: (db, tenantId, plan) => effectiveLimits(db, tenantId, plan) };
 export function businessContextOf(request: FastifyRequest): Promise<BusinessContext> {
-  return buildBusinessContext({ db: dbOf(request.server), user: requireUser(request), headers: request.headers, ip: request.ip, requestId: String(request.id), log: request.log }, deps);
+  const info = { db: dbOf(request.server), headers: request.headers, ip: request.ip, requestId: String(request.id), log: request.log };
+  const s = request.support;
+  if (s) {
+    // A Sheetal support session (ACCESS.md 12): the business of the session only, the owner's permissions minus the deny list, read-only unless write mode.
+    const wanted = request.headers["x-tenant-id"];
+    if (typeof wanted === "string" && wanted && wanted !== s.tenantId) throw forbidden("You are not a member of this business.");
+    return buildSupportContext({
+      ...info, tenantId: s.tenantId, staff: { id: s.staffId, name: s.staff.userName, role: s.staff.platformRole },
+      session: { id: s.id, reason: s.reason, expiresAt: s.expiresAt, readOnly: s.readOnly },
+    }, deps);
+  }
+  return buildBusinessContext({ ...info, user: requireUser(request) }, deps);
 }
 
 // ───── Which branches a request looks at ─────

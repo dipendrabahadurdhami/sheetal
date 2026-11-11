@@ -4,6 +4,8 @@
 // business is covered by the owner's Pro plan when they have one. Branch access is kept by branch ID (allBranches + link rows);
 // since P1-BE-3 invitations and member edits write BOTH the new rows and the old branch names in one transaction (ACCESS.md 3.4),
 // read the new rows, and accept `branchIds` ("all" or ids) as well as the old `scopes` (names). Answers carry both.
+// P1-BE-7: the role list also carries `grants` (every role in the NEW permission names, with scopes) and the answer carries `catalog` (what the apps of this
+// business offer, with each permission's scopes and the Phase 1 cap); a role being saved may hold old names, new names ("expenses.expense.read:branch"), or both.
 // Rules: "team.manage" handles people, "roles.manage" roles (own roles need a plan that allows them); the owner role
 // can't be edited and a business always keeps one active owner; seats count pending invitations, and making a paused
 // member active again needs a free seat, like inviting.
@@ -21,6 +23,7 @@ import { starterPlanId } from "@sheetal/backend-core/domain/plans";
 import { mediaBase, photoUrl, savePhoto } from "@sheetal/backend-core/lib/photos";
 import { BUSINESS_TYPES, businessPermsFor, type BusinessType } from "@sheetal/backend-core/domain/permissions";
 import { accessOfMember } from "@sheetal/platform/tenancy/context";
+import { catalogForTypes, normalizeRolePerms, toGrants } from "@sheetal/platform/tenancy/catalog";
 import { EVERY_BRANCH, accessColumns, accessFromNames, resolveBranchAccess, setLinks, type ResolvedAccess } from "@sheetal/platform/tenancy/branch-links";
 import { branchIdsOf, branchesOf, workspaceOf, type Workspace } from "../access.js";
 
@@ -181,8 +184,11 @@ export async function teamRoutes(app: FastifyInstance) {
       data: {
         members: members.map((m) => ({ id: m.userId, name: m.user.userName, email: m.user.email, phone: m.user.phone, roleId: m.roleId, status: m.status, scopes: accessOf(m).names, branchIds: accessOf(m).allowed, lastActive: m.user.lastLoginAt, joinedAt: m.createdAt })),
         invites: invites.map((i) => ({ id: i.id, email: i.email, roleId: i.roleId, scopes: accessOf(i).names, branchIds: accessOf(i).allowed, status: i.expiresAt < new Date() ? "expired" : i.status, sent: i.sentAt, expires: i.expiresAt, by: names.get(i.invitedBy ?? "") ?? null })),
-        roles: roles.map((r) => ({ id: r.id, key: r.key, name: r.name, perms: r.perms, system: r.system })),
+        // `perms` is what is stored (old names, new names, or both); `grants` is the same role in NEW names with an explicit scope (P1-BE-7), whatever is stored.
+        roles: roles.map((r) => ({ id: r.id, key: r.key, name: r.name, perms: r.perms, grants: toGrants(r.perms), system: r.system })),
         permissions: businessPermsFor(typesOf(ws)),
+        // The new catalog (P1-BE-7): the permissions of the apps this business has, with the scopes each allows and the Phase 1 cap (no "all" for Expenses and Reviews).
+        catalog: catalogForTypes(typesOf(ws)),
         seats: { used: seatsUsed, limit: await seatLimit(dbOf(app), ws) },
         activity: activity.map((a) => ({ id: a.id, who: names.get(a.actorId ?? "") ?? "Someone", what: a.action, target: a.target, at: a.createdAt })),
       },
@@ -337,11 +343,12 @@ export async function teamRoutes(app: FastifyInstance) {
 
   // ───── Roles ─────
   const roleBody = z.object({ name: z.string().trim().min(2).max(60), perms: z.array(z.string()).max(200) });
+  // Accepts the OLD names (kept as sent, until the rewrite) and the NEW names with a scope (stored with the scope written out). ACCESS.md 5.2 and 8.
   const checkPerms = (ws: Workspace, perms: string[]) => {
-    const allowed = new Set(businessPermsFor(typesOf(ws)));
-    const bad = perms.filter((p) => !allowed.has(p));
-    if (bad.length) throw badRequest(`Unknown permissions: ${bad.join(", ")}`);
-    return [...new Set(perms)];
+    const r = normalizeRolePerms(perms, { catalog: catalogForTypes(typesOf(ws)), oldAllowed: new Set(businessPermsFor(typesOf(ws))) });
+    if (r.unknown.length) throw badRequest(`Unknown permissions: ${r.unknown.join(", ")}`);
+    if (r.refused.length) throw badRequest(r.refused.join(" "));
+    return r.perms;
   };
   const rolesAdmin = (ws: Workspace) => { if (!ws.can("roles.manage")) throw forbidden("Only people who manage roles can do this."); };
 

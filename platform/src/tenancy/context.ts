@@ -124,19 +124,20 @@ export function buildPermissionSet(perms: readonly string[]): PermissionSet {
 export const IMPERSONATION_DENY = [
   "workspace.role.*", "workspace.team.invite", "workspace.team.update", "workspace.team.remove", "workspace.billing.manage", "workspace.settings.update",
 ];
-const denied = (perm: string) => [perm, ...newNamesOf(perm)].some((n) => IMPERSONATION_DENY.some((d) => (d.endsWith(".*") ? n.startsWith(d.slice(0, -1)) : n === d)));
+/** Whether a permission is on the fixed deny list of a support session (also through the alias layer: an old name counts when one of its new names is denied). */
+export const deniedInSupport = (perm: string) => [perm, ...newNamesOf(perm)].some((n) => IMPERSONATION_DENY.some((d) => (d.endsWith(".*") ? n.startsWith(d.slice(0, -1)) : n === d)));
 
 /** The permission set of a support session: the owner role minus the fixed deny list. */
 export function buildImpersonationPermissions(): PermissionSet {
   const owner = buildPermissionSet(["*"]);
   return {
-    can: (p) => !denied(p) && owner.can(p),
-    scopeOf: (p) => (denied(p) ? null : owner.scopeOf(p)),
+    can: (p) => !deniedInSupport(p) && owner.can(p),
+    scopeOf: (p) => (deniedInSupport(p) ? null : owner.scopeOf(p)),
     require(p, message) {
-      if (denied(p)) throw forbidden(message ?? "Sheetal support sessions can't do this.");
+      if (deniedInSupport(p)) throw forbidden(message ?? "Sheetal support sessions can't do this.");
       return owner.require(p, message);
     },
-    canAny: (list) => list.some((p) => !denied(p) && owner.can(p)),
+    canAny: (list) => list.some((p) => !deniedInSupport(p) && owner.can(p)),
   };
 }
 
@@ -304,7 +305,7 @@ async function businessParts(
 }
 
 /** The context of a business request: the person must be an active member of the business named in "x-tenant-id" (or their first one). */
-export async function buildBusinessContext(r: RequestInfo & { user: SessionUserLike }, deps: TenancyDeps): Promise<BusinessContext> {
+export async function buildBusinessContext(r: RequestInfo & { user: SessionUserLike; approval?: { id: string; checkerId: string } }, deps: TenancyDeps): Promise<BusinessContext> {
   const wanted = header(r.headers, "x-tenant-id");
   const m = wanted ? r.user.memberships.find((x) => x.tenantId === wanted) : r.user.memberships[0];
   if (!m || m.status !== "active") throw forbidden("You are not a member of this business.");
@@ -316,6 +317,8 @@ export async function buildBusinessContext(r: RequestInfo & { user: SessionUserL
     business: { id: t.id, name: t.name, type: t.type, status: t.status, planId: t.planId },
     member: { userId: r.user.id, membershipId: m.id, roleId: m.role.id, roleKey: m.role.key, isOwner: m.role.perms.includes("*") },
     branches, permissions: buildPermissionSet(m.role.perms), entitlements, impersonation: null,
+    // Set only while an approved request runs again as its maker (ACCESS.md 9.4 step 5); kept in the parts so a transaction opened from it still has it.
+    ...(r.approval ? { approval: r.approval } : {}),
   }, null);
 }
 
@@ -372,5 +375,33 @@ export async function buildImpersonationContext(r: RequestInfo & ImpersonationIn
     member: { userId: actor.staffId, membershipId: "", roleId: "", roleKey: "support", isOwner: false },
     branches, permissions: buildImpersonationPermissions(), entitlements,
     impersonation: { staffId: actor.staffId, reason, expiresAt: new Date(now.getTime() + minutes * 60_000), readOnly: !write },
+  }, null);
+}
+
+export interface SupportSessionInput {
+  /** The staff member who opened the session. */
+  staff: { id: string; name: string; role: string };
+  tenantId: string;
+  /** The ImpersonationSession row: its id, reason, end time and mode are what the context carries. */
+  session: { id: string; reason: string; expiresAt: Date; readOnly: boolean };
+}
+
+/**
+ * The context of a request made inside an OPEN support session (ACCESS.md section 12): the same as buildImpersonationContext(), but from the stored
+ * session row instead of a fresh start, so the end time and the mode are the ones the staff member was given. Refuses an ended or expired session.
+ */
+export async function buildSupportContext(r: RequestInfo & SupportSessionInput, deps: TenancyDeps): Promise<BusinessContext> {
+  const now = r.now ?? new Date();
+  if (r.session.expiresAt <= now) throw new AppError(401, "support_session_ended", "This support session has ended.");
+  const t = await r.db.tenant.findUnique({ where: { id: r.tenantId }, include: { plan: true } });
+  if (!t) throw notFound("Business not found.");
+  const { branches, entitlements } = await businessParts(r, deps, t, { allowed: "all", names: "all" });
+  return assemble({
+    ...base(r),
+    actor: { kind: "staff", staffId: r.staff.id, name: r.staff.name, role: r.staff.role },
+    business: { id: t.id, name: t.name, type: t.type, status: t.status, planId: t.planId },
+    member: { userId: r.staff.id, membershipId: "", roleId: "", roleKey: "support", isOwner: false },
+    branches, permissions: buildImpersonationPermissions(), entitlements,
+    impersonation: { staffId: r.staff.id, reason: r.session.reason, expiresAt: r.session.expiresAt, readOnly: r.session.readOnly, sessionId: r.session.id },
   }, null);
 }

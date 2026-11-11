@@ -45,6 +45,10 @@ export function fieldErrors(error: ZodError): Record<string, string[]> {
 
 export function errorHandler(error: FastifyError | Error, request: FastifyRequest, reply: FastifyReply) {
   const requestId = request.id;
+  if (error instanceof AppError && error.statusCode < 300) {
+    // A "success that is not done yet" (202 Sent for approval): answered as { message, code, data, requestId }, the shape a success has.
+    return reply.status(error.statusCode).send({ message: error.message, code: error.code, data: error.details, requestId });
+  }
   if (error instanceof AppError) {
     // undefined fields (no errors, no details) are left out of the JSON, so the wire format of old errors is unchanged.
     return reply.status(error.statusCode).send({ message: error.message, code: error.code, errors: error.errors, details: error.details, requestId });

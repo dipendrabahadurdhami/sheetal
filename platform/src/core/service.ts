@@ -5,8 +5,8 @@
 // 3 parse input 4 before-hook 5 transaction { repository write, audit row, event row, after-hook } 6 answer.
 // Rules: a service never touches Prisma delegates for business data (only the repository does); the audit row is the only
 // thing it writes itself, with the same transaction. Old audit action strings stay as they are in Phase 1 (set per
-// operation in `audit.actions`). Maker-checker approvals are not built yet: an action that asks for one is refused loudly
-// rather than run without the check.
+// operation in `audit.actions`). Maker-checker approvals (P1-BE-7): an action that names an `approval` goes through `deps.approvals` (the gate) first;
+// a service built without a gate that asks for one is still refused loudly rather than run without the check.
 // P1-BE-5 additions (all optional, nothing changes for a service that does not use them): `events` names the event of a standard write
 // (Expenses: a create is "expenses.expense.confirmed"), `audit.updateLabel` writes the target of an update from the row before and after
 // ("EX-0001 Rs. 1000 -> 1200"), and wrote()/eventPayload() receive the row as it was before an update (wrote() is now protected).
@@ -17,7 +17,8 @@ import { badRequest, forbidden, planLimit } from "./errors.js";
 import { actorIdOf, narrowest, type BusinessContext, type DataScope, type PermissionId } from "./context.js";
 import type { EventBus } from "./events.js";
 import type { BaseRepository, BusinessEntity, ListQuery, Page } from "./repository.js";
-import type { Money } from "./money.js";
+import { ApprovalRequested, type ApprovalGate, type ApprovalSpec } from "./approval.js";
+export type { ApprovalSpec } from "./approval.js";
 
 export interface ResourcePermissions {
   read: PermissionId;            // list + get
@@ -27,9 +28,6 @@ export interface ResourcePermissions {
 }
 
 export type WriteKind = "created" | "updated" | "deleted" | "restored";
-
-/** Placeholder until the approvals task (ACCESS.md section 9): naming the action and, if known, the amount. */
-export interface ApprovalSpec { action: string; amount?: Money }
 
 export interface ServiceDeps<T extends BusinessEntity, C extends object, U extends object> {
   app: string;                                   // app id from the manifest, e.g. "expenses"
@@ -51,6 +49,8 @@ export interface ServiceDeps<T extends BusinessEntity, C extends object, U exten
   bus: EventBus;
   /** false = an update without `version` is allowed (last write wins). Default true. */
   requireVersion?: boolean;
+  /** The maker-checker gate (platform/src/approvals/service.ts). Without it, an action that names an `approval` is refused. */
+  approvals?: ApprovalGate;
 }
 
 const VERB: Record<WriteKind, string> = { created: "created", updated: "updated", deleted: "deleted", restored: "restored" };
@@ -143,7 +143,7 @@ export abstract class BaseService<T extends BusinessEntity, C extends object, U 
     name: string;                    // "confirm"
     permission: PermissionId;        // "expenses.expense.confirm"
     scope?: DataScope;               // default: the scope the person was granted. Never wider than that.
-    approval?: ApprovalSpec;         // maker-checker (ACCESS.md section 9): not built yet
+    approval?: ApprovalSpec;         // maker-checker (ACCESS.md section 9): the gate may store it for a second person instead of running it
     audit: (result: R) => { action: string; target: string; meta?: object };
     event?: (result: R) => { name: string; payload: object };
     run: (ctx: BusinessContext, scope: DataScope) => Promise<R>;   // runs inside the transaction
@@ -151,7 +151,12 @@ export abstract class BaseService<T extends BusinessEntity, C extends object, U 
     this.refuseReadOnly(ctx);
     this.requireApp(ctx);
     const granted = ctx.permissions.require(a.permission);
-    if (a.approval) throw new Error(`Action "${a.name}" asks for an approval, but approvals are built in a later task; refusing to run it unchecked.`);
+    if (a.approval && !ctx.approval) {
+      // The checks above come first (a person who may not even do it gets "forbidden", not a request). Then the gate: no rule or a rule that is off = run now.
+      if (!this.deps.approvals) throw new Error(`Action "${a.name}" asks for an approval, but this service has no approval gate; refusing to run it unchecked.`);
+      const held = await this.deps.approvals.intercept(ctx, a.approval);
+      if (held) throw new ApprovalRequested(held.approvalId);
+    }
     const scope = a.scope ? narrowest(a.scope, granted) : granted;
     return this.inTransaction(ctx, async (tx) => {
       const result = await a.run(tx, scope);
@@ -223,7 +228,9 @@ export abstract class BaseService<T extends BusinessEntity, C extends object, U 
   /** One AuditLog row, written with the context's transaction. Staff acting as the business carry who and why (ACCESS.md 12). */
   protected async writeAudit(ctx: BusinessContext, action: string, target: string, meta?: object): Promise<void> {
     const staff = ctx.actor.kind === "staff" ? { impersonatedBy: ctx.actor.staffId, reason: ctx.impersonation?.reason ?? null } : null;
-    const merged = { ...(meta ?? {}), ...(staff ?? {}) };
+    // An action that runs after approval says so: the action's own row carries the request and who approved it (ACCESS.md 9.4 step 6).
+    const approved = ctx.approval ? { approvalId: ctx.approval.id, approvedBy: ctx.approval.checkerId } : null;
+    const merged = { ...(meta ?? {}), ...(staff ?? {}), ...(approved ?? {}) };
     await (ctx.tx ?? ctx.db).auditLog.create({
       data: {
         tenantId: ctx.business.id, actorId: actorIdOf(ctx), action, target, ip: ctx.ip,
