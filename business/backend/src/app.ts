@@ -31,7 +31,7 @@ import { dataRoutes } from "./modules/data/routes.js";
 import { invoicingRoutes } from "./modules/invoicing/routes.js";
 import { payoutRoutes } from "./modules/payouts/routes.js";
 import { expenseRoutes } from "@sheetal/app-expenses/backend";
-import { rentalRoutes } from "./modules/rentals/routes.js";
+import { rentalRoutes } from "@sheetal/app-rentals/backend";
 import { listingCodeRoutes } from "./modules/listings/codes.js";
 import { formRoutes } from "./modules/forms/routes.js";
 import { agreementRoutes } from "./modules/agreements/routes.js";
@@ -77,7 +77,8 @@ export async function buildApp(config: Config, deps: AppDeps & { resolver?: Reso
   await app.register(payoutRoutes, { prefix: "/v1" });
   // Expenses is the first app on the kernel (P1-BE-5): its code lives in apps/expenses/backend; it gets the request-context builder from here.
   await app.register(expenseRoutes, { prefix: "/v1", contextOf: businessContextOf });
-  await app.register(rentalRoutes, { prefix: "/v1" });
+  // Rentals is on the kernel too (P2-W1-S1): its code lives in apps/rentals/backend; same way as Expenses.
+  await app.register(rentalRoutes, { prefix: "/v1", contextOf: businessContextOf });
   await app.register(listingCodeRoutes, { prefix: "/v1" });
   await app.register(checkupRoutes, { prefix: "/v1" });
   await app.register(formRoutes, { prefix: "/v1" });
