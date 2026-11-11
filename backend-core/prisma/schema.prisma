@@ -1969,6 +1969,12 @@ model RentOwner {
   updatedAt  DateTime         @updatedAt @map("updated_at")
   units      RentUnit[]
   statements OwnerStatement[]
+  createdBy String?   @map("created_by")
+  /// Kernel columns (P2-W1-S1): who changed it last, the version for 409 conflicts, and the soft-delete marks.
+  updatedBy String?   @map("updated_by")
+  version   Int       @default(1)
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 
   @@index([tenantId, branchId])
   @@map("rent_owners")
@@ -1995,6 +2001,12 @@ model RentUnit {
   updatedAt DateTime     @updatedAt @map("updated_at")
   leases    RentLease[]
   repairs   RentRepair[]
+  createdBy String?   @map("created_by")
+  /// Kernel columns (P2-W1-S1): who changed it last, the version for 409 conflicts, and the soft-delete marks.
+  updatedBy String?   @map("updated_by")
+  version   Int       @default(1)
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 
   @@index([tenantId, branchId])
   @@index([listingId])
@@ -2036,6 +2048,11 @@ model RentLease {
   createdAt       DateTime   @default(now()) @map("created_at")
   updatedAt       DateTime   @updatedAt @map("updated_at")
   bills           RentBill[]
+  /// Kernel columns (P2-W1-S1): who changed it last, the version for 409 conflicts, and the soft-delete marks.
+  updatedBy String?   @map("updated_by")
+  version   Int       @default(1)
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 
   @@index([tenantId, status])
   @@index([unitId])
@@ -2062,6 +2079,12 @@ model RentBill {
   createdAt  DateTime      @default(now()) @map("created_at")
   updatedAt  DateTime      @updatedAt @map("updated_at")
   payments   RentPayment[]
+  createdBy String?   @map("created_by")
+  /// Kernel columns (P2-W1-S1): who changed it last, the version for 409 conflicts, and the soft-delete marks.
+  updatedBy String?   @map("updated_by")
+  version   Int       @default(1)
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 
   @@unique([leaseId, month])
   @@index([tenantId, month])
@@ -2097,6 +2120,12 @@ model RentPayment {
   reviewNote  String?   @map("review_note")
   createdBy String?  @map("created_by")
   createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at")
+  /// Kernel columns (P2-W1-S1): who changed it last, the version for 409 conflicts, and the soft-delete marks.
+  updatedBy String?   @map("updated_by")
+  version   Int       @default(1)
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 
   @@index([tenantId, paidOn])
   @@index([billId])
@@ -2124,6 +2153,11 @@ model RentRepair {
   createdBy String?   @map("created_by")
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
+  /// Kernel columns (P2-W1-S1): who changed it last, the version for 409 conflicts, and the soft-delete marks.
+  updatedBy String?   @map("updated_by")
+  version   Int       @default(1)
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 
   @@index([tenantId, status])
   @@map("rent_repairs")
@@ -2147,6 +2181,11 @@ model OwnerStatement {
   createdBy String?   @map("created_by")
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
+  /// Kernel columns (P2-W1-S1): who changed it last, the version for 409 conflicts, and the soft-delete marks.
+  updatedBy String?   @map("updated_by")
+  version   Int       @default(1)
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 
   @@unique([ownerId, month])
   @@index([tenantId, month])
