@@ -66,7 +66,7 @@ describe("migration 20261112090000_access_tables", () => {
 
   it("keeps money in paisa (bigint) and has no foreign key on branch_id, maker_id or checker_id", async () => {
     const cols = await rows<{ table_name: string; column_name: string; data_type: string }>(
-      db, `SELECT table_name, column_name, data_type FROM information_schema.columns WHERE column_name IN ('threshold_paisa','amount_paisa')`);
+      db, `SELECT table_name, column_name, data_type FROM information_schema.columns WHERE table_name IN ('approval_rules','approval_requests') AND column_name IN ('threshold_paisa','amount_paisa')`);
     expect(cols.map((c) => `${c.table_name}.${c.column_name}:${c.data_type}`).sort()).toEqual(["approval_requests.amount_paisa:bigint", "approval_rules.threshold_paisa:bigint"]);
     const fks = await rows<{ t: string; col: string; ref: string; del: string }>(
       db,
