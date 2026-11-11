@@ -15,6 +15,7 @@ import { dbOf } from "@sheetal/backend-core/lib/db";
 import { badRequest, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
 import { readPrivateFile } from "@sheetal/backend-core/lib/files";
 import { worksAt } from "@sheetal/backend-core/domain/branches";
+import { hasPerm } from "@sheetal/backend-core/domain/permissions";
 import { DESTS, DEST_LABEL, FieldsSchema, formLimits, monthStart, publishProblem, slugify, type Answer, type FormField } from "@sheetal/backend-core/domain/forms";
 import { branchFor, branchView, inView, workspaceOf, type Workspace } from "../access.js";
 
@@ -74,7 +75,7 @@ export async function formRoutes(app: FastifyInstance) {
     ]);
     if (!m) throw badRequest("Pick someone in your team to get the leads.");
     if (!worksAt(m, branchId, br?.name)) throw badRequest(`They don't work at ${br?.name}. Give them that branch on the Team page first.`);
-    if (!m.role.perms.includes("*") && !["leads.view", "messages.reply"].some((p) => m.role.perms.includes(p))) throw badRequest("Their role can't see leads. Pick someone who can, or leave it unassigned.");
+    if (!["leads.view", "messages.reply"].some((p) => hasPerm(m.role.perms, p))) throw badRequest("Their role can't see leads. Pick someone who can, or leave it unassigned.");
     return userId;
   };
   const limitsFor = async (tenantId: string) => {

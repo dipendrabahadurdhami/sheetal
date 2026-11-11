@@ -16,7 +16,7 @@ const VERBOSE = process.argv.includes("--verbose");
 // Models with a branchId column that deliberately are NOT branch work: EventOutbox.branchId is only a label (MODEL-OWNERS.md).
 // Models whose branchId is a label or a link, not branch work: they never block deleting a branch.
 // MembershipBranch / InviteBranch are who-works-where links; deleting the branch deletes them (P1-DB-2).
-const BRANCH_LABEL_ONLY = new Set(["EventOutbox", "MembershipBranch", "InviteBranch"]);
+const BRANCH_LABEL_ONLY = new Set(["EventOutbox", "MembershipBranch", "InviteBranch", "ApprovalRequest"]);
 
 const errors = [];
 const warnings = [];

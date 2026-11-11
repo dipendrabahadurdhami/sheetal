@@ -10,8 +10,8 @@ If the code clearly says a model belongs elsewhere (e.g. only one module ever us
 
 | App id | Models | With `branchId` (go in `branchOwned`) |
 |---|---|---|
-| platform | AppSetting, User, Session, EmailToken, Plan, OutboundEmail, AuditLog, UpgradeRequest, VerificationDoc, SupportTicket, SupportMessage, BlogCategory, BlogPost, BlogComment, JobPost, JobApplication, Invoice, Payment, AiUsage, PageView, BotDay, TenantAddon, Boost, Banner, ReminderLog, EventOutbox, EventDelivery | EventOutbox (`branchId` is only a label there: **leave it out of `branchOwned`**, events never block a branch delete) |
-| workspace | Tenant, Branch, Role, Membership, MembershipBranch, Invite, InviteBranch, Notification, ApiKey, DocCounter, MailDomain, Mailbox, MailboxAccess, MailMessage, MailAttachment, MailDelivery, ChannelAccount, MessageTemplate, Form, FormResponse | Form (MembershipBranch / InviteBranch have `branchId` but are links: left out, like EventOutbox) |
+| platform | AppSetting, User, Session, EmailToken, Plan, OutboundEmail, AuditLog, UpgradeRequest, VerificationDoc, SupportTicket, SupportMessage, BlogCategory, BlogPost, BlogComment, JobPost, JobApplication, Invoice, Payment, AiUsage, PageView, BotDay, TenantAddon, Boost, Banner, ReminderLog, EventOutbox, EventDelivery, ImpersonationSession | EventOutbox (`branchId` is only a label there: **leave it out of `branchOwned`**, events never block a branch delete) |
+| workspace | Tenant, Branch, Role, Membership, MembershipBranch, Invite, InviteBranch, ApprovalRule, ApprovalRequest, Notification, ApiKey, DocCounter, MailDomain, Mailbox, MailboxAccess, MailMessage, MailAttachment, MailDelivery, ChannelAccount, MessageTemplate, Form, FormResponse | Form (MembershipBranch / InviteBranch have `branchId` but are links: left out, like EventOutbox; ApprovalRequest (`branchId` is only a label: leave it out of `branchOwned`)) |
 | expenses | Expense, RecurringExpense | Expense, RecurringExpense |
 | reviews | Review | – |
 | listings | Listing, ListingPhoto, ListingReview, Favourite, DemandMatch | Listing, ListingReview |
@@ -26,4 +26,4 @@ If the code clearly says a model belongs elsewhere (e.g. only one module ever us
 | agreements | Agreement, AgreementSigner | Agreement |
 | people | Attendance, LeaveType, LeaveRequest | Attendance, LeaveRequest |
 
-Total: 93 models, each in exactly one row (MembershipBranch and InviteBranch added by P1-DB-2).
+Total: 96 models, each in exactly one row (MembershipBranch and InviteBranch added by P1-DB-2; ApprovalRule, ApprovalRequest, ImpersonationSession added by P1-DB-3).
