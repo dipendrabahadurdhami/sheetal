@@ -37,6 +37,16 @@ export interface ExpenseServiceDeps {
 const no = (e: { seq: number }) => expenseNo(e.seq);
 const label = (e: ExpenseRow) => `${no(e)} Rs. ${rupeesOf(e)}`;
 
+/** Per-action flags for the screen: each is "does this person hold the permission". (The data scope is not a flag: the list is already limited to it.) */
+export function expenseFlags(ctx: Pick<BusinessContext, "permissions">) {
+  const can = (p: string) => ctx.permissions.can(p);
+  return {
+    create: can("expenses.expense.create"), update: can("expenses.expense.update"), delete: can("expenses.expense.delete"), confirm: can("expenses.expense.confirm"),
+    receipt: can("expenses.expense.update"), profit: can("expenses.profit.read"),
+    recurringRead: can("expenses.recurring.read"), recurringCreate: can("expenses.recurring.create"), recurringUpdate: can("expenses.recurring.update"), recurringStop: can("expenses.recurring.stop"),
+  };
+}
+
 /** The category must be one of the business's list; "Other" needs a short note. */
 async function checkCategory(ctx: BusinessContext, category: string, note?: string | null) {
   if (!(await expenseCategories(ctx.db)).some((c) => c.id === category)) throw badRequest("Choose a category from the list.");
@@ -93,6 +103,8 @@ export class ExpenseService extends BaseService<ExpenseRow, ExpenseCreate, Expen
     const names = new Map(ctx.branches.mine.map((b) => [b.id, b.name]));
     return {
       canManage: ctx.permissions.can("expenses.expense.create"), categories, methods: EXPENSE_METHODS, drafts, rows: page.rows.map((e) => present(e, names)),
+      /** What this person may do, per action, so the screen stops guessing from the role (P1-BE-7). The controller puts it in `meta.can`. */
+      can: expenseFlags(ctx),
       /** Only when the caller asked for a page (page/per): the old call has no meta. */
       meta: q.page === undefined && q.per === undefined ? undefined : page.meta,
     };
