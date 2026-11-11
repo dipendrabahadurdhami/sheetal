@@ -36,3 +36,11 @@ No database, Prisma engine or browser (engine download is blocked), so **CI is t
 - A request could stay "approved" if the process dies before it runs; it is visible in the inbox but there is no retry yet.
 - Phase 2 apps must pass `approval` in their actions to use the gate.
 - No old test assertion was changed.
+
+## Lead, after review (11 Nov)
+- `apps/reviews/backend/host.ts` deleted; `apps.generated.ts` was current.
+- The new database test needed a 32-character `SECRETS_KEY` (config rule).
+- **Expenses "confirm" is now wired to the approval gate**, as the test expected: it sends the draft, branch and amount (paisa) to `intercept()`
+  and registers its executor (runs as the maker after approval). The rule is OFF unless the business switches it on, so nothing changes today.
+- The routes.ts comment pointing to the deleted `LiveExpenses.jsx` was restored to `ExpensesPage.jsx`.
+- CI green: 971 tests.
