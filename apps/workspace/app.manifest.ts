@@ -79,6 +79,8 @@ const manifest = {
     "MembershipBranch",
     "Invite",
     "InviteBranch",
+    "ApprovalRule",
+    "ApprovalRequest",
     "Notification",
     "ApiKey",
     "DocCounter",
