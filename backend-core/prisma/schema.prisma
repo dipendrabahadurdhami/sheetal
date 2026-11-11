@@ -51,9 +51,10 @@ model User {
   createdAt       DateTime   @default(now()) @map("created_at")
   updatedAt       DateTime   @updatedAt @map("updated_at")
 
-  sessions    Session[]
-  tokens      EmailToken[]
-  memberships Membership[]
+  sessions       Session[]
+  tokens         EmailToken[]
+  memberships    Membership[]
+  impersonations ImpersonationSession[]
 
   @@map("users")
 }
@@ -179,6 +180,9 @@ model Tenant {
   memberships      Membership[]
   invites          Invite[]
   branches         Branch[]
+  approvalRules    ApprovalRule[]
+  approvalRequests ApprovalRequest[]
+  impersonations   ImpersonationSession[]
   verificationDocs VerificationDoc[]
   forms            Form[]
   agreements       Agreement[]
@@ -263,6 +267,9 @@ model Role {
   name        String?
   system      Boolean      @default(true)
   perms       String[]
+  /// The permission list as it was BEFORE the move to the new names (ACCESS.md 6.3 step 2): the backup. Filled once by
+  /// scripts/rewrite-role-perms.mjs --apply (never overwritten), put back by --restore, never read by the app.
+  permsV1     String[]     @default([]) @map("perms_v1")
   tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   memberships Membership[]
 
@@ -349,6 +356,40 @@ model AuditLog {
   @@index([tenantId, createdAt])
   @@index([actorId, createdAt])
   @@map("audit_logs")
+}
+
+/// One "log in as the business" visit by a Sheetal staff member (ACCESS.md section 12): who, which business, why, for how long.
+/// The record is the trail, so it outlives people: deleting the staff user is refused while they have sessions (suspend them
+/// instead), and deleting the business (for example the demo cleanup) keeps the row and empties tenantId; the platform
+/// audit log still names the business.
+/// @app platform
+model ImpersonationSession {
+  id           String    @id @default(cuid())
+  /// The staff member (a user with a platformRole).
+  staffId      String    @map("staff_id")
+  /// The business viewed; empty only after that business was deleted.
+  tenantId     String?   @map("tenant_id")
+  /// Why, 10 to 300 characters, written by the staff member.
+  reason       String
+  startedAt    DateTime  @default(now()) @map("started_at")
+  /// 15 minutes after the start by default, 30 at most.
+  expiresAt    DateTime  @map("expires_at")
+  endedAt      DateTime? @map("ended_at")
+  /// A user id, or "system" when it ran out.
+  endedBy      String?   @map("ended_by")
+  /// true = every non-GET route is refused.
+  readOnly     Boolean   @default(true) @map("read_only")
+  ip           String?
+  /// Plain page reads are counted here, not logged one by one.
+  requestCount Int       @default(0) @map("request_count")
+  staff        User      @relation(fields: [staffId], references: [id], onDelete: Restrict)
+  tenant       Tenant?   @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  // Active sessions of a business (endedAt empty, expiresAt in the future) and the business's history.
+  @@index([tenantId, endedAt])
+  // Active sessions of a staff member, and their history.
+  @@index([staffId, endedAt])
+  @@map("impersonation_sessions")
 }
 
 // ───────────── Listings (properties for sale and rent) ─────────────
@@ -808,6 +849,71 @@ model InviteBranch {
   @@id([inviteId, branchId])
   @@index([branchId])
   @@map("invite_branches")
+}
+
+/// A business's maker-checker rule for one approvable action (ACCESS.md section 9): when it is on, a different person must
+/// approve the action before it runs. One rule per business and action. All rules start OFF; Phase 1 inserts none.
+/// @app workspace
+model ApprovalRule {
+  id                 String   @id @default(cuid())
+  tenantId           String   @map("tenant_id")
+  /// The action, as the manifest names it (an `approvals` entry), e.g. expenses.expense.confirm.
+  action             String
+  /// The rule only applies while this is true.
+  enabled            Boolean  @default(false)
+  /// In paisa. Below this amount the action runs straight away; empty = every time.
+  thresholdPaisa     BigInt?  @map("threshold_paisa")
+  /// The permission a person must hold to decide a request of this rule (for example expenses.expense.confirm).
+  approverPermission String   @map("approver_permission")
+  /// A request that nobody decides within this many hours expires.
+  expiresHours       Int      @default(72) @map("expires_hours")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+  tenant             Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, action])
+  @@map("approval_rules")
+}
+
+/// One action waiting for a second person (ACCESS.md section 9.4): what was asked, who asked, who decided and what happened.
+/// status: pending → approved → executed or failed; pending → rejected, cancelled or expired (a CHECK in the database allows
+/// only these seven words). Money is in paisa. `branchId` is only a label for the inbox filter and the approver's branch
+/// scope: it has NO foreign key, so an approval never blocks deleting a branch. makerId / checkerId are user ids without a
+/// foreign key, like AuditLog.actorId: the record outlives the person.
+/// @app workspace
+model ApprovalRequest {
+  id          String          @id @default(cuid())
+  tenantId    String          @map("tenant_id")
+  /// A label, not a link: no foreign key to Branch (see above).
+  branchId    String?         @map("branch_id")
+  /// The action, as in ApprovalRule.action.
+  action      String
+  /// What it is about, e.g. "expense", and its id when it is one record.
+  resource    String
+  resourceId  String?         @map("resource_id")
+  /// The validated input the action will run with once approved.
+  payload     Json
+  /// In paisa, when the action moves money.
+  amountPaisa BigInt?         @map("amount_paisa")
+  /// pending, approved, executed, failed, rejected, cancelled, expired.
+  status      String          @default("pending")
+  makerId     String          @map("maker_id")
+  makerNote   String          @default("") @map("maker_note")
+  checkerId   String?         @map("checker_id")
+  checkerNote String?         @map("checker_note")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  decidedAt   DateTime?       @map("decided_at")
+  expiresAt   DateTime        @map("expires_at")
+  executedAt  DateTime?       @map("executed_at")
+  /// What the action returned, or why it failed.
+  result      Json?
+  tenant      Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // The inbox: a business's requests by status, newest first.
+  @@index([tenantId, status, createdAt])
+  // The expiry job: pending requests whose time has passed.
+  @@index([status, expiresAt])
+  @@map("approval_requests")
 }
 
 // ───────────── Requirement board, notifications ─────────────

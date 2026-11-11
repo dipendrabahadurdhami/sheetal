@@ -135,6 +135,7 @@ const manifest = {
     "ReminderLog",
     "EventOutbox",
     "EventDelivery",
+    "ImpersonationSession",
   ],
   branchOwned: [],
   settings: [],
