@@ -137,7 +137,7 @@ export const APPS = [
       {
         id: "expenses",
         label: { en: "Expenses", ne: "खर्च" },
-        icon: "receipt",
+        icon: "chart-pie",
         path: "/business/expenses",
         group: "money",
         order: 40,
@@ -390,7 +390,7 @@ export const APPS = [
     editions: [{ id: "free", name: { en: "Free" }, free: true, limits: {}, features: [], price: null }],
     trialDays: null,
     limits: [],
-    menu: [],
+    menu: [{ id: "rentals", label: { en: "Rentals", ne: "भाडा" }, icon: "key-round", path: "/business/rentals", group: "work", order: 50, permission: "rentals.rental.read" }],
     approvals: [],
     ai: [],
     permissions: [

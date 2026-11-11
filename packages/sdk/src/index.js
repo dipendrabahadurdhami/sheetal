@@ -5,3 +5,4 @@
 // Rules: browser-safe only. Never import @sheetal/platform (scripts/check-boundaries.mjs enforces it).
 export * from "./client.js";
 export * from "./hooks.js";
+export * from "./support.js";

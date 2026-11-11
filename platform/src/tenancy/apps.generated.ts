@@ -268,7 +268,7 @@ export const APPS: readonly AppManifest[] = [
       {
         id: "expenses",
         label: { en: "Expenses", ne: "खर्च" },
-        icon: "receipt",
+        icon: "chart-pie",
         path: "/business/expenses",
         group: "money",
         order: 40,
@@ -665,7 +665,7 @@ export const APPS: readonly AppManifest[] = [
       { key: "accountant", types: ["agency"], add: ["rentals.rental.read:branch", "rentals.rental.create:branch", "rentals.rental.update:branch", "rentals.rental.delete:branch"] },
     ],
     approvals: [],
-    menu: [],
+    menu: [{ id: "rentals", label: { en: "Rentals", ne: "भाडा" }, icon: "key-round", path: "/business/rentals", group: "work", order: 50, permission: "rentals.rental.read" }],
     events: {
       publishes: [
         { name: "rentals.owner.created", v: 1, label: "A property owner was added", payload: { ownerId: "id", branchId: "id" } },

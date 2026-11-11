@@ -6,6 +6,8 @@
 // Rules: set VITE_BUSINESS_API_URL in business/frontend/.env.local (e.g. http://localhost:4001/v1); without it the panel shows the
 // sample workspace only. The address is read here from import.meta.env, which Vite fills in for the app being built (see CHANGES).
 
+import { supportToken } from "./support.js";
+
 export class ApiError extends Error {
   /** `code` and `requestId` are new: the server may send { code: "version_conflict" } in the body and an x-request-id header. */
   constructor(status, message, errors, code, requestId) {
@@ -21,11 +23,14 @@ export class ApiError extends Error {
 /**
  * One API client. `baseUrl`: the address up to and including /v1 (empty = not connected). `tokenKey`: the localStorage key of the
  * sign-in token. `tenantHeader`: send x-tenant-id and x-branch. `name`: used in the "isn't connected" message.
+ * `support`: send this tab's support-session token (support.js) instead of the sign-in token while one is set.
  * Returns { api, ready, signedIn, setActiveTenant, setActiveBranch, getActiveTenant, getActiveBranch }.
  */
-export function createApi({ baseUrl, tokenKey = "sheetal_token", tenantHeader = true, name = "business", envName = "VITE_BUSINESS_API_URL" } = {}) {
+export function createApi({ baseUrl, tokenKey = "sheetal_token", tenantHeader = true, name = "business", envName = "VITE_BUSINESS_API_URL", support = false } = {}) {
   const BASE = (baseUrl || "").replace(/\/+$/, "");
-  const token = () => { try { return localStorage.getItem(tokenKey); } catch { return null; } };
+  // A Sheetal support session in this tab (support.js) is sent instead of the person's own sign-in, for the business API only.
+  const token = () => (support ? supportToken() : null) || ownToken();
+  const ownToken = () => { try { return localStorage.getItem(tokenKey); } catch { return null; } };
   // The business the panel has open; sent with every call so the API acts in that business.
   let activeTenant = null;
   // The branch picked in the top bar (a branch id, or "all"); the API shows and files work under it.
@@ -68,7 +73,7 @@ export function createApi({ baseUrl, tokenKey = "sheetal_token", tenantHeader = 
 
 // The business API. import.meta.env.VITE_BUSINESS_API_URL is replaced by Vite while it builds the app that imports this file,
 // so /business, /admin and the website each get the value from their own env files, exactly as api.js did before.
-const biz = createApi({ baseUrl: import.meta.env.VITE_BUSINESS_API_URL });
+const biz = createApi({ baseUrl: import.meta.env.VITE_BUSINESS_API_URL, support: true });
 export const bizApi = biz.api;
 export const bizApiReady = biz.ready;
 export const signedIn = biz.signedIn;

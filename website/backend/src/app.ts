@@ -8,6 +8,7 @@ import type { FastifyInstance } from "fastify";
 import type { Config } from "@sheetal/backend-core/config";
 import { buildBaseApp, type AppDeps } from "@sheetal/backend-core/app";
 import { authRoutes } from "./modules/auth/routes.js";
+import { registerDemoGuard } from "@sheetal/platform/demo/guard";
 import { catalogRoutes, mediaRoutes } from "./modules/catalog/routes.js";
 import { catalogOptionRoutes } from "./modules/catalog/options.js";
 import { engageRoutes } from "./modules/engage/routes.js";
@@ -27,6 +28,9 @@ import type { Fetch } from "@sheetal/backend-core/lib/payments";
 
 export async function buildApp(config: Config, deps: AppDeps & { ai?: { client: AiClient; model: string }; fetch?: Fetch } = {}): Promise<FastifyInstance> {
   const app = await buildBaseApp(config, deps);
+  // A "Try the demo" visitor (platform/src/demo/guard.ts) can read the website like anyone, but can change nothing here except signing out:
+  // no listing, enquiry, review or payment ever comes from a demo user.
+  registerDemoGuard(app, { allow: [/^\/v1(\/auth)?\/logout$/] });
   await app.register(authRoutes, { prefix: "/v1" });
   await app.register(catalogRoutes, { prefix: "/v1" });
   await app.register(catalogOptionRoutes, { prefix: "/v1" });

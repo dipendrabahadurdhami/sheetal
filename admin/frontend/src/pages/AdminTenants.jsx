@@ -15,6 +15,7 @@ import { Badge, Button, Confirm, Drawer, Empty, Field, Input, Meter, PageHead, P
 import { Icon } from "@sheetal/shared/core/icons";
 import { BUSINESS_TYPES } from "@sheetal/shared/core/rbac";
 import { planOf, TenantName } from "./AdminDashboard";
+import { OpenAsSupport } from "./OpenAsSupport";
 
 const FEATURES = PLAN_FEATURES;
 
@@ -25,6 +26,7 @@ export function TenantDetail({ id, role }) {
   const { navigate } = useRouter();
   const toast = useToast();
   const [confirm, setConfirm] = useState(null);
+  const [support, setSupport] = useState(false);
   const live = isStaffLive() ? liveAdmin(toast) : null;
   const [detail, reloadDetail] = useLiveTenant(live ? id : null);
   const x = db.tenants.find((r) => r.id === id);
@@ -52,6 +54,9 @@ export function TenantDetail({ id, role }) {
         title={x.name} sub={`${t(`type.${x.type}`)} · ${x.city} · ${t("tenants.since")} ${fdate(x.since)}`}
         actions={<>
           {can(role, "tenants.impersonate") && !live && <Button variant="outline" icon="external-link" onClick={open}>{t("tenant.open")}</Button>}
+          {/* Signed in to the admin API: a real, read-only support session (OpenAsSupport.jsx). */}
+          {can(role, "tenants.impersonate") && live && <Button variant="outline" icon="external-link" onClick={() => setSupport(true)}>Open as support</Button>}
+          {live && <OpenAsSupport business={x} open={support} onClose={() => setSupport(false)} />}
           {can(role, "tenants.suspend") && (x.status === "suspended"
             ? <Button icon="rotate-ccw" onClick={() => setConfirm("active")}>{t("tenant.reactivate")}</Button>
             : <Button variant="outline" className="pf-danger" icon="ban" onClick={() => setConfirm("suspended")}>{t("tenant.suspend")}</Button>)}

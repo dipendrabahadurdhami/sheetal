@@ -42,7 +42,7 @@ const manifest = {
     },
   ],
   approvals: [],
-  menu: [],
+  menu: [{ id: "rentals", label: { en: "Rentals", ne: "भाडा" }, icon: "key-round", path: "/business/rentals", group: "work", order: 50, permission: "rentals.rental.read" }],
   events: {
     publishes: [
       { name: "rentals.owner.created", v: 1, label: "A property owner was added", payload: { ownerId: "id", branchId: "id" } },
