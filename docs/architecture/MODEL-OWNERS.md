@@ -27,3 +27,21 @@ If the code clearly says a model belongs elsewhere (e.g. only one module ever us
 | people | Attendance, LeaveType, LeaveRequest | Attendance, LeaveRequest |
 
 Total: 93 models, each in exactly one row (MembershipBranch and InviteBranch added by P1-DB-2).
+
+
+## Disagreements (Lead code search, 11 Nov 2026; closes the open item from P1-OPS-2)
+
+OPS-2 could not list disagreements without the code. The Lead searched every server folder (`apps/*/backend`, `business|admin|website/backend/src`,
+`platform/src`, `backend-core/src`, tests left out) for `db.<model>.<find|create|update|delete|upsert|count|aggregate|groupBy>` and compared the
+users of each model with its `@app` tag. **No tag is changed in Phase 1**; moving code to its owner is the job of the later app moves.
+
+| Model | Tag | Used by | Decision |
+|---|---|---|---|
+| `ListingReview` (listing check-ups) | listings | only `business/backend/src/modules/reviews/checkups.ts` | Tag stays (it is listing data). The code is in the wrong folder: `checkups.ts` moves to `apps/listings` with the Listings app. |
+| `ChannelAccount` (WhatsApp / Facebook for the Inbox) | workspace | `business` growth and leads modules | Tag stays for now; decide `workspace` vs `crm` when the CRM app moves (the Inbox is shared by every app today). |
+| `Collection`, `Commitment`, `InvestmentUpdate`, `Unit` | collections, investments, projects | only the old `business` projects module | Tags are right; the code is still one module and splits when Projects, Collections and Investments move. |
+| `Invoice`, `Payment` (Sheetal's own billing) | platform | also `apps/invoicing`, `apps/collections` | Tag stays; those reads must go through a platform helper when the apps move (no direct table use across apps). |
+| `BizReceipt`, `Payout`, `OwnerStatement` | invoicing, rentals | also `apps/expenses` (profit) | Allowed read for the profit report today; becomes a read through the owning app when those apps move. |
+| `DocCounter`, `MailboxAccess` | workspace | no direct `db.<model>` call (used through relations or raw SQL) | No change. |
+
+Everything else is used by its own app's code, by platform/core, or by the screens' shared admin and website modules that read many apps.
