@@ -10,9 +10,12 @@ import { PLANS as UI_PLANS } from "../../shared/src/demo/demo.js";
 import { priceFor as uiPriceFor } from "../../shared/src/core/plans.js";
 
 describe("backend and screens agree", () => {
-  it("permission groups", () => {
-    expect(api.BUSINESS_PERMS).toEqual(ui.BUSINESS_PERMS);
-    expect(api.PLATFORM_PERMS).toEqual(ui.PLATFORM_PERMS);
+  it("permission groups: the screens group exactly the permissions the server offers a business", () => {
+    const shown = (groups: { perms: string[] }[]) => groups.flatMap((g) => g.perms).sort();
+    for (const type of api.BUSINESS_TYPES) expect(shown(ui.permsForType(type)), type).toEqual(shown([{ perms: api.businessPermsFor([type]) }]));
+    expect(shown(ui.permsForTypes([...api.BUSINESS_TYPES]))).toEqual([...api.businessPermsFor(api.BUSINESS_TYPES)].sort());
+    expect(shown(ui.PLATFORM_PERMS).every((p) => p.startsWith("platform."))).toBe(true);
+    expect(shown(ui.BUSINESS_PERMS).some((p) => p.startsWith("platform."))).toBe(false);
   });
   it("role templates for every business type", () => {
     for (const type of api.BUSINESS_TYPES) {

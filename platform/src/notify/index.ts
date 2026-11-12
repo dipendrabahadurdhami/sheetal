@@ -8,9 +8,9 @@
 // reconcileOldNames() step of P1-BE-3 exactly as it was.
 
 import type { Db } from "../db/client.js";
-import { hasPerm } from "../tenancy/aliases.js";
+import { hasPerm } from "../tenancy/perms.js";
+import { STAFF_GRANTS } from "../tenancy/staff-roles.js";
 import { reconcileOldNames } from "../tenancy/branch-links.js";
-import { LEGACY_PLATFORM_ROLES } from "../tenancy/permissions.generated.js";
 import { worksAt } from "../tenancy/works-at.js";
 
 export interface Note { type: string; title: string; message?: string; link?: string; tenantId?: string | null }
@@ -32,11 +32,19 @@ export const STAFF_FOR = {
   leads: "platform.business.read",
   /** Requests about a business that staff act on (plan upgrades, channel requests). */
   businessRequests: "platform.business.read+platform.business.create+platform.business.update",
+  /** Businesses that sent their papers to be verified. */
+  verification: "platform.verification.review",
+  /** Payments to check by hand (bank transfers). */
+  billing: "platform.billing.read",
+  /** Plans and paid promotion (banner pictures to check). */
+  plans: "platform.plan.read+platform.plan.create+platform.plan.update+platform.plan.delete",
+  /** Messages a business sends to Sheetal's support. */
+  support: "platform.business.read",
 } as const;
 
 /** Sheetal staff whose platform role covers `perm` (super admins always). */
 export async function notifyStaff(db: Db, perm: string, note: Omit<Note, "tenantId">) {
-  const roles = Object.entries(LEGACY_PLATFORM_ROLES).filter(([, perms]) => hasPerm(perms, perm)).map(([r]) => r);
+  const roles = [...STAFF_GRANTS].filter(([, perms]) => hasPerm(perms, perm)).map(([r]) => r);
   const staff = await db.user.findMany({ where: { platformRole: { in: roles } }, select: { id: true } });
   await notify(db, staff.map((s) => s.id), { ...note, tenantId: null });
 }
@@ -51,7 +59,6 @@ export async function teamWith(db: Db, tenantId: string, perms: string[], branch
     db.branch.findMany({ where: { tenantId }, select: { id: true, name: true } }),
   ]);
   const members = rows.map((m) => reconcileOldNames(m, branches));   // a row written only the old way is never "every branch"
-  // hasPerm goes through the alias layer: a role holding only the new names (or only the old ones) is found either way (QA, P1-BE-5 fix 1).
   return members.filter((m) => perms.some((p) => hasPerm(m.role.perms, p)) && worksAt(m, branchId)).map((m) => m.userId);
 }
 

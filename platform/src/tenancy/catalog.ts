@@ -17,7 +17,7 @@
 import { narrowest, type DataScope } from "../core/context.js";
 import { phaseOneCap } from "../core/scope-cap.js";
 import { APPS } from "./apps.generated.js";
-import { LEGACY_ALIASES, PERMISSION_CATALOG } from "./permissions.generated.js";
+import { PERMISSION_CATALOG } from "./permissions.generated.js";
 
 export interface CatalogEntry {
   id: string;
@@ -72,7 +72,7 @@ function split(perm: string): [string, string | null] {
   return i < 0 ? [perm, null] : [perm.slice(0, i), perm.slice(i + 1)];
 }
 
-/** A stored permission list as new names with an explicit scope, in catalog order. "*" alone means everything. Names that are neither old nor new are left out. */
+/** A stored permission list with an explicit scope on every grant, in catalog order. "*" alone means everything. Names no manifest declares are left out. */
 export function toGrants(perms: readonly string[]): string[] {
   if (perms.includes("*")) return ["*"];
   const held = new Map<string, DataScope>();
@@ -83,7 +83,6 @@ export function toGrants(perms: readonly string[]): string[] {
   for (const p of perms) {
     const [name, suffix] = split(p);
     if (BY_ID.has(name)) { give(name, suffix && isScope(suffix) ? suffix : scopeFor(name)); continue; }
-    for (const n of LEGACY_ALIASES[p] ?? []) give(n, scopeFor(n));   // an old name: all the new names it stands for
   }
   const order = new Map(PERMISSION_CATALOG.map((p, i) => [p.id, i]));
   return [...held].sort((a, b) => (order.get(a[0]) ?? 0) - (order.get(b[0]) ?? 0)).map(([id, s]) => `${id}:${s}`);

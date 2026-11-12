@@ -11,7 +11,7 @@ import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { isPro } from "@sheetal/backend-core/domain/billing";
 import { dbOf } from "@sheetal/backend-core/lib/db";
-import { notifyStaff } from "@sheetal/backend-core/lib/notify";
+import { STAFF_FOR, notifyStaff } from "@sheetal/backend-core/lib/notify";
 import { AppError, badRequest, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
 import { Vault } from "@sheetal/backend-core/lib/vault";
 import { savePrivateFile } from "@sheetal/backend-core/lib/files";
@@ -164,7 +164,7 @@ export async function billingRoutes(app: FastifyInstance, opts: { fetch?: Fetch 
     const proofFile = await savePrivateFile(app.config.MEDIA_DIR, "proofs", Buffer.from(b.data, "base64"));
     await db().payment.update({ where: { id: p.id }, data: { status: "pending_review", proofFile, providerRef: b.reference || null } });
     await app.mailer.send({ to: app.config.SUPPORT_EMAIL, subject: `Bank transfer to check: ${invoiceNumber(p.invoice)} (Rs. ${p.amount.toLocaleString("en-IN")})`, text: `${ws.member.tenant.name} sent a bank transfer proof for ${invoiceNumber(p.invoice)}${b.reference ? `, reference ${b.reference}` : ""}.\nConfirm it in the admin panel: Billing → Payments.` });
-    await notifyStaff(db(), "billing.view", { type: "billing", title: `Bank transfer to check: ${invoiceNumber(p.invoice)}`, message: `${ws.member.tenant.name} · Rs. ${p.amount.toLocaleString("en-IN")}`, link: "/admin/billing" });
+    await notifyStaff(db(), STAFF_FOR.billing, { type: "billing", title: `Bank transfer to check: ${invoiceNumber(p.invoice)}`, message: `${ws.member.tenant.name} · Rs. ${p.amount.toLocaleString("en-IN")}`, link: "/admin/billing" });
     return { message: p.invoice.kind === "banner" ? "Proof sent. Sheetal confirms the transfer and checks your banner picture within a working day; it then shows on its dates." : p.invoice.kind === "boost" ? "Proof sent. Sheetal confirms bank transfers within a working day; your boost starts by itself then." : "Proof sent. Sheetal confirms bank transfers within a working day; your plan starts then." };
   });
 

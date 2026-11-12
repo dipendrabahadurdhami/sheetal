@@ -1,47 +1,66 @@
-// The safety net of stage 1.5 (new permission names everywhere): switching a check from an old name to its new names must not change who passes.
-// How it works: an old name stands for one or more new names (LEGACY_ALIASES for businesses, LEGACY_PLATFORM_ALIASES for Sheetal staff). A call site is
-// rewritten from "old" to its new names joined with "+" (all of them are needed). For every role template of every business type and every staff role, and
-// for every old name, the old check and the new check must give the same answer: with the role stored in old names (today) and in new names (after the
-// role rewrite). The table of call-site replacements (scripts/perm-names.mjs) is built from the same maps, and is checked here too.
+// The proof behind stage 1.5 (new permission names everywhere): moving from the old names to the new ones changed nobody's access.
+// How it works: the old world is kept as DATA only (LEGACY_TEMPLATES, LEGACY_PLATFORM_ROLES, LEGACY_ALIASES in the generated file; nothing reads them at
+// run time). For every built-in role of every business type and every staff role, and for every old name: the role held the old name THEN exactly when
+// the role's new grants pass the new form of that check NOW. The new form of a check is its new names joined with "+" (scripts/perm-names.mjs), which is
+// what every call site was rewritten to.
 import { describe, expect, it } from "vitest";
 import { can, roleTemplatesFor, BUSINESS_TYPES, PLATFORM_ROLE_TEMPLATES } from "../../../shared/src/core/rbac.js";
-import { LEGACY_ALIASES, LEGACY_PLATFORM_ALIASES } from "./permissions.generated.js";
+import { LEGACY_ALIASES, LEGACY_BUSINESS_GROUPS, LEGACY_PLATFORM_ALIASES, LEGACY_PLATFORM_ROLES, LEGACY_TEMPLATES } from "./permissions.generated.js";
 import { newNameFor } from "../../../scripts/perm-names.mjs";
 
-const inNew = (role, map) => ({ ...role, perms: role.perms.includes("*") ? ["*"] : [...new Set(role.perms.flatMap((p) => map[p] || [p]))] });
-const businessRoles = Object.keys(BUSINESS_TYPES).flatMap((type) => roleTemplatesFor(type).map((r) => ({ ...r, key: `${type}/${r.key}` })));
+/** What a built-in role held in the old names (the rule the old code used: a role without a list held everything of its type except two names). */
+function oldPerms(type, key) {
+  const row = LEGACY_TEMPLATES[type].find(([k]) => k === key);
+  if (!row) return null;
+  if (row[1]) return row[1];
+  const all = LEGACY_BUSINESS_GROUPS.filter((g) => g.types === "all" || g.types.includes(type)).flatMap((g) => g.perms);
+  return all.filter((p) => p !== "roles.manage" && p !== "billing.manage");
+}
+const held = (perms, old) => perms.includes("*") || perms.includes(old);
 
-describe("new permission names give the same answers", () => {
-  it("joins names with + as 'all of them'", () => {
+describe("new permission names give the same answers as the old ones did", () => {
+  it("joins names with + as 'all of them', and understands only the manifests' names", () => {
     const role = { perms: ["a.b.read", "a.b.update:branch"] };
     expect(can(role, "a.b.read+a.b.update")).toBe(true);
     expect(can(role, "a.b.read+a.b.delete")).toBe(false);
     expect(can(role, "a.b.read+")).toBe(false);
     expect(can({ perms: ["*"] }, "a.b.read+a.b.delete")).toBe(true);
     expect(can(null, "a.b.read+a.b.update")).toBe(false);
+    // The alias layer is gone: an old name gives nothing, and a new-name role does not pass a check written in an old name.
+    expect(can({ perms: ["leads.view"] }, "crm.lead.read")).toBe(false);
+    expect(can({ perms: ["crm.lead.read:own"] }, "leads.view")).toBe(false);
   });
 
-  it("every business role template answers every check the same way, before and after the role rewrite", () => {
-    expect(businessRoles.length).toBeGreaterThan(15);
-    for (const role of [...businessRoles, { key: "owner", perms: ["*"] }, { key: "nobody", perms: [] }]) {
-      for (const old of Object.keys(LEGACY_ALIASES)) {
-        const want = can(role, old);
-        const next = newNameFor(old, "business");
-        expect(can(role, next), `${role.key}: ${old} -> ${next} (role in old names)`).toBe(want);
-        expect(can(inNew(role, LEGACY_ALIASES), next), `${role.key}: ${old} -> ${next} (role in new names)`).toBe(want);
+  it("every built-in business role passes exactly the checks its old permissions passed", () => {
+    let roles = 0;
+    for (const type of Object.keys(BUSINESS_TYPES)) {
+      for (const role of roleTemplatesFor(type)) {
+        const before = oldPerms(type, role.key);
+        expect(before, `${type}/${role.key} existed before`).not.toBeNull();
+        roles++;
+        for (const old of Object.keys(LEGACY_ALIASES)) {
+          expect(can(role, newNameFor(old, "business")), `${type}/${role.key}: ${old}`).toBe(held(before, old));
+        }
       }
+      expect(roleTemplatesFor(type).map((r) => r.key)).toEqual(LEGACY_TEMPLATES[type].map(([k]) => k));
     }
+    expect(roles).toBeGreaterThan(15);
   });
 
-  it("every staff role answers every check the same way, before and after", () => {
-    for (const role of [...PLATFORM_ROLE_TEMPLATES, { key: "nobody", perms: [] }]) {
+  it("every staff role passes exactly the checks its old permissions passed", () => {
+    expect(PLATFORM_ROLE_TEMPLATES.map((r) => r.key)).toEqual(Object.keys(LEGACY_PLATFORM_ROLES));
+    for (const role of PLATFORM_ROLE_TEMPLATES) {
       for (const old of Object.keys(LEGACY_PLATFORM_ALIASES)) {
-        const want = can(role, old);
-        const next = newNameFor(old, "platform");
-        expect(can(role, next), `${role.key}: ${old} -> ${next} (old names)`).toBe(want);
-        expect(can(inNew(role, LEGACY_PLATFORM_ALIASES), next), `${role.key}: ${old} -> ${next} (new names)`).toBe(want);
+        expect(can(role, newNameFor(old, "platform")), `${role.key}: ${old}`).toBe(held(LEGACY_PLATFORM_ROLES[role.key], old));
       }
     }
+  });
+
+  it("no built-in role stores an old name", () => {
+    const olds = new Set([...Object.keys(LEGACY_ALIASES), ...Object.keys(LEGACY_PLATFORM_ALIASES)]);
+    const stored = [...Object.keys(BUSINESS_TYPES).flatMap((t) => roleTemplatesFor(t)), ...PLATFORM_ROLE_TEMPLATES].flatMap((r) => r.perms);
+    expect(stored.filter((p) => olds.has(p.split(":")[0]))).toEqual([]);
+    expect(stored.every((p) => p === "*" || /^[a-z_]+\.[a-z_]+\.[a-z_]+(:(own|branch|all))?$/.test(p))).toBe(true);
   });
 
   it("the replacement of a name is its new names in the manifest's order, and unknown names are left alone", () => {
