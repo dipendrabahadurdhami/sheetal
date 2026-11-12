@@ -18,7 +18,7 @@ export async function adminDashboardRoutes(app: FastifyInstance) {
   const db = () => dbOf(app);
 
   app.get("/admin/dashboard", async (request) => {
-    const s = staffOf(request, "dashboard.view");
+    const s = staffOf(request, "platform.dashboard.read");
     const now = new Date();
     const ago = (days: number) => new Date(now.getTime() - days * 864e5);
     const ahead = (days: number) => new Date(now.getTime() + days * 864e5);
@@ -41,7 +41,7 @@ export async function adminDashboardRoutes(app: FastifyInstance) {
     out.mrr = { total: paying.reduce((n, t) => n + t.plan.price, 0), payingBusinesses: paying.length };
 
     // Money this month: what Sheetal earned (without VAT), as Billing → Earnings shows it.
-    if (s.can("billing.view")) {
+    if (s.can("platform.billing.read")) {
       const e = await computeEarnings(db(), month, month);
       out.money = { plans: e.totals.plans, addons: e.totals.addons, boosts: e.totals.boosts, commission: e.totals.commission, refunds: e.totals.refunds, total: e.totals.total, commissionWaiting: e.commissionWaiting };
     }
@@ -49,13 +49,13 @@ export async function adminDashboardRoutes(app: FastifyInstance) {
     // Work waiting for staff, only what this role can open.
     const queue: { id: string; label: string; count: number; to: string }[] = [];
     const add = async (id: string, label: string, to: string, allowed: boolean, count: () => Promise<number>) => { if (allowed) queue.push({ id, label, to, count: await count() }); };
-    await add("transfers", "Bank transfers to check", "/admin/billing", s.can("billing.view"), () => db().payment.count({ where: { status: "pending_review" } }));
-    await add("listings", "Listings waiting for review", "/admin/moderation", s.can("moderation.listings"), () => db().listing.count({ where: { status: "pending" } }));
-    await add("kyc", "Businesses waiting for verification", "/admin/moderation", s.can("moderation.kyc"), () => db().tenant.count({ where: { verification: "pending" } }));
-    await add("banners", "Banner pictures to check", "/admin/promote", s.can("billing.view"), () => db().banner.count({ where: { status: "review" } }));
-    await add("upgrades", "Upgrade requests", "/admin/requests", s.can("tenants.view"), () => db().upgradeRequest.count({ where: { status: "pending" } }));
-    await add("leads", "New platform leads", "/admin/leads", s.can("tenants.view"), () => db().lead.count({ where: { tenantId: null, status: "new" } }));
-    await add("fees", "Requirement fees to check", "/admin/leads", s.can("tenants.view"), () => db().lead.count({ where: { feeStatus: "pending" } }));
+    await add("transfers", "Bank transfers to check", "/admin/billing", s.can("platform.billing.read"), () => db().payment.count({ where: { status: "pending_review" } }));
+    await add("listings", "Listings waiting for review", "/admin/moderation", s.can("platform.listing.moderate"), () => db().listing.count({ where: { status: "pending" } }));
+    await add("kyc", "Businesses waiting for verification", "/admin/moderation", s.can("platform.verification.review"), () => db().tenant.count({ where: { verification: "pending" } }));
+    await add("banners", "Banner pictures to check", "/admin/promote", s.can("platform.billing.read"), () => db().banner.count({ where: { status: "review" } }));
+    await add("upgrades", "Upgrade requests", "/admin/requests", s.can("platform.business.read"), () => db().upgradeRequest.count({ where: { status: "pending" } }));
+    await add("leads", "New platform leads", "/admin/leads", s.can("platform.business.read"), () => db().lead.count({ where: { tenantId: null, status: "new" } }));
+    await add("fees", "Requirement fees to check", "/admin/leads", s.can("platform.business.read"), () => db().lead.count({ where: { feeStatus: "pending" } }));
     out.queue = queue;
     return { data: out };
   });

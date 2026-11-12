@@ -18,7 +18,7 @@ export async function adminRentPaymentRoutes(app: FastifyInstance) {
   const audit = (actorId: string, ip: string, action: string, target: string, tenantId: string) => db().auditLog.create({ data: { actorId, tenantId, action, target, ip } });
 
   app.get("/admin/rent-payments", async (request) => {
-    staffOf(request, "billing.view");
+    staffOf(request, "platform.billing.read");
     const q = z.object({ status: z.enum(["pending", "confirmed", "rejected", "all"]).default("pending"), to: z.enum(["sheetal", "business", "all"]).default("sheetal") }).parse(request.query);
     const rows = await db().rentPayment.findMany({
       where: { source: "online", ...(q.status === "all" ? {} : { status: q.status }), ...(q.to === "all" ? {} : { collectedBy: q.to }) },
@@ -36,7 +36,7 @@ export async function adminRentPaymentRoutes(app: FastifyInstance) {
   });
 
   app.get<{ Params: { id: string } }>("/admin/rent-payments/:id/proof", async (request) => {
-    staffOf(request, "billing.view");
+    staffOf(request, "platform.billing.read");
     const p = await db().rentPayment.findUnique({ where: { id: request.params.id.slice(0, 40) }, select: { proofFile: true } });
     const f = p?.proofFile ? await readPrivateFile(app.config.MEDIA_DIR, "proofs", p.proofFile) : null;
     if (!f) throw notFound("No screenshot was sent with this payment.");
@@ -44,7 +44,7 @@ export async function adminRentPaymentRoutes(app: FastifyInstance) {
   });
 
   app.post<{ Params: { id: string } }>("/admin/rent-payments/:id/confirm", async (request) => {
-    const s = staffOf(request, "billing.refund");
+    const s = staffOf(request, "platform.billing.refund");
     const p = await db().rentPayment.findUnique({ where: { id: request.params.id.slice(0, 40) }, select: { tenantId: true } });
     if (!p) throw notFound("Payment not found.");
     const r = await confirmRentPayment(db(), { paymentId: request.params.id.slice(0, 40), by: s.user.id });
@@ -53,7 +53,7 @@ export async function adminRentPaymentRoutes(app: FastifyInstance) {
   });
 
   app.post<{ Params: { id: string } }>("/admin/rent-payments/:id/reject", async (request) => {
-    const s = staffOf(request, "billing.refund");
+    const s = staffOf(request, "platform.billing.refund");
     const b = z.object({ note: z.string().trim().min(3, "Say why, so the tenant knows.").max(300) }).parse(request.body);
     const p = await db().rentPayment.findUnique({ where: { id: request.params.id.slice(0, 40) }, select: { tenantId: true } });
     if (!p) throw notFound("Payment not found.");

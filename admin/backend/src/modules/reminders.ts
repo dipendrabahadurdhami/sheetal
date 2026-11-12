@@ -24,13 +24,13 @@ export async function adminReminderRoutes(app: FastifyInstance) {
   const db = () => dbOf(app);
 
   app.get("/admin/reminders", async (request) => {
-    staffOf(request, "settings.platform");
+    staffOf(request, "platform.settings.read+platform.settings.update");
     const [settings, upcoming, recent] = await Promise.all([reminderSettings(db()), planReminders(db()), recentReminders(db())]);
     return { data: { settings, upcoming: upcoming.map(({ kind, business, what, sendOn }) => ({ kind, business, what, sendOn })), recent } };
   });
 
   app.put("/admin/reminders", async (request) => {
-    const s = staffOf(request, "settings.platform");
+    const s = staffOf(request, "platform.settings.read+platform.settings.update");
     const b = body.parse(request.body);
     const cur = await reminderSettings(db());
     const next: ReminderSettings = { plan: { ...cur.plan, ...b.plan }, listings: { ...cur.listings, ...b.listings }, boosts: { ...cur.boosts, ...b.boosts }, banners: { ...cur.banners, ...b.banners } };
@@ -44,7 +44,7 @@ export async function adminReminderRoutes(app: FastifyInstance) {
   });
 
   app.post("/admin/reminders/run", async (request) => {
-    const s = staffOf(request, "settings.platform");
+    const s = staffOf(request, "platform.settings.read+platform.settings.update");
     const out = await runReminders(db(), app.mailer, { siteUrl: app.config.SITE_URL });
     await db().auditLog.create({ data: { actorId: s.user.id, action: "reminders.run", target: `plans ${out.plan}, listings ${out.listings}, boosts ${out.boosts}, banners ${out.banners}`, ip: request.ip } });
     const total = out.plan + out.listings + out.boosts + out.banners;

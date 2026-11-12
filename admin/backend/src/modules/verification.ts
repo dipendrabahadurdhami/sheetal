@@ -17,7 +17,7 @@ export async function adminVerificationRoutes(app: FastifyInstance) {
   const db = () => dbOf(app);
 
   app.get("/admin/verifications", async (request) => {
-    staffOf(request, "moderation.kyc");
+    staffOf(request, "platform.verification.review");
     const q = z.object({ status: z.enum(["pending", "verified", "rejected", "all"]).default("pending") }).parse(request.query);
     const rows = await db().tenant.findMany({
       where: q.status === "all" ? { verification: { not: "none" } } : { verification: q.status },
@@ -35,7 +35,7 @@ export async function adminVerificationRoutes(app: FastifyInstance) {
   });
 
   app.get<{ Params: { id: string } }>("/admin/verifications/docs/:id/file", async (request, reply) => {
-    staffOf(request, "moderation.kyc");
+    staffOf(request, "platform.verification.review");
     const d = await db().verificationDoc.findUnique({ where: { id: request.params.id } });
     const f = d ? await readPrivateFile(app.config.MEDIA_DIR, "kyc", d.file) : null;
     if (!f) throw notFound("Document not found.");
@@ -43,7 +43,7 @@ export async function adminVerificationRoutes(app: FastifyInstance) {
   });
 
   app.post<{ Params: { tenantId: string } }>("/admin/verifications/:tenantId/review", async (request) => {
-    const s = staffOf(request, "moderation.kyc");
+    const s = staffOf(request, "platform.verification.review");
     const b = z.object({ decision: z.enum(["verify", "reject", "reopen"]), note: z.string().trim().max(500).optional() }).parse(request.body);
     const t = await db().tenant.findUnique({ where: { id: request.params.tenantId }, include: { memberships: { where: { role: { key: "owner" }, status: "active" }, include: { user: { select: { email: true, userName: true } } }, take: 1 } } });
     if (!t) throw notFound("Business not found.");

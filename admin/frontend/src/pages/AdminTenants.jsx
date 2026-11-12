@@ -53,16 +53,16 @@ export function TenantDetail({ id, role }) {
       <PageHead back={<Link to="/admin/tenants" className="pf-back"><Icon name="arrow-left" size={15} />{t("tenants.title")}</Link>}
         title={x.name} sub={`${t(`type.${x.type}`)} · ${x.city} · ${t("tenants.since")} ${fdate(x.since)}`}
         actions={<>
-          {can(role, "tenants.impersonate") && !live && <Button variant="outline" icon="external-link" onClick={open}>{t("tenant.open")}</Button>}
+          {can(role, "platform.business.impersonate") && !live && <Button variant="outline" icon="external-link" onClick={open}>{t("tenant.open")}</Button>}
           {/* Signed in to the admin API: a real, read-only support session (OpenAsSupport.jsx). */}
-          {can(role, "tenants.impersonate") && live && <Button variant="outline" icon="external-link" onClick={() => setSupport(true)}>Open as support</Button>}
+          {can(role, "platform.business.impersonate") && live && <Button variant="outline" icon="external-link" onClick={() => setSupport(true)}>Open as support</Button>}
           {live && <OpenAsSupport business={x} open={support} onClose={() => setSupport(false)} />}
-          {can(role, "tenants.suspend") && (x.status === "suspended"
+          {can(role, "platform.business.suspend") && (x.status === "suspended"
             ? <Button icon="rotate-ccw" onClick={() => setConfirm("active")}>{t("tenant.reactivate")}</Button>
             : <Button variant="outline" className="pf-danger" icon="ban" onClick={() => setConfirm("suspended")}>{t("tenant.suspend")}</Button>)}
         </>} />
 
-      {x.status === "pending_verification" && can(role, "moderation.kyc") && (
+      {x.status === "pending_verification" && can(role, "platform.verification.review") && (
         <div className="pf-alert action">
           <Icon name="circle-alert" size={18} /><div><b>{t("tenant.kycTitle")}</b><span>{t("tenant.kycText")}</span></div>
           <Button variant="outline" size="sm" onClick={() => setStatus("rejected")}>{t("common.reject")}</Button>
@@ -113,7 +113,7 @@ export function TenantDetail({ id, role }) {
                   checked={!!x.autoRenew} disabled={!role.perms.includes("*")}
                   onChange={(v) => { if (!role.perms.includes("*")) return; if (live) { change({ autoRenew: v }); return; } update((d) => { d.tenants.find((r) => r.id === id).autoRenew = v; }); toast(v ? "Auto-renew is on" : "Auto-renew is off"); }} />
               )}
-              {can(role, "tenants.manage") && (
+              {can(role, "platform.business.read+platform.business.create+platform.business.update") && (
                 <Field label={t("tenant.changePlan")}>
                   <Select value={x.planId} onChange={(v) => { if (live) { change({ planId: v }); return; } update((d) => { d.tenants.find((r) => r.id === id).planId = v; }); toast(t("tenant.toastPlan")); }}
                     options={plans.map((p) => ({ id: p.id, label: `${p.name} · ${rs(p.price)}` }))} />

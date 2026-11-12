@@ -25,7 +25,7 @@ export async function adminPromoteRoutes(app: FastifyInstance) {
   const audit = (actorId: string, ip: string, action: string, target: string, tenantId?: string) => db().auditLog.create({ data: { actorId, ip, action, target, tenantId } });
 
   app.get("/admin/promote", async (request) => {
-    staffOf(request, "billing.view");
+    staffOf(request, "platform.billing.read");
     const q = z.object({ show: z.enum(["now", "all"]).default("now") }).parse(request.query);
     const day = today();
     const [s, taken, rows] = await Promise.all([
@@ -55,7 +55,7 @@ export async function adminPromoteRoutes(app: FastifyInstance) {
   });
 
   app.put("/admin/promote/settings", async (request) => {
-    const s = staffOf(request, "plans.manage");
+    const s = staffOf(request, "platform.plan.read+platform.plan.create+platform.plan.update+platform.plan.delete");
     const b = z.object({ home: PlaceBody, search: PlaceBody, city: PlaceBody, hero: PlaceBody, lengths: z.array(z.number().int().min(1).max(90)).min(1, "Keep at least one length.").max(8) }).parse(request.body);
     const value = { ...b, lengths: [...new Set(b.lengths)].sort((x, y) => x - y) };
     await db().appSetting.upsert({ where: { key: "promote" }, create: { key: "promote", value }, update: { value } });
@@ -64,7 +64,7 @@ export async function adminPromoteRoutes(app: FastifyInstance) {
   });
 
   app.post<{ Params: { id: string } }>("/admin/promote/boosts/:id/stop", async (request) => {
-    const s = staffOf(request, "plans.manage");
+    const s = staffOf(request, "platform.plan.read+platform.plan.create+platform.plan.update+platform.plan.delete");
     const { note } = z.object({ note: z.string().trim().min(3, "Say why.").max(300) }).parse(request.body);
     const b = await db().boost.findUnique({ where: { id: request.params.id.slice(0, 40) } });
     if (!b) throw notFound("Boost not found.");
@@ -79,7 +79,7 @@ export async function adminPromoteRoutes(app: FastifyInstance) {
   const ownerOf = (tenantId: string) => db().membership.findFirst({ where: { tenantId, status: "active", role: { key: "owner" } }, select: { user: { select: { id: true, email: true } } } });
 
   app.get("/admin/promote/banners", async (request) => {
-    staffOf(request, "billing.view");
+    staffOf(request, "platform.billing.read");
     const rows = await db().banner.findMany({ orderBy: [{ status: "asc" }, { startOn: "desc" }], take: 500 });
     const tenants = new Map((await db().tenant.findMany({ where: { id: { in: rows.map((r) => r.tenantId).filter((x): x is string => !!x) } }, select: { id: true, name: true } })).map((x) => [x.id, x.name]));
     const inv = rows.map((r) => r.invoiceId).filter((x): x is string => !!x);
@@ -100,7 +100,7 @@ export async function adminPromoteRoutes(app: FastifyInstance) {
 
   // Sheetal's own banner (a bank, a builder, our own offer): free, shown when paid banners leave a spot.
   app.post("/admin/promote/banners", { bodyLimit: 4 * 1024 * 1024 }, async (request) => {
-    const s = staffOf(request, "plans.manage");
+    const s = staffOf(request, "platform.plan.read+platform.plan.create+platform.plan.update+platform.plan.delete");
     const Day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
     const b = BannerText.extend({ desktop: Picture, mobile: Picture, startOn: Day, endOn: Day }).parse(request.body);
     if (b.endOn < b.startOn) throw badRequest("The end date is before the start.");
@@ -113,7 +113,7 @@ export async function adminPromoteRoutes(app: FastifyInstance) {
   });
 
   app.post<{ Params: { id: string } }>("/admin/promote/banners/:id/review", async (request) => {
-    const s = staffOf(request, "plans.manage");
+    const s = staffOf(request, "platform.plan.read+platform.plan.create+platform.plan.update+platform.plan.delete");
     const b = z.object({ decision: z.enum(["approve", "reject"]), note: z.string().trim().max(300).optional() }).parse(request.body);
     const row = await db().banner.findUnique({ where: { id: request.params.id.slice(0, 40) } });
     if (!row) throw notFound("Banner not found.");
@@ -135,7 +135,7 @@ export async function adminPromoteRoutes(app: FastifyInstance) {
   });
 
   app.post<{ Params: { id: string } }>("/admin/promote/banners/:id/stop", async (request) => {
-    const s = staffOf(request, "plans.manage");
+    const s = staffOf(request, "platform.plan.read+platform.plan.create+platform.plan.update+platform.plan.delete");
     const { note } = z.object({ note: z.string().trim().min(3, "Say why.").max(300) }).parse(request.body);
     const row = await db().banner.findUnique({ where: { id: request.params.id.slice(0, 40) } });
     if (!row) throw notFound("Banner not found.");
