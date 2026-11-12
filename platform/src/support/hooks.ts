@@ -72,19 +72,22 @@ export function registerSupportSessions(app: FastifyInstance & { db?: Db; config
   });
 
   // The trail: every write, and every opening of a private file, while a support session is in use.
-  app.addHook("onResponse", async (request: FastifyRequest, reply) => {
+  // Written in onSend (before the answer leaves), not after it: when the caller has the answer, the audit row exists. (It used to be written after the
+  // response, so a reader that looked straight away could miss it; the CI run on main caught that twice.)
+  app.addHook("onSend", async (request: FastifyRequest, reply, payload: unknown) => {
     const s = request.support;
-    if (!s || !app.db || reply.statusCode >= 400) return;
+    if (!s || !app.db || reply.statusCode >= 400) return payload;
     const route = request.routeOptions?.url ?? request.url.split("?")[0] ?? "";
     const write = !READS.has(request.method);
     const file = !write && FILE_ROUTE.test(route);
-    if (!write && !file) return;
-    if (ALWAYS_OK.test(route)) return;
+    if (!write && !file) return payload;
+    if (ALWAYS_OK.test(route)) return payload;
     await app.db.auditLog.create({
       data: {
         tenantId: s.tenantId, actorId: s.staffId, action: write ? "impersonation.write" : "impersonation.opened_file", target: `${request.method} ${route}`, ip: request.ip,
         meta: { impersonatedBy: s.staffId, reason: s.reason, sessionId: s.id, status: reply.statusCode },
       },
     }).catch((err: unknown) => request.log.warn({ err }, "support audit row failed"));
+    return payload;
   });
 }
