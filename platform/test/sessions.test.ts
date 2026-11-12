@@ -71,7 +71,7 @@ describe("how long a sign-in lasts", () => {
 
 describe("userForToken", () => {
   const userRow = (membership: object) => ({ id: "u1", status: "active", memberships: [membership] });
-  const membership = (over: object) => ({ id: "m1", scopes: "all", allBranches: true, branches: [], role: { perms: ["leads.view"] }, tenant: { id: "t1", branches: [{ id: "b1", name: "Pokhara" }, { id: "b2", name: "Chitwan" }] }, ...over });
+  const membership = (over: object) => ({ id: "m1", scopes: "all", allBranches: true, branches: [], role: { perms: ["crm.lead.read"] }, tenant: { id: "t1", branches: [{ id: "b1", name: "Pokhara" }, { id: "b2", name: "Chitwan" }] }, ...over });
   const live = { id: "s1", userId: "u1", revokedAt: null, expiresAt: new Date(Date.now() + DAY), lastUsedAt: new Date() };
 
   it("refuses an unknown, revoked or expired token, and a user who is not active", async () => {

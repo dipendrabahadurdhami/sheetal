@@ -13,10 +13,16 @@ import { PrismaClient, type Prisma } from "@prisma/client";
 import { afterAll, describe, expect, inject, it } from "vitest";
 // @ts-expect-error -- the script is plain JavaScript without types
 import { ALLOWED_WIDENING, loadCatalogs, makeHasPerm, rewritePerms, runRewrite } from "../scripts/rewrite-role-perms.mjs";
-// @ts-expect-error -- the screens' files are plain JavaScript without types
-import { BUSINESS_TYPES, can, roleTemplatesFor } from "../../shared/src/core/rbac.js";
-import { hasPerm } from "../../platform/src/tenancy/aliases.js";
+import { hasPerm as hasPermNow } from "../../platform/src/tenancy/perms.js";
+import { oldUi } from "./permissions-oracle.js";
 import { LEGACY_ALIASES, LEGACY_PLATFORM_ALIASES } from "../../platform/src/tenancy/permissions.generated.js";
+
+// The OLD world this script moves roles out of: the frozen old screens code gives the built-in roles in old names (what a database held before the rewrite),
+// and the script's own rule is the rule the server and the screens both used before stage 1.5 (their copies of it are gone).
+const BUSINESS_TYPES: Record<string, unknown> = oldUi.BUSINESS_TYPES;
+const roleTemplatesFor = (type: string): { key: string; perms: string[] }[] => oldUi.roleTemplatesFor(type);
+const oldRule: (perms: string[], perm: string) => boolean = makeHasPerm([LEGACY_ALIASES, LEGACY_PLATFORM_ALIASES]);
+const can = (role: { perms: string[] }, perm: string) => oldRule(role.perms, perm);
 
 type Tx = Prisma.TransactionClient;
 class Rollback extends Error {}
@@ -142,15 +148,21 @@ describe("the rewrite script reads and applies the same rules as the app", () =>
   const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
   for (let i = 0; i < 200; i += 1) shapes.push(ALL_NAMES.filter(() => rnd() < 0.15));
 
-  it("answers like the server rule (platform aliases.ts) and the screens' rule (shared rbac.js)", () => {
+  it("its own rule (the rule before stage 1.5) answers a list in NEW names exactly like today's server rule", () => {
     const mine = makeHasPerm([cat.aliases, cat.platformAliases]);
+    const isNew = (entry: string) => cat.byId.has(entry.split(":")[0]);
+    let compared = 0;
     for (const perms of shapes) {
-      for (const name of ALL_NAMES) {
-        const server = hasPerm(perms, name);
-        expect(mine(perms, name), `${name} for ${perms.join(",")}`).toBe(server);
-        expect(can({ perms }, name), `screens ${name} for ${perms.join(",")}`).toBe(server);
+      if (!perms.every(isNew)) continue;                       // today's rule only understands the manifests' names
+      for (const name of cat.businessNames) {
+        expect(mine(perms, name), `${name} for ${perms.join(",")}`).toBe(hasPermNow(perms, name));
+        compared += 1;
       }
     }
+    expect(compared).toBeGreaterThan(1000);
+    // And it still reads the old world, which is what lets it prove a rewrite: an old name gives its new names, and all the new names give the old one.
+    expect(mine(["leads.view"], "crm.lead.read")).toBe(true);
+    expect(hasPermNow(["leads.view"], "crm.lead.read")).toBe(false);
   });
 
   it("rewrites a list so that a second rewrite changes nothing", () => {

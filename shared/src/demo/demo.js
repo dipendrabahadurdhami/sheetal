@@ -5,7 +5,7 @@ import { PLATFORM_ROLE_TEMPLATES, roleTemplatesFor } from "../core/rbac";
 import { CATALOG } from "../data/catalog";
 import { TODAY } from "../core/format";
 
-export const VERSION = 18;
+export const VERSION = 19;   // 19: sample roles hold the manifests' permission names (stage 1.5)
 
 // Plans: every business type has the same three. limit -1 = unlimited.
 // Starter is free, renews itself every month, and every new account starts on it: one listing, the basics only.

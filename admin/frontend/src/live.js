@@ -4,6 +4,7 @@
 // review queue; liveAdmin() holds the actions screens call (businesses, plans, staff).
 // Rules: isStaffLive() tells a screen whether to use the API or the sample data.
 
+import { can } from "@sheetal/shared/core/rbac";
 import { useCallback, useEffect, useState } from "react";
 import { useStore } from "@sheetal/shared/core/store";
 import { adminApi, adminApiReady, signedIn } from "./api";
@@ -58,17 +59,17 @@ export function useLiveStaff() {
 
   const load = useCallback(() => {
     if (!me) return;
-    const has = (p) => me.perms.includes("*") || me.perms.includes(p);
-    if (has("tenants.view")) {
+    const has = (p) => can({ perms: me.perms }, p);
+    if (has("platform.business.read")) {
       allTenants().then((rows) => update((d) => { d.tenants = rows.map(toTenant); })).catch(() => {});
       adminApi("GET", "/admin/plans").then(({ data }) => update((d) => {
         d.plans = data.map((p) => ({ id: p.id, type: p.type, name: p.name, price: p.price, yearly: p.yearly, limits: p.limits, features: p.features, active: p.active, sort: p.sort }));
       })).catch(() => {});
     }
-    if (has("staff.view")) {
+    if (has("platform.staff.read")) {
       adminApi("GET", "/admin/staff").then(({ data }) => update((d) => { d.platformStaff = data.map(toStaff); d.platformInvites = []; })).catch(() => {});
     }
-    if (has("audit.view")) {
+    if (has("platform.audit.read")) {
       adminApi("GET", "/admin/audit").then(({ data }) => update((d) => {
         d.platformActivity = data.map((a) => ({ id: a.id, who: a.actor?.userName || "System", what: what(a), at: a.createdAt }));
       })).catch(() => {});

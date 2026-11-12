@@ -76,7 +76,7 @@ beforeAll(async () => {
   await join(ids.agent!, (await role("agent")).id);
   await join(ids.pokhara!, (await role("accountant")).id, { scopes: ["Pokhara"] });
   await join(ids.reader!, await custom("reader_new", ["rentals.rental.read:branch"]));      // only the NEW name, read only
-  await join(ids.oldview!, await custom("viewer_old", ["rentals.view"]));                    // only the OLD name
+  await join(ids.oldview!, await custom("viewer_old", ["rentals.rental.read"]));                    // what the old name rentals.view stood for
 });
 afterAll(async () => { await app.close(); });
 
