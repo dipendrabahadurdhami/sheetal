@@ -149,7 +149,7 @@ export async function listingRoutes(app: FastifyInstance) {
   // without it, a short summary of every listing for the screens that work across all of them (check-ups, search, menus).
   app.get("/listings", async (request) => {
     const ws = workspaceOf(request);
-    if (!LISTING_PERMS.some(ws.can) && !ws.can("overview.view")) throw forbidden("Your role can't see listings.");
+    if (!LISTING_PERMS.some(ws.can) && !ws.can("workspace.overview.read")) throw forbidden("Your role can't see listings.");
     const q = z.object({
       page: z.coerce.number().int().min(1).optional(), per: z.coerce.number().int().min(10).max(500).default(100),
       q: z.string().trim().max(80).optional(), kind: z.enum(LISTING_KINDS).optional(),

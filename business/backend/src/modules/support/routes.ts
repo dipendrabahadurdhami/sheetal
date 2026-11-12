@@ -18,7 +18,7 @@ const Text = z.string().trim().min(2, "Write your message.").max(5000);
 
 export async function supportRoutes(app: FastifyInstance) {
   const db = () => dbOf(app);
-  const seesAll = (ws: Workspace) => ws.member.role.perms.includes("*") || ws.can("settings.business");
+  const seesAll = (ws: Workspace) => ws.member.role.perms.includes("*") || ws.can("workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete");
   const scope = (ws: Workspace) => ({ tenantId: ws.tenantId, ...(seesAll(ws) ? {} : { userId: ws.user.id }) });
   const one = async (ws: Workspace, id: string) => {
     const t = await db().supportTicket.findFirst({ where: { ...scope(ws), id: id.slice(0, 40) } });

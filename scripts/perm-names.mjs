@@ -4,7 +4,7 @@
 // How it works: an old name becomes its new names joined with "+" (all of them are needed; hasPerm understands "+"). Which map applies depends on the area:
 // Sheetal staff checks (admin/…) use the staff map, business checks use the business map ("roles.manage" is in both, with different meanings).
 // Only string literals that sit in a permission-check position are touched: staffOf(request, "x"), ws.can("x"), can(role, "x"), guard("x" / ["x", …]),
-// perm: "x", permAny: ["x", …]. Anything else (an audit action or a translation key that happens to look like a permission) is reported, never changed.
+// perm: "x", permAny: ["x", …], the helpers need(ws, "x", …) / any("x", …) / teamWith(db, id, ["x"]) and named lists (VIEW_PERMS = […]). Anything else (an audit action or a translation key that happens to look like a permission) is reported, never changed.
 // Rules: never run --apply on tests (old tests keep proving the old names still work while the alias layer is on). The role templates and the scripts that
 // rewrite stored roles keep old names on purpose until the alias layer is removed.
 
@@ -45,12 +45,42 @@ const SHAPES = [
   new RegExp(`(\\bnotifyStaff\\(\\s*[\\w()]+\\s*,\\s*)(${ONE})`, "g"),
 ];
 
+// Helpers that take permission names as their arguments (any of them is enough): every literal inside the call's brackets is a permission name.
+const LIST_CALLS = /\b(need|any|teamWith)\(/g;
+// Named lists of permissions: `const VIEW_PERMS = ["a", "b"]`, `export const AGREEMENT_PERM = "a"`.
+const CONSTANTS = new RegExp(`(\\b[A-Z][A-Z_]*PERMS?\\s*(?::\\s*[\\w\\[\\]<> ]+)?=\\s*)(${ONE}|${LIST})`, "g");
+
+/** The end (index after the closing bracket) of the call that opens at `open`, skipping brackets inside strings. -1 when it never closes. */
+function callEnd(text, open) {
+  let depth = 0; let quote = null;
+  for (let i = open; i < text.length; i++) {
+    const c = text[i];
+    if (quote) { if (c === "\\") i++; else if (c === quote) quote = null; continue; }
+    if (c === '"' || c === "'" || c === "`") { quote = c; continue; }
+    if (c === "(") depth++;
+    else if (c === ")") { depth--; if (depth === 0) return i + 1; }
+  }
+  return -1;
+}
+
 /** Rewrites the known shapes of one file's text. Returns the new text and how many names changed. */
 export function rewrite(text, kind) {
   let changed = 0;
   const swap = (lit) => lit.replace(new RegExp(`(${Q})(${NAME})\\1`, "g"), (m, q, name) => { const n = newNameFor(name, kind); if (!n) return m; changed++; return `${q}${n}${q}`; });
   let out = text;
-  for (const re of SHAPES) out = out.replace(re, (m, pre, names) => pre + swap(names));
+  for (const re of [...SHAPES, CONSTANTS]) out = out.replace(re, (m, pre, names) => pre + swap(names));
+  // need(ws, "a", "b") · any("a", "b") · teamWith(db, id, ["a"]): the whole argument list.
+  let built = ""; let from = 0;
+  for (const m of out.matchAll(LIST_CALLS)) {
+    if (m.index < from) continue;
+    const open = m.index + m[0].length - 1;
+    const end = callEnd(out, open);
+    if (end < 0) continue;
+    // A definition (`const need = (ws, ...perms) =>`) is not a call with names in it; swap() finds nothing there.
+    built += out.slice(from, open) + swap(out.slice(open, end));
+    from = end;
+  }
+  out = built + out.slice(from);
   return { text: out, changed };
 }
 

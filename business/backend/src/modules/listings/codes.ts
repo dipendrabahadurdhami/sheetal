@@ -19,12 +19,12 @@ export async function listingCodeRoutes(app: FastifyInstance) {
     const t = await db().tenant.findUniqueOrThrow({ where: { id: ws.tenantId }, select: { name: true, codePrefix: true } });
     const suggested = initialsOf(t.name);
     const prefix = t.codePrefix || suggested;
-    return { data: { prefix, custom: !!t.codePrefix, suggested, sample: listingCode(prefix, 123), canChange: ws.can("settings.business") } };
+    return { data: { prefix, custom: !!t.codePrefix, suggested, sample: listingCode(prefix, 123), canChange: ws.can("workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete") } };
   });
 
   app.put("/listings/code-prefix", async (request) => {
     const ws = workspaceOf(request);
-    if (!ws.can("settings.business")) throw forbidden("Your role can't change business settings.");
+    if (!ws.can("workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete")) throw forbidden("Your role can't change business settings.");
     const b = z.object({ prefix: z.string().trim().toUpperCase().regex(PREFIX_RE, "Use 2 to 5 letters or numbers, starting with a letter.") }).parse(request.body);
     if (b.prefix === "TMP") throw badRequest("TMP can't be used. Choose another prefix.");
     let changed = 0;

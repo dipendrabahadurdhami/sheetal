@@ -35,7 +35,7 @@ export async function growthRoutes(app: FastifyInstance, opts: { ai?: Ai; fetch?
   // ───── AI: leads from pasted text ─────
   app.post("/ai/extract-leads", { bodyLimit: 300_000, config: { rateLimit: { max: 30, timeWindow: "1 hour" } } }, async (request) => {
     const ws = workspaceOf(request);
-    need(ws, "leads.view", "messages.reply");
+    need(ws, "crm.lead.read", "crm.message.reply");
     const b = z.object({ text: z.string().trim().min(20, "Paste a bit more text.").max(60_000, "That's too long; paste up to about 10 pages at a time."), save: z.boolean().default(false) }).parse(request.body);
     await requireAiFeature(db(), ws.member.tenant.plan.name, "lead_finder");
     const a = await ai(ws);
@@ -63,7 +63,7 @@ export async function growthRoutes(app: FastifyInstance, opts: { ai?: Ai; fetch?
   // ───── Analytics ─────
   app.get("/analytics", async (request) => {
     const ws = workspaceOf(request);
-    need(ws, "overview.view", "listings.manage", "leads.view");
+    need(ws, "workspace.overview.read", "listings.listing.read+listings.listing.create+listings.listing.update+listings.listing.delete+listings.listing.publish", "crm.lead.read");
     const { days } = z.object({ days: z.coerce.number().int().min(7).max(365).default(30) }).parse(request.query);
     const since = new Date(Date.now() - days * 864e5);
     // For one branch (or staff limited to some): views of that branch's listings and its leads only.
@@ -93,7 +93,7 @@ export async function growthRoutes(app: FastifyInstance, opts: { ai?: Ai; fetch?
 
   app.get("/ota/feeds", async (request) => {
     const ws = workspaceOf(request);
-    need(ws, "calendar.view", "settings.business");
+    need(ws, "hotel.calendar.read", "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete");
     const [feeds, types] = await Promise.all([db().otaFeed.findMany({ where: { tenantId: ws.tenantId }, orderBy: { createdAt: "asc" } }), db().room.groupBy({ by: ["type"], where: { tenantId: ws.tenantId, active: true } })]);
     const api = app.config.API_URL.replace(/\/$/, "");
     return { data: {
@@ -105,7 +105,7 @@ export async function growthRoutes(app: FastifyInstance, opts: { ai?: Ai; fetch?
 
   app.post("/ota/feeds", async (request) => {
     const ws = workspaceOf(request);
-    need(ws, "calendar.edit", "settings.business");
+    need(ws, "hotel.calendar.update", "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete");
     const b = z.object({ type: z.string().trim().min(1).max(60), site: z.enum(SITES), url: z.url().refine((u) => u.startsWith("https://"), "Use the https calendar link from the site.") }).parse(request.body);
     if (!(await db().room.count({ where: { tenantId: ws.tenantId, type: b.type, active: true } }))) throw badRequest("Add rooms of this type first.");
     const f = await db().otaFeed.create({ data: { tenantId: ws.tenantId, roomType: b.type, site: b.site, url: b.url } });
@@ -115,7 +115,7 @@ export async function growthRoutes(app: FastifyInstance, opts: { ai?: Ai; fetch?
 
   app.post<{ Params: { id: string } }>("/ota/feeds/:id/sync", async (request) => {
     const ws = workspaceOf(request);
-    need(ws, "calendar.edit", "settings.business");
+    need(ws, "hotel.calendar.update", "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete");
     const f = await db().otaFeed.findFirst({ where: { id: request.params.id, tenantId: ws.tenantId } });
     if (!f) throw notFound("Feed not found.");
     const r = await syncFeed(f.id);
@@ -158,14 +158,14 @@ export async function growthRoutes(app: FastifyInstance, opts: { ai?: Ai; fetch?
   // ───── Channels: WhatsApp, Messenger, Instagram ─────
   app.get("/channels", async (request) => {
     const ws = workspaceOf(request);
-    need(ws, "settings.business", "messages.reply");
+    need(ws, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete", "crm.message.reply");
     const rows = await db().channelAccount.findMany({ where: { tenantId: ws.tenantId }, orderBy: { createdAt: "asc" } });
     return { data: rows.map(({ accessToken: _t, ...r }) => r) };
   });
 
   app.post("/channels", async (request) => {
     const ws = workspaceOf(request);
-    need(ws, "settings.business");
+    need(ws, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete");
     const b = z.object({ kind: z.enum(["whatsapp", "messenger", "instagram"]), externalId: z.string().trim().regex(/^\d{5,30}$/, "Use the numeric id from Meta."), name: z.string().trim().min(2).max(80), accessToken: z.string().trim().min(20).max(1000) }).parse(request.body);
     if (await db().channelAccount.findUnique({ where: { externalId: b.externalId } })) throw badRequest("That account is already connected.");
     await db().channelAccount.create({ data: { tenantId: ws.tenantId, kind: b.kind, externalId: b.externalId, name: b.name, accessToken: vault.seal(b.accessToken) } });
@@ -175,7 +175,7 @@ export async function growthRoutes(app: FastifyInstance, opts: { ai?: Ai; fetch?
 
   app.post<{ Params: { id: string } }>("/channels/:id/disconnect", async (request) => {
     const ws = workspaceOf(request);
-    need(ws, "settings.business");
+    need(ws, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete");
     const r = await db().channelAccount.deleteMany({ where: { id: request.params.id, tenantId: ws.tenantId } });
     if (!r.count) throw notFound("Channel not found.");
     return { message: "Disconnected." };

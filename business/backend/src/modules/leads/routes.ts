@@ -24,8 +24,8 @@ export async function leadRoutes(app: FastifyInstance, opts: { fetch?: Fetch } =
   const vault = new Vault(app.config.SECRETS_KEY, app.config.NODE_ENV === "production");
 
   async function access(ws: Workspace, request: FastifyRequest) {
-    if (!ws.can("leads.view") && !ws.can("messages.reply")) throw forbidden("Your role can't see leads.");
-    const all = ws.can("leads.assign") || ws.member.role.key === "owner";
+    if (!ws.can("crm.lead.read") && !ws.can("crm.message.reply")) throw forbidden("Your role can't see leads.");
+    const all = ws.can("crm.lead.assign") || ws.member.role.key === "owner";
     const where: Prisma.LeadWhereInput = { tenantId: ws.tenantId, ...inView(await branchView(db(), request, ws)), ...(all ? {} : { OR: [{ assigneeId: ws.user.id }, { assigneeId: null }] }) };
     return { all, where };
   }
@@ -103,7 +103,7 @@ export async function leadRoutes(app: FastifyInstance, opts: { fetch?: Fetch } =
 
   app.post<{ Params: { id: string } }>("/leads/:id/reply", { config: { rateLimit: { max: 60, timeWindow: "10 minutes" } } }, async (request) => {
     const ws = workspaceOf(request);
-    if (!ws.can("messages.reply")) throw forbidden("Your role can't reply to leads.");
+    if (!ws.can("crm.message.reply")) throw forbidden("Your role can't reply to leads.");
     const l = await one(ws, request, request.params.id);
     const { text } = z.object({ text: z.string().trim().min(1, "Write a reply.").max(5000) }).parse(request.body);
     // A chat from WhatsApp, Messenger or Instagram is answered there; everything else by email.

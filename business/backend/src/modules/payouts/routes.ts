@@ -20,7 +20,7 @@ const Day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use a date like 2026-11-04.
 
 export async function payoutRoutes(app: FastifyInstance) {
   const db = () => dbOf(app);
-  const canView = (ws: Workspace) => { if (!ws.can("payouts.view")) throw forbidden("Your role can't see payouts."); };
+  const canView = (ws: Workspace) => { if (!ws.can("invoicing.payout.read")) throw forbidden("Your role can't see payouts."); };
   const branchNames = (v: BranchView) => new Map(v.mine.map((b) => [b.id, b.name]));
 
   const present = (p: Prisma.PayoutGetPayload<object>, names: Map<string, string>) => ({

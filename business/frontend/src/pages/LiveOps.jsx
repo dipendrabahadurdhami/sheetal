@@ -40,7 +40,7 @@ export function LiveFrontDesk({ tenant, role }) {
       <div className="pf-stats">
         <Stat label="Vacant" value={count("vacant")} /><Stat label="Arriving today" value={count("arriving")} /><Stat label="In house" value={count("occupied")} /><Stat label="To clean" value={count("dirty")} tone={count("dirty") ? "action" : undefined} />
       </div>
-      <Panel title="Rooms" sub="Tap a room to check in, add to the bill, take payment or check out." actions={can(role, "settings.business") && <Button icon="plus" onClick={() => setAdding({ type: types[0] || "Deluxe", rate: 5000, nos: "", maxGuests: 2 })}>Add rooms</Button>}>
+      <Panel title="Rooms" sub="Tap a room to check in, add to the bill, take payment or check out." actions={can(role, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete") && <Button icon="plus" onClick={() => setAdding({ type: types[0] || "Deluxe", rate: 5000, nos: "", maxGuests: 2 })}>Add rooms</Button>}>
         {!rooms.length ? <Empty icon="bed-double" title="No rooms yet">Add your rooms with their type and nightly rate.</Empty> : (
           <div className="pf-room-grid pf-pad">{rooms.map((r) => (
             <button key={r.id} type="button" className={`card pf-room ${r.status}`} onClick={() => (r.bookingId ? setOpen(r.bookingId) : r.status === "dirty" ? run(toast, bizApi("PATCH", `/rooms/${r.id}`, { status: "vacant" }), reloadRooms) : null)}>
@@ -81,7 +81,7 @@ function StayDrawer({ id, rooms, role, onClose, onChange }) {
           <Field label="Room"><Select value={roomId} onChange={setRoomId} options={[{ id: "", label: "Choose…" }, ...free.map((r) => ({ id: r.id, label: `${r.no} (${r.status})` }))]} /></Field>
           <ToggleRow title="I have seen the guest's ID" sub="Citizenship, passport or driving licence. Required by law." checked={idOk} onChange={setIdOk} />
           <Button icon="log-in" disabled={!roomId || !idOk} onClick={() => act(bizApi("POST", `/bookings/${b.id}/check-in`, { roomId, idChecked: true }))}>Check in</Button>
-          {can(role, "bookings.cancel") && <Button variant="outline" className="pf-danger" onClick={() => window.confirm("Cancel this booking?") && act(bizApi("PATCH", `/bookings/${b.id}`, { status: "cancelled" }))}>Cancel booking</Button>}
+          {can(role, "hotel.booking.cancel") && <Button variant="outline" className="pf-danger" onClick={() => window.confirm("Cancel this booking?") && act(bizApi("PATCH", `/bookings/${b.id}`, { status: "cancelled" }))}>Cancel booking</Button>}
         </div></Panel>}
         <Panel title="Room bill">
           <ul className="pf-list">{b.folio.map((l) => <li key={l.id}><span style={{ flex: 1 }}>{l.what}<small className="muted tnum"> · {fdatetime(l.at)}</small></span><b className="tnum">{rs(l.amount)}</b></li>)}
@@ -91,7 +91,7 @@ function StayDrawer({ id, rooms, role, onClose, onChange }) {
         {b.status === "checked_in" && <>
           <div className="pf-row-actions"><Input placeholder="Extra, e.g. Laundry" value={extra.what} onChange={(e) => setExtra({ ...extra, what: e.target.value })} /><Input className="input tnum" placeholder="Rs." style={{ width: 110 }} value={extra.amount} onChange={(e) => setExtra({ ...extra, amount: e.target.value.replace(/\D/g, "") })} />
             <Button variant="outline" disabled={!extra.what || !extra.amount} onClick={() => act(bizApi("POST", `/bookings/${b.id}/folio`, { kind: "extra", what: extra.what, amount: Number(extra.amount) })).then(() => setExtra({ what: "", amount: "" }))}>Add</Button>
-            {can(role, "pos.discount") && <Button variant="ghost" disabled={!extra.what || !extra.amount} onClick={() => act(bizApi("POST", `/bookings/${b.id}/folio`, { kind: "discount", what: extra.what, amount: Number(extra.amount) })).then(() => setExtra({ what: "", amount: "" }))}>As discount</Button>}</div>
+            {can(role, "pos.bill.discount") && <Button variant="ghost" disabled={!extra.what || !extra.amount} onClick={() => act(bizApi("POST", `/bookings/${b.id}/folio`, { kind: "discount", what: extra.what, amount: Number(extra.amount) })).then(() => setExtra({ what: "", amount: "" }))}>As discount</Button>}</div>
           <div className="pf-row-actions"><Select value={pay.method} onChange={(v) => setPay({ ...pay, method: v })} options={PAY.map(([id, label]) => ({ id, label }))} style={{ width: 130 }} />
             <Input className="input tnum" value={pay.amount} onChange={(e) => setPay({ ...pay, amount: e.target.value.replace(/\D/g, "") })} style={{ width: 130 }} />
             <Button disabled={!Number(pay.amount)} onClick={() => act(bizApi("POST", `/bookings/${b.id}/payments`, { method: pay.method, amount: Number(pay.amount) }))}>Take payment</Button></div>
@@ -116,7 +116,7 @@ export function LiveBookings({ tenant, role }) {
   const list = (rows || []).filter((b) => groups[tab].includes(b.status));
   return (
     <>
-      <PageHead title="Bookings" sub="Every stay, from the website, other sites, phone and walk-ins." actions={can(role, "bookings.create") && <Button icon="plus" onClick={() => setForm({ type: types[0] || "", guest: "", phone: "", from: today(), to: plusDays(1), adults: 2, source: "direct" })}>New booking</Button>} />
+      <PageHead title="Bookings" sub="Every stay, from the website, other sites, phone and walk-ins." actions={can(role, "hotel.booking.create") && <Button icon="plus" onClick={() => setForm({ type: types[0] || "", guest: "", phone: "", from: today(), to: plusDays(1), adults: 2, source: "direct" })}>New booking</Button>} />
       <section className="card pf-panel">
         <div className="pf-pad-x"><Tabs value={tab} onChange={setTab} tabs={Object.keys(groups).map((g) => ({ id: g, label: { upcoming: "Upcoming", inhouse: "In house", past: "Past", cancelled: "Cancelled" }[g], count: (rows || []).filter((b) => groups[g].includes(b.status)).length }))} /></div>
         {!rows ? <p className="muted pf-pad">Loading…</p> : <Table rows={list} onRowClick={(b) => setOpen(b.id)} minWidth={820} empty={<Empty icon="clipboard-list" title="No bookings here" />} columns={[
@@ -126,7 +126,7 @@ export function LiveBookings({ tenant, role }) {
           { key: "d", label: "Stay", num: true, render: (b) => `${fdate(b.from)} – ${fdate(b.to)}` },
           { key: "a", label: "Amount", num: true, align: "right", render: (b) => rs(b.bill.total || b.amount) },
           { key: "s", label: "Status", render: (b) => <Badge tone={BK_TONE[b.status]}>{BK_WORD[b.status]}</Badge> },
-          { key: "x", label: "", align: "right", render: (b) => b.status === "requested" && can(role, "bookings.edit") && <Button size="sm" onClick={(e) => { e.stopPropagation(); run(toast, bizApi("PATCH", `/bookings/${b.id}`, { status: "confirmed" }), reload).catch(() => {}); }}>Confirm</Button> },
+          { key: "x", label: "", align: "right", render: (b) => b.status === "requested" && can(role, "hotel.booking.update") && <Button size="sm" onClick={(e) => { e.stopPropagation(); run(toast, bizApi("PATCH", `/bookings/${b.id}`, { status: "confirmed" }), reload).catch(() => {}); }}>Confirm</Button> },
         ]} />}
       </section>
       <StayDrawer id={open} rooms={rooms || []} role={role} onClose={() => { setOpen(null); reload(); }} onChange={reload} />
@@ -167,9 +167,9 @@ export function LivePOS({ tenant, role }) {
   return (
     <>
       <PageHead title="Point of sale" sub={shift ? `Shift open since ${fdatetime(shift.openedAt)} · cash expected ${rs(shift.expectedCash)}` : "No shift open. Open one to take cash."}
-        actions={<>{shift ? can(role, "shift.close") && <Button variant="outline" onClick={() => { const c = window.prompt(`Cash counted in the drawer? Expected ${shift.expectedCash}.`); if (c !== null) run(toast, bizApi("POST", "/shifts/close", { counted: Number(c.replace(/\D/g, "")) || 0 }), reloadShift).catch(() => {}); }}>Close shift</Button>
+        actions={<>{shift ? can(role, "pos.shift.close") && <Button variant="outline" onClick={() => { const c = window.prompt(`Cash counted in the drawer? Expected ${shift.expectedCash}.`); if (c !== null) run(toast, bizApi("POST", "/shifts/close", { counted: Number(c.replace(/\D/g, "")) || 0 }), reloadShift).catch(() => {}); }}>Close shift</Button>
           : <Button onClick={() => { const f = window.prompt("Opening cash float (Rs.)", "0"); if (f !== null) run(toast, bizApi("POST", "/shifts/open", { float: Number(f.replace(/\D/g, "")) || 0 }), reloadShift).catch(() => {}); }}>Open shift</Button>}
-          {can(role, "settings.business") && <Button variant="outline" icon="plus" onClick={() => setNewItem({ name: "", price: "", category: "Food", outlet: here })}>Menu item</Button>}</>} />
+          {can(role, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete") && <Button variant="outline" icon="plus" onClick={() => setNewItem({ name: "", price: "", category: "Food", outlet: here })}>Menu item</Button>}</>} />
       <div className="pf-split">
         <Panel title={here} className="grow" actions={outlets.length > 1 && <Select value={here} onChange={setOutlet} options={outlets.map((o) => ({ id: o, label: o }))} style={{ width: 180 }} />}>
           {!menu ? <p className="muted pf-pad">Loading…</p> : !items.length ? <Empty icon="utensils" title="No menu items yet">Add items with “Menu item”.</Empty>
@@ -178,7 +178,7 @@ export function LivePOS({ tenant, role }) {
         <Panel title="Bill" className="side" pad>
           <div className="pf-stack">
             {!cart.length ? <p className="muted">Tap items to add them.</p> : <ul className="pf-list">{cart.map((l, i) => <li key={i}><span style={{ flex: 1 }}>{l.name} × {l.qty}</span><b className="tnum">{rs(l.qty * l.price)}</b><button type="button" className="btn btn-ghost btn-icon btn-sm" aria-label={`Remove ${l.name}`} onClick={() => setCart((c) => c.filter((_, j) => j !== i))}><Icon name="x" size={14} /></button></li>)}</ul>}
-            {can(role, "pos.discount") && <Field label="Discount (Rs.)"><Input className="input tnum" value={discount} onChange={(e) => setDiscount(e.target.value.replace(/\D/g, ""))} /></Field>}
+            {can(role, "pos.bill.discount") && <Field label="Discount (Rs.)"><Input className="input tnum" value={discount} onChange={(e) => setDiscount(e.target.value.replace(/\D/g, ""))} /></Field>}
             <dl className="pf-kv"><dt>Subtotal</dt><dd className="tnum">{rs(sub)}</dd><dt>Service 10%</dt><dd className="tnum">{rs(svc)}</dd><dt>VAT 13%</dt><dd className="tnum">{rs(vat)}</dd><dt>Total</dt><dd className="tnum"><b>{rs(base + svc + vat)}</b></dd></dl>
             <Field label="Paid by"><Select value={method} onChange={setMethod} options={[...PAY.filter(([id]) => id !== "bank"), ...(inHouse.length ? [["room", "Put on a room"]] : [])].map(([id, label]) => ({ id, label }))} /></Field>
             {method === "room" && <Field label="Room"><Select value={bookingId} onChange={setBookingId} options={[{ id: "", label: "Choose…" }, ...inHouse.map((r) => ({ id: r.bookingId, label: `${r.no} · ${r.guest}` }))]} /></Field>}
@@ -213,9 +213,9 @@ export function LiveProjects({ tenant, role }) {
       <PageHead title="Projects" sub="Units, holds, reservations and what each buyer has paid." />
       <Tabs value={tab} onChange={setTab} tabs={[{ id: "units", label: "Units", icon: "layout-grid" }, { id: "reservations", label: "Reservations and collections", icon: "wallet", count: reservations?.filter((r) => r.status === "reserved").length }]} />
       {tab === "units" && (!projects.length ? <Empty icon="building-2" title="No project listings yet">Post a project from Listings first; its units are managed here.</Empty> : projects.map((p) => (
-        <Panel key={p.id} title={p.title} sub={`${p.code} · ${p.summary.available} free · ${p.summary.held} held · ${p.summary.reserved} reserved · ${p.summary.sold} sold`} actions={can(role, "projects.manage") && <Button size="sm" icon="plus" onClick={() => setAdding({ projectId: p.id, block: "A", type: "2BHK", price: "", nos: "" })}>Add units</Button>}>
+        <Panel key={p.id} title={p.title} sub={`${p.code} · ${p.summary.available} free · ${p.summary.held} held · ${p.summary.reserved} reserved · ${p.summary.sold} sold`} actions={can(role, "projects.project.read+projects.project.create+projects.project.update+projects.project.delete") && <Button size="sm" icon="plus" onClick={() => setAdding({ projectId: p.id, block: "A", type: "2BHK", price: "", nos: "" })}>Add units</Button>}>
           {!p.units.length ? <p className="muted pf-pad">No units yet.</p> : <div className="pf-room-grid pf-pad">{p.units.map((u) => (
-            <button key={u.id} type="button" className={`card pf-room ${u.status}`} onClick={() => (u.status === "available" || u.status === "held") && can(role, "reservations.manage") && setReserve({ unit: u, buyer: "", phone: "", plan: "" })}>
+            <button key={u.id} type="button" className={`card pf-room ${u.status}`} onClick={() => (u.status === "available" || u.status === "held") && can(role, "projects.reservation.read+projects.reservation.create+projects.reservation.update+projects.reservation.delete") && setReserve({ unit: u, buyer: "", phone: "", plan: "" })}>
               <b className="tnum">{u.block}{u.no}</b><Badge tone={UNIT_TONE[u.status]}>{u.status}</Badge><span className="small muted">{u.type}{u.sizeSqft ? ` · ${u.sizeSqft} sq ft` : ""}</span><span className="tnum small">{rs(u.price)}</span>
               {u.status === "available" && <span className="small pf-tone-action" onClick={(e) => { e.stopPropagation(); run(toast, bizApi("POST", `/units/${u.id}/hold`, { days: 3 }), reload).catch(() => {}); }}>Hold 3 days</span>}
             </button>))}</div>}
@@ -245,12 +245,12 @@ export function LiveProjects({ tenant, role }) {
         {res && <div className="pf-stack">
           {res.plan.length > 0 && <ul className="pf-list">{res.plan.map((s, i) => <li key={i}><span style={{ flex: 1 }}>{s.label} · {fdate(s.due)}</span><span className="tnum">{rs(s.paid)} / {rs(s.amount)}</span><Badge tone={s.done ? "done" : s.overdue ? "problem" : "neutral"}>{s.done ? "Paid" : s.overdue ? "Overdue" : "Due"}</Badge></li>)}</ul>}
           <ul className="pf-list">{res.collections.map((c) => <li key={c.id}><span style={{ flex: 1 }}>{c.method}{c.ref ? ` · ${c.ref}` : ""}<small className="muted"> · {fdatetime(c.at)}</small></span><b className="tnum">{rs(c.amount)}</b></li>)}</ul>
-          {res.status === "reserved" && can(role, "collect.payments") && <div className="pf-row-actions">
+          {res.status === "reserved" && can(role, "collections.payment.read+collections.payment.create") && <div className="pf-row-actions">
             <Select value={pay.method} onChange={(v) => setPay({ ...pay, method: v })} options={["bank", "cash", "cheque", "fonepay", "esewa", "khalti"].map((x) => ({ id: x, label: x }))} style={{ width: 120 }} />
             <Input className="input tnum" placeholder="Rs." value={pay.amount} onChange={(e) => setPay({ ...pay, amount: e.target.value.replace(/\D/g, "") })} style={{ width: 140 }} />
             <Input placeholder="Reference" value={pay.ref} onChange={(e) => setPay({ ...pay, ref: e.target.value })} style={{ width: 140 }} />
             <Button disabled={!Number(pay.amount)} onClick={() => run(toast, bizApi("POST", `/reservations/${res.id}/collections`, { amount: Number(pay.amount), method: pay.method, ref: pay.ref || undefined }), (r) => { setRes(r.data); setPay({ amount: "", method: "bank", ref: "" }); both(); }).catch(() => {})}>Record payment</Button></div>}
-          {res.status === "reserved" && can(role, "reservations.manage") && <Button variant="outline" className="pf-danger" onClick={() => { const note = window.prompt("Why is it cancelled?"); if (note?.trim()) run(toast, bizApi("POST", `/reservations/${res.id}/cancel`, { note }), () => { setRes(null); both(); }).catch(() => {}); }}>Cancel reservation</Button>}
+          {res.status === "reserved" && can(role, "projects.reservation.read+projects.reservation.create+projects.reservation.update+projects.reservation.delete") && <Button variant="outline" className="pf-danger" onClick={() => { const note = window.prompt("Why is it cancelled?"); if (note?.trim()) run(toast, bizApi("POST", `/reservations/${res.id}/cancel`, { note }), () => { setRes(null); both(); }).catch(() => {}); }}>Cancel reservation</Button>}
         </div>}
       </Drawer>
     </>
@@ -269,12 +269,12 @@ export function LiveInvestors({ tenant, role }) {
       <PageHead title="Investors" sub="Pledges, payments and updates for each investment." />
       {!list.length ? <Empty icon="hand-coins" title="No investment listings yet">Post an investment from Listings first.</Empty> : list.map((inv) => (
         <Panel key={inv.id} title={inv.title} sub={`${inv.code} · raised ${rs(inv.paid)} paid, ${rs(inv.pledged)} pledged${inv.target ? ` of ${rs(inv.target)}` : ""}`}
-          actions={<>{can(role, "updates.post") && <Button size="sm" variant="outline" icon="send" onClick={() => setPost({ id: inv.id, title: "", body: "" })}>Post update</Button>}{can(role, "investments.manage") && <Button size="sm" icon="plus" onClick={() => setAdd({ id: inv.id, name: "", email: "", phone: "", amount: "" })}>Add investor</Button>}</>}>
+          actions={<>{can(role, "investments.update.create") && <Button size="sm" variant="outline" icon="send" onClick={() => setPost({ id: inv.id, title: "", body: "" })}>Post update</Button>}{can(role, "investments.offering.read+investments.offering.create+investments.offering.update+investments.offering.delete") && <Button size="sm" icon="plus" onClick={() => setAdd({ id: inv.id, name: "", email: "", phone: "", amount: "" })}>Add investor</Button>}</>}>
           <Table rows={inv.investors} minWidth={600} empty={<Empty icon="users" title="No investors yet" />} columns={[
             { key: "n", label: "Investor", render: (c) => <span className="pf-two"><b>{c.name}</b><small>{[c.email, c.phone].filter(Boolean).join(" · ")}</small></span> },
             { key: "a", label: "Amount", num: true, align: "right", render: (c) => rs(c.amount) },
             { key: "s", label: "Status", render: (c) => <Badge tone={{ pledged: "action", paid: "done", refunded: "neutral" }[c.status]}>{c.status}</Badge> },
-            { key: "x", label: "", align: "right", render: (c) => can(role, "investments.manage") && c.status === "pledged" && <Button size="sm" onClick={() => { const ref = window.prompt("Payment reference (optional)") ?? undefined; run(toast, bizApi("PATCH", `/commitments/${c.id}`, { status: "paid", ref: ref || undefined }), reload).catch(() => {}); }}>Mark paid</Button> },
+            { key: "x", label: "", align: "right", render: (c) => can(role, "investments.offering.read+investments.offering.create+investments.offering.update+investments.offering.delete") && c.status === "pledged" && <Button size="sm" onClick={() => { const ref = window.prompt("Payment reference (optional)") ?? undefined; run(toast, bizApi("PATCH", `/commitments/${c.id}`, { status: "paid", ref: ref || undefined }), reload).catch(() => {}); }}>Mark paid</Button> },
           ]} />
           {inv.updates.length > 0 && <ul className="pf-list">{inv.updates.slice(0, 3).map((u) => <li key={u.id}><span className="pf-two"><b>{u.title}</b><small className="muted">{fdatetime(u.at)}</small></span></li>)}</ul>}
         </Panel>))}
@@ -312,7 +312,7 @@ function BranchCalendar({ tenant, role }) {
   const [cal, reload] = useApi(`/calendar?month=${month}${type ? `&type=${encodeURIComponent(type)}` : ""}`, [tenant.id]);
   const [rule, setRule] = useState(null);
   useEffect(() => { if (cal?.rule) setRule(cal.rule); }, [cal?.type, cal?.rule?.weekendPct, cal?.rule?.minNights]);
-  const edit = can(role, "calendar.edit");
+  const edit = can(role, "hotel.calendar.update");
   const act = (p) => { setBusy(true); run(toast, p, () => { setSel([]); setPrice(""); reload(); }).catch(() => {}).finally(() => setBusy(false)); };
   const setDays = (body) => act(bizApi("PUT", "/calendar/days", { type: cal.type, days: sel, ...body }));
   const go = (d) => { const m = ym[1] + d; setYm([ym[0] + Math.floor(m / 12), ((m % 12) + 12) % 12]); setSel([]); };

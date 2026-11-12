@@ -18,7 +18,7 @@ const MAX_DOCS = 10;
 
 export async function verificationRoutes(app: FastifyInstance) {
   const db = () => dbOf(app);
-  const manage = (ws: Workspace) => { if (!ws.can("settings.business")) throw forbidden("Your role can't handle business verification."); };
+  const manage = (ws: Workspace) => { if (!ws.can("workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete")) throw forbidden("Your role can't handle business verification."); };
   const status = async (ws: Workspace) => db().tenant.findUniqueOrThrow({ where: { id: ws.tenantId }, select: { name: true, verification: true, verificationNote: true, verifiedAt: true } });
   const editable = (s: string) => { if (s === "pending") throw badRequest("Your documents are being checked. Wait for the result, or ask Sheetal support."); if (s === "verified") throw badRequest("Your business is verified. Ask Sheetal support to change documents."); };
 

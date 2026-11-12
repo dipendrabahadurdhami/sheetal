@@ -21,7 +21,7 @@ export async function otaRoutes(app: FastifyInstance) {
 
   app.get("/ota/requests", async (request) => {
     const ws = workspaceOf(request);
-    need(ws, "calendar.view", "settings.business");
+    need(ws, "hotel.calendar.read", "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete");
     const q = z.object({ listingId: z.coerce.number().int().positive().optional() }).parse(request.query);
     const v = await branchView(db(), request, ws);
     const [rows, set, acc] = await Promise.all([db().otaRequest.findMany({ where: { tenantId: ws.tenantId, ...inView(v), ...(q.listingId ? { listingId: q.listingId } : {}) }, orderBy: { createdAt: "desc" }, take: 300 }), otaSettings(db()), otaAccounts(db())]);
@@ -38,7 +38,7 @@ export async function otaRoutes(app: FastifyInstance) {
 
   app.post("/ota/requests", async (request, reply) => {
     const ws = workspaceOf(request);
-    need(ws, "calendar.edit", "settings.business");
+    need(ws, "hotel.calendar.update", "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete");
     const b = z.object({ listingId: z.number().int().positive(), channel: z.string().max(20), price: z.number().int().min(0, "Mark-up can't be below 0.").max(100, "Mark-up can't be above 100."), note: z.string().trim().max(500).optional() }).strict().parse(request.body); // strict: unknown fields are refused, not ignored
     const r = await askForChannel(db(), { tenant: { id: ws.tenantId, name: ws.member.tenant.name, type: ws.member.tenant.type }, ...b, who: ws.user.userName });
     return reply.code(201).send({ message: "Sent. Sheetal's team will set it up and tell you here.", data: presentRequest(r) });
@@ -46,7 +46,7 @@ export async function otaRoutes(app: FastifyInstance) {
 
   app.post<{ Params: { id: string } }>("/ota/requests/:id/reply", { bodyLimit: 40_000_000 }, async (request) => {
     const ws = workspaceOf(request);
-    need(ws, "calendar.edit", "settings.business");
+    need(ws, "hotel.calendar.update", "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete");
     const b = z.object({ text: z.string().trim().max(1000).default(""), files: z.array(z.object({ data: z.string().max(14_000_000) })).max(3, "Up to 3 files.").default([]) }).parse(request.body);
     if (!b.text && !b.files.length) throw badRequest("Write an answer or add a file.");
     const names: string[] = [];
@@ -57,7 +57,7 @@ export async function otaRoutes(app: FastifyInstance) {
 
   app.post<{ Params: { id: string } }>("/ota/requests/:id/pause", async (request) => {
     const ws = workspaceOf(request);
-    need(ws, "calendar.edit", "settings.business");
+    need(ws, "hotel.calendar.update", "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete");
     const r = await pauseRequest(db(), { tenantId: ws.tenantId, id: request.params.id, who: ws.user.userName });
     return { message: "Done. Sheetal's team will take it down.", data: presentRequest(r) };
   });

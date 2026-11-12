@@ -43,4 +43,4 @@ export async function teamWith(db: Db, tenantId: string, perms: string[], branch
 }
 
 /** Everyone in a business whose role can see leads (owners always). */
-export const leadPeople = (db: Db, tenantId: string, branchId?: string | null) => teamWith(db, tenantId, ["leads.view", "messages.reply"], branchId);
+export const leadPeople = (db: Db, tenantId: string, branchId?: string | null) => teamWith(db, tenantId, ["crm.lead.read", "crm.message.reply"], branchId);

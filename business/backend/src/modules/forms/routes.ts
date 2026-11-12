@@ -47,7 +47,7 @@ export async function formRoutes(app: FastifyInstance) {
 
   const access = (request: FastifyRequest) => {
     const ws = workspaceOf(request);
-    if (!ws.can("messages.reply") && !ws.can("leads.view") && !ws.can("settings.business")) throw forbidden("Your role can't use forms.");
+    if (!ws.can("crm.message.reply") && !ws.can("crm.lead.read") && !ws.can("workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete")) throw forbidden("Your role can't use forms.");
     return ws;
   };
   const scope = async (ws: Workspace, request: FastifyRequest) => ({ tenantId: ws.tenantId, ...inView(await branchView(db(), request, ws)) });
@@ -75,7 +75,7 @@ export async function formRoutes(app: FastifyInstance) {
     ]);
     if (!m) throw badRequest("Pick someone in your team to get the leads.");
     if (!worksAt(m, branchId, br?.name)) throw badRequest(`They don't work at ${br?.name}. Give them that branch on the Team page first.`);
-    if (!["leads.view", "messages.reply"].some((p) => hasPerm(m.role.perms, p))) throw badRequest("Their role can't see leads. Pick someone who can, or leave it unassigned.");
+    if (!["crm.lead.read", "crm.message.reply"].some((p) => hasPerm(m.role.perms, p))) throw badRequest("Their role can't see leads. Pick someone who can, or leave it unassigned.");
     return userId;
   };
   const limitsFor = async (tenantId: string) => {
