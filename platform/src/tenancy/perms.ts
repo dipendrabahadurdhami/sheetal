@@ -3,7 +3,7 @@
 // The screens have the same rule in JavaScript (shared/src/core/rbac.js); platform/test/tenancy-context.test.ts runs both against the same cases.
 // How it works: a role holds "*" (everything) or grants "app.resource.action" with an optional ":scope". A check names a permission, or several joined
 // with "+" (all are needed). The scope does not change whether a name is held.
-// Rules: only the names of the app manifests. The old names ("leads.view") are NOT understood here any more: stored roles were rewritten by
+// Rules: only the names of the app manifests. The old dotted names are NOT understood here any more: stored roles were rewritten by
 // backend-core/scripts/rewrite-role-perms.mjs (the old list is kept in roles.perms_v1), and a test forbids an old name anywhere outside that script.
 
 /** Does the list hold this exact name, with or without a ":scope" suffix? */
