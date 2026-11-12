@@ -109,6 +109,7 @@ const manifest = {
   dependencies: { requires: [], optional: [], reads: [] },
   models: [
     "AppSetting",
+    "HelpGuide",
     "User",
     "Session",
     "EmailToken",
