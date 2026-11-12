@@ -32,6 +32,14 @@ export const STAFF_FOR = {
   leads: "platform.business.read",
   /** Requests about a business that staff act on (plan upgrades, channel requests). */
   businessRequests: "platform.business.read+platform.business.create+platform.business.update",
+  /** Businesses that sent their papers to be verified. */
+  verification: "platform.verification.review",
+  /** Payments to check by hand (bank transfers). */
+  billing: "platform.billing.read",
+  /** Plans and paid promotion (banner pictures to check). */
+  plans: "platform.plan.read+platform.plan.create+platform.plan.update+platform.plan.delete",
+  /** Messages a business sends to Sheetal's support. */
+  support: "platform.business.read",
 } as const;
 
 /** Sheetal staff whose platform role covers `perm` (super admins always). */

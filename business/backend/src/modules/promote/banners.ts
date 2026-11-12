@@ -11,7 +11,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { dbOf } from "@sheetal/backend-core/lib/db";
 import { badRequest, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
-import { notifyStaff } from "@sheetal/backend-core/lib/notify";
+import { STAFF_FOR, notifyStaff } from "@sheetal/backend-core/lib/notify";
 import { dayOf, ymd } from "@sheetal/backend-core/domain/money";
 import { billingSettings, createAddonInvoice, invoiceNumber } from "@sheetal/backend-core/domain/billing";
 import { addDays, promoteSettings, today } from "@sheetal/backend-core/domain/promote";
@@ -110,7 +110,7 @@ export async function bannerRoutes(app: FastifyInstance) {
     const mobile = b.mobile ? await saveBannerPicture(app.config.MEDIA_DIR, b.mobile.data, "mobile") : row.mobile;
     const back = row.status === "rejected" ? "review" : row.status;
     await db().banner.update({ where: { id: row.id }, data: { desktop, mobile, link: b.link, title: b.title, button: b.button, status: back, reviewNote: back === "review" ? null : row.reviewNote } });
-    if (row.status === "rejected") await notifyStaff(db(), "plans.manage", { type: "promote", title: `Banner picture to check again: ${bannerNo(row.seq)}`, message: ws.member.tenant.name, link: "/admin/promote" });
+    if (row.status === "rejected") await notifyStaff(db(), STAFF_FOR.plans, { type: "promote", title: `Banner picture to check again: ${bannerNo(row.seq)}`, message: ws.member.tenant.name, link: "/admin/promote" });
     await audit(ws, request.ip, "promote.banner_changed", bannerNo(row.seq));
     return { message: row.status === "rejected" ? "Sent to Sheetal to check again." : "Saved." };
   });

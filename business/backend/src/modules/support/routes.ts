@@ -10,7 +10,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { dbOf } from "@sheetal/backend-core/lib/db";
 import { badRequest, notFound } from "@sheetal/backend-core/lib/errors";
-import { notifyStaff } from "@sheetal/backend-core/lib/notify";
+import { STAFF_FOR, notifyStaff } from "@sheetal/backend-core/lib/notify";
 import { workspaceOf, type Workspace } from "../access.js";
 
 export const ticketNo = (seq: number) => `SUP-${String(seq).padStart(4, "0")}`;
@@ -25,7 +25,7 @@ export async function supportRoutes(app: FastifyInstance) {
     if (!t) throw notFound("Message not found.");
     return t;
   };
-  const tellStaff = (ws: Workspace, title: string, message: string) => notifyStaff(db(), "tenants.view", { type: "support", title, message: message.slice(0, 140), link: "/admin/inbox" });
+  const tellStaff = (ws: Workspace, title: string, message: string) => notifyStaff(db(), STAFF_FOR.support, { type: "support", title, message: message.slice(0, 140), link: "/admin/inbox" });
   const audit = (ws: Workspace, request: FastifyRequest, action: string, target: string) => db().auditLog.create({ data: { tenantId: ws.tenantId, actorId: ws.user.id, action, target, ip: request.ip } });
 
   app.get("/support", async (request) => {

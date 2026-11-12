@@ -9,7 +9,7 @@ import { z } from "zod";
 import { dbOf } from "@sheetal/backend-core/lib/db";
 import { badRequest, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
 import { readPrivateFile, savePrivateFile } from "@sheetal/backend-core/lib/files";
-import { notifyStaff } from "@sheetal/backend-core/lib/notify";
+import { STAFF_FOR, notifyStaff } from "@sheetal/backend-core/lib/notify";
 import { workspaceOf, type Workspace } from "../access.js";
 
 export const DOC_KINDS = ["registration", "pan", "owner_id", "other"] as const;
@@ -74,7 +74,7 @@ export async function verificationRoutes(app: FastifyInstance) {
     if (missing.length) throw badRequest(`Add the ${missing.map((k) => (k === "pan" ? "PAN/VAT certificate" : "company registration certificate")).join(" and ")} first.`);
     await db().tenant.update({ where: { id: ws.tenantId }, data: { verification: "pending", verificationNote: null } });
     await db().auditLog.create({ data: { actorId: ws.user.id, tenantId: ws.tenantId, action: "verification.submitted", target: t.name, ip: request.ip } });
-    await notifyStaff(db(), "moderation.kyc", { type: "verification", title: "Business to verify", message: t.name, link: "/admin/moderation" });
+    await notifyStaff(db(), STAFF_FOR.verification, { type: "verification", title: "Business to verify", message: t.name, link: "/admin/moderation" });
     return { message: "Sent to Sheetal. We usually check documents within a working day." };
   });
 }

@@ -38,3 +38,12 @@ After this update the servers and the screens understand ONLY the new permission
 ## Old names that remain, on purpose (data, never read at run time)
 `platform/src/tenancy/legacy-v1.ts` and the `LEGACY_*` exports of the generated files (the rewrite script, `check-manifests` and the proofs read them),
 `backend-core/test/permissions-oracle.ts` (frozen), `roles.perms_v1` (the backup column).
+
+## Staff roles: three small additions that were already decided (ACCESS.md section 7)
+Staff roles now come from the platform manifest. It gives, as designed in Phase 0: `finance` may see connection status, prices and revenue reports
+(`platform.integration.read`, `platform.pricing.manage`, `platform.revenue.read`); `operations` and `support` may see connection status. Nobody but the
+super admin can change a connection or see a key. `admin/backend/test/integrations.test.ts` was updated for this (finance sees, content editor is refused).
+
+## Staff notices
+Business code named the staff to tell with an old staff permission name. It now names the work (`STAFF_FOR.verification`, `.billing`, `.plans`, `.support`,
+`.listingReview` in `platform/src/notify/index.ts`). A guard in `no-old-names.test.js` keeps it so.

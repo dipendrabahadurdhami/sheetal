@@ -60,6 +60,12 @@ describe("no old permission name is checked anywhere", () => {
     expect(found).toEqual(LOOK_ALIKES);
   });
 
+  it("a staff notice names a staff permission of the manifest, never an old name", () => {
+    const bad = [];
+    for (const f of files) for (const m of read(f).matchAll(/notifyStaff\([^,]*,\s*"([^"]+)"/g)) if (!m[1].split("+").every((p) => p.startsWith("platform."))) bad.push(`${f}: ${m[1]}`);
+    expect(bad).toEqual([]);
+  });
+
   it("the alias layer is gone and nothing at run time reads the legacy tables", () => {
     expect(existsSync(join(root, "platform/src/tenancy/aliases.ts"))).toBe(false);
     const readers = files.filter((f) => /LEGACY_(ALIASES|PLATFORM_ALIASES|TEMPLATES|PLATFORM_ROLES|BUSINESS_GROUPS|PLATFORM_GROUPS)/.test(read(f)));
