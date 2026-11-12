@@ -11,8 +11,8 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Form as FormRow, Prisma } from "@prisma/client";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { badRequest, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
+import { dbOf } from "@sheetal/platform/db/client";
+import { badRequest, forbidden, notFound } from "@sheetal/platform/core/errors";
 import { readPrivateFile } from "@sheetal/backend-core/lib/files";
 import { worksAt } from "@sheetal/backend-core/domain/branches";
 import { hasPerm } from "@sheetal/backend-core/domain/permissions";

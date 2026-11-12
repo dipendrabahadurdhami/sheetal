@@ -10,10 +10,10 @@
 
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { AppError, badRequest, forbidden } from "@sheetal/backend-core/lib/errors";
-import { sha256 } from "@sheetal/backend-core/lib/secrets";
-import { leadPeople, notify } from "@sheetal/backend-core/lib/notify";
+import { dbOf } from "@sheetal/platform/db/client";
+import { AppError, badRequest, forbidden } from "@sheetal/platform/core/errors";
+import { sha256 } from "@sheetal/platform/auth/secrets";
+import { leadPeople, notify } from "@sheetal/platform/notify/index";
 import { headOffice } from "@sheetal/backend-core/domain/branches";
 import { dayOf, ymd } from "@sheetal/backend-core/domain/money";
 import { listingCard, mediaBase } from "../catalog/present.js";

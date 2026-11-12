@@ -9,8 +9,8 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Booking, FolioLine, GuestPayment, Prisma, Room } from "@prisma/client";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { badRequest, conflict, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
+import { dbOf } from "@sheetal/platform/db/client";
+import { badRequest, conflict, forbidden, notFound } from "@sheetal/platform/core/errors";
 import { dayOf, hotelBill, nightsBetween, ymd } from "@sheetal/backend-core/domain/money";
 import { nightsOf, quoteStay } from "@sheetal/backend-core/domain/rates";
 import { branchFor, branchView, inView, workspaceOf, type Workspace } from "../access.js";

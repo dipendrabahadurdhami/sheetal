@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildBaseApp } from "../src/app.js";
-import { loadConfig } from "../src/config.js";
+import { loadConfig } from "@sheetal/platform/core/config";
 
 describe("CORS", () => {
   it("lets the panels edit and delete from the browser", async () => {

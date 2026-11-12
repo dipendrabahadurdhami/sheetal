@@ -8,9 +8,9 @@
 
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { badRequest, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
-import { newToken, sha256 } from "@sheetal/backend-core/lib/secrets";
+import { dbOf } from "@sheetal/platform/db/client";
+import { badRequest, forbidden, notFound } from "@sheetal/platform/core/errors";
+import { newToken, sha256 } from "@sheetal/platform/auth/secrets";
 import { workspaceOf, type Workspace } from "../access.js";
 
 export const KEY_SCOPES = ["listings.read", "leads.write", "bookings.read"] as const;

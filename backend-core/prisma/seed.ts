@@ -5,7 +5,7 @@
 // without a password and a one-time "set your password" link is printed instead.
 import { PrismaClient } from "@prisma/client";
 import { PLANS } from "../src/domain/plans.js";
-import { hashPassword, newToken, sha256 } from "../src/lib/secrets.js";
+import { hashPassword, newToken, sha256 } from "@sheetal/platform/auth/secrets";
 import { createWorkspace } from "../src/modules/accounts/workspace.js";
 
 for (const file of [".env", "../.env"]) { try { process.loadEnvFile(file); } catch { /* optional */ } }

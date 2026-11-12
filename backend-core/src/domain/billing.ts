@@ -9,11 +9,11 @@
 // Applying a payment is safe to repeat. Covered businesses follow their Pro business's plan.
 
 import type { Invoice, Plan, Prisma, Tenant } from "@prisma/client";
-import type { Db } from "../lib/db.js";
+import type { Db } from "@sheetal/platform/db/client";
 import type { Mailer } from "../lib/mailer.js";
-import { Vault } from "../lib/vault.js";
+import { Vault } from "@sheetal/platform/auth/vault";
 import { ESEWA_TEST, type Mode } from "../lib/payments.js";
-import { notify, notifyStaff } from "../lib/notify.js";
+import { notify, notifyStaff } from "@sheetal/platform/notify/index";
 import { priceFor, starterPlanId } from "./plans.js";
 import type { BusinessType } from "./permissions.js";
 import { applyAddonLines, endAddons, linesTotal, renewalLines, type AddonLine } from "./addons.js";

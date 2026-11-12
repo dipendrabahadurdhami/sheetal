@@ -8,8 +8,8 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { badRequest, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
+import { dbOf } from "@sheetal/platform/db/client";
+import { badRequest, forbidden, notFound } from "@sheetal/platform/core/errors";
 import { hotelBill } from "@sheetal/backend-core/domain/money";
 import { reverseSale, saleMoves } from "@sheetal/backend-core/domain/stock";
 import { branchFor, branchView, inView, workspaceOf, type BranchView, type Workspace } from "../access.js";

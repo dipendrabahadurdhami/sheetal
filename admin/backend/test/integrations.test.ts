@@ -5,12 +5,12 @@
 // follow (so billing's gateways() and the old screens keep working), and that the migrate copy is idempotent and deletes nothing.
 // Rules: only a staff role with platform.integration.manage may change a connection; secrets are write-only; test and live keys never mix.
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
-import type {} from "@sheetal/backend-core/test/setup-db";
+import type {} from "@sheetal/platform/test/setup-db";
 import type { FastifyInstance } from "fastify";
-import { loadConfig } from "@sheetal/backend-core/config";
+import { loadConfig } from "@sheetal/platform/core/config";
 import { createSession } from "@sheetal/backend-core/modules/auth/sessions";
 import { gateways } from "@sheetal/backend-core/domain/billing";
-import { Vault } from "@sheetal/backend-core/lib/vault";
+import { Vault } from "@sheetal/platform/auth/vault";
 import { importLegacy } from "@sheetal/platform/integrations/legacy";
 import { buildApp } from "../src/app.js";
 import { adminJobs, adminPlatformJobs } from "../src/jobs.js";

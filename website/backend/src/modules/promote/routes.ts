@@ -6,7 +6,7 @@
 
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
+import { dbOf } from "@sheetal/platform/db/client";
 import { isBotRequest } from "@sheetal/backend-core/lib/bots";
 import { dayOf } from "@sheetal/backend-core/domain/money";
 import { PLACES, today } from "@sheetal/backend-core/domain/promote";

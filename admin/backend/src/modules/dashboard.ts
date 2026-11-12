@@ -9,7 +9,7 @@
 // moderation.listings, moderation.kyc, tenants.view, plans.manage); counts only, no personal details; whole rupees.
 
 import type { FastifyInstance } from "fastify";
-import { dbOf } from "@sheetal/backend-core/lib/db";
+import { dbOf } from "@sheetal/platform/db/client";
 import { nepalDay } from "@sheetal/backend-core/domain/payouts";
 import { computeEarnings } from "./earnings.js";
 import { staffOf } from "./routes.js";

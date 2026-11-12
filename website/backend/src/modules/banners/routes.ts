@@ -6,7 +6,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { cached } from "@sheetal/backend-core/lib/cache";
-import { dbOf } from "@sheetal/backend-core/lib/db";
+import { dbOf } from "@sheetal/platform/db/client";
 import { isBotRequest } from "@sheetal/backend-core/lib/bots";
 import { mediaBase } from "@sheetal/backend-core/lib/photos";
 import { liveBanners } from "@sheetal/backend-core/domain/banners";

@@ -2,8 +2,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import type { FastifyInstance } from "fastify";
 import { buildBaseApp as buildApp } from "../src/app.js";
-import { loadConfig } from "../src/config.js";
-import { AppError } from "../src/lib/errors.js";
+import { loadConfig } from "@sheetal/platform/core/config";
+import { AppError } from "@sheetal/platform/core/errors";
 
 const config = (extra: Record<string, string> = {}) => loadConfig({ NODE_ENV: "test", LOG_LEVEL: "silent", ...extra });
 let app: FastifyInstance;

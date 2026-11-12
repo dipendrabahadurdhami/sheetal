@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import type {} from "@sheetal/backend-core/test/setup-db";
+import type {} from "@sheetal/platform/test/setup-db";
 import type { FastifyInstance } from "fastify";
-import { loadConfig } from "@sheetal/backend-core/config";
+import { loadConfig } from "@sheetal/platform/core/config";
 import { PLANS } from "@sheetal/backend-core/domain/plans";
-import { hashPassword } from "@sheetal/backend-core/lib/secrets";
+import { hashPassword } from "@sheetal/platform/auth/secrets";
 import { buildApp } from "../src/app.js";
 
 // Platform settings that reach sign-in and sign-up: max login attempts and trial days.

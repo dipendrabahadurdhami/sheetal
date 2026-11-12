@@ -10,9 +10,9 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Listing, ListingPhoto, ListingStatus, Prisma } from "@prisma/client";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { STAFF_FOR, notifyStaff } from "@sheetal/backend-core/lib/notify";
-import { AppError, badRequest, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
+import { dbOf } from "@sheetal/platform/db/client";
+import { STAFF_FOR, notifyStaff } from "@sheetal/platform/notify/index";
+import { AppError, badRequest, forbidden, notFound } from "@sheetal/platform/core/errors";
 import { isPhotoName, mediaBase, photoUrl, savePhoto } from "@sheetal/backend-core/lib/photos";
 import { hasPerm } from "@sheetal/backend-core/domain/permissions";
 import { COUNTED, LISTING_KINDS, LISTING_PERMS, kindsFor, listingCap, purposeOf } from "@sheetal/backend-core/domain/listings";

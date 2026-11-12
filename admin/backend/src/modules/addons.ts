@@ -5,8 +5,8 @@
 import type { FastifyInstance } from "fastify";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { notFound } from "@sheetal/backend-core/lib/errors";
+import { dbOf } from "@sheetal/platform/db/client";
+import { notFound } from "@sheetal/platform/core/errors";
 import { ADDON_DEFAULTS, addonCatalog } from "@sheetal/backend-core/domain/addons";
 import { BUSINESS_TYPES } from "@sheetal/backend-core/domain/permissions";
 import { staffOf } from "./routes.js";

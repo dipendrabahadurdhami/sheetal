@@ -4,10 +4,10 @@
 // How it works: each stay in the other site's feed becomes a booking of that room type (no room yet) at the branch
 // whose rooms it fills; stays that disappear from the feed are cancelled; the people at that branch are notified.
 
-import type { Db } from "../lib/db.js";
+import type { Db } from "@sheetal/platform/db/client";
 import type { Fetch } from "../lib/payments.js";
 import { parseIcal } from "../lib/ical.js";
-import { leadPeople, notify } from "../lib/notify.js";
+import { leadPeople, notify } from "@sheetal/platform/notify/index";
 import { dayOf, ymd } from "./money.js";
 import { headOffice } from "./branches.js";
 

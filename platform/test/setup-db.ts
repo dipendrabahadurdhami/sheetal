@@ -32,7 +32,7 @@ export default async function setup(project: TestProject) {
   await admin.query("CREATE DATABASE sheetal_test TEMPLATE template0 ENCODING 'UTF8' LC_COLLATE 'C' LC_CTYPE 'C'");
   await admin.end();
   const url = `postgresql://test:test@localhost:${PORT}/sheetal_test`;
-  execSync("npx prisma migrate deploy", { cwd: fileURLToPath(new URL("..", import.meta.url)), env: { ...process.env, DATABASE_URL: url }, stdio: "ignore" });
+  execSync("npx prisma migrate deploy", { cwd: fileURLToPath(new URL("../../backend-core", import.meta.url)), env: { ...process.env, DATABASE_URL: url }, stdio: "ignore" });
   project.provide("databaseUrl", url);
   return async () => {
     await pg.stop();

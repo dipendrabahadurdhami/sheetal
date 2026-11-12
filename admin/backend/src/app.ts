@@ -6,7 +6,7 @@
 // Rules: every route starts with staffOf(request, permission); businesses get nothing here.
 
 import type { FastifyInstance } from "fastify";
-import type { Config } from "@sheetal/backend-core/config";
+import type { Config } from "@sheetal/platform/core/config";
 import { buildBaseApp, type AppDeps } from "@sheetal/backend-core/app";
 import { adminRoutes } from "./modules/routes.js";
 import { adminListingRoutes } from "./modules/listings.js";
@@ -31,7 +31,7 @@ import { integrationAdminRoutes } from "@sheetal/platform/integrations/routes";
 import { settingsAdminRoutes } from "@sheetal/platform/settings/routes";
 import { SettingsService } from "@sheetal/platform/settings/service";
 import { buildStaffContext } from "@sheetal/platform/tenancy/context";
-import { dbOf } from "@sheetal/backend-core/lib/db";
+import { dbOf } from "@sheetal/platform/db/client";
 import { requireUser } from "@sheetal/backend-core/modules/auth/sessions";
 import { jobsOn, startJobs } from "@sheetal/platform/jobs/registry";
 import type { Fetch } from "@sheetal/backend-core/lib/payments";

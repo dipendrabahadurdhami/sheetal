@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from "vitest";
-import { loadConfig } from "@sheetal/backend-core/config";
+import { loadConfig } from "@sheetal/platform/core/config";
 import { buildApp } from "../src/app.js";
 
 const app = await buildApp(loadConfig({ NODE_ENV: "test", LOG_LEVEL: "silent" }, "admin"));

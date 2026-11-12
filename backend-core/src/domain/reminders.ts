@@ -7,9 +7,9 @@
 // sends its own renewal reminders on its reminder days; this job skips those days so nobody gets two emails.
 
 import type { Prisma } from "@prisma/client";
-import type { Db } from "../lib/db.js";
+import type { Db } from "@sheetal/platform/db/client";
 import type { Mailer } from "../lib/mailer.js";
-import { notify } from "../lib/notify.js";
+import { notify } from "@sheetal/platform/notify/index";
 import { billingSettings, ownerOf } from "./billing.js";
 import { dayOf, ymd } from "./money.js";
 import { nepalDay } from "./payouts.js";

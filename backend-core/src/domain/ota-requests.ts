@@ -7,10 +7,10 @@
 // Rules: a site needs its partner account connected and switched on; one open or live request per listing and site.
 
 import type { Prisma } from "@prisma/client";
-import type { Db } from "../lib/db.js";
+import type { Db } from "@sheetal/platform/db/client";
 import type { Mailer } from "../lib/mailer.js";
-import { AppError, badRequest, notFound } from "../lib/errors.js";
-import { notify, notifyStaff, teamWith } from "../lib/notify.js";
+import { AppError, badRequest, notFound } from "@sheetal/platform/core/errors";
+import { notify, notifyStaff, teamWith } from "@sheetal/platform/notify/index";
 import { ownerOf } from "./billing.js";
 
 export const OTA_CHANNELS = [

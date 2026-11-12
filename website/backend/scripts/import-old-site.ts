@@ -11,8 +11,8 @@
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { Prisma } from "@prisma/client";
-import { loadConfig, loadEnvFiles } from "@sheetal/backend-core/config";
-import { createDb } from "@sheetal/backend-core/lib/db";
+import { loadConfig, loadEnvFiles } from "@sheetal/platform/core/config";
+import { createDb } from "@sheetal/platform/db/client";
 
 import { readTables, type Row } from "./old-dump.js";
 

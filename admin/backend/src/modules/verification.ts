@@ -7,10 +7,10 @@
 
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { badRequest, notFound } from "@sheetal/backend-core/lib/errors";
+import { dbOf } from "@sheetal/platform/db/client";
+import { badRequest, notFound } from "@sheetal/platform/core/errors";
 import { readPrivateFile } from "@sheetal/backend-core/lib/files";
-import { notify, teamWith } from "@sheetal/backend-core/lib/notify";
+import { notify, teamWith } from "@sheetal/platform/notify/index";
 import { staffOf } from "./routes.js";
 
 export async function adminVerificationRoutes(app: FastifyInstance) {

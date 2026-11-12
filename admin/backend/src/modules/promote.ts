@@ -7,13 +7,13 @@
 
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { badRequest, notFound } from "@sheetal/backend-core/lib/errors";
+import { dbOf } from "@sheetal/platform/db/client";
+import { badRequest, notFound } from "@sheetal/platform/core/errors";
 import { ymd } from "@sheetal/backend-core/domain/money";
 import { invoiceNumber } from "@sheetal/backend-core/domain/billing";
 import { PHASE_LABEL, PLACES, PLACE_LABEL, boostNo, phaseOf, promoteSettings, takenToday, today, type Place } from "@sheetal/backend-core/domain/promote";
 import { staffOf } from "./routes.js";
-import { notify } from "@sheetal/backend-core/lib/notify";
+import { notify } from "@sheetal/platform/notify/index";
 import { mediaBase } from "@sheetal/backend-core/lib/photos";
 import { BANNER_PHASE, BannerText, Picture, approvedDates, bannerNo, bannerPhase, saveBannerPicture } from "@sheetal/backend-core/domain/banners";
 import { dayOf } from "@sheetal/backend-core/domain/money";

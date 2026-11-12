@@ -14,7 +14,7 @@
 // boosted ones, for as long as the business keeps it there.
 
 import type { Prisma } from "@prisma/client";
-import type { Db } from "../lib/db.js";
+import type { Db } from "@sheetal/platform/db/client";
 import { dayOf, ymd } from "./money.js";
 import { nepalDay } from "./payouts.js";
 

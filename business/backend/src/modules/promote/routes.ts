@@ -12,8 +12,8 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { badRequest, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
+import { dbOf } from "@sheetal/platform/db/client";
+import { badRequest, forbidden, notFound } from "@sheetal/platform/core/errors";
 import { dayOf, ymd } from "@sheetal/backend-core/domain/money";
 import { effectiveLimits } from "@sheetal/backend-core/domain/addons";
 import { billingSettings, createAddonInvoice, invoiceNumber } from "@sheetal/backend-core/domain/billing";

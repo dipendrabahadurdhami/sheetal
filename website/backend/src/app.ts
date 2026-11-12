@@ -5,7 +5,7 @@
 // Rules: public endpoints only return public data; anything personal needs a signed-in person.
 
 import type { FastifyInstance } from "fastify";
-import type { Config } from "@sheetal/backend-core/config";
+import type { Config } from "@sheetal/platform/core/config";
 import { buildBaseApp, type AppDeps } from "@sheetal/backend-core/app";
 import { authRoutes } from "./modules/auth/routes.js";
 import { registerDemoGuard } from "@sheetal/platform/demo/guard";

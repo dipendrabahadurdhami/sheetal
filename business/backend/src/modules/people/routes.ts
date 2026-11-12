@@ -11,9 +11,9 @@
 
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { badRequest, conflict, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
-import { notify, teamWith } from "@sheetal/backend-core/lib/notify";
+import { dbOf } from "@sheetal/platform/db/client";
+import { badRequest, conflict, forbidden, notFound } from "@sheetal/platform/core/errors";
+import { notify, teamWith } from "@sheetal/platform/notify/index";
 import { dayOf, ymd } from "@sheetal/backend-core/domain/money";
 import { nepalDay } from "@sheetal/backend-core/domain/payouts";
 import { branchFor, branchesOf, branchView, inView, workspaceOf, type BranchView, type Workspace } from "../access.js";

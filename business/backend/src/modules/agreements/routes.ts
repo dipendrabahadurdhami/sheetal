@@ -12,9 +12,9 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Agreement, AgreementSigner, Prisma } from "@prisma/client";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { AppError, badRequest, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
-import { newToken, sha256 } from "@sheetal/backend-core/lib/secrets";
+import { dbOf } from "@sheetal/platform/db/client";
+import { AppError, badRequest, forbidden, notFound } from "@sheetal/platform/core/errors";
+import { newToken, sha256 } from "@sheetal/platform/auth/secrets";
 import { nepalDay } from "@sheetal/backend-core/domain/payouts";
 import { AGREEMENT_PERM, KINDS, LANGS, SignersInput, TEMPLATES, agreementNo, hashOf, maskEmail, nepalTime, parseValues, render, roleLabel, sendProblem, type Kind, type SignerIn } from "@sheetal/backend-core/domain/agreements";
 import { branchFor, branchView, inView, workspaceOf, type Workspace } from "../access.js";

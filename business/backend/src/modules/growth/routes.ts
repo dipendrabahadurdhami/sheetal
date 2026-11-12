@@ -8,14 +8,14 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { AppError, badRequest, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
-import { Vault } from "@sheetal/backend-core/lib/vault";
+import { dbOf } from "@sheetal/platform/db/client";
+import { AppError, badRequest, forbidden, notFound } from "@sheetal/platform/core/errors";
+import { Vault } from "@sheetal/platform/auth/vault";
 import { aiFor, creditsUsed, extractLeads, type AiClient } from "@sheetal/backend-core/lib/ai";
 import { requireAiFeature } from "@sheetal/backend-core/domain/ai-features";
 import { buildIcal } from "@sheetal/backend-core/lib/ical";
 import { metaSignatureOk, readMetaWebhook } from "@sheetal/backend-core/lib/meta";
-import { leadPeople, notify } from "@sheetal/backend-core/lib/notify";
+import { leadPeople, notify } from "@sheetal/platform/notify/index";
 import { dayOf, ymd } from "@sheetal/backend-core/domain/money";
 import { syncOtaFeed } from "@sheetal/backend-core/domain/ota";
 import type { Fetch } from "@sheetal/backend-core/lib/payments";

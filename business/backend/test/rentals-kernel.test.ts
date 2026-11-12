@@ -1,5 +1,5 @@
 // Tests for Rentals on the kernel (P2-W1 stage 1): what the move to apps/rentals/backend added. rentals.test.ts (the old tests) is NOT repeated here and passes unchanged.
-// Where it fits: runs with the business API tests (needs the throwaway PostgreSQL started by backend-core/test/setup-db.ts): npm run test -w @sheetal/business-api
+// Where it fits: runs with the business API tests (needs the throwaway PostgreSQL started by platform/test/setup-db.ts): npm run test -w @sheetal/business-api
 // How it works: a real business API with a few people (owner, accountant, a Pokhara-only accountant, an agent, two custom roles) in "Everest Realty" and one more
 // business; calls go through HTTP (app.inject), the database is read straight afterwards to check what was really written.
 // Rules: covers isolation (other business, other branch), the new role names and the old ones, version conflict (409), hidden deleted rows, the audit lines with the OLD
@@ -7,9 +7,9 @@
 // business rule: payment <= owed; amount changes only before anything is paid; deposit held and returned, never income; statement = collected - fee - repairs and the fee
 // (only) in profit; online payments count once confirmed, once, never over what is owed; Sheetal's own payments are left to Sheetal; a late fee once, not again after a waive.
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import type {} from "@sheetal/backend-core/test/setup-db";
+import type {} from "@sheetal/platform/test/setup-db";
 import type { FastifyInstance } from "fastify";
-import { loadConfig } from "@sheetal/backend-core/config";
+import { loadConfig } from "@sheetal/platform/core/config";
 import { PLANS } from "@sheetal/backend-core/domain/plans";
 import { nepalDay } from "@sheetal/backend-core/domain/payouts";
 import { createWorkspace } from "@sheetal/backend-core/modules/accounts/workspace";

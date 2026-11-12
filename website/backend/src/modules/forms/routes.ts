@@ -12,15 +12,15 @@
 import type { FastifyInstance } from "fastify";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { AppError, notFound } from "@sheetal/backend-core/lib/errors";
+import { dbOf } from "@sheetal/platform/db/client";
+import { AppError, notFound } from "@sheetal/platform/core/errors";
 import { savePrivateFile } from "@sheetal/backend-core/lib/files";
-import { Vault } from "@sheetal/backend-core/lib/vault";
+import { Vault } from "@sheetal/platform/auth/vault";
 import { captchaSiteKey, checkCaptcha } from "@sheetal/backend-core/lib/captcha";
 import type { Fetch } from "@sheetal/backend-core/lib/payments";
 import { headOffice } from "@sheetal/backend-core/domain/branches";
 import { DEST_LABEL, FieldsSchema, answersText, checkAnswers, contactOf, formLimits, matchListings, monthStart, type Match } from "@sheetal/backend-core/domain/forms";
-import { notify, teamWith } from "@sheetal/backend-core/lib/notify";
+import { notify, teamWith } from "@sheetal/platform/notify/index";
 
 const rs = (n: number) => `Rs. ${n.toLocaleString("en-IN")}`;
 

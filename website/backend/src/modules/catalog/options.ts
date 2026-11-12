@@ -4,7 +4,7 @@
 
 import type { FastifyInstance } from "fastify";
 import { cached } from "@sheetal/backend-core/lib/cache";
-import { dbOf } from "@sheetal/backend-core/lib/db";
+import { dbOf } from "@sheetal/platform/db/client";
 import { readCatalog } from "@sheetal/backend-core/lib/catalog";
 
 export async function catalogOptionRoutes(app: FastifyInstance) {

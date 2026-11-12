@@ -8,7 +8,7 @@
 
 import type { FastifyInstance } from "fastify";
 import type { Prisma } from "@prisma/client";
-import { dbOf } from "@sheetal/backend-core/lib/db";
+import { dbOf } from "@sheetal/platform/db/client";
 import { effectiveLimits } from "@sheetal/backend-core/domain/addons";
 import { dayOf, ymd } from "@sheetal/backend-core/domain/money";
 import { nepalDay } from "@sheetal/backend-core/domain/payouts";

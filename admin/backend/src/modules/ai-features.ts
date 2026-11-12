@@ -6,8 +6,8 @@
 
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { badRequest } from "@sheetal/backend-core/lib/errors";
+import { dbOf } from "@sheetal/platform/db/client";
+import { badRequest } from "@sheetal/platform/core/errors";
 import { AI_FEATURES, AI_FEATURE_NAMES, aiFeatureSettings, saveAiFeatures, usageByBusiness } from "@sheetal/backend-core/domain/ai-features";
 import { staffOf } from "./routes.js";
 
