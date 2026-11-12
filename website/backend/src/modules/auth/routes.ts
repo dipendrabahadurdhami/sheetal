@@ -6,9 +6,9 @@
 
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { AppError, conflict } from "@sheetal/backend-core/lib/errors";
+import { AppError, conflict } from "@sheetal/platform/core/errors";
 import { emails } from "@sheetal/backend-core/lib/mailer";
-import { checkPassword, hashPassword, newToken, sha256 } from "@sheetal/backend-core/lib/secrets";
+import { checkPassword, hashPassword, newToken, sha256 } from "@sheetal/platform/auth/secrets";
 import { createWorkspace } from "@sheetal/backend-core/modules/accounts/workspace";
 import { userJson } from "@sheetal/backend-core/modules/auth/present";
 import { platformSettings } from "@sheetal/backend-core/domain/platform";

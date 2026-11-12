@@ -4,7 +4,7 @@
 // How it works: makes up to four website users (reviewer1..4@sheetal.test, no password: they cannot sign in) and writes their reviews:
 // three about the business (5, 2 and 1 stars, one already answered) and one about the business's first listing, if it has one.
 import { PrismaClient } from "@prisma/client";
-import { loadConfig, loadEnvFiles } from "../src/config.js";
+import { loadConfig, loadEnvFiles } from "@sheetal/platform/core/config";
 
 loadEnvFiles();
 const config = loadConfig(process.env, "website");

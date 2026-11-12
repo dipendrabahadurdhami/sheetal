@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 // Brings in the test database declaration (inject("databaseUrl")).
-import type {} from "@sheetal/backend-core/test/setup-db";
+import type {} from "@sheetal/platform/test/setup-db";
 import type { FastifyInstance } from "fastify";
-import { loadConfig } from "@sheetal/backend-core/config";
+import { loadConfig } from "@sheetal/platform/core/config";
 import { createSession } from "@sheetal/backend-core/modules/auth/sessions";
 import { billingSettings } from "@sheetal/backend-core/domain/billing";
 import { PLATFORM_DEFAULTS, platformSettings, publicSite } from "@sheetal/backend-core/domain/platform";

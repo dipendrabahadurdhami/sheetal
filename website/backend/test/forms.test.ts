@@ -1,12 +1,12 @@
 ﻿import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import type {} from "@sheetal/backend-core/test/setup-db";
+import type {} from "@sheetal/platform/test/setup-db";
 import type { FastifyInstance } from "fastify";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { loadConfig } from "@sheetal/backend-core/config";
+import { loadConfig } from "@sheetal/platform/core/config";
 import { PLANS } from "@sheetal/backend-core/domain/plans";
-import { Vault } from "@sheetal/backend-core/lib/vault";
+import { Vault } from "@sheetal/platform/auth/vault";
 import { createWorkspace } from "@sheetal/backend-core/modules/accounts/workspace";
 import { buildApp } from "../src/app.js";
 

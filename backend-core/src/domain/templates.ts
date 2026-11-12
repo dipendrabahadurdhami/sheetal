@@ -5,7 +5,7 @@
 // are filled from the values the sender gives; a template may only use the placeholders listed for its key.
 // Rules: keep the placeholders; never put a password in a message; "reset to default" deletes the row.
 
-import type { Db } from "../lib/db.js";
+import type { Db } from "@sheetal/platform/db/client";
 
 export type TplChannel = "email" | "sms" | "whatsapp";
 export const TPL_CHANNELS: TplChannel[] = ["email", "sms", "whatsapp"];

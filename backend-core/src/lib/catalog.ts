@@ -7,7 +7,7 @@
 // areas: { kathmandu: ["Dhapasi", …] } }, kindsByType: { agency: [...] } }. catalogKindsNow() gives the last
 // kindsByType it read and refreshes it in the background at most once a minute.
 
-import type { Db } from "./db.js";
+import type { Db } from "@sheetal/platform/db/client";
 
 export const CATALOG_KEY = "catalog";
 export interface CatalogItem { id: string; en: string; ne: string; icon?: string; [extra: string]: unknown }

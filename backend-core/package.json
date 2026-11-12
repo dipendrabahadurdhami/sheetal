@@ -52,7 +52,6 @@
     "seed": "tsx prisma/seed.ts"
   },
   "exports": {
-    "./*": "./src/*.ts",
-    "./test/setup-db": "./test/setup-db.ts"
+    "./*": "./src/*.ts"
   }
 }

@@ -9,9 +9,9 @@
 
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { badRequest, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
-import { STAFF_FOR, notifyStaff } from "@sheetal/backend-core/lib/notify";
+import { dbOf } from "@sheetal/platform/db/client";
+import { badRequest, forbidden, notFound } from "@sheetal/platform/core/errors";
+import { STAFF_FOR, notifyStaff } from "@sheetal/platform/notify/index";
 import { dayOf, ymd } from "@sheetal/backend-core/domain/money";
 import { billingSettings, createAddonInvoice, invoiceNumber } from "@sheetal/backend-core/domain/billing";
 import { addDays, promoteSettings, today } from "@sheetal/backend-core/domain/promote";

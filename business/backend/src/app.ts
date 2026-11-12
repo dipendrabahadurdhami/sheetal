@@ -9,7 +9,7 @@
 // default) is accepted by the hook registered right after the base app, and then looks like a sign-in to that one business (platform/src/support).
 
 import type { FastifyInstance } from "fastify";
-import type { Config } from "@sheetal/backend-core/config";
+import type { Config } from "@sheetal/platform/core/config";
 import { buildBaseApp, type AppDeps } from "@sheetal/backend-core/app";
 import { mailRoutes } from "./modules/mail/routes.js";
 import { teamRoutes } from "./modules/team/routes.js";

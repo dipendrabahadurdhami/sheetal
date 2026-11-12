@@ -6,11 +6,11 @@
 
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { notFound } from "@sheetal/backend-core/lib/errors";
+import { dbOf } from "@sheetal/platform/db/client";
+import { notFound } from "@sheetal/platform/core/errors";
 import { readPrivateFile } from "@sheetal/backend-core/lib/files";
-import { confirmRentPayment, rejectRentPayment } from "@sheetal/backend-core/domain/rentpay";
-import { billNo, leaseNo } from "@sheetal/backend-core/domain/rentals";
+import { confirmRentPayment, rejectRentPayment } from "@sheetal/app-rentals/backend/rentpay";
+import { billNo, leaseNo } from "@sheetal/app-rentals/backend/rentals";
 import { staffOf } from "./routes.js";
 
 export async function adminRentPaymentRoutes(app: FastifyInstance) {

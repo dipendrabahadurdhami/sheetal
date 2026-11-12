@@ -9,8 +9,8 @@
 import type { FastifyInstance } from "fastify";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { badRequest } from "@sheetal/backend-core/lib/errors";
+import { dbOf } from "@sheetal/platform/db/client";
+import { badRequest } from "@sheetal/platform/core/errors";
 import { CATALOG_KEY, readCatalog, type CatalogItem, type StoredCatalog } from "@sheetal/backend-core/lib/catalog";
 import { LISTING_KINDS } from "@sheetal/backend-core/domain/listings";
 import { BUSINESS_TYPES } from "@sheetal/backend-core/domain/permissions";

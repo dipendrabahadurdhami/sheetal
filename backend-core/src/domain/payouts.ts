@@ -9,8 +9,8 @@
 // same payment is never counted twice; a refund (negative amount) is kept as "<ref>:refund", so it can be recorded
 // with the same ref as the payment it returns; dates are Nepal dates (UTC+5:45).
 
-import type { Db } from "../lib/db.js";
-import { badRequest } from "../lib/errors.js";
+import type { Db } from "@sheetal/platform/db/client";
+import { badRequest } from "@sheetal/platform/core/errors";
 import { dayOf, ymd } from "./money.js";
 
 export const WEEKDAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;

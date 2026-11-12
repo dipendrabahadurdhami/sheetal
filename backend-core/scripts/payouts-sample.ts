@@ -4,7 +4,7 @@
 //   --tenant   the business (default: the first one that has a bank account for payouts)
 //   --add-bank give the business a sample bank account if it has none (only for testing)
 import { PrismaClient } from "@prisma/client";
-import { loadConfig, loadEnvFiles } from "../src/config.js";
+import { loadConfig, loadEnvFiles } from "@sheetal/platform/core/config";
 import { bankOf, nepalDay, recordCollected, type Collected } from "../src/domain/payouts.js";
 import { dayOf, ymd } from "../src/domain/money.js";
 

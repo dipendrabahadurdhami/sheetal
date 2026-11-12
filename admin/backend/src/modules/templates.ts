@@ -7,8 +7,8 @@
 
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { badRequest, notFound } from "@sheetal/backend-core/lib/errors";
+import { dbOf } from "@sheetal/platform/db/client";
+import { badRequest, notFound } from "@sheetal/platform/core/errors";
 import { SAMPLE_VALUES, TEMPLATE_DEFS, TPL_CHANNELS, TPL_LANGS, allowedVars, defOf, placeholdersIn, renderText } from "@sheetal/backend-core/domain/templates";
 import { staffOf } from "./routes.js";
 

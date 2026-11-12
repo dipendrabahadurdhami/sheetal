@@ -6,10 +6,10 @@
 
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { badRequest, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
+import { dbOf } from "@sheetal/platform/db/client";
+import { badRequest, forbidden, notFound } from "@sheetal/platform/core/errors";
 import { readPrivateFile, savePrivateFile } from "@sheetal/backend-core/lib/files";
-import { STAFF_FOR, notifyStaff } from "@sheetal/backend-core/lib/notify";
+import { STAFF_FOR, notifyStaff } from "@sheetal/platform/notify/index";
 import { workspaceOf, type Workspace } from "../access.js";
 
 export const DOC_KINDS = ["registration", "pan", "owner_id", "other"] as const;

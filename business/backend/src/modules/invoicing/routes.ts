@@ -14,8 +14,8 @@
 import type { FastifyInstance } from "fastify";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { badRequest, conflict, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
+import { dbOf } from "@sheetal/platform/db/client";
+import { badRequest, conflict, forbidden, notFound } from "@sheetal/platform/core/errors";
 import { creditSplit, dayOf, docNo, fiscalYearOf, hotelBill, invoiceAmounts, nightsBetween, ymd, type InvoiceLine } from "@sheetal/backend-core/domain/money";
 import { branchFor, branchView, inView, workspaceOf, type BranchView, type Workspace } from "../access.js";
 import { bookingCode } from "../hotel/routes.js";

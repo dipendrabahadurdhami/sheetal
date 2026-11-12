@@ -2,7 +2,7 @@
 // Where it fits: dispatcher.test.ts proves the delivery logic without a database; this file proves the row locking (two dispatchers never
 // deliver an event twice), that the outbox row and the delivery rows commit together, that a rolled-back publish leaves nothing to
 // deliver, and that a handler is given the context of its event's business only.
-// How it works: needs the throwaway test database (backend-core/test/setup-db.ts, started once per run). Event names carry a random
+// How it works: needs the throwaway test database (platform/test/setup-db.ts, started once per run). Event names carry a random
 // tag, and every test handler listens only to its own tag, so other test files' rows are marked dispatched and otherwise ignored.
 // Run with: npm run test -w @sheetal/platform
 import { randomUUID } from "node:crypto";

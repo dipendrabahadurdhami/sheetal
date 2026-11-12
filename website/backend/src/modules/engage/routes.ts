@@ -8,12 +8,12 @@
 import type { FastifyInstance } from "fastify";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { badRequest, notFound } from "@sheetal/backend-core/lib/errors";
+import { dbOf } from "@sheetal/platform/db/client";
+import { badRequest, notFound } from "@sheetal/platform/core/errors";
 import { requireUser } from "@sheetal/backend-core/modules/auth/sessions";
 import { savePrivateFile } from "@sheetal/backend-core/lib/files";
 import { headOffice } from "@sheetal/backend-core/domain/branches";
-import { STAFF_FOR, leadPeople, notify, notifyStaff, teamWith } from "@sheetal/backend-core/lib/notify";
+import { STAFF_FOR, leadPeople, notify, notifyStaff, teamWith } from "@sheetal/platform/notify/index";
 import { listingCard, mediaBase } from "../catalog/present.js";
 import { feeSettings } from "../board/routes.js";
 

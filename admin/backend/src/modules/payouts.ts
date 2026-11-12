@@ -13,9 +13,9 @@
 import type { FastifyInstance } from "fastify";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { badRequest, notFound } from "@sheetal/backend-core/lib/errors";
-import { notify, teamWith } from "@sheetal/backend-core/lib/notify";
+import { dbOf } from "@sheetal/platform/db/client";
+import { badRequest, notFound } from "@sheetal/platform/core/errors";
+import { notify, teamWith } from "@sheetal/platform/notify/index";
 import { dayOf, ymd } from "@sheetal/backend-core/domain/money";
 import { PAYOUT_DEFAULTS, WEEKDAYS, bankOf, holdCutoff, nepalDay, nextPayoutOn, payoutNo, payoutSettings } from "@sheetal/backend-core/domain/payouts";
 import { staffOf } from "./routes.js";

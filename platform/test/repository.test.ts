@@ -1,5 +1,5 @@
 // Tests for BaseRepository (platform/src/core/repository.ts) on the real Expense table, plus the isolation helper itself.
-// Needs the throwaway test database (started by backend-core/test/setup-db.ts). Run with: npm run test -w @sheetal/platform
+// Needs the throwaway test database (started by platform/test/setup-db.ts). Run with: npm run test -w @sheetal/platform
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AppError } from "../src/core/errors.js";

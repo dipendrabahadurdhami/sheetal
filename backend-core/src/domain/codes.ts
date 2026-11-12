@@ -7,7 +7,7 @@
 // listings.old_codes, so a code printed on an old agreement or sign still finds the listing.
 // Rules: a prefix is 2 to 5 capital letters or digits, starting with a letter; TMP is reserved.
 
-import type { Db } from "../lib/db.js";
+import type { Db } from "@sheetal/platform/db/client";
 
 export const DEFAULT_PREFIX = "SP";
 export const PREFIX_RE = /^[A-Z][A-Z0-9]{1,4}$/;

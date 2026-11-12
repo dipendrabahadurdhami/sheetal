@@ -8,11 +8,11 @@
 import type { FastifyInstance } from "fastify";
 import type { Lead } from "@prisma/client";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { badRequest, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
+import { dbOf } from "@sheetal/platform/db/client";
+import { badRequest, forbidden, notFound } from "@sheetal/platform/core/errors";
 import { requireUser } from "@sheetal/backend-core/modules/auth/sessions";
 import { hasPerm } from "@sheetal/backend-core/domain/permissions";
-import { notify } from "@sheetal/backend-core/lib/notify";
+import { notify } from "@sheetal/platform/notify/index";
 
 export const FEE_KEY = "requirement_fee";
 export interface FeeSettings { enabled: boolean; amount: number; note?: string }

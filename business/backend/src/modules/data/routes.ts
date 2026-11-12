@@ -8,8 +8,8 @@
 
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { AppError, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
+import { dbOf } from "@sheetal/platform/db/client";
+import { AppError, forbidden, notFound } from "@sheetal/platform/core/errors";
 import { COUNTED, LISTING_PERMS, kindsFor, listingCap } from "@sheetal/backend-core/domain/listings";
 import { catalogKindsNow } from "@sheetal/backend-core/lib/catalog";
 import { listingCode, prefixFor } from "@sheetal/backend-core/domain/codes";

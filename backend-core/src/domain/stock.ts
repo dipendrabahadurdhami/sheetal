@@ -10,9 +10,9 @@
 // Nepal days (UTC+5:45).
 
 import type { Prisma } from "@prisma/client";
-import type { Db } from "../lib/db.js";
-import { badRequest, notFound } from "../lib/errors.js";
-import { teamWith, notify } from "../lib/notify.js";
+import type { Db } from "@sheetal/platform/db/client";
+import { badRequest, notFound } from "@sheetal/platform/core/errors";
+import { teamWith, notify } from "@sheetal/platform/notify/index";
 import { nepalDay } from "./payouts.js";
 
 type Tx = Db | Prisma.TransactionClient;

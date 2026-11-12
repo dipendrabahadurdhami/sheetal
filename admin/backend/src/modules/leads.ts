@@ -11,9 +11,9 @@
 import type { FastifyInstance } from "fastify";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { badRequest, notFound } from "@sheetal/backend-core/lib/errors";
-import { leadPeople, notify } from "@sheetal/backend-core/lib/notify";
+import { dbOf } from "@sheetal/platform/db/client";
+import { badRequest, notFound } from "@sheetal/platform/core/errors";
+import { leadPeople, notify } from "@sheetal/platform/notify/index";
 import { headOffice } from "@sheetal/backend-core/domain/branches";
 import { PLATFORM_ROLES, hasPerm } from "@sheetal/backend-core/domain/permissions";
 import { staffOf } from "./routes.js";

@@ -11,10 +11,10 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { randomInt } from "node:crypto";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { AppError, badRequest, notFound } from "@sheetal/backend-core/lib/errors";
-import { safeEqual, sha256 } from "@sheetal/backend-core/lib/secrets";
-import { notify, teamWith } from "@sheetal/backend-core/lib/notify";
+import { dbOf } from "@sheetal/platform/db/client";
+import { AppError, badRequest, notFound } from "@sheetal/platform/core/errors";
+import { safeEqual, sha256 } from "@sheetal/platform/auth/secrets";
+import { notify, teamWith } from "@sheetal/platform/notify/index";
 import { AGREEMENT_PERM, OTP_GAP_SECONDS, OTP_MINUTES, OTP_SENDS, OTP_TRIES, agreementNo, maskEmail, nepalTime, otpHash, roleLabel, type Kind } from "@sheetal/backend-core/domain/agreements";
 
 export async function signRoutes(app: FastifyInstance) {

@@ -7,8 +7,8 @@
 // Rules: change a default here only on purpose. Secrets are write-only: read them with openSecret(), never send them to a browser.
 
 import type { Prisma } from "@prisma/client";
-import type { Db } from "../lib/db.js";
-import type { Vault } from "../lib/vault.js";
+import type { Db } from "@sheetal/platform/db/client";
+import type { Vault } from "@sheetal/platform/auth/vault";
 
 export interface PlatformSettings {
   siteName: string;

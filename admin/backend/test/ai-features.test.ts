@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import type {} from "@sheetal/backend-core/test/setup-db";
+import type {} from "@sheetal/platform/test/setup-db";
 import type { FastifyInstance } from "fastify";
-import { loadConfig } from "@sheetal/backend-core/config";
+import { loadConfig } from "@sheetal/platform/core/config";
 import { PLANS } from "@sheetal/backend-core/domain/plans";
 import { aiFeatureSettings, requireAiFeature, requireAskAi, usageByBusiness } from "@sheetal/backend-core/domain/ai-features";
 import { aiClient } from "@sheetal/backend-core/lib/ai";
-import { Vault } from "@sheetal/backend-core/lib/vault";
+import { Vault } from "@sheetal/platform/auth/vault";
 import { createWorkspace } from "@sheetal/backend-core/modules/accounts/workspace";
 import { createSession } from "@sheetal/backend-core/modules/auth/sessions";
 import { buildApp } from "../src/app.js";

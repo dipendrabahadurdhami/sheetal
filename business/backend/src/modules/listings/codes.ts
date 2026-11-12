@@ -6,8 +6,8 @@
 
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { badRequest, forbidden } from "@sheetal/backend-core/lib/errors";
+import { dbOf } from "@sheetal/platform/db/client";
+import { badRequest, forbidden } from "@sheetal/platform/core/errors";
 import { PREFIX_RE, initialsOf, listingCode, recodeListings } from "@sheetal/backend-core/domain/codes";
 import { workspaceOf } from "../access.js";
 

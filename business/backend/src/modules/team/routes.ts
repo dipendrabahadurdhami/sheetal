@@ -13,9 +13,9 @@
 import type { FastifyInstance } from "fastify";
 import { effectiveLimits } from "@sheetal/backend-core/domain/addons";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { AppError, badRequest, conflict, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
-import { newToken, sha256 } from "@sheetal/backend-core/lib/secrets";
+import { dbOf } from "@sheetal/platform/db/client";
+import { AppError, badRequest, conflict, forbidden, notFound } from "@sheetal/platform/core/errors";
+import { newToken, sha256 } from "@sheetal/platform/auth/secrets";
 import { requireUser } from "@sheetal/backend-core/modules/auth/sessions";
 import { createWorkspace } from "@sheetal/backend-core/modules/accounts/workspace";
 import { isPro, syncCovered } from "@sheetal/backend-core/domain/billing";

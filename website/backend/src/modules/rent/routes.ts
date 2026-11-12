@@ -9,14 +9,14 @@
 
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { badRequest } from "@sheetal/backend-core/lib/errors";
+import { dbOf } from "@sheetal/platform/db/client";
+import { badRequest } from "@sheetal/platform/core/errors";
 import { savePrivateFile } from "@sheetal/backend-core/lib/files";
 import { requireUser } from "@sheetal/backend-core/modules/auth/sessions";
 import { dayOf, ymd } from "@sheetal/backend-core/domain/money";
 import { nepalDay } from "@sheetal/backend-core/domain/payouts";
-import { ONLINE_METHODS, findLease, leaseView, takeOnlinePayment } from "@sheetal/backend-core/domain/rentpay";
-import { billNo, leaseNo } from "@sheetal/backend-core/domain/rentals";
+import { ONLINE_METHODS, findLease, leaseView, takeOnlinePayment } from "@sheetal/app-rentals/backend/rentpay";
+import { billNo, leaseNo } from "@sheetal/app-rentals/backend/rentals";
 
 const strict = (max: number) => ({ config: { rateLimit: { max, timeWindow: "10 minutes" } } });
 const Find = z.object({ code: z.string().trim().min(2, "Enter the property code.").max(30), phone: z.string().trim().max(20).nullish() });

@@ -3,7 +3,7 @@
 // its listings, in Business → Promote. Listings of no business (Sheetal's own) stay featured as they were.
 // Safe to run again: a listing that already has a gift boost is skipped. Run once after the Promote update.
 import { PrismaClient } from "@prisma/client";
-import { loadConfig, loadEnvFiles } from "../src/config.js";
+import { loadConfig, loadEnvFiles } from "@sheetal/platform/core/config";
 import { GIFT_DAYS, addDays, today } from "../src/domain/promote.js";
 import { dayOf } from "../src/domain/money.js";
 

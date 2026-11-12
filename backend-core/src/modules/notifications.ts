@@ -6,8 +6,8 @@
 
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Prisma } from "@prisma/client";
-import { dbOf } from "../lib/db.js";
-import { notFound } from "../lib/errors.js";
+import { dbOf } from "@sheetal/platform/db/client";
+import { notFound } from "@sheetal/platform/core/errors";
 
 export function notificationRoutes(app: FastifyInstance, path: string, scope: (request: FastifyRequest) => Prisma.NotificationWhereInput) {
   const json = (n: { id: string; type: string; title: string; message: string; link: string | null; readAt: Date | null; createdAt: Date }) =>

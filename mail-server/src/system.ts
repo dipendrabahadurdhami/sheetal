@@ -8,8 +8,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import nodemailer, { type SendMailOptions } from "nodemailer";
-import type { Db } from "@sheetal/backend-core/lib/db";
-import { Vault } from "@sheetal/backend-core/lib/vault";
+import type { Db } from "@sheetal/platform/db/client";
+import { Vault } from "@sheetal/platform/auth/vault";
 import type { MailConfig } from "./config.js";
 import { RETRY_MINUTES, mailServersFor, systemMx, type MxResolver, type SmtpError } from "./outbound.js";
 

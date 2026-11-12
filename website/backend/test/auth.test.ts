@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, inject, it } from "vitest";
 // Brings in the test database declaration (inject("databaseUrl")).
-import type {} from "@sheetal/backend-core/test/setup-db";
+import type {} from "@sheetal/platform/test/setup-db";
 import type { FastifyInstance } from "fastify";
 import { buildApp } from "../src/app.js";
-import { loadConfig } from "@sheetal/backend-core/config";
+import { loadConfig } from "@sheetal/platform/core/config";
 import { PLANS } from "@sheetal/backend-core/domain/plans";
-import { hashPassword } from "@sheetal/backend-core/lib/secrets";
+import { hashPassword } from "@sheetal/platform/auth/secrets";
 
 let app: FastifyInstance;
 let ipN = 0;

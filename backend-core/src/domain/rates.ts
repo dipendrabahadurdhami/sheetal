@@ -4,7 +4,7 @@
 // markup on Friday and Saturday nights, rounded to Rs. 50.
 // Rules: closed nights and stays shorter than the minimum take no new bookings.
 
-import type { Db } from "../lib/db.js";
+import type { Db } from "@sheetal/platform/db/client";
 import { ymd } from "./money.js";
 
 export interface Night { day: string; price: number; override: number | null; closed: boolean; weekend: boolean }

@@ -4,7 +4,7 @@
 // Safe to run again: a connection that already exists is left alone. It deletes nothing: the old rows stay and keep working.
 // Usage: npm run integrations:migrate            (prints a report: created, skipped and why)
 import { PrismaClient } from "@prisma/client";
-import { loadConfig, loadEnvFiles } from "../src/config.js";
+import { loadConfig, loadEnvFiles } from "@sheetal/platform/core/config";
 import { importLegacy } from "@sheetal/platform/integrations/legacy";
 
 loadEnvFiles();

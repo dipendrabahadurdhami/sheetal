@@ -1,8 +1,8 @@
 import { generateKeyPairSync } from "node:crypto";
 import type { AddressInfo } from "node:net";
 import { SMTPServer } from "smtp-server";
-import { createDb, type Db } from "@sheetal/backend-core/lib/db";
-import { Vault } from "@sheetal/backend-core/lib/vault";
+import { createDb, type Db } from "@sheetal/platform/db/client";
+import { Vault } from "@sheetal/platform/auth/vault";
 import { PLANS } from "@sheetal/backend-core/domain/plans";
 import { createWorkspace } from "@sheetal/backend-core/modules/accounts/workspace";
 
