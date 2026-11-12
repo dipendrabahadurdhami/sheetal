@@ -11,7 +11,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Listing, ListingPhoto, ListingStatus, Prisma } from "@prisma/client";
 import { z } from "zod";
 import { dbOf } from "@sheetal/backend-core/lib/db";
-import { notifyStaff } from "@sheetal/backend-core/lib/notify";
+import { STAFF_FOR, notifyStaff } from "@sheetal/backend-core/lib/notify";
 import { AppError, badRequest, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
 import { isPhotoName, mediaBase, photoUrl, savePhoto } from "@sheetal/backend-core/lib/photos";
 import { hasPerm } from "@sheetal/backend-core/domain/permissions";
@@ -243,7 +243,7 @@ export async function listingRoutes(app: FastifyInstance) {
       return tx.listing.update({ where: { id: l.id }, data: { code: listingCode(await prefixFor(tx, ws.tenantId), l.id), slug: `${slugify(l.title)}-${l.id}` }, include: { photos: true, branch: { select: { id: true, name: true } } } });
     });
     await audit(ws, request.ip, b.submit ? "listing.submitted" : "listing.draft_saved", created.code);
-    if (b.submit) await notifyStaff(dbOf(app), "moderation.listings", { type: "review", title: "Listing to review", message: `${created.title} · ${ws.member.tenant.name}`, link: "/admin/moderation" });
+    if (b.submit) await notifyStaff(dbOf(app), STAFF_FOR.listingReview, { type: "review", title: "Listing to review", message: `${created.title} · ${ws.member.tenant.name}`, link: "/admin/moderation" });
     return {
       message: b.submit ? "Sent to Sheetal for review. It goes live once checked, usually within a day." : "Saved as a draft.",
       data: row(created, 0),
@@ -283,7 +283,7 @@ export async function listingRoutes(app: FastifyInstance) {
       return u;
     });
     await audit(ws, request.ip, b.submit ? "listing.submitted" : "listing.updated", l.code);
-    if (b.submit) await notifyStaff(dbOf(app), "moderation.listings", { type: "review", title: "Listing to review", message: `${l.title} · ${ws.member.tenant.name}`, link: "/admin/moderation" });
+    if (b.submit) await notifyStaff(dbOf(app), STAFF_FOR.listingReview, { type: "review", title: "Listing to review", message: `${l.title} · ${ws.member.tenant.name}`, link: "/admin/moderation" });
     const leads = await leadCounts(ws.tenantId, [l.id]);
     return {
       message: b.submit ? (LIVE.includes(l.status) ? "Changes sent for review. The listing is off the website until Sheetal checks them." : "Sent to Sheetal for review.") : "Saved.",
@@ -321,7 +321,7 @@ export async function listingRoutes(app: FastifyInstance) {
       changed.push(l.code);
     }
     if (changed.length) await audit(ws, request.ip, `listing.${b.status}`, changed.join(", "));
-    if (reviewing.length) await notifyStaff(dbOf(app), "moderation.listings", { type: "review", title: `${reviewing.length} listing${reviewing.length > 1 ? "s" : ""} to review`, message: ws.member.tenant.name, link: "/admin/moderation" });
+    if (reviewing.length) await notifyStaff(dbOf(app), STAFF_FOR.listingReview, { type: "review", title: `${reviewing.length} listing${reviewing.length > 1 ? "s" : ""} to review`, message: ws.member.tenant.name, link: "/admin/moderation" });
     const word = { published: "Published", paused: "Paused. Hidden from the website until you publish again.", archived: "Archived", sold: "Marked sold", available: "Available again" }[b.status];
     return { message: reviewing.length ? `${reviewing.length === changed.length ? "Sent" : `${changed.length - reviewing.length} published, ${reviewing.length} sent`} to Sheetal for review.` : changed.length ? word : "Nothing to change.", data: { changed } };
   });
