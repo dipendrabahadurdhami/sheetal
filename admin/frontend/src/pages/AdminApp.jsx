@@ -28,6 +28,7 @@ import { MyProfile, NotificationsPage, adminLive, useNotifs, useServerNotifs } f
 import { AdminAudit, AdminBilling, AdminContent, AdminInbox, AdminModeration } from "./AdminOps";
 import { AdminChannels } from "./AdminChannels";
 import { AdminIntegrations } from "./AdminIntegrations";
+import { IntegrationCenter } from "./IntegrationCenter";
 import { AdminStatus } from "./AdminStatus";
 import { otaOf } from "@sheetal/shared/data/ota";
 import { config } from "@sheetal/shared/core/config";
@@ -35,7 +36,6 @@ import { isStaffLive, useLiveStaff, useReviewQueue } from "../live";
 import { adminApi } from "../api";
 import { LiveAnalytics, LiveOutbox, LiveSetup, LiveStatus } from "./LiveSetup";
 import { LivePlatformSettings } from "./LivePlatformSettings";
-import { LiveIntegrations } from "./LiveIntegrations";
 import { LiveChannels, useOtaWaiting } from "./LiveChannels";
 import { LiveAiFeatures } from "./LiveAiFeatures";
 import { LiveExpiry, LiveTemplates } from "./LiveMessages";
@@ -160,8 +160,10 @@ export default function AdminApp() {
         { path: "/admin/staff", render: () => guard("staff.view", <AdminStaff role={role} />) },
         { path: "/admin/settings", render: () => guard("settings.platform", isStaffLive() ? <LivePlatformSettings /> : <AdminSettings />) },
         { path: "/admin/status", render: () => guard("settings.platform", isStaffLive() ? <><LiveStatus /><LiveOutbox /></> : <AdminStatus />) },
-        { path: "/admin/integrations", render: () => guard("settings.platform", <>{isStaffLive() && <><LiveIntegrations /><LiveSetup /></>}<AdminIntegrations /></>) },
-        { path: "/admin/integrations/:id", render: ({ id }) => guard("settings.platform", <AdminIntegrations key={id} id={id} />) },
+        // Signed in to the admin API: the Integration Center (stage 1.3). Not signed in: the old sample screen. LiveSetup keeps the AI and Meta key forms
+        // until those connections are built in the Center.
+        { path: "/admin/integrations", render: () => guard("settings.platform", isStaffLive() ? <><IntegrationCenter /><LiveSetup /></> : <AdminIntegrations />) },
+        { path: "/admin/integrations/:id", render: ({ id }) => guard("settings.platform", isStaffLive() ? <IntegrationCenter key={id} id={id} /> : <AdminIntegrations key={id} id={id} />) },
         { path: "/admin/me", render: () => <MyProfile scope="admin" roleLabel={roleName(role, t)} access="Sheetal staff" /> },
         { path: "/admin/notifications", render: () => <NotificationsPage notifs={notifs} prefsTo="/admin/me" /> },
       ]} />

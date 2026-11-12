@@ -4,6 +4,7 @@
 // period, reminders and bank details. startBillingJob() runs the renewal cycle every 6 hours.
 // Rules: gateway keys are write-only: once saved they are never shown again.
 
+import { LEGACY_GATEWAYS, importLegacy } from "@sheetal/platform/integrations/legacy";
 import type { FastifyInstance } from "fastify";
 import { startJobs, type JobSpec } from "@sheetal/platform/jobs/registry";
 import type { Prisma } from "@prisma/client";
@@ -189,6 +190,8 @@ export async function adminBillingRoutes(app: FastifyInstance) {
       if (k === "fonepay" && g.enabled && !g.merchantCode) throw badRequest("Add Fonepay's merchant code.");
     }
     await db().appSetting.upsert({ where: { key: "payments" }, create: { key: "payments", value: next as Prisma.InputJsonValue }, update: { value: next as Prisma.InputJsonValue } });
+    // The gateways are connections in the Integration Center too: they follow what was just saved here (platform/src/integrations/legacy.ts).
+    for (const g of LEGACY_GATEWAYS) await importLegacy(db(), { only: g, force: true, actorId: s.user.id });
     await audit(s.user.id, request.ip, "settings.payments", "payment gateways", undefined, { esewa: b.esewa.enabled && b.esewa.mode, khalti: b.khalti.enabled && b.khalti.mode, fonepay: b.fonepay.enabled && b.fonepay.mode, manual: b.manual.enabled });
     return { message: "Payment settings saved." };
   });
