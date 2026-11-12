@@ -9,7 +9,7 @@ import type { FastifyInstance } from "fastify";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { dbOf } from "@sheetal/backend-core/lib/db";
-import { notifyStaff } from "@sheetal/backend-core/lib/notify";
+import { STAFF_FOR, notifyStaff } from "@sheetal/backend-core/lib/notify";
 import { headOffice } from "@sheetal/backend-core/domain/branches";
 import { AppError, badRequest, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
 import { requireUser, type SessionUser } from "@sheetal/backend-core/modules/auth/sessions";
@@ -106,7 +106,7 @@ export async function postingRoutes(app: FastifyInstance) {
       } });
       return tx.listing.update({ where: { id: l.id }, data: { code: `SP-${String(l.id).padStart(4, "0")}`, slug: `${slugify(b.name)}-${l.id}` }, include: { photos: true } });
     });
-    await notifyStaff(db, "platform.listing.moderate", { type: "review", title: "Listing to review", message: `${created.title} · posted on the website`, link: "/admin/moderation" });
+    await notifyStaff(db, STAFF_FOR.listingReview, { type: "review", title: "Listing to review", message: `${created.title} · posted on the website`, link: "/admin/moderation" });
     return { status: 200, message: "Posted. Sheetal checks every listing before it goes live, usually within a day.", data: { ...listingCard(created, base), listing_status: created.status } };
   });
 
@@ -170,7 +170,7 @@ export async function postingRoutes(app: FastifyInstance) {
       to: app.config.SUPPORT_EMAIL, subject: `Upgrade request: ${plan.name} (${plan.type}) for ${b.months} months`,
       text: `${user.userName} <${user.email}>${user.phone ? `, ${user.phone}` : ""} asked for ${plan.name} (${plan.type}) for ${b.months} months: Rs. ${priceFor(plan.price, b.months).toLocaleString("en-IN")}.\nBusiness id: ${tenantId}`,
     });
-    await notifyStaff(db, "platform.business.read+platform.business.create+platform.business.update", { type: "upgrade", title: `Upgrade request: ${plan.name} (${plan.type})`, message: `${user.userName} · ${b.months} month${b.months > 1 ? "s" : ""}`, link: "/admin/requests" });
+    await notifyStaff(db, STAFF_FOR.businessRequests, { type: "upgrade", title: `Upgrade request: ${plan.name} (${plan.type})`, message: `${user.userName} · ${b.months} month${b.months > 1 ? "s" : ""}`, link: "/admin/requests" });
     return { status: 200, message: "Upgrade request sent. Our team will call you to finish it." };
   });
 }
