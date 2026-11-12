@@ -2699,3 +2699,141 @@ model ReminderLog {
   @@index([day])
   @@map("reminder_logs")
 }
+
+/// One outside service connected for Sheetal itself (scope "platform") or for one business (scope "business"): its state, its
+/// non-secret values and its health (INTEGRATIONS.md section 5). Secrets live in IntegrationSecretSet, never here.
+/// @app workspace
+model IntegrationConnection {
+  id              String    @id @default(cuid())
+  /// The id in platform/src/integrations/registry.ts: esewa, khalti, whatsapp, ai.anthropic…
+  integrationId   String    @map("integration_id")
+  /// platform or business
+  scope           String
+  /// The business for scope "business"; empty for Sheetal's own.
+  tenantId        String?   @map("tenant_id")
+  /// "platform", or the business id: with integrationId it is the identity of the connection.
+  ownerKey        String    @map("owner_key")
+  /// draft, in_review, rejected, details_entered, test_failed, test_passed, live, paused
+  state           String    @default("draft")
+  /// test or live: which secret set is in use.
+  mode            String    @default("test")
+  /// Non-secret values of the ACTIVE details, e.g. { productCode, phoneId }.
+  config          Json
+  /// Non-secret values waiting to be applied to a live or paused connection.
+  stagedConfig    Json?     @map("staged_config")
+  /// none, pending, accepted, rejected
+  reviewStatus    String    @default("none") @map("review_status")
+  reviewedBy      String?   @map("reviewed_by")
+  reviewedAt      DateTime? @map("reviewed_at")
+  reviewNote      String?   @map("review_note")
+  lastTestAt      DateTime? @map("last_test_at")
+  lastTestOk      Boolean?  @map("last_test_ok")
+  goLiveAt        DateTime? @map("go_live_at")
+  goLiveBy        String?   @map("go_live_by")
+  pausedAt        DateTime? @map("paused_at")
+  pausedBy        String?   @map("paused_by")
+  pauseReason     String?   @map("pause_reason")
+  /// healthy, degraded, down, unknown. Not a state: a live connection can be down.
+  healthStatus    String    @default("unknown") @map("health_status")
+  healthMessage   String?   @map("health_message")
+  healthCheckedAt DateTime? @map("health_checked_at")
+  healthFailures  Int       @default(0) @map("health_failures")
+  healthAlertedAt DateTime? @map("health_alerted_at")
+  version         Int       @default(1)
+  createdBy       String?   @map("created_by")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  secrets   IntegrationSecretSet[]
+  documents IntegrationDocument[]
+  logs      IntegrationTestLog[]
+
+  @@unique([integrationId, ownerKey])
+  @@index([tenantId])
+  @@index([state])
+  @@map("integration_connections")
+}
+
+/// The sealed secrets of a connection for ONE mode. Test and live are separate rows; a change to a live connection waits as "staged".
+/// @app workspace
+model IntegrationSecretSet {
+  id           String                @id @default(cuid())
+  connectionId String                @map("connection_id")
+  connection   IntegrationConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  /// test or live
+  mode         String
+  /// active, staged, retired
+  status       String                @default("active")
+  /// { fieldName: sealed value } : one sealed value per secret field.
+  sealed       Json
+  /// The field names only, for the "has" flags.
+  fieldNames   Json                  @map("field_names")
+  createdBy    String?               @map("created_by")
+  createdAt    DateTime              @default(now()) @map("created_at")
+
+  @@index([connectionId, mode, status])
+  @@map("integration_secret_sets")
+}
+
+/// A document uploaded for a connection that needs a human check (a business's payment request).
+/// @app workspace
+model IntegrationDocument {
+  id           String                @id @default(cuid())
+  connectionId String                @map("connection_id")
+  connection   IntegrationConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  key          String
+  /// A private file reference (platform/files); never a public address.
+  fileRef      String                @map("file_ref")
+  mime         String
+  bytes        Int
+  expiresOn    DateTime?             @map("expires_on") @db.Date
+  /// pending, accepted, rejected
+  status       String                @default("pending")
+  note         String?
+  uploadedBy   String?               @map("uploaded_by")
+  uploadedAt   DateTime              @default(now()) @map("uploaded_at")
+  reviewedBy   String?               @map("reviewed_by")
+  reviewedAt   DateTime?             @map("reviewed_at")
+
+  @@unique([connectionId, key])
+  @@map("integration_documents")
+}
+
+/// One test, go-live or health result of a connection. Messages are fixed words plus the provider's short error, never a key.
+/// @app workspace
+model IntegrationTestLog {
+  id           String                @id @default(cuid())
+  connectionId String                @map("connection_id")
+  connection   IntegrationConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  /// test, staged_test, go_live, health
+  kind         String
+  mode         String
+  ok           Boolean
+  checks       Json
+  durationMs   Int                   @default(0) @map("duration_ms")
+  actorId      String?               @map("actor_id")
+  at           DateTime              @default(now())
+
+  @@index([connectionId, at])
+  @@map("integration_test_logs")
+}
+
+/// A step-by-step help guide the super admin can edit (integration set-up guides first). A published row wins over the built-in text.
+/// @app platform
+model HelpGuide {
+  id        String   @id @default(cuid())
+  /// guide.integration.<id>.<scope>
+  key       String
+  lang      String   @default("en")
+  title     String
+  /// [{ title, body, links: [{ label, url }] }]
+  steps     Json
+  /// draft or published
+  status    String   @default("draft")
+  version   Int      @default(1)
+  updatedBy String?  @map("updated_by")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([key, lang])
+  @@map("help_guides")
+}

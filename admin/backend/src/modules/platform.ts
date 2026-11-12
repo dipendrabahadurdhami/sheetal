@@ -18,6 +18,7 @@ import {
   type IntegrationId, type PlatformSettings,
 } from "@sheetal/backend-core/domain/platform";
 import { staffOf } from "./routes.js";
+import { importLegacy } from "@sheetal/platform/integrations/legacy";
 
 const domain = z.string().trim().toLowerCase().max(120).regex(/^[a-z0-9]([a-z0-9.-]*[a-z0-9])?(\/[a-z0-9._-]*)*$/, "Write it like sheetalproperty.com, with no https://.");
 const platformBody = z.strictObject({
@@ -131,6 +132,8 @@ export async function adminPlatformRoutes(app: FastifyInstance, opts: { fetch?: 
     delete next.lastTest; // the keys changed, so the last test no longer counts
     await saveIntegration(db(), id, next);
     for (const c of changes) await audit(s.user.id, request.ip, `settings.integration.${id}`, c);
+    // This old route is an alias of the Integration Center now: its connection follows what was just saved (platform/src/integrations/legacy.ts).
+    await importLegacy(db(), { only: id, force: true, actorId: s.user.id });
     return { message: "Saved. Press Test to check it.", data: await view(id) };
   });
 
@@ -175,6 +178,7 @@ export async function adminPlatformRoutes(app: FastifyInstance, opts: { fetch?: 
     const ok = checks.length > 0 && checks.every((c) => c.ok);
     await saveIntegration(db(), id, { ...cur, lastTest: { at: new Date().toISOString(), ok } });
     await audit(s.user.id, request.ip, `settings.integration.${id}.test`, ok ? "passed" : "failed");
+    await importLegacy(db(), { only: id, force: true, actorId: s.user.id });
     return { data: { ok, checks } };
   });
 }

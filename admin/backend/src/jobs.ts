@@ -12,6 +12,30 @@ import type { JobSpec } from "@sheetal/platform/jobs/registry";
 import { billingJob } from "./modules/billing.js";
 import { otaJob } from "./modules/insight.js";
 import { reminderJob } from "./modules/reminders.js";
+import { dbOf } from "@sheetal/backend-core/lib/db";
+import { Vault } from "@sheetal/backend-core/lib/vault";
+import type { Fetch } from "@sheetal/backend-core/lib/payments";
+import { IntegrationService } from "@sheetal/platform/integrations/service";
+import { syncLegacy } from "@sheetal/platform/integrations/legacy";
+import { integrationHealthJob } from "@sheetal/platform/integrations/health";
 
 /** Every background job of the admin API, in start order. */
 export const adminJobs = (app: FastifyInstance): JobSpec[] => [billingJob(app), otaJob(app), reminderJob(app)];
+
+/**
+ * The Integration Center's engine for this API (stage 1.3): one per process. After every change to a platform connection the old settings rows are
+ * rewritten (syncLegacy), so billing's gateways() and the website keep reading what they always read.
+ */
+export function integrationsOf(app: FastifyInstance, fetchFn?: Fetch): IntegrationService {
+  const db = dbOf(app);
+  const vault = new Vault(app.config.SECRETS_KEY, app.config.NODE_ENV === "production");
+  const env = app.config.NODE_ENV === "production" ? "production" : app.config.NODE_ENV === "test" ? "test" : "development";
+  return new IntegrationService({ db, vault, env, fetch: fetchFn, log: app.log, afterChange: (id) => syncLegacy(db, vault, id) });
+}
+
+/** Jobs of the platform itself that run in this API, listed apart from adminJobs() so that list (and the test that pins it) stays as it was. */
+export const adminPlatformJobs = (app: FastifyInstance, integrations: IntegrationService): JobSpec[] => [integrationHealthJob(dbOf(app), integrations, app.log)];
+
+declare module "fastify" {
+  interface FastifyInstance { integrations?: IntegrationService }
+}

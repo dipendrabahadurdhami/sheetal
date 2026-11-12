@@ -70,6 +70,10 @@ export const APPS: readonly AppManifest[] = [
       "Invite",
       "InviteBranch",
       "ApprovalRule",
+      "IntegrationConnection",
+      "IntegrationSecretSet",
+      "IntegrationDocument",
+      "IntegrationTestLog",
       "ApprovalRequest",
       "Notification",
       "ApiKey",
@@ -842,6 +846,7 @@ export const APPS: readonly AppManifest[] = [
     dependencies: { requires: [], optional: [], reads: [] },
     models: [
       "AppSetting",
+      "HelpGuide",
       "User",
       "Session",
       "EmailToken",
