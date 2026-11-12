@@ -19,6 +19,7 @@
     "listings:tidy": "tsx scripts/tidy-listings.ts",
     "payouts:sample": "tsx scripts/payouts-sample.ts",
     "reviews:sample": "tsx scripts/reviews-sample.ts",
+    "integrations:migrate": "tsx scripts/integrations-migrate.ts",
     "expenses:roles": "tsx scripts/expenses-roles.ts",
     "rentals:roles": "tsx scripts/rentals-roles.ts",
     "agreements:roles": "tsx scripts/agreements-roles.ts",

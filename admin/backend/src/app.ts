@@ -26,7 +26,11 @@ import { adminChannelRoutes } from "./modules/channels.js";
 import { adminAiFeatureRoutes } from "./modules/ai-features.js";
 import { adminTemplateRoutes } from "./modules/templates.js";
 import { adminReminderRoutes } from "./modules/reminders.js";
-import { adminJobs } from "./jobs.js";
+import { adminJobs, adminPlatformJobs, integrationsOf } from "./jobs.js";
+import { integrationAdminRoutes } from "@sheetal/platform/integrations/routes";
+import { buildStaffContext } from "@sheetal/platform/tenancy/context";
+import { dbOf } from "@sheetal/backend-core/lib/db";
+import { requireUser } from "@sheetal/backend-core/modules/auth/sessions";
 import { jobsOn, startJobs } from "@sheetal/platform/jobs/registry";
 import type { Fetch } from "@sheetal/backend-core/lib/payments";
 import { notificationRoutes } from "@sheetal/backend-core/modules/notifications";
@@ -60,9 +64,19 @@ export async function buildApp(config: Config, deps: AppDeps & { fetch?: Fetch }
   await app.register(adminCatalogRoutes, { prefix: "/v1" });
   await app.register(adminSupportRoutes, { prefix: "/v1" });
   await app.register(adminImpersonationRoutes, { prefix: "/v1" });
+  // The Integration Center (stage 1.3): every outside service in one place, details -> test -> live -> paused. The old Admin -> Settings connection
+  // routes above stay as aliases; platform/src/integrations/legacy.ts keeps their settings rows and the connections in step.
+  const integrations = app.db ? integrationsOf(app, deps.fetch) : null;
+  if (integrations) {
+    app.decorate("integrations", integrations);
+    await app.register(integrationAdminRoutes, {
+      prefix: "/v1", service: integrations,
+      staffOf: (request) => buildStaffContext({ db: dbOf(app), user: requireUser(request), headers: request.headers, ip: request.ip, requestId: String(request.id), log: request.log }),
+    });
+  }
   // The bell: work for Sheetal staff (notes without a business that lead into the admin panel).
   await app.register(async (a) => notificationRoutes(a, "/admin/notifications", (request) => ({ userId: staffOf(request).user.id, tenantId: null, link: { startsWith: "/admin" } })), { prefix: "/v1" });
   // The renewal cycle, calendar sync and expiry reminders run in this process only, started by one registry (src/jobs.ts). JOBS=off turns them off.
-  startJobs(app, adminJobs(app), { enabled: jobsOn(config.NODE_ENV, !!app.db) });
+  startJobs(app, [...adminJobs(app), ...(integrations ? adminPlatformJobs(app, integrations) : [])], { enabled: jobsOn(config.NODE_ENV, !!app.db) });
   return app;
 }
