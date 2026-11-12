@@ -24,7 +24,7 @@ export async function adminInsightRoutes(app: FastifyInstance) {
   const audit = (actorId: string, ip: string, action: string, target: string) => db().auditLog.create({ data: { actorId, action, target, ip } });
 
   app.get("/admin/analytics", async (request) => {
-    staffOf(request, "dashboard.view");
+    staffOf(request, "platform.dashboard.read");
     const { days } = z.object({ days: z.coerce.number().int().min(1).max(365).default(30) }).parse(request.query);
     const since = new Date(Date.now() - days * 864e5);
     const prev = new Date(since.getTime() - days * 864e5);
@@ -55,7 +55,7 @@ export async function adminInsightRoutes(app: FastifyInstance) {
   // are saved instead of sent; in production staff see who, what, when and the outcome.
   const showText = () => app.config.NODE_ENV !== "production";
   app.get("/admin/email/outbox", async (request) => {
-    staffOf(request, "settings.platform");
+    staffOf(request, "platform.settings.read+platform.settings.update");
     const q = z.object({ status: z.enum(["all", "queued", "sending", "deferred", "sent", "failed"]).default("all"), q: z.string().trim().max(120).optional() }).parse(request.query);
     const where: Prisma.OutboundEmailWhereInput = { ...(q.status === "all" ? {} : { status: q.status }), ...(q.q ? { OR: [{ to: { contains: q.q, mode: "insensitive" } }, { subject: { contains: q.q, mode: "insensitive" } }] } : {}) };
     const [rows, counts] = await Promise.all([
@@ -65,13 +65,13 @@ export async function adminInsightRoutes(app: FastifyInstance) {
     return { data: rows, meta: { counts: Object.fromEntries(counts.map((c) => [c.status, c._count])), showText: showText() } };
   });
   app.get<{ Params: { id: string } }>("/admin/email/outbox/:id", async (request) => {
-    staffOf(request, "settings.platform");
+    staffOf(request, "platform.settings.read+platform.settings.update");
     const e = await dbOf(app).outboundEmail.findUnique({ where: { id: request.params.id } });
     if (!e) throw notFound("Email not found.");
     return { data: { ...e, text: showText() ? e.text : null, html: showText() ? e.html : null } };
   });
   app.post<{ Params: { id: string } }>("/admin/email/outbox/:id/resend", async (request) => {
-    const s = staffOf(request, "settings.platform");
+    const s = staffOf(request, "platform.settings.read+platform.settings.update");
     const r = await dbOf(app).outboundEmail.updateMany({ where: { id: request.params.id, status: { in: ["failed", "deferred", "sent"] } }, data: { status: "queued", attempts: 0, nextAttemptAt: new Date(), lockedUntil: null, error: null } });
     if (!r.count) throw notFound("Email not found, or it is being sent right now.");
     await dbOf(app).auditLog.create({ data: { actorId: s.user.id, action: "email.resend", target: request.params.id, ip: request.ip } });
@@ -79,7 +79,7 @@ export async function adminInsightRoutes(app: FastifyInstance) {
   });
 
   app.get("/admin/system/status", async (request) => {
-    staffOf(request, "settings.platform");
+    staffOf(request, "platform.settings.read+platform.settings.update");
     const t0 = Date.now();
     const dbOk = await db().$queryRaw`SELECT 1`.then(() => true).catch(() => false);
     const dbMs = Date.now() - t0;
@@ -111,12 +111,12 @@ export async function adminInsightRoutes(app: FastifyInstance) {
   });
 
   app.get("/admin/settings/ai", async (request) => {
-    staffOf(request, "settings.platform");
+    staffOf(request, "platform.settings.read+platform.settings.update");
     const s = ((await db().appSetting.findUnique({ where: { key: "ai" } }))?.value ?? {}) as AiSettings;
     return { data: { enabled: s.enabled !== false, model: s.model || DEFAULT_MODEL, credits: Object.fromEntries(Object.entries((await aiFeatureSettings(db())).plans).map(([n, p]) => [n, p.credits])), hasKey: !!s.apiKey, envKey: !!process.env.ANTHROPIC_API_KEY } };
   });
   app.put("/admin/settings/ai", async (request) => {
-    const s = staffOf(request, "settings.platform");
+    const s = staffOf(request, "platform.settings.read+platform.settings.update");
     if (s.role !== "super_admin") throw badRequest("Only the super admin can change AI keys.");
     const b = z.object({
       enabled: z.boolean(), model: z.string().trim().regex(/^claude-[a-z0-9-]+$/, "Use a Claude model id, like claude-opus-5-5.").max(60),
@@ -135,12 +135,12 @@ export async function adminInsightRoutes(app: FastifyInstance) {
   });
 
   app.get("/admin/settings/meta", async (request) => {
-    staffOf(request, "settings.platform");
+    staffOf(request, "platform.settings.read+platform.settings.update");
     const v = ((await db().appSetting.findUnique({ where: { key: "meta" } }))?.value ?? {}) as { appSecret?: string; verifyToken?: string };
     return { data: { hasAppSecret: !!v.appSecret, hasVerifyToken: !!v.verifyToken, webhookUrl: `${app.config.API_URL.replace(/\/$/, "")}/v1/webhooks/meta` } };
   });
   app.put("/admin/settings/meta", async (request) => {
-    const s = staffOf(request, "settings.platform");
+    const s = staffOf(request, "platform.settings.read+platform.settings.update");
     if (s.role !== "super_admin") throw badRequest("Only the super admin can change Meta keys.");
     const b = z.object({ appSecret: z.string().trim().min(16).max(200).optional(), verifyToken: z.string().trim().min(12).max(200).optional() }).parse(request.body);
     const cur = ((await db().appSetting.findUnique({ where: { key: "meta" } }))?.value ?? {}) as { appSecret?: string; verifyToken?: string };
@@ -152,12 +152,12 @@ export async function adminInsightRoutes(app: FastifyInstance) {
 
   // Robot check on the website's online forms (Cloudflare Turnstile). Saving both empty with off: true turns it off.
   app.get("/admin/settings/captcha", async (request) => {
-    staffOf(request, "settings.platform");
+    staffOf(request, "platform.settings.read+platform.settings.update");
     const v = await captchaSettings(db());
     return { data: { siteKey: v.siteKey ?? "", hasSecret: !!v.secret, on: !!(v.siteKey && v.secret) } };
   });
   app.put("/admin/settings/captcha", async (request) => {
-    const s = staffOf(request, "settings.platform");
+    const s = staffOf(request, "platform.settings.read+platform.settings.update");
     if (s.role !== "super_admin") throw badRequest("Only the super admin can change the robot-check keys.");
     const b = z.object({ siteKey: z.string().trim().max(200).optional(), secret: z.string().trim().min(10).max(300).optional(), off: z.boolean().optional() }).parse(request.body);
     const cur = await captchaSettings(db());

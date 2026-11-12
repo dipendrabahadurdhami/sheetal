@@ -29,7 +29,7 @@ export async function adminTemplateRoutes(app: FastifyInstance) {
   const def = (key: string) => defOf(key) ?? (() => { throw notFound("There is no such message."); })();
 
   app.get("/admin/templates", async (request) => {
-    staffOf(request, "settings.platform");
+    staffOf(request, "platform.settings.read+platform.settings.update");
     const saved = await db().messageTemplate.findMany({ orderBy: [{ key: "asc" }, { channel: "asc" }, { lang: "asc" }] });
     return {
       data: {
@@ -41,7 +41,7 @@ export async function adminTemplateRoutes(app: FastifyInstance) {
   });
 
   app.put<{ Params: { key: string } }>("/admin/templates/:key", async (request) => {
-    const s = staffOf(request, "settings.platform");
+    const s = staffOf(request, "platform.settings.read+platform.settings.update");
     def(request.params.key);
     const b = wording.parse(request.body);
     check(request.params.key, b.channel, b.subject, b.body);
@@ -55,7 +55,7 @@ export async function adminTemplateRoutes(app: FastifyInstance) {
 
   /** Back to the built-in wording. */
   app.delete<{ Params: { key: string } }>("/admin/templates/:key", async (request) => {
-    const s = staffOf(request, "settings.platform");
+    const s = staffOf(request, "platform.settings.read+platform.settings.update");
     def(request.params.key);
     const q = where.parse(request.query);
     const r = await db().messageTemplate.deleteMany({ where: { key: request.params.key, channel: q.channel, lang: q.lang } });
@@ -64,14 +64,14 @@ export async function adminTemplateRoutes(app: FastifyInstance) {
   });
 
   app.post<{ Params: { key: string } }>("/admin/templates/:key/preview", async (request) => {
-    staffOf(request, "settings.platform");
+    staffOf(request, "platform.settings.read+platform.settings.update");
     def(request.params.key);
     const b = z.object({ subject: z.string().max(200).default(""), body: z.string().max(5000) }).parse(request.body);
     return { data: { subject: renderText(b.subject, SAMPLE_VALUES), body: renderText(b.body, SAMPLE_VALUES) } };
   });
 
   app.post<{ Params: { key: string } }>("/admin/templates/:key/test", async (request) => {
-    const s = staffOf(request, "settings.platform");
+    const s = staffOf(request, "platform.settings.read+platform.settings.update");
     def(request.params.key);
     const b = z.object({ subject: z.string().trim().min(1).max(200), body: z.string().trim().min(5).max(5000) }).parse(request.body);
     check(request.params.key, "email", b.subject, b.body);

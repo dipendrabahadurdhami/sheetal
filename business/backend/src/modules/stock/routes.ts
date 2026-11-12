@@ -19,8 +19,8 @@ import { nepalDay } from "@sheetal/backend-core/domain/payouts";
 import { MAX_COST, MAX_QTY, STOCK_PLACES, applyMove, lowStock, placeOf, runLowStock } from "@sheetal/backend-core/domain/stock";
 import { branchFor, branchView, inView, workspaceOf, type BranchView, type Workspace } from "../access.js";
 
-const VIEW = ["pos.restaurant", "pos.extras", "settings.business"];
-const CHANGE = ["pos.restaurant", "settings.business"];
+const VIEW = ["pos.restaurant.use", "pos.extra.create", "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"];
+const CHANGE = ["pos.restaurant.use", "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"];
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const whole = (max: number) => z.number().int().min(0).max(max);
 const dayStart = (d: string) => {

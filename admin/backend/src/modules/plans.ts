@@ -31,7 +31,7 @@ export async function adminPlanRoutes(app: FastifyInstance) {
     db().auditLog.create({ data: { actorId, action, target, ip, meta: meta as object } });
 
   app.get("/admin/plans", async (request) => {
-    staffOf(request, "tenants.view");
+    staffOf(request, "platform.business.read");
     const [plans, counts] = await Promise.all([
       db().plan.findMany({ orderBy: [{ type: "asc" }, { sort: "asc" }] }),
       db().tenant.groupBy({ by: ["planId"], where: { status: { notIn: ["cancelled"] } }, _count: true }),
@@ -44,7 +44,7 @@ export async function adminPlanRoutes(app: FastifyInstance) {
   });
 
   app.patch<{ Params: { id: string } }>("/admin/plans/:id", async (request) => {
-    const s = staffOf(request, "plans.manage");
+    const s = staffOf(request, "platform.plan.read+platform.plan.create+platform.plan.update+platform.plan.delete");
     const b = Edit.parse(request.body);
     const p = await db().plan.findUnique({ where: { id: request.params.id } });
     if (!p) throw notFound("Plan not found.");
@@ -57,7 +57,7 @@ export async function adminPlanRoutes(app: FastifyInstance) {
   });
 
   app.post("/admin/plans", async (request) => {
-    const s = staffOf(request, "plans.manage");
+    const s = staffOf(request, "platform.plan.read+platform.plan.create+platform.plan.update+platform.plan.delete");
     const b = Edit.extend({ type: z.enum(BUSINESS_TYPES) }).parse(request.body);
     const slug = b.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 24) || "plan";
     const id = `${b.type}-${slug}`;

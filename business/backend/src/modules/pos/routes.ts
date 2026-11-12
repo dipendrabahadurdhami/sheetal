@@ -29,12 +29,12 @@ export async function posRoutes(app: FastifyInstance) {
   // ───── Menu ─────
   app.get("/menu", async (request) => {
     const ws = workspaceOf(request);
-    need(ws, "pos.restaurant", "pos.extras", "pos.frontdesk", "settings.business");
+    need(ws, "pos.restaurant.use", "pos.extra.create", "pos.frontdesk.use", "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete");
     return { data: await db().menuItem.findMany({ where: { tenantId: ws.tenantId, ...onMenu(await branchView(db(), request, ws)) }, orderBy: [{ outlet: "asc" }, { category: "asc" }, { name: "asc" }] }) };
   });
   app.post("/menu", async (request) => {
     const ws = workspaceOf(request);
-    need(ws, "settings.business");
+    need(ws, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete");
     const b = z.object({ items: z.array(z.object({ name: z.string().trim().min(1).max(80), price: z.number().int().min(0).max(1_000_000), category: z.string().trim().max(40).default("Food"), outlet: z.string().trim().max(40).default("Restaurant") })).min(1).max(500), branchId: z.string().max(40).nullish() }).parse(request.body);
     // No branch: on every branch's menu (only for people with all branches); otherwise that branch's own.
     const v = await branchView(db(), request, ws);
@@ -45,7 +45,7 @@ export async function posRoutes(app: FastifyInstance) {
   });
   app.patch<{ Params: { id: string } }>("/menu/:id", async (request) => {
     const ws = workspaceOf(request);
-    need(ws, "settings.business");
+    need(ws, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete");
     const b = z.object({ name: z.string().trim().min(1).max(80).optional(), price: z.number().int().min(0).optional(), category: z.string().max(40).optional(), outlet: z.string().max(40).optional(), active: z.boolean().optional() }).parse(request.body);
     const v = await branchView(db(), request, ws);
     // Shared items can only be changed by people with all branches.
@@ -57,7 +57,7 @@ export async function posRoutes(app: FastifyInstance) {
   // ───── Shifts ─────
   app.get("/shifts/current", async (request) => {
     const ws = workspaceOf(request);
-    need(ws, "pos.restaurant", "pos.frontdesk", "pos.extras", "shift.close");
+    need(ws, "pos.restaurant.use", "pos.frontdesk.use", "pos.extra.create", "pos.shift.close");
     const s = await openShift(ws.tenantId, await till(ws, request));
     if (!s) return { data: null };
     const bills = await db().posBill.groupBy({ by: ["method"], where: { shiftId: s.id, status: "paid" }, _sum: { total: true } });
@@ -66,7 +66,7 @@ export async function posRoutes(app: FastifyInstance) {
   });
   app.post("/shifts/open", async (request) => {
     const ws = workspaceOf(request);
-    need(ws, "pos.restaurant", "pos.frontdesk", "shift.close");
+    need(ws, "pos.restaurant.use", "pos.frontdesk.use", "pos.shift.close");
     const { float } = z.object({ float: z.number().int().min(0).max(10_000_000).default(0) }).parse(request.body);
     const branchId = await till(ws, request);
     if (await openShift(ws.tenantId, branchId)) throw badRequest("A shift is already open at this branch. Close it first.");
@@ -75,7 +75,7 @@ export async function posRoutes(app: FastifyInstance) {
   });
   app.post("/shifts/close", async (request) => {
     const ws = workspaceOf(request);
-    need(ws, "shift.close");
+    need(ws, "pos.shift.close");
     const { counted } = z.object({ counted: z.number().int().min(0).max(100_000_000) }).parse(request.body);
     const s = await openShift(ws.tenantId, await till(ws, request));
     if (!s) throw badRequest("No shift is open at this branch.");
@@ -89,7 +89,7 @@ export async function posRoutes(app: FastifyInstance) {
   // ───── Bills ─────
   app.get("/pos/bills", async (request) => {
     const ws = workspaceOf(request);
-    need(ws, "pos.restaurant", "pos.frontdesk", "pos.extras", "shift.close", "invoices.view");
+    need(ws, "pos.restaurant.use", "pos.frontdesk.use", "pos.extra.create", "pos.shift.close", "invoicing.invoice.read");
     const { day } = z.object({ day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }).parse(request.query);
     const from = day ? new Date(`${day}T00:00:00+05:45`) : new Date(Date.now() - 864e5);
     const rows = await db().posBill.findMany({ where: { tenantId: ws.tenantId, ...inView(await branchView(db(), request, ws)), createdAt: { gte: from, lt: new Date(from.getTime() + (day ? 864e5 : 2 * 864e5)) } }, orderBy: { createdAt: "desc" } });
@@ -102,8 +102,8 @@ export async function posRoutes(app: FastifyInstance) {
       outlet: z.string().trim().min(1).max(40), method: z.enum(METHODS), bookingId: z.string().max(40).optional(), discount: z.number().int().min(0).default(0),
       lines: z.array(z.object({ itemId: z.string().max(40).optional(), name: z.string().trim().min(1).max(80), qty: z.number().int().min(1).max(999), price: z.number().int().min(0).max(1_000_000) })).min(1).max(100),
     }).parse(request.body);
-    need(ws, "pos.restaurant", "pos.extras", "pos.frontdesk");
-    if (b.discount > 0) need(ws, "pos.discount");
+    need(ws, "pos.restaurant.use", "pos.extra.create", "pos.frontdesk.use");
+    if (b.discount > 0) need(ws, "pos.bill.discount");
     // Prices come from the menu when the item is on it, so a bill can't be rung up below the menu price.
     const branchId = await till(ws, request);
     const items = new Map((await db().menuItem.findMany({ where: { tenantId: ws.tenantId, OR: [{ branchId: null }, { branchId }], id: { in: b.lines.map((l) => l.itemId).filter((x): x is string => !!x) } } })).map((i) => [i.id, i]));
@@ -131,7 +131,7 @@ export async function posRoutes(app: FastifyInstance) {
 
   app.post<{ Params: { id: string } }>("/pos/bills/:id/void", async (request) => {
     const ws = workspaceOf(request);
-    need(ws, "pos.void");
+    need(ws, "pos.bill.void");
     const { note } = z.object({ note: z.string().trim().min(3, "Say why.").max(200) }).parse(request.body);
     const pb = await db().posBill.findFirst({ where: { id: request.params.id, tenantId: ws.tenantId, ...inView(await branchView(db(), request, ws)) } });
     if (!pb || pb.status !== "paid") throw notFound("Bill not found.");

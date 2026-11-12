@@ -1,6 +1,6 @@
 # CONTINUE Phase 1 (rest): where it stands (12 Nov 2026, Nepal time)
 
-Phase 1 (rest) is not finished. This note is the stop at a merged, green stage boundary. The next "next" continues the SAME phase with stage 1.5.
+Phase 1 (rest) is not finished. This note is the stop at a merged, green stage boundary. The next step is stage 1.5 part 2, after the owner says yes to the role rewrite.
 
 ## Done (merged, CI green on main)
 | Stage | PR | State |
@@ -9,33 +9,26 @@ Phase 1 (rest) is not finished. This note is the stop at a merged, green stage b
 | 1.3 Integration Center | #22 (`1a607c4`) | merged. 5 new tables (additive migration `20261112110000_integration_center`), bound vault (v2), framework, 6 adapters + 17 shells, two-way sync with the old settings rows, `npm run integrations:migrate`, admin screens. Notes: `CHANGES-P1-S3-integration-center.md`. |
 | 1.4 Settings | #23 (`7c8e0f9`) | merged. Typed settings store (no schema change), revenue share + report, field builder, theme tokens, admin screens. Notes: `CHANGES-P1-S4-settings.md`. |
 
-Tests on main: 1125 (was 1013 at the start of Phase 1 rest).
+Tests on main: 1132 (was 1013 at the start of Phase 1 rest). PR #25 fixed a timing fault in the support-session audit row that made the check on main fail twice.
 
-## Not done: stage 1.5 (new permission names everywhere) and stage 1.6 (close-out)
+## Stage 1.5: part 1 is merged, part 2 waits for the owner's yes
 
-### Why 1.5 was not started in the same sitting
-Measured on main: **60 old permission names, about 700 uses in 85 files** (besides `platform/src/tenancy/legacy-v1.ts`, which is the alias table itself).
-Biggest: `business/frontend/src/pages/BusinessApp.jsx` 162, `admin/frontend/src/pages/AdminApp.jsx` 56, `business/backend/src/modules/hotel/routes.ts` 33,
-`overview/routes.ts` 25, `pos/routes.ts` 25, `admin/backend/src/modules/content.ts` 22, `projects/routes.ts` 21.
-By area: business/backend 220, business/frontend 231, admin/backend 138, admin/frontend 73, backend-core 22, website/backend 9, shared 6.
-Every one of these decides who may do what. A wrong mapping is a silent access bug, so it must not be done in a hurry.
+**Part 1 (merged, PR #26):** every permission CHECK names the new permissions (about 660 places in 49 files). A check may join names with `+` (all needed), so a
+check that used one old bundle name keeps the same meaning. Safety-net tests prove every role template and staff role answers every check the same way, before and
+after the role rewrite. Tool and report: `node scripts/perm-names.mjs --report`. The alias layer is still ON; no stored data changed; no old test changed.
+Notes: `CHANGES-P1-S5a-new-names-call-sites.md`.
 
-### What 1.5 has to respect
-1. **An old name can stand for several new names.** `can("old")` is true when the role holds the old name or ALL of its new names (`platform/src/tenancy/aliases.ts`).
-   So `can("old")` becomes `can(new)` only when the old name maps to exactly one new name; otherwise it becomes "all of [new…]". Do it with a table-driven
-   codemod, not by hand, and commit the table.
-2. **Safety net first:** write a truth-table test before touching call sites: for every role template of every business type (and every platform staff role),
-   record the answer of every old-name check; after the switch the new-name checks must give the same answers. `packages/config/src/menu.test.js` shows the shape.
-3. **Role templates** (`shared/src/core/rbac.js`, `backend-core/src/domain/permissions.ts`) still create roles in OLD names. They must create new names with scopes
-   before the alias layer goes, or every new business gets roles that no longer work.
-4. **Old tests assert old names** (role `perms` arrays, `ws.can("…")` in tests). The team rule says old tests pass unchanged; 1.5 necessarily changes what a role
-   stores, so those assertions change. List every changed test in the CHANGES file with the reason; never change what a test proves.
-5. **Order on the owner's computer.** Once the alias layer is removed, roles stored in old names stop working. The real role rewrite
-   (`npm run roles:new-names -- --apply`, with `Role.permsV1` as the backup) must run in the same update, before the servers start. It changes real data:
-   **ask the owner first**, and take `npm run db:backup` before it. This is why 1.5 and the runner of 1.6 ship together.
-6. Suggested split: 1.5a truth-table test + templates in new names (alias layer still on, nothing breaks) → 1.5b server call sites (business, admin, website)
-   → 1.5c front-end call sites → 1.5d remove the alias layer (server + `shared/src/core/rbac.js`) + the grep test. Each one green before the next.
-   `menu.test.js` compares old and new names through the alias layer: in 1.5d keep its "new names" half.
+**Part 2 (not started; it rewrites stored roles, so it needs the owner's yes first):**
+1. Role templates create new names with scopes (`platform/src/tenancy/legacy-v1.ts` and its readers `shared/src/core/rbac.js`, `backend-core/src/domain/permissions.ts`).
+2. The real role rewrite on every database: `npm run db:backup`, then `npm run roles:new-names -- --apply` (`Role.permsV1` keeps the old values).
+   It must run in the same update as step 3, before the servers start: this is what `scripts/ops/RUN-P1-ROLES.cmd` (stage 1.6) is for.
+3. Remove the alias layer (`platform/src/tenancy/aliases.ts` old-name branches, the copy in `shared/src/core/rbac.js`) and add the grep test that no old name
+   is left outside the rewrite script and its backup column.
+4. `admin/frontend/src/live.js` `has("tenants.view" …)` reads stored staff permissions raw: switch it with the staff roles.
+5. Tests: about 345 uses of old names in tests. Those that assert what a role STORES change with step 1; list each in the CHANGES file with the reason.
+   `packages/config/src/menu.test.js` and `new-names.test.js` compare old and new through the alias layer: keep their "new names" halves.
+6. Website and business code must never write a `platform.*` permission (`backend-core/test/permissions-worlds.test.ts`): name the staff work with
+   `STAFF_FOR` in `platform/src/notify/index.ts`.
 
 ### Stage 1.6 (after 1.5)
 Delete the `backend-core/src/lib/*`, `domain/*` and `modules/*` shims; retire the old role scripts; move `backend-core/test/setup-db.ts` to `platform/test`;

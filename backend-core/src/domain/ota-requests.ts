@@ -84,7 +84,7 @@ export async function askForChannel(db: Db, o: { tenant: { id: string; name: str
   const busy = await db.otaRequest.findFirst({ where: { tenantId: o.tenant.id, listingId: listing.id, channel: o.channel, status: { in: [...OPEN_STATUSES, "live"] } } });
   if (busy) throw new AppError(409, "ota_exists", `${channelName(o.channel)} already has a request for this listing.`);
   const r = await db.otaRequest.create({ data: { tenantId: o.tenant.id, branchId: listing.branchId, listingId: listing.id, channel: o.channel, price: o.price, note: o.note || null, log: [line(o.who, `Asked Sheetal to post on ${channelName(o.channel)}${o.note ? `: ${o.note}` : ""}`)] as unknown as Prisma.InputJsonValue } });
-  await notifyStaff(db, "tenants.manage", { type: "ota", title: `${channelName(o.channel)} request: ${o.tenant.name}`, message: `${otaRef(r.seq)} · ${listing.title}`, link: "/admin/channels" });
+  await notifyStaff(db, "platform.business.read+platform.business.create+platform.business.update", { type: "ota", title: `${channelName(o.channel)} request: ${o.tenant.name}`, message: `${otaRef(r.seq)} · ${listing.title}`, link: "/admin/channels" });
   return r;
 }
 
@@ -94,7 +94,7 @@ export async function replyToRequest(db: Db, o: { tenantId: string; id: string; 
   if (!r) throw notFound("That request isn't in this business.");
   if (r.status !== "needs_info") throw badRequest("Sheetal isn't waiting for a reply on this one.");
   const upd = await db.otaRequest.update({ where: { id: r.id }, data: { status: "setting_up", log: [...logOf(r), line(o.who, `Replied${o.text ? `: ${o.text}` : ""}${o.files.length ? ` (${o.files.length} file${o.files.length > 1 ? "s" : ""} added)` : ""}`, o.files)] as unknown as Prisma.InputJsonValue } });
-  await notifyStaff(db, "tenants.manage", { type: "ota", title: `Reply on ${otaRef(r.seq)}`, message: channelName(r.channel), link: "/admin/channels" });
+  await notifyStaff(db, "platform.business.read+platform.business.create+platform.business.update", { type: "ota", title: `Reply on ${otaRef(r.seq)}`, message: channelName(r.channel), link: "/admin/channels" });
   return upd;
 }
 
@@ -104,7 +104,7 @@ export async function pauseRequest(db: Db, o: { tenantId: string; id: string; wh
   if (!r) throw notFound("That request isn't in this business.");
   if (r.status === "paused" || r.status === "rejected") throw badRequest("This one is already stopped.");
   const upd = await db.otaRequest.update({ where: { id: r.id }, data: { status: "paused", log: [...logOf(r), line(o.who, r.status === "live" ? "Asked to stop selling" : "Cancelled")] as unknown as Prisma.InputJsonValue } });
-  await notifyStaff(db, "tenants.manage", { type: "ota", title: `${r.status === "live" ? "Take down" : "Cancelled"}: ${otaRef(r.seq)}`, message: channelName(r.channel), link: "/admin/channels" });
+  await notifyStaff(db, "platform.business.read+platform.business.create+platform.business.update", { type: "ota", title: `${r.status === "live" ? "Take down" : "Cancelled"}: ${otaRef(r.seq)}`, message: channelName(r.channel), link: "/admin/channels" });
   return upd;
 }
 
@@ -136,7 +136,7 @@ export async function setRequestStatus(db: Db, mailer: Mailer, o: StatusChange) 
   }[o.status as Exclude<OtaStatus, "requested">];
   const tenant = await db.tenant.findUnique({ where: { id: r.tenantId }, select: { id: true, name: true, email: true } });
   if (tenant) {
-    await notify(db, await teamWith(db, tenant.id, ["calendar.edit", "settings.business"], r.branchId), { tenantId: tenant.id, type: "ota", title: `${ch}: ${STATUS_WORDS[o.status]}`, message, link: "/business/listings" });
+    await notify(db, await teamWith(db, tenant.id, ["hotel.calendar.update", "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"], r.branchId), { tenantId: tenant.id, type: "ota", title: `${ch}: ${STATUS_WORDS[o.status]}`, message, link: "/business/listings" });
     const owner = await ownerOf(db, tenant.id);
     const to = owner?.email ?? tenant.email;
     const link = `${o.siteUrl.replace(/\/$/, "")}/business/listings`;

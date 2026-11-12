@@ -34,7 +34,7 @@ export function Branches({ tenant, role }) {
   const multi = true; // one subscription covers every branch
   const save = (next) => update((d) => { d.branches = d.branches || {}; d.branches[tenant.id] = next; d.tenants.find((x) => x.id === tenant.id).scopes = next.filter((b) => b.status === "open").map((b) => b.name); });
   const total = list.reduce((s, b) => s + b.revenue, 0);
-  const manage = can(role, "settings.business");
+  const manage = can(role, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete");
   return (
     <>
       <PageHead title={t("br.title")} sub={t("br.sub")} actions={manage && <Button icon="plus" disabled={!multi && list.length >= 1} title={!multi ? t("br.planLocked") : undefined}
@@ -117,7 +117,7 @@ export function Calendar({ tenant, role }) {
     return Math.round(p / 50) * 50;
   };
   const sold = (d) => ops.bookings.filter((b) => b.type === type && b.from <= iso(d) && b.to > iso(d)).length;
-  const edit = can(role, "calendar.edit");
+  const edit = can(role, "hotel.calendar.update");
   const apply = (kind, v) => { set((o) => { o.blocked = o.blocked || {}; o.rates = o.rates || {}; sel.forEach((d) => { if (kind === "block") o.blocked[key(d)] = !o.blocked[key(d)]; else o.rates[key(d)] = v; }); }); toast(t(kind === "block" ? "cal.toastBlocked" : "cal.toastRate", { n: sel.length })); setSel([]); };
   return (
     <>
@@ -250,7 +250,7 @@ export function LiveBranches({ tenant, role }) {
   const [close, setClose] = useState(null);
   const [del, setDel] = useState(null);
   const [busy, setBusy] = useState(false);
-  const manage = can(role, "settings.business");
+  const manage = can(role, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete");
   const stays = tenant.type === "hotel" || tenant.type === "host";
   const people = (db.members[tenant.id] || []).filter((m) => m.status === "active");
   const act = async (p, done) => { setBusy(true); try { await p; done?.(); } catch { /* the toast says why */ } finally { setBusy(false); } };

@@ -197,7 +197,7 @@ export async function applyPayment(db: Db, mailer: Mailer, o: { paymentId: strin
   if (done.p.invoice.kind === "banner") {
     if (to) await mailer.send({ to, subject: `Payment received: ${number}`, text: `Namaste ${owner?.userName ?? done.tenant.name},\n\nWe received Rs. ${done.p.amount.toLocaleString("en-IN")} for your home page banner. Sheetal checks the picture (usually within a working day); it then shows on its dates by itself.\n\n${o.siteUrl.replace(/\/$/, "")}/business/promote/banner\n\nSheetal Property`, template: { key: "payment_banner", vars: { name: owner?.userName ?? done.tenant.name, amount: done.p.amount.toLocaleString("en-IN"), number, link: `${o.siteUrl.replace(/\/$/, "")}/business/promote/banner` } } });
     await notify(db, [owner?.id, done.p.userId], { tenantId: done.tenant.id, type: "billing", title: `Banner paid: ${number}`, message: "Sheetal checks the picture next.", link: "/business/promote/banner" });
-    await notifyStaff(db, "plans.manage", { type: "promote", title: `Banner picture to check: ${done.tenant.name}`, message: number, link: "/admin/promote" });
+    await notifyStaff(db, "platform.plan.read+platform.plan.create+platform.plan.update+platform.plan.delete", { type: "promote", title: `Banner picture to check: ${done.tenant.name}`, message: number, link: "/admin/promote" });
     return true;
   }
   if (done.p.invoice.kind === "boost") {

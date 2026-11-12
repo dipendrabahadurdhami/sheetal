@@ -33,10 +33,10 @@ const bill = (sub, disc = 0) => { const s = sub - disc; const svc = Math.round(s
 export function POS({ tenant, role }) {
   const t = useT();
   const tabs = [
-    can(role, "pos.frontdesk") && { id: "front", label: t("pos.front"), icon: "concierge-bell" },
-    can(role, "pos.restaurant") && { id: "rest", label: t("pos.restaurant"), icon: "utensils" },
-    can(role, "pos.extras") && { id: "extras", label: t("pos.extras"), icon: "sparkles" },
-    can(role, "shift.close") && { id: "shift", label: t("pos.shift"), icon: "calculator" },
+    can(role, "pos.frontdesk.use") && { id: "front", label: t("pos.front"), icon: "concierge-bell" },
+    can(role, "pos.restaurant.use") && { id: "rest", label: t("pos.restaurant"), icon: "utensils" },
+    can(role, "pos.extra.create") && { id: "extras", label: t("pos.extras"), icon: "sparkles" },
+    can(role, "pos.shift.close") && { id: "shift", label: t("pos.shift"), icon: "calculator" },
   ].filter(Boolean);
   const [tab, setTab] = useState(tabs[0]?.id);
   const [ops] = useOps(tenant);
@@ -87,7 +87,7 @@ function FrontDesk({ tenant, role }) {
         ))}
       </div>
       <Drawer open={!!room} onClose={() => setOpen(null)} title={room && `${t("room.room")} ${room.no} · ${room.type}`} sub={room?.guest}
-        footer={room && <FolioActions room={room} set={set} t={t} toast={toast} close={() => setOpen(null)} canDiscount={can(role, "pos.discount")} />}>
+        footer={room && <FolioActions room={room} set={set} t={t} toast={toast} close={() => setOpen(null)} canDiscount={can(role, "pos.bill.discount")} />}>
         {room && <Folio room={room} set={set} ops={ops} t={t} />}
       </Drawer>
     </>
@@ -234,7 +234,7 @@ function Restaurant({ tenant, role }) {
           )) : <Empty icon="utensils" title={t("pos.emptyTicket")}>{t("pos.emptyTicketText")}</Empty>}
         </div>
         {lines.length > 0 && <div className="pf-pad pf-stack tight">
-          {can(role, "pos.discount") && <div className="pf-row-actions" style={{ justifyContent: "space-between" }}><span className="small">{t("pos.discount")}</span><Seg value={String(disc)} onChange={(v) => setDisc(Number(v))} options={["0", "5", "10", "15"].map((x) => ({ id: x, label: `${x}%` }))} /></div>}
+          {can(role, "pos.bill.discount") && <div className="pf-row-actions" style={{ justifyContent: "space-between" }}><span className="small">{t("pos.discount")}</span><Seg value={String(disc)} onChange={(v) => setDisc(Number(v))} options={["0", "5", "10", "15"].map((x) => ({ id: x, label: `${x}%` }))} /></div>}
           <Totals b={b} t={t} />
           {paying ? <PayBox amount={b.total} rooms={occupied} onCancel={() => setPaying(false)} onPaid={done} t={t} /> : (
             <div className="pf-grid-2 tight">
@@ -331,7 +331,7 @@ export function Bookings({ tenant, role }) {
   const declineSite = (r) => set((o) => { o.channelRes = o.channelRes || structuredClone(tenant.id === "t1" ? OTA_RES : []); const x = o.channelRes.find((y) => y.id === r.id); if (x) x.status = "cancelled"; });
   return (
     <>
-      <PageHead title={t("nav.bookings")} sub={t("bk.sub")} actions={<><Button variant="outline" icon="calendar-days" onClick={() => navigate("/business/calendar")}>{t("nav.calendar")}</Button><Button variant="outline" icon="store" onClick={() => navigate("/business/pos")}>{t("pos.front")}</Button>{can(role, "bookings.create") && <Button icon="plus" onClick={() => setForm(true)}>{t("bk.manual")}</Button>}</>} />
+      <PageHead title={t("nav.bookings")} sub={t("bk.sub")} actions={<><Button variant="outline" icon="calendar-days" onClick={() => navigate("/business/calendar")}>{t("nav.calendar")}</Button><Button variant="outline" icon="store" onClick={() => navigate("/business/pos")}>{t("pos.front")}</Button>{can(role, "hotel.booking.create") && <Button icon="plus" onClick={() => setForm(true)}>{t("bk.manual")}</Button>}</>} />
       <BookingForm tenant={tenant} open={form} onClose={() => setForm(false)} />
       <section className="card pf-panel">
         <div className="pf-pad-x"><Tabs value={tab} onChange={setTab} tabs={Object.keys(groups).map((g) => ({ id: g, label: t(`bk.${g}`), count: all.filter((b) => groups[g].includes(b.status)).length }))} /></div>
@@ -349,7 +349,7 @@ export function Bookings({ tenant, role }) {
             <IconLink to="/business/inbox" icon="message-circle" label={t("bk.message")} />
             <IconLink to="/business/invoices" icon="receipt" label={t("bk.invoice")} />
           </div> },
-          { key: "act", label: "", align: "right", render: (b) => b.ota ? can(role, "bookings.edit") && <div className="pf-row-actions"><Button variant="outline" size="sm" onClick={() => declineSite(b.ota)}>{t("bk.decline")}</Button><Button size="sm" onClick={() => confirmSite(b.ota)}>{t("chm.confirm")}</Button></div> : b.status === "requested" && can(role, "bookings.edit") && <div className="pf-row-actions">
+          { key: "act", label: "", align: "right", render: (b) => b.ota ? can(role, "hotel.booking.update") && <div className="pf-row-actions"><Button variant="outline" size="sm" onClick={() => declineSite(b.ota)}>{t("bk.decline")}</Button><Button size="sm" onClick={() => confirmSite(b.ota)}>{t("chm.confirm")}</Button></div> : b.status === "requested" && can(role, "hotel.booking.update") && <div className="pf-row-actions">
             <Button variant="outline" size="sm" onClick={() => set((o) => { o.bookings.find((x) => x.id === b.id).status = "cancelled"; })}>{t("bk.decline")}</Button>
             <Button size="sm" onClick={() => { set((o) => { o.bookings.find((x) => x.id === b.id).status = "confirmed"; }); toast(t("bk.toastAccepted")); }}>{t("bk.accept")}</Button></div> },
         ]} />

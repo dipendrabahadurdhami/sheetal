@@ -25,7 +25,7 @@ function SampleCheckups({ tenant, role }) {
   const { navigate } = useRouter();
   const { settings, log, act } = useCheckups(tenant.id);
   const listings = db.listings.filter((l) => l.tenantId === tenant.id);
-  const manager = can(role, "team.manage") || role.perms.includes("*");
+  const manager = can(role, "workspace.team.read+workspace.team.invite+workspace.team.update+workspace.team.remove") || role.perms.includes("*");
   const [tab, setTab] = useState("today");
   const [extra, setExtra] = useState(0);
   const list = todaysList(listings, settings, log, today, extra);

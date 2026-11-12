@@ -70,7 +70,7 @@ export async function hotelRoutes(app: FastifyInstance) {
   // ───── Rooms ─────
   app.get("/rooms", async (request) => {
     const ws = workspaceOf(request);
-    need(ws, "bookings.view", "calendar.view", "pos.frontdesk", "settings.business");
+    need(ws, "hotel.booking.read", "hotel.calendar.read", "pos.frontdesk.use", "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete");
     const today = dayOf(ymd(new Date()));
     const v = await view(ws, request);
     const [rooms, current] = await Promise.all([
@@ -88,7 +88,7 @@ export async function hotelRoutes(app: FastifyInstance) {
 
   app.post("/rooms", async (request) => {
     const ws = workspaceOf(request);
-    need(ws, "settings.business", "calendar.edit");
+    need(ws, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete", "hotel.calendar.update");
     const b = z.object({ type: z.string().trim().min(2).max(60), rate: z.number().int().min(0).max(10_000_000), nos: z.array(z.string().trim().min(1).max(20)).min(1).max(200), maxGuests: z.number().int().min(1).max(60).default(2), floor: z.string().max(20).optional(), branchId: z.string().max(40).optional(), listingId: z.number().int().optional() }).parse(request.body);
     const branchId = branchFor(await view(ws, request), b.branchId);
     const t = ws.member.tenant;
@@ -106,7 +106,7 @@ export async function hotelRoutes(app: FastifyInstance) {
     const ws = workspaceOf(request);
     const b = z.object({ rate: z.number().int().min(0).optional(), type: z.string().trim().min(2).max(60).optional(), status: z.enum(["vacant", "dirty", "blocked"]).optional(), active: z.boolean().optional() }).parse(request.body);
     // Housekeeping marks rooms clean; changing rates or types is setup.
-    need(ws, ...(b.rate !== undefined || b.type || b.active !== undefined ? ["settings.business", "calendar.edit"] : ["calendar.view", "pos.frontdesk", "bookings.edit"]));
+    need(ws, ...(b.rate !== undefined || b.type || b.active !== undefined ? ["workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete", "hotel.calendar.update"] : ["hotel.calendar.read", "pos.frontdesk.use", "hotel.booking.update"]));
     const r = await db().room.updateMany({ where: { id: request.params.id, tenantId: ws.tenantId, ...inView(await view(ws, request)) }, data: b });
     if (!r.count) throw notFound("Room not found.");
     return { message: b.status === "vacant" ? "Room is ready." : "Saved." };
@@ -133,7 +133,7 @@ export async function hotelRoutes(app: FastifyInstance) {
   const calendarBranch = async (ws: Workspace, request: FastifyRequest, asked?: string) => branchFor(await view(ws, request), asked);
   app.get("/calendar", async (request) => {
     const ws = workspaceOf(request);
-    need(ws, "calendar.view", "calendar.edit", "bookings.view");
+    need(ws, "hotel.calendar.read", "hotel.calendar.update", "hotel.booking.read");
     const q = z.object({ type: z.string().max(60).optional(), month: z.string().regex(/^\d{4}-\d{2}$/), branchId: z.string().max(40).optional() }).parse(request.query);
     const branchId = await calendarBranch(ws, request, q.branchId);
     const types = (await db().room.groupBy({ by: ["type"], where: { tenantId: ws.tenantId, branchId, active: true }, _count: true, orderBy: { type: "asc" } })).map((t) => ({ type: t.type, rooms: t._count }));
@@ -152,7 +152,7 @@ export async function hotelRoutes(app: FastifyInstance) {
 
   app.put("/calendar/days", async (request) => {
     const ws = workspaceOf(request);
-    need(ws, "calendar.edit");
+    need(ws, "hotel.calendar.update");
     const b = z.object({
       type: z.string().trim().min(1).max(60), days: z.array(date).min(1).max(370), branchId: z.string().max(40).optional(),
       // A price for those nights (null = back to the normal price); and/or closed or open.
@@ -178,7 +178,7 @@ export async function hotelRoutes(app: FastifyInstance) {
 
   app.put("/calendar/rules", async (request) => {
     const ws = workspaceOf(request);
-    need(ws, "calendar.edit");
+    need(ws, "hotel.calendar.update");
     const b = z.object({ type: z.string().trim().min(1).max(60), weekendPct: z.number().int().min(0).max(200), minNights: z.number().int().min(1).max(60), branchId: z.string().max(40).optional() }).parse(request.body);
     const branchId = await calendarBranch(ws, request, b.branchId);
     await db().roomRule.upsert({ where: { branchId_roomType: { branchId, roomType: b.type } }, create: { tenantId: ws.tenantId, branchId, roomType: b.type, weekendPct: b.weekendPct, minNights: b.minNights }, update: { weekendPct: b.weekendPct, minNights: b.minNights } });
@@ -189,7 +189,7 @@ export async function hotelRoutes(app: FastifyInstance) {
   // ───── Bookings ─────
   app.get("/bookings", async (request) => {
     const ws = workspaceOf(request);
-    need(ws, "bookings.view", "calendar.view");
+    need(ws, "hotel.booking.read", "hotel.calendar.read");
     const q = z.object({ from: date.optional(), to: date.optional() }).parse(request.query);
     const where: Prisma.BookingWhereInput = { tenantId: ws.tenantId, ...inView(await view(ws, request)), ...(q.from && q.to ? { checkIn: { lt: dayOf(q.to) }, checkOut: { gt: dayOf(q.from) } } : { checkOut: { gte: new Date(Date.now() - 60 * 864e5) } }) };
     const rows = await db().booking.findMany({ where, include: { branch: { select: { name: true } }, room: true, folio: true, payments: true }, orderBy: { checkIn: "asc" }, take: 2000 });
@@ -198,13 +198,13 @@ export async function hotelRoutes(app: FastifyInstance) {
 
   app.get<{ Params: { id: string } }>("/bookings/:id", async (request) => {
     const ws = workspaceOf(request);
-    need(ws, "bookings.view", "pos.frontdesk");
+    need(ws, "hotel.booking.read", "pos.frontdesk.use");
     return { data: json(await full(ws, request, request.params.id)) };
   });
 
   app.post("/bookings", async (request) => {
     const ws = workspaceOf(request);
-    need(ws, "bookings.create");
+    need(ws, "hotel.booking.create");
     const b = z.object({
       type: z.string().trim().min(1).max(60), roomId: z.string().max(40).optional(), guest: z.string().trim().min(2, "Enter the guest's name.").max(80),
       phone: z.string().trim().max(30).optional(), email: z.union([z.email(), z.literal("")]).optional(), adults: z.number().int().min(1).max(60).default(2), children: z.number().int().min(0).max(20).default(0),
@@ -240,7 +240,7 @@ export async function hotelRoutes(app: FastifyInstance) {
   app.patch<{ Params: { id: string } }>("/bookings/:id", async (request) => {
     const ws = workspaceOf(request);
     const b = z.object({ status: z.enum(["confirmed", "cancelled"]).optional(), roomId: z.string().max(40).nullable().optional(), from: date.optional(), to: date.optional(), notes: z.string().max(1000).optional() }).parse(request.body);
-    need(ws, b.status === "cancelled" ? "bookings.cancel" : "bookings.edit");
+    need(ws, b.status === "cancelled" ? "hotel.booking.cancel" : "hotel.booking.update");
     const cur = await full(ws, request, request.params.id);
     if (cur.status === "completed" || cur.status === "cancelled") throw badRequest("This booking is closed.");
     if (b.status === "cancelled" && cur.status === "checked_in") throw badRequest("The guest is in the room; check them out instead.");
@@ -258,7 +258,7 @@ export async function hotelRoutes(app: FastifyInstance) {
 
   app.post<{ Params: { id: string } }>("/bookings/:id/check-in", async (request) => {
     const ws = workspaceOf(request);
-    need(ws, "bookings.edit", "pos.frontdesk");
+    need(ws, "hotel.booking.update", "pos.frontdesk.use");
     const b = z.object({ roomId: z.string().max(40).optional(), idChecked: z.literal(true, { message: "See the guest's ID (citizenship, passport or licence) before checking in." }) }).parse(request.body);
     const cur = await full(ws, request, request.params.id);
     if (cur.status !== "confirmed" && cur.status !== "requested") throw badRequest(cur.status === "checked_in" ? "Already checked in." : "This booking is closed.");
@@ -281,7 +281,7 @@ export async function hotelRoutes(app: FastifyInstance) {
   app.post<{ Params: { id: string } }>("/bookings/:id/folio", async (request) => {
     const ws = workspaceOf(request);
     const b = z.object({ kind: z.enum(["extra", "discount"]), what: z.string().trim().min(2).max(120), amount: z.number().int().min(1).max(10_000_000) }).parse(request.body);
-    need(ws, ...(b.kind === "discount" ? ["pos.discount"] : ["pos.frontdesk", "pos.extras", "bookings.edit"]));
+    need(ws, ...(b.kind === "discount" ? ["pos.bill.discount"] : ["pos.frontdesk.use", "pos.extra.create", "hotel.booking.update"]));
     const cur = await full(ws, request, request.params.id);
     if (cur.status !== "checked_in") throw badRequest("Charges go on a room while the guest is in.");
     await db().folioLine.create({ data: { bookingId: cur.id, kind: b.kind, what: b.what, amount: b.kind === "discount" ? -b.amount : b.amount, byUserId: ws.user.id } });
@@ -291,7 +291,7 @@ export async function hotelRoutes(app: FastifyInstance) {
 
   app.post<{ Params: { id: string } }>("/bookings/:id/payments", async (request) => {
     const ws = workspaceOf(request);
-    need(ws, "pos.frontdesk", "bookings.edit");
+    need(ws, "pos.frontdesk.use", "hotel.booking.update");
     const b = z.object({ method: z.enum(METHODS), amount: z.number().int().min(1).max(100_000_000), ref: z.string().trim().max(80).optional() }).parse(request.body);
     const cur = await full(ws, request, request.params.id);
     if (cur.status === "cancelled" || cur.status === "completed") throw badRequest("This booking is closed.");
@@ -301,7 +301,7 @@ export async function hotelRoutes(app: FastifyInstance) {
 
   app.post<{ Params: { id: string } }>("/bookings/:id/check-out", async (request) => {
     const ws = workspaceOf(request);
-    need(ws, "bookings.edit", "pos.frontdesk");
+    need(ws, "hotel.booking.update", "pos.frontdesk.use");
     const cur = await full(ws, request, request.params.id);
     if (cur.status !== "checked_in") throw badRequest("The guest isn't checked in.");
     const bill = folioOf(cur);

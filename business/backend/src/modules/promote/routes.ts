@@ -20,7 +20,7 @@ import { billingSettings, createAddonInvoice, invoiceNumber } from "@sheetal/bac
 import { PHASE_LABEL, PLACES, PLACE_LABEL, PLACE_SUB, SEARCH_KINDS, addDays, boostLine, boostNo, nextFreeStart, phaseOf, promoteSettings, takenToday, today, type Place } from "@sheetal/backend-core/domain/promote";
 import { branchView, inView, workspaceOf, type Workspace } from "../access.js";
 
-const VIEW_PERMS = ["listings.manage", "projects.manage", "investments.manage", "calendar.edit", "billing.manage"];
+const VIEW_PERMS = ["listings.listing.read+listings.listing.create+listings.listing.update+listings.listing.delete+listings.listing.publish", "projects.project.read+projects.project.create+projects.project.update+projects.project.delete", "investments.offering.read+investments.offering.create+investments.offering.update+investments.offering.delete", "hotel.calendar.update", "workspace.billing.manage"];
 const Day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use a date like 2026-11-04.").refine((s) => { const d = dayOf(s); return !Number.isNaN(d.getTime()) && ymd(d) === s; }, "That date doesn't exist.");
 const Ask = z.object({ listingId: z.coerce.number().int().positive(), place: z.enum(PLACES), days: z.coerce.number().int().min(1).max(90), startOn: Day.optional() });
 const ON_SITE = ["published"];
@@ -32,7 +32,7 @@ export async function promoteRoutes(app: FastifyInstance) {
     if (!VIEW_PERMS.some((p) => ws.can(p))) throw forbidden("Your role can't promote listings.");
     return ws;
   };
-  const payer = (ws: Workspace) => { if (!ws.can("billing.manage")) throw forbidden("Only people who manage billing can buy boosts. Ask the owner."); };
+  const payer = (ws: Workspace) => { if (!ws.can("workspace.billing.manage")) throw forbidden("Only people who manage billing can buy boosts. Ask the owner."); };
   const scope = async (ws: Workspace, request: FastifyRequest) => ({ tenantId: ws.tenantId, ...inView(await branchView(db(), request, ws)) });
   const listingOf = async (ws: Workspace, request: FastifyRequest, id: number) => {
     const l = await db().listing.findFirst({ where: { ...(await scope(ws, request)), id }, select: { id: true, code: true, title: true, kind: true, city: true, status: true, reviewHold: true, featured: true } });
@@ -88,7 +88,7 @@ export async function promoteRoutes(app: FastifyInstance) {
     const day = today();
     return {
       data: {
-        today: day, canBuy: ws.can("billing.manage"), vatRate: (await billingSettings(db())).vatRate,
+        today: day, canBuy: ws.can("workspace.billing.manage"), vatRate: (await billingSettings(db())).vatRate,
         lengths: s.lengths,
         places: PLACES.map((p) => ({ id: p, label: PLACE_LABEL[p], sub: PLACE_SUB[p], price: s[p].price, spots: s[p].spots, active: s[p].active, takenToday: p === "city" ? null : taken[p] })),
         cityTaken: taken.city,

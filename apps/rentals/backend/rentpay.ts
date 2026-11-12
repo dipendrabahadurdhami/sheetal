@@ -93,8 +93,8 @@ export async function takeOnlinePayment(db: Db, o: { leaseId: string; billId: st
   const collectedBy = view.payTo;
   const p = await db.rentPayment.create({ data: { tenantId: l.tenantId, branchId: l.branchId, billId: bill.id, amount: o.amount, method: o.method, paidOn: new Date(`${o.paidOn}T00:00:00.000Z`), ref: o.ref, status: "pending", source: "online", collectedBy, proofFile: o.proofFile, userId: o.userId } });
   const note = { type: "rent", title: "Rent payment to confirm", message: `${view.renter} paid Rs. ${o.amount} for ${bill.no} (${o.method}, ref ${o.ref}).` };
-  if (collectedBy === "sheetal") await notifyStaff(db, "billing.refund", { ...note, message: `${note.message} ${view.business}.`, link: "/admin/billing" }).catch(() => {});
-  else await notify(db, await teamWith(db, l.tenantId, ["rentals.manage"], l.branchId), { ...note, link: "/business/rentals/rent", tenantId: l.tenantId }).catch(() => {});
+  if (collectedBy === "sheetal") await notifyStaff(db, "platform.billing.refund", { ...note, message: `${note.message} ${view.business}.`, link: "/admin/billing" }).catch(() => {});
+  else await notify(db, await teamWith(db, l.tenantId, ["rentals.rental.read+rentals.rental.create+rentals.rental.update+rentals.rental.delete"], l.branchId), { ...note, link: "/business/rentals/rent", tenantId: l.tenantId }).catch(() => {});
   return { id: p.id, collectedBy, bill: bill.no };
 }
 

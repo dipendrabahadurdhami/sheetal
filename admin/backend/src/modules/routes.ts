@@ -40,7 +40,7 @@ export async function adminRoutes(app: FastifyInstance) {
 
   // ───── Businesses ─────
   app.get("/admin/tenants", async (request) => {
-    staffOf(request, "tenants.view");
+    staffOf(request, "platform.business.read");
     const q = z.object({ q: z.string().trim().max(80).optional(), status: z.enum(STATUSES).optional(), type: z.string().max(20).optional(), page: z.coerce.number().int().min(1).default(1), per: z.coerce.number().int().min(1).max(500).default(50) }).parse(request.query);
     const where: Prisma.TenantWhereInput = {
       ...(q.status ? { status: q.status } : {}), ...(q.type ? { type: q.type } : {}),
@@ -72,7 +72,7 @@ export async function adminRoutes(app: FastifyInstance) {
 
   /** Sets up a business for its owner. Someone new gets an account and a link to set their own password. */
   app.post("/admin/tenants", { config: { rateLimit: { max: 30, timeWindow: "1 hour" } } }, async (request) => {
-    const s = staffOf(request, "tenants.manage");
+    const s = staffOf(request, "platform.business.read+platform.business.create+platform.business.update");
     const b = z.object({
       name: z.string().trim().min(2, "Enter the business name.").max(80),
       type: z.enum(BUSINESS_TYPES),
@@ -103,7 +103,7 @@ export async function adminRoutes(app: FastifyInstance) {
   });
 
   app.get<{ Params: { id: string } }>("/admin/tenants/:id", async (request) => {
-    staffOf(request, "tenants.view");
+    staffOf(request, "platform.business.read");
     const db = dbOf(app);
     const t = await db.tenant.findUnique({ where: { id: request.params.id }, include: { plan: true, memberships: { include: { user: { select: { id: true, userName: true, email: true, lastLoginAt: true } }, role: { select: { key: true, name: true } } } } } });
     if (!t) throw notFound("Business not found.");
@@ -126,7 +126,7 @@ export async function adminRoutes(app: FastifyInstance) {
   });
 
   app.patch<{ Params: { id: string } }>("/admin/tenants/:id", async (request) => {
-    const s = staffOf(request, "tenants.view");
+    const s = staffOf(request, "platform.business.read");
     const b = z.object({
       status: z.enum(STATUSES).optional(), planId: z.string().max(40).optional(), period: z.union([z.literal(1), z.literal(3), z.literal(6), z.literal(12)]).optional(),
       renewsAt: z.coerce.date().optional(), autoRenew: z.boolean().optional(), note: z.string().max(300).optional(),
@@ -136,9 +136,9 @@ export async function adminRoutes(app: FastifyInstance) {
     if (!t) throw notFound("Business not found.");
     if (b.status && b.status !== t.status) {
       const suspending = b.status === "suspended" || b.status === "cancelled";
-      if (!s.can(suspending ? "tenants.suspend" : "tenants.manage")) throw forbidden("Your staff role can't change a business's status.");
+      if (!s.can(suspending ? "platform.business.suspend" : "platform.business.read+platform.business.create+platform.business.update")) throw forbidden("Your staff role can't change a business's status.");
     }
-    if ((b.planId || b.period || b.renewsAt) && !s.can("plans.manage") && !s.can("tenants.manage")) throw forbidden("Your staff role can't change plans.");
+    if ((b.planId || b.period || b.renewsAt) && !s.can("platform.plan.read+platform.plan.create+platform.plan.update+platform.plan.delete") && !s.can("platform.business.read+platform.business.create+platform.business.update")) throw forbidden("Your staff role can't change plans.");
     if (b.autoRenew !== undefined && s.role !== "super_admin") throw forbidden("Only the super admin can switch auto-renew.");
     if (b.planId) {
       const plan = await db.plan.findUnique({ where: { id: b.planId } });
@@ -152,7 +152,7 @@ export async function adminRoutes(app: FastifyInstance) {
 
   // ───── Upgrade requests ─────
   app.get("/admin/upgrades", async (request) => {
-    staffOf(request, "tenants.view");
+    staffOf(request, "platform.business.read");
     const { status } = z.object({ status: z.enum(["pending", "done", "declined"]).default("pending") }).parse(request.query);
     const rows = await dbOf(app).upgradeRequest.findMany({ where: { status }, orderBy: { createdAt: "desc" }, take: 200 });
     const db = dbOf(app);
@@ -167,7 +167,7 @@ export async function adminRoutes(app: FastifyInstance) {
   });
 
   app.patch<{ Params: { id: string } }>("/admin/upgrades/:id", async (request) => {
-    const s = staffOf(request, "plans.manage");
+    const s = staffOf(request, "platform.plan.read+platform.plan.create+platform.plan.update+platform.plan.delete");
     const b = z.object({ status: z.enum(["done", "declined"]), apply: z.boolean().default(true), note: z.string().trim().max(300).optional() }).parse(request.body);
     const db = dbOf(app);
     const r = await db.upgradeRequest.findUnique({ where: { id: request.params.id } });
@@ -197,13 +197,13 @@ export async function adminRoutes(app: FastifyInstance) {
 
   // ───── Staff ─────
   app.get("/admin/staff", async (request) => {
-    staffOf(request, "staff.view");
+    staffOf(request, "platform.staff.read");
     const rows = await dbOf(app).user.findMany({ where: { platformRole: { not: null } }, orderBy: { createdAt: "asc" }, select: { id: true, userName: true, email: true, phone: true, platformRole: true, status: true, lastLoginAt: true, passwordHash: true } });
     return { data: rows.map(({ passwordHash, ...u }) => ({ ...u, invited: !passwordHash })), roles: Object.keys(PLATFORM_ROLES) };
   });
 
   app.post("/admin/staff", { config: { rateLimit: { max: 10, timeWindow: "1 hour" } } }, async (request) => {
-    const s = staffOf(request, "staff.manage");
+    const s = staffOf(request, "platform.staff.read+platform.staff.create+platform.staff.update+platform.staff.remove");
     const b = z.object({ email: z.email().transform((x) => x.toLowerCase().trim()), name: z.string().trim().min(2).max(60), role: z.enum(Object.keys(PLATFORM_ROLES) as [string, ...string[]]) }).parse(request.body);
     if (b.role === "super_admin" && s.role !== "super_admin") throw forbidden("Only the super admin can add another super admin.");
     const db = dbOf(app);
@@ -223,7 +223,7 @@ export async function adminRoutes(app: FastifyInstance) {
   });
 
   app.patch<{ Params: { id: string } }>("/admin/staff/:id", async (request) => {
-    const s = staffOf(request, "staff.manage");
+    const s = staffOf(request, "platform.staff.read+platform.staff.create+platform.staff.update+platform.staff.remove");
     const b = z.object({ role: z.enum(Object.keys(PLATFORM_ROLES) as [string, ...string[]]).nullable() }).parse(request.body);
     const db = dbOf(app);
     const u = await db.user.findUnique({ where: { id: request.params.id } });
@@ -281,7 +281,7 @@ export async function adminRoutes(app: FastifyInstance) {
   };
 
   app.get("/admin/audit", async (request) => {
-    staffOf(request, "audit.view");
+    staffOf(request, "platform.audit.read");
     const q = AuditQuery.parse(request.query);
     const where = auditWhere(q);
     const per = 100;
@@ -302,7 +302,7 @@ export async function adminRoutes(app: FastifyInstance) {
   });
 
   app.get("/admin/audit.csv", async (request, reply) => {
-    staffOf(request, "audit.view");
+    staffOf(request, "platform.audit.read");
     const q = AuditQuery.parse(request.query);
     const rows = await dbOf(app).auditLog.findMany({ where: auditWhere(q), orderBy: { createdAt: "desc" }, take: 20000 });
     const { who, biz } = await withNames(rows);

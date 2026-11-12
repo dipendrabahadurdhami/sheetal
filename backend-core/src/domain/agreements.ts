@@ -19,7 +19,7 @@ export const LANGS = ["en", "ne", "both"] as const;
 export type Lang = (typeof LANGS)[number];
 export const ROLES = ["p1", "p2", "witness"] as const;
 export const STATUSES = ["draft", "sent", "signed", "cancelled"] as const;
-export const AGREEMENT_PERM = "agreements.manage";
+export const AGREEMENT_PERM = "agreements.agreement.read+agreements.agreement.create+agreements.agreement.update+agreements.agreement.delete";
 
 type Two = { en: string; ne: string };
 type FieldType = "text" | "money" | "date" | "number" | "pct" | "time";

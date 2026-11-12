@@ -27,7 +27,7 @@ export async function adminBillingRoutes(app: FastifyInstance) {
     db().auditLog.create({ data: { actorId, tenantId, action, target, ip, meta: meta as object | undefined } });
 
   app.get("/admin/billing/summary", async (request) => {
-    staffOf(request, "billing.view");
+    staffOf(request, "platform.billing.read");
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const [month, last30, byProvider, active, pastDue, toCheck] = await Promise.all([
@@ -49,7 +49,7 @@ export async function adminBillingRoutes(app: FastifyInstance) {
   });
 
   app.get("/admin/billing/payments", async (request) => {
-    staffOf(request, "billing.view");
+    staffOf(request, "platform.billing.read");
     const q = z.object({ status: z.enum(["all", "pending_review", "paid", "failed", "refunded", "initiated"]).default("all") }).parse(request.query);
     const rows = await db().payment.findMany({ where: q.status === "all" ? { status: { not: "initiated" } } : { status: q.status }, include: { invoice: true }, orderBy: { createdAt: "desc" }, take: 300 });
     const tenants = new Map((await db().tenant.findMany({ where: { id: { in: rows.map((r) => r.tenantId) } }, select: { id: true, name: true, type: true } })).map((t) => [t.id, t]));
@@ -62,7 +62,7 @@ export async function adminBillingRoutes(app: FastifyInstance) {
   });
 
   app.get<{ Params: { id: string } }>("/admin/billing/payments/:id/proof", async (request, reply) => {
-    staffOf(request, "billing.view");
+    staffOf(request, "platform.billing.read");
     const p = await db().payment.findUnique({ where: { id: request.params.id } });
     const f = p?.proofFile ? await readPrivateFile(app.config.MEDIA_DIR, "proofs", p.proofFile) : null;
     if (!p || !f) throw notFound("Proof not found.");
@@ -71,7 +71,7 @@ export async function adminBillingRoutes(app: FastifyInstance) {
 
   /** A bank transfer checked against the bank statement: confirm (applies the plan) or reject with a reason. */
   app.post<{ Params: { id: string } }>("/admin/billing/payments/:id/review", async (request) => {
-    const s = staffOf(request, "plans.manage");
+    const s = staffOf(request, "platform.plan.read+platform.plan.create+platform.plan.update+platform.plan.delete");
     const b = z.object({ decision: z.enum(["confirm", "reject"]), note: z.string().trim().max(300).optional() }).parse(request.body);
     const p = await db().payment.findUnique({ where: { id: request.params.id }, include: { invoice: true } });
     if (!p) throw notFound("Payment not found.");
@@ -93,7 +93,7 @@ export async function adminBillingRoutes(app: FastifyInstance) {
 
   /** Money given back through the gateway's or bank's own portal; this records it. The plan is changed separately. */
   app.post<{ Params: { id: string } }>("/admin/billing/payments/:id/refund", async (request) => {
-    const s = staffOf(request, "billing.refund");
+    const s = staffOf(request, "platform.billing.refund");
     const { note } = z.object({ note: z.string().trim().min(3, "Say why.").max(300) }).parse(request.body);
     const p = await db().payment.findUnique({ where: { id: request.params.id }, include: { invoice: true } });
     if (!p || p.status !== "paid") throw badRequest("Only paid payments can be refunded.");
@@ -103,7 +103,7 @@ export async function adminBillingRoutes(app: FastifyInstance) {
   });
 
   app.get("/admin/billing/invoices", async (request) => {
-    staffOf(request, "billing.view");
+    staffOf(request, "platform.billing.read");
     const q = z.object({ status: z.enum(["all", "open", "paid", "void"]).default("all"), tenantId: z.string().max(40).optional() }).parse(request.query);
     const where: Prisma.InvoiceWhereInput = { ...(q.status !== "all" ? { status: q.status } : {}), ...(q.tenantId ? { tenantId: q.tenantId } : {}) };
     const rows = await db().invoice.findMany({ where, orderBy: { createdAt: "desc" }, take: 300 });
@@ -113,7 +113,7 @@ export async function adminBillingRoutes(app: FastifyInstance) {
 
   /** Staff bill a business directly (a plan sold by phone, say); the business pays it from its panel. */
   app.post("/admin/billing/invoices", async (request) => {
-    const s = staffOf(request, "plans.manage");
+    const s = staffOf(request, "platform.plan.read+platform.plan.create+platform.plan.update+platform.plan.delete");
     const b = z.object({ tenantId: z.string().max(40), planId: z.string().max(40), months: z.number().int().refine((m) => PERIODS.some((p) => p.months === m)) }).parse(request.body);
     const t = await db().tenant.findUnique({ where: { id: b.tenantId } });
     const plan = await db().plan.findUnique({ where: { id: b.planId } });
@@ -124,7 +124,7 @@ export async function adminBillingRoutes(app: FastifyInstance) {
   });
 
   app.post<{ Params: { id: string } }>("/admin/billing/invoices/:id/void", async (request) => {
-    const s = staffOf(request, "plans.manage");
+    const s = staffOf(request, "platform.plan.read+platform.plan.create+platform.plan.update+platform.plan.delete");
     const i = await db().invoice.findUnique({ where: { id: request.params.id } });
     if (!i || i.status !== "open") throw badRequest("Only open invoices can be cancelled.");
     await db().invoice.update({ where: { id: i.id }, data: { status: "void" } });
@@ -134,11 +134,11 @@ export async function adminBillingRoutes(app: FastifyInstance) {
 
   // ───── Settings ─────
   app.get("/admin/settings/billing", async (request) => {
-    staffOf(request, "settings.platform");
+    staffOf(request, "platform.settings.read+platform.settings.update");
     return { data: await billingSettings(db()) };
   });
   app.put("/admin/settings/billing", async (request) => {
-    const s = staffOf(request, "settings.platform");
+    const s = staffOf(request, "platform.settings.read+platform.settings.update");
     const b = z.object({
       vatRate: z.number().min(0).max(30), graceDays: z.number().int().min(0).max(60), reminderDays: z.array(z.number().int().min(1).max(60)).max(5),
       bank: z.object({ name: z.string().max(80).optional(), account: z.string().max(40).optional(), accountName: z.string().max(80).optional(), note: z.string().max(300).optional() }),
@@ -152,7 +152,7 @@ export async function adminBillingRoutes(app: FastifyInstance) {
   const stored = async () => ((await db().appSetting.findUnique({ where: { key: "payments" } }))?.value ?? {}) as StoredGateways;
   /** Gateway settings without the secrets: only whether one is saved. */
   app.get("/admin/settings/payments", async (request) => {
-    staffOf(request, "settings.platform");
+    staffOf(request, "platform.settings.read+platform.settings.update");
     const s = await stored();
     return {
       data: {
@@ -166,7 +166,7 @@ export async function adminBillingRoutes(app: FastifyInstance) {
   });
   /** Saving keeps a secret unless a new one is typed; secrets are encrypted and never sent back. Super admin only. */
   app.put("/admin/settings/payments", async (request) => {
-    const s = staffOf(request, "settings.platform");
+    const s = staffOf(request, "platform.settings.read+platform.settings.update");
     if (s.role !== "super_admin") throw badRequest("Only the super admin can change payment keys.");
     const mode = z.enum(["test", "live"]);
     const secret = z.string().trim().min(4).max(500).optional();
@@ -197,7 +197,7 @@ export async function adminBillingRoutes(app: FastifyInstance) {
   });
 
   app.post("/admin/billing/run-cycle", async (request) => {
-    const s = staffOf(request, "plans.manage");
+    const s = staffOf(request, "platform.plan.read+platform.plan.create+platform.plan.update+platform.plan.delete");
     const r = await runBillingCycle(db(), app.mailer, { siteUrl: site });
     await audit(s.user.id, request.ip, "billing.cycle_run", `${r.reminded} reminded, ${r.pastDue} past due, ${r.downgraded} to Starter`);
     return { message: `Done: ${r.reminded} reminded, ${r.pastDue} now past due, ${r.downgraded} moved to Starter.`, data: r };

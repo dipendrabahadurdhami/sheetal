@@ -79,12 +79,12 @@ export async function adminPlatformRoutes(app: FastifyInstance, opts: { fetch?: 
 
   // ───── Platform settings ─────
   app.get("/admin/settings/platform", async (request) => {
-    const s = staffOf(request, "settings.platform");
+    const s = staffOf(request, "platform.settings.read+platform.settings.update");
     return { data: { ...(await platformSettings(db())), canChangeSecurity: s.role === "super_admin" } };
   });
 
   app.put("/admin/settings/platform", async (request) => {
-    const s = staffOf(request, "settings.platform");
+    const s = staffOf(request, "platform.settings.read+platform.settings.update");
     const b = platformBody.parse(request.body);
     const cur = await platformSettings(db());
     const next: PlatformSettings = { ...cur, ...b, domains: { ...cur.domains, ...(b.domains ?? {}) }, maintenance: { ...cur.maintenance, ...(b.maintenance ?? {}) } } as PlatformSettings;
@@ -111,12 +111,12 @@ export async function adminPlatformRoutes(app: FastifyInstance, opts: { fetch?: 
   };
 
   app.get("/admin/settings/integrations/:id", async (request) => {
-    staffOf(request, "settings.platform");
+    staffOf(request, "platform.settings.read+platform.settings.update");
     return { data: await view(idOf(request)) };
   });
 
   app.put("/admin/settings/integrations/:id", async (request) => {
-    const s = staffOf(request, "settings.platform");
+    const s = staffOf(request, "platform.settings.read+platform.settings.update");
     if (s.role !== "super_admin") throw forbidden("Only the super admin can change connection keys.");
     const id = idOf(request);
     const b = BODIES[id].parse(request.body) as Record<string, string | undefined>;
@@ -138,7 +138,7 @@ export async function adminPlatformRoutes(app: FastifyInstance, opts: { fetch?: 
   });
 
   app.post("/admin/settings/integrations/:id/test", async (request) => {
-    const s = staffOf(request, "settings.platform");
+    const s = staffOf(request, "platform.settings.read+platform.settings.update");
     const id = idOf(request);
     const cur = (await integrationSettings(db(), id)) as Record<string, string | undefined>;
     const checks: Check[] = [];

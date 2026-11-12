@@ -30,7 +30,7 @@ export async function adminChannelRoutes(app: FastifyInstance) {
   const audit = (actorId: string, ip: string, action: string, target: string, tenantId?: string) => db().auditLog.create({ data: { actorId, action, target, ip, tenantId } });
 
   app.get("/admin/ota/requests", async (request) => {
-    staffOf(request, "tenants.view");
+    staffOf(request, "platform.business.read");
     const q = z.object({ status: z.enum(OTA_STATUSES).optional(), channel: z.string().optional(), q: z.string().trim().max(80).optional() }).parse(request.query);
     const where: Prisma.OtaRequestWhereInput = { ...(q.status ? { status: q.status } : {}), ...(q.channel && isChannel(q.channel) ? { channel: q.channel } : {}) };
     const [rows, groups] = await Promise.all([db().otaRequest.findMany({ where, orderBy: { createdAt: "desc" }, take: 400 }), db().otaRequest.groupBy({ by: ["status"], _count: { _all: true } })]);
@@ -44,7 +44,7 @@ export async function adminChannelRoutes(app: FastifyInstance) {
   });
 
   app.put<{ Params: { id: string } }>("/admin/ota/requests/:id", async (request) => {
-    const s = staffOf(request, "tenants.manage");
+    const s = staffOf(request, "platform.business.read+platform.business.create+platform.business.update");
     const b = z.object({
       status: z.enum(OTA_STATUSES).refine((x) => x !== "requested", "A request can't go back to requested."),
       note: z.string().trim().max(1000).optional(), ask: z.string().trim().max(1000).optional(), otaPropertyId: z.string().trim().max(80).optional(), url: z.string().trim().max(400).optional(),
@@ -58,7 +58,7 @@ export async function adminChannelRoutes(app: FastifyInstance) {
 
   /** A file a business sent with a reply (only files named in the request's log). */
   app.get<{ Params: { id: string; name: string } }>("/admin/ota/requests/:id/files/:name", async (request) => {
-    staffOf(request, "tenants.view");
+    staffOf(request, "platform.business.read");
     const r = await db().otaRequest.findUnique({ where: { id: request.params.id } });
     if (!r || !logOf(r).some((l) => l.files?.includes(request.params.name))) throw notFound("No such file on this request.");
     const f = await readPrivateFile(app.config.MEDIA_DIR, "ota", request.params.name);
@@ -67,12 +67,12 @@ export async function adminChannelRoutes(app: FastifyInstance) {
   });
 
   app.get("/admin/ota/settings", async (request) => {
-    staffOf(request, "tenants.view");
+    staffOf(request, "platform.business.read");
     return { data: { settings: await otaSettings(db()), accounts: await otaAccounts(db()), channels: OTA_CHANNELS } };
   });
 
   app.put("/admin/ota/settings", async (request) => {
-    const s = staffOf(request, "settings.platform");
+    const s = staffOf(request, "platform.settings.read+platform.settings.update");
     const b = settingsBody.parse(request.body);
     const cur = await otaSettings(db());
     const next: OtaSettings = { ...cur, ...b, types: { ...cur.types, ...(b.types ?? {}) }, sites: Object.fromEntries(OTA_CHANNELS.map((c) => [c.id, { ...cur.sites[c.id]!, ...(b.sites?.[c.id] ?? {}) }])) } as OtaSettings;
@@ -85,7 +85,7 @@ export async function adminChannelRoutes(app: FastifyInstance) {
   });
 
   app.put<{ Params: { channel: string } }>("/admin/ota/accounts/:channel", async (request) => {
-    const s = staffOf(request, "settings.platform");
+    const s = staffOf(request, "platform.settings.read+platform.settings.update");
     if (!isChannel(request.params.channel)) throw notFound("There is no such site.");
     const b = z.object({ status: z.enum(["connected", "not_connected"]), note: z.string().trim().max(300).optional() }).parse(request.body);
     const channel = request.params.channel;

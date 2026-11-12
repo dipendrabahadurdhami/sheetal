@@ -47,24 +47,24 @@ export async function dataRoutes(app: FastifyInstance) {
         return { data: rows.map((l) => ({ title: l.title, purpose: l.purpose === "rent" ? "Rent" : "Sale", type: l.category, district: l.district ?? "", area: l.area ?? "", price: l.price == null ? "" : Number(l.price), land: l.landArea ?? "", beds: l.bedrooms ?? "", code: l.code, status: l.status })) };
       }
       case "leads": {
-        need(ws, ["leads.view", "messages.reply"], "leads");
+        need(ws, ["crm.lead.read", "crm.message.reply"], "leads");
         const rows = await db().lead.findMany({ where, orderBy: { createdAt: "desc" }, take: 10_000 });
         const ids = [...new Set(rows.map((r) => r.listingId).filter((x): x is number => x != null))];
         const codes = new Map((await db().listing.findMany({ where: { id: { in: ids } }, select: { id: true, code: true } })).map((l) => [l.id, l.code]));
         return { data: rows.map((r) => { const ch = ((r.details ?? {}) as { channel?: string }).channel ?? "website"; return { name: r.name, phone: r.phone ?? "", email: r.email ?? "", source: CHANNEL_OUT[ch] ?? ch, listing: r.listingId ? codes.get(r.listingId) ?? "" : "", budget: r.value == null ? "" : Number(r.value), stage: STAGE_OUT[r.status] ?? r.status }; }) };
       }
       case "rooms": case "units": {
-        need(ws, ["bookings.view", "calendar.view", "pos.frontdesk"], "rooms");
+        need(ws, ["hotel.booking.read", "hotel.calendar.read", "pos.frontdesk.use"], "rooms");
         const rows = await db().room.findMany({ where: { ...where, active: true }, orderBy: { no: "asc" } });
         return { data: rows.map((r) => ({ no: r.no, type: r.type, beds: "", pax: r.maxGuests, rate: r.rate, floor: r.floor ?? "" })) };
       }
       case "bookings": {
-        need(ws, ["bookings.view"], "bookings");
+        need(ws, ["hotel.booking.read"], "bookings");
         const rows = await db().booking.findMany({ where, include: { room: { select: { no: true } } }, orderBy: { checkIn: "desc" }, take: 10_000 });
         return { data: rows.map((b) => { const nights = Math.max(1, Math.round((b.checkOut.getTime() - b.checkIn.getTime()) / 864e5)); return { guest: b.guestName, phone: b.phone ?? "", room: b.room?.no ?? "", from: day(b.checkIn), to: day(b.checkOut), guests: b.adults + b.children, amount: b.rate * nights, paid: "", source: SOURCE_OUT[b.source] ?? b.source }; }) };
       }
       case "team": case "staff": {
-        need(ws, ["team.view"], "the team");
+        need(ws, ["workspace.team.read"], "the team");
         const rows = await db().membership.findMany({ where: { tenantId: ws.tenantId, status: { in: ["active", "paused"] } }, include: { user: true, role: true }, orderBy: { createdAt: "asc" } });
         return { data: rows.map((m) => ({ name: m.user.userName, email: m.user.email, phone: m.user.phone ?? "", role: m.role.name || m.role.key.replace(/_/g, " "), status: m.status === "paused" ? "Paused" : "Active" })) };
       }
@@ -108,7 +108,7 @@ export async function dataRoutes(app: FastifyInstance) {
     }
 
     if (request.params.kind === "leads") {
-      if (!["leads.view", "messages.reply"].some(ws.can)) throw forbidden("Your role can't add leads.");
+      if (!["crm.lead.read", "crm.message.reply"].some(ws.can)) throw forbidden("Your role can't add leads.");
       const { rows } = Rows(LeadRow).parse(request.body);
       const codes = [...new Set(rows.map((r) => r.listing).filter((x): x is string => !!x))];
       const listings = new Map((await db().listing.findMany({ where: { tenantId: ws.tenantId, code: { in: codes }, ...inView(v) }, select: { id: true, code: true, branchId: true } })).map((l) => [l.code, l]));

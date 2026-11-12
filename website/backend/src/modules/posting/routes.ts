@@ -9,7 +9,7 @@ import type { FastifyInstance } from "fastify";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { dbOf } from "@sheetal/backend-core/lib/db";
-import { notifyStaff } from "@sheetal/backend-core/lib/notify";
+import { STAFF_FOR, notifyStaff } from "@sheetal/backend-core/lib/notify";
 import { headOffice } from "@sheetal/backend-core/domain/branches";
 import { AppError, badRequest, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
 import { requireUser, type SessionUser } from "@sheetal/backend-core/modules/auth/sessions";
@@ -32,7 +32,7 @@ export async function postingRoutes(app: FastifyInstance) {
 
   /** The workspace a person posts into; old-site accounts without one get a free Starter workspace. */
   async function workspaceFor(user: SessionUser) {
-    const m = user.memberships.find((x) => x.status === "active" && hasPerm(x.role.perms, "listings.manage"));
+    const m = user.memberships.find((x) => x.status === "active" && hasPerm(x.role.perms, "listings.listing.read+listings.listing.create+listings.listing.update+listings.listing.delete+listings.listing.publish"));
     if (m) return { tenantId: m.tenantId, plan: m.tenant.plan };
     const db = dbOf(app);
     const { trialDays } = await platformSettings(db);
@@ -106,7 +106,7 @@ export async function postingRoutes(app: FastifyInstance) {
       } });
       return tx.listing.update({ where: { id: l.id }, data: { code: `SP-${String(l.id).padStart(4, "0")}`, slug: `${slugify(b.name)}-${l.id}` }, include: { photos: true } });
     });
-    await notifyStaff(db, "moderation.listings", { type: "review", title: "Listing to review", message: `${created.title} · posted on the website`, link: "/admin/moderation" });
+    await notifyStaff(db, STAFF_FOR.listingReview, { type: "review", title: "Listing to review", message: `${created.title} · posted on the website`, link: "/admin/moderation" });
     return { status: 200, message: "Posted. Sheetal checks every listing before it goes live, usually within a day.", data: { ...listingCard(created, base), listing_status: created.status } };
   });
 
@@ -120,7 +120,7 @@ export async function postingRoutes(app: FastifyInstance) {
   async function ownListing(user: SessionUser, id: number) {
     const l = await dbOf(app).listing.findFirst({ where: { id, ...OPEN } });
     if (!l) throw notFound("Listing not found.");
-    const manages = l.tenantId && user.memberships.some((m) => m.tenantId === l.tenantId && hasPerm(m.role.perms, "listings.manage"));
+    const manages = l.tenantId && user.memberships.some((m) => m.tenantId === l.tenantId && hasPerm(m.role.perms, "listings.listing.read+listings.listing.create+listings.listing.update+listings.listing.delete+listings.listing.publish"));
     if (l.userId !== user.id && !manages) throw forbidden("You can only change your own listings.");
     return l;
   }
@@ -163,14 +163,14 @@ export async function postingRoutes(app: FastifyInstance) {
     const db = dbOf(app);
     const plan = await db.plan.findUnique({ where: { id: b.requested_plan } });
     if (!plan || !plan.active || !plan.price) throw badRequest("Choose a paid plan.");
-    const owner = user.memberships.find((m) => m.tenant.type === plan.type && hasPerm(m.role.perms, "billing.manage"));
+    const owner = user.memberships.find((m) => m.tenant.type === plan.type && hasPerm(m.role.perms, "workspace.billing.manage"));
     const tenantId = owner?.tenantId ?? (await workspaceFor(user)).tenantId;
     await db.upgradeRequest.create({ data: { tenantId, userId: user.id, planId: plan.id, months: b.months } });
     await app.mailer.send({
       to: app.config.SUPPORT_EMAIL, subject: `Upgrade request: ${plan.name} (${plan.type}) for ${b.months} months`,
       text: `${user.userName} <${user.email}>${user.phone ? `, ${user.phone}` : ""} asked for ${plan.name} (${plan.type}) for ${b.months} months: Rs. ${priceFor(plan.price, b.months).toLocaleString("en-IN")}.\nBusiness id: ${tenantId}`,
     });
-    await notifyStaff(db, "tenants.manage", { type: "upgrade", title: `Upgrade request: ${plan.name} (${plan.type})`, message: `${user.userName} · ${b.months} month${b.months > 1 ? "s" : ""}`, link: "/admin/requests" });
+    await notifyStaff(db, STAFF_FOR.businessRequests, { type: "upgrade", title: `Upgrade request: ${plan.name} (${plan.type})`, message: `${user.userName} · ${b.months} month${b.months > 1 ? "s" : ""}`, link: "/admin/requests" });
     return { status: 200, message: "Upgrade request sent. Our team will call you to finish it." };
   });
 }

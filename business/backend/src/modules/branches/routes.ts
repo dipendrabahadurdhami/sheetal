@@ -25,7 +25,7 @@ type Tx = Prisma.TransactionClient;
 
 export async function branchRoutes(app: FastifyInstance) {
   const db = () => dbOf(app);
-  const manage = (ws: Workspace) => { if (!ws.can("settings.business")) throw forbidden("Your role can't change branches."); };
+  const manage = (ws: Workspace) => { if (!ws.can("workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete")) throw forbidden("Your role can't change branches."); };
   const audit = (ws: Workspace, ip: string, action: string, target?: string) =>
     db().auditLog.create({ data: { tenantId: ws.tenantId, actorId: ws.user.id, action, target, ip } });
   const branchOf = async (ws: Workspace, id: string) => {

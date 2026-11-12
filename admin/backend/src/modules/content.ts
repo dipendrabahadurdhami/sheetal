@@ -45,7 +45,7 @@ export async function adminContentRoutes(app: FastifyInstance) {
   });
 
   app.get("/admin/blog/posts", async (request) => {
-    staffOf(request, "content.edit");
+    staffOf(request, "platform.content.update");
     const q = z.object({ status: z.enum(["all", "draft", "published"]).default("all"), q: z.string().trim().max(80).optional() }).parse(request.query);
     const rows = await db().blogPost.findMany({
       where: { ...(q.status !== "all" ? { status: q.status } : {}), ...(q.q ? { title: { contains: q.q, mode: "insensitive" } } : {}) },
@@ -55,17 +55,17 @@ export async function adminContentRoutes(app: FastifyInstance) {
   });
 
   app.get<{ Params: { id: string } }>("/admin/blog/posts/:id", async (request) => {
-    staffOf(request, "content.edit");
+    staffOf(request, "platform.content.update");
     const p = await db().blogPost.findUnique({ where: { id: Number(request.params.id) || -1 }, include: { category: true } });
     if (!p) throw notFound("Post not found.");
     return { data: { ...p, imageUrl: image(p.image) } };
   });
 
   async function savePost(request: FastifyRequest, id?: number) {
-    const s = staffOf(request, "content.edit");
+    const s = staffOf(request, "platform.content.update");
     const b = Post.parse(request.body);
     // Editors write drafts; publishing needs content.publish.
-    if (b.status === "published" && !s.can("content.publish")) throw badRequest("Your staff role can save drafts; someone with publishing rights makes it live.");
+    if (b.status === "published" && !s.can("platform.content.publish")) throw badRequest("Your staff role can save drafts; someone with publishing rights makes it live.");
     const before = id ? await db().blogPost.findUnique({ where: { id } }) : null;
     if (id && !before) throw notFound("Post not found.");
     const content = sanitizeHtml(b.content);
@@ -83,7 +83,7 @@ export async function adminContentRoutes(app: FastifyInstance) {
   app.put<{ Params: { id: string } }>("/admin/blog/posts/:id", (request) => savePost(request, Number(request.params.id) || -1));
 
   app.delete<{ Params: { id: string } }>("/admin/blog/posts/:id", async (request) => {
-    const s = staffOf(request, "content.publish");
+    const s = staffOf(request, "platform.content.publish");
     const p = await db().blogPost.delete({ where: { id: Number(request.params.id) || -1 } }).catch(() => null);
     if (!p) throw notFound("Post not found.");
     await audit(s.user.id, request.ip, "content.post_deleted", p.title);
@@ -91,26 +91,26 @@ export async function adminContentRoutes(app: FastifyInstance) {
   });
 
   app.post("/admin/blog/images", { bodyLimit: 12 * 1024 * 1024 }, async (request) => {
-    staffOf(request, "content.edit");
+    staffOf(request, "platform.content.update");
     const { data } = z.object({ data: z.string().min(16).max(11 * 1024 * 1024) }).parse(request.body);
     const file = await savePhoto(app.config.MEDIA_DIR, Buffer.from(data, "base64"), "blog");
     return { data: { file, url: image(file) } };
   });
 
   app.get("/admin/blog/categories", async (request) => {
-    staffOf(request, "content.edit");
+    staffOf(request, "platform.content.update");
     const rows = await db().blogCategory.findMany({ orderBy: { name: "asc" }, include: { _count: { select: { posts: true } } } });
     return { data: rows.map(({ _count, ...c }) => ({ ...c, posts: _count.posts })) };
   });
   app.post("/admin/blog/categories", async (request) => {
-    const s = staffOf(request, "content.edit");
+    const s = staffOf(request, "platform.content.update");
     const b = z.object({ name: z.string().trim().min(2).max(60), description: opt(300) }).parse(request.body);
     const c = await db().blogCategory.create({ data: { name: b.name, description: b.description, slug: await uniqueSlug("blogCategory", b.name) } });
     await audit(s.user.id, request.ip, "content.category_created", c.name);
     return { message: `${c.name} added.`, data: c };
   });
   app.patch<{ Params: { id: string } }>("/admin/blog/categories/:id", async (request) => {
-    staffOf(request, "content.edit");
+    staffOf(request, "platform.content.update");
     const b = z.object({ name: z.string().trim().min(2).max(60).optional(), description: opt(300), active: z.boolean().optional() }).parse(request.body);
     const c = await db().blogCategory.update({ where: { id: Number(request.params.id) || -1 }, data: b }).catch(() => null);
     if (!c) throw notFound("Category not found.");
@@ -118,13 +118,13 @@ export async function adminContentRoutes(app: FastifyInstance) {
   });
 
   app.get("/admin/blog/comments", async (request) => {
-    staffOf(request, "content.edit");
+    staffOf(request, "platform.content.update");
     const { status } = z.object({ status: z.enum(["pending", "approved", "rejected"]).default("pending") }).parse(request.query);
     const rows = await db().blogComment.findMany({ where: { status }, include: { post: { select: { id: true, title: true, slug: true } } }, orderBy: { createdAt: status === "pending" ? "asc" : "desc" }, take: 300 });
     return { data: rows };
   });
   app.patch<{ Params: { id: string } }>("/admin/blog/comments/:id", async (request) => {
-    const s = staffOf(request, "content.publish");
+    const s = staffOf(request, "platform.content.publish");
     const { status } = z.object({ status: z.enum(["approved", "rejected"]) }).parse(request.body);
     const c = await db().blogComment.update({ where: { id: request.params.id }, data: { status } }).catch(() => null);
     if (!c) throw notFound("Comment not found.");
@@ -146,21 +146,21 @@ export async function adminContentRoutes(app: FastifyInstance) {
   });
 
   app.get("/admin/jobs", async (request) => {
-    staffOf(request, "content.edit");
+    staffOf(request, "platform.content.update");
     const rows = await db().jobPost.findMany({ orderBy: { createdAt: "desc" }, include: { _count: { select: { applications: true } } } });
     const fresh = await db().jobApplication.groupBy({ by: ["jobId"], where: { status: "new" }, _count: true });
     const n = new Map(fresh.map((f) => [f.jobId, f._count]));
     return { data: rows.map(({ _count, ...j }) => ({ ...j, applications: _count.applications, newApplications: n.get(j.id) ?? 0 })) };
   });
   app.post("/admin/jobs", async (request) => {
-    const s = staffOf(request, "content.edit");
+    const s = staffOf(request, "platform.content.update");
     const b = Job.parse(request.body);
     const j = await db().jobPost.create({ data: { ...jobData(b), slug: await uniqueSlug("jobPost", b.title) } });
     await audit(s.user.id, request.ip, "content.job_created", j.title);
     return { message: j.status === "open" ? "Job posted." : "Saved.", data: { id: j.id } };
   });
   app.put<{ Params: { id: string } }>("/admin/jobs/:id", async (request) => {
-    const s = staffOf(request, "content.edit");
+    const s = staffOf(request, "platform.content.update");
     const b = Job.parse(request.body);
     const j = await db().jobPost.update({ where: { id: Number(request.params.id) || -1 }, data: jobData(b) }).catch(() => null);
     if (!j) throw notFound("Job not found.");
@@ -168,19 +168,19 @@ export async function adminContentRoutes(app: FastifyInstance) {
     return { message: "Saved." };
   });
   app.get<{ Params: { id: string } }>("/admin/jobs/:id/applications", async (request) => {
-    staffOf(request, "content.edit");
+    staffOf(request, "platform.content.update");
     const rows = await db().jobApplication.findMany({ where: { jobId: Number(request.params.id) || -1 }, orderBy: { createdAt: "desc" } });
     return { data: rows.map(({ ip: _ip, ...a }) => ({ ...a, cv: a.cvFile ? `/admin/applications/${a.id}/cv` : null })) };
   });
   app.patch<{ Params: { id: string } }>("/admin/applications/:id", async (request) => {
-    staffOf(request, "content.edit");
+    staffOf(request, "platform.content.update");
     const { status } = z.object({ status: z.enum(["new", "shortlisted", "rejected", "hired"]) }).parse(request.body);
     const a = await db().jobApplication.update({ where: { id: request.params.id }, data: { status } }).catch(() => null);
     if (!a) throw notFound("Application not found.");
     return { message: "Saved." };
   });
   app.get<{ Params: { id: string } }>("/admin/applications/:id/cv", async (request, reply) => {
-    staffOf(request, "content.edit");
+    staffOf(request, "platform.content.update");
     const a = await db().jobApplication.findUnique({ where: { id: request.params.id } });
     const f = a?.cvFile ? await readPrivateFile(app.config.MEDIA_DIR, "cv", a.cvFile) : null;
     if (!a || !f) throw notFound("CV not found.");
@@ -189,7 +189,7 @@ export async function adminContentRoutes(app: FastifyInstance) {
 
   // ───── Buyer requirements and the requirement fee ─────
   app.get("/admin/requirements", async (request) => {
-    staffOf(request, "moderation.listings");
+    staffOf(request, "platform.listing.moderate");
     const q = z.object({ show: z.enum(["fee_pending", "public", "hidden", "all"]).default("fee_pending") }).parse(request.query);
     const where: Prisma.LeadWhereInput = {
       kind: "requirement", tenantId: null,
@@ -206,7 +206,7 @@ export async function adminContentRoutes(app: FastifyInstance) {
   });
 
   app.get<{ Params: { id: string } }>("/admin/requirements/:id/proof", async (request, reply) => {
-    staffOf(request, "moderation.listings");
+    staffOf(request, "platform.listing.moderate");
     const l = await db().lead.findUnique({ where: { id: request.params.id } });
     const f = l?.feeProof ? await readPrivateFile(app.config.MEDIA_DIR, "proofs", l.feeProof) : null;
     if (!l || !f) throw notFound("Proof not found.");
@@ -215,7 +215,7 @@ export async function adminContentRoutes(app: FastifyInstance) {
 
   /** Confirm or reject the fee, or show/hide a requirement on the board. */
   app.patch<{ Params: { id: string } }>("/admin/requirements/:id", async (request) => {
-    const s = staffOf(request, "moderation.listings");
+    const s = staffOf(request, "platform.listing.moderate");
     const b = z.object({ fee: z.enum(["confirmed", "rejected"]).optional(), public: z.boolean().optional(), note: z.string().trim().max(500).optional() }).parse(request.body);
     const l = await db().lead.findFirst({ where: { id: request.params.id, kind: "requirement", tenantId: null } });
     if (!l) throw notFound("Requirement not found.");
@@ -238,12 +238,12 @@ export async function adminContentRoutes(app: FastifyInstance) {
   });
 
   app.get("/admin/settings/requirement-fee", async (request) => {
-    staffOf(request, "settings.platform");
+    staffOf(request, "platform.settings.read+platform.settings.update");
     const row = await db().appSetting.findUnique({ where: { key: FEE_KEY } });
     return { data: { enabled: false, amount: 0, note: "", ...((row?.value as object) ?? {}) } };
   });
   app.put("/admin/settings/requirement-fee", async (request) => {
-    const s = staffOf(request, "settings.platform");
+    const s = staffOf(request, "platform.settings.read+platform.settings.update");
     const b = z.object({ enabled: z.boolean(), amount: z.number().int().min(0).max(100_000), note: z.string().trim().max(300).default("") }).parse(request.body);
     if (b.enabled && !b.amount) throw badRequest("Set the amount to switch the fee on.");
     await db().appSetting.upsert({ where: { key: FEE_KEY }, create: { key: FEE_KEY, value: b }, update: { value: b } });

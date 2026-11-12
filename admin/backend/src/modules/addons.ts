@@ -15,13 +15,13 @@ export async function adminAddonRoutes(app: FastifyInstance) {
   const db = () => dbOf(app);
 
   app.get("/admin/addons", async (request) => {
-    staffOf(request, "billing.view");
+    staffOf(request, "platform.billing.read");
     const [cat, owned] = await Promise.all([addonCatalog(db()), db().tenantAddon.groupBy({ by: ["addonId"], where: { qty: { gt: 0 } }, _sum: { qty: true }, _count: true })]);
     return { data: cat.map((a) => { const o = owned.find((x) => x.addonId === a.id); return { ...a, businesses: o?._count ?? 0, units: o?._sum.qty ?? 0 }; }) };
   });
 
   app.put<{ Params: { id: string } }>("/admin/addons/:id", async (request) => {
-    const s = staffOf(request, "plans.manage");
+    const s = staffOf(request, "platform.plan.read+platform.plan.create+platform.plan.update+platform.plan.delete");
     const def = ADDON_DEFAULTS.find((a) => a.id === request.params.id);
     if (!def) throw notFound("Add-on not found.");
     const b = z.object({

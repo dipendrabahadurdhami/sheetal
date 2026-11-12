@@ -15,7 +15,7 @@ import { notify } from "@sheetal/backend-core/lib/notify";
 import { PLATFORM_ROLES, hasPerm } from "@sheetal/backend-core/domain/permissions";
 import { staffOf } from "./routes.js";
 
-const PERM = "tenants.view";
+const PERM = "platform.business.read";
 const ticketNo = (seq: number) => `SUP-${String(seq).padStart(4, "0")}`;
 const Text = z.string().trim().min(1, "Write something.").max(5000);
 

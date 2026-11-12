@@ -30,7 +30,7 @@ export async function billingRoutes(app: FastifyInstance, opts: { fetch?: Fetch 
   const gw = () => gateways(db(), vault, app.config.NODE_ENV === "production");
 
   function payer(ws: Workspace) {
-    if (!ws.can("billing.manage")) throw forbidden("Only people who manage billing can pay for the plan.");
+    if (!ws.can("workspace.billing.manage")) throw forbidden("Only people who manage billing can pay for the plan.");
   }
   const invoiceJson = (i: { id: string; seq: number; createdAt: Date; planId: string; months: number; kind?: string; addons?: unknown; subtotal: number; vat: number; total: number; status: string; dueAt: Date; paidAt: Date | null; periodStart: Date | null; periodEnd: Date | null; billedTo: unknown }, plans: Map<string, string>) => ({
     id: i.id, number: invoiceNumber(i), kind: i.kind ?? "plan", addons: i.addons ?? [], plan: i.kind === "addon" ? "Add-ons" : i.kind === "boost" ? "Boost" : i.kind === "banner" ? "Home banner" : plans.get(i.planId) ?? i.planId, planId: i.planId, months: i.months, subtotal: i.subtotal, vat: i.vat, total: i.total, status: i.status,
@@ -39,7 +39,7 @@ export async function billingRoutes(app: FastifyInstance, opts: { fetch?: Fetch 
 
   app.get("/billing", async (request) => {
     const ws = workspaceOf(request);
-    if (!ws.can("billing.manage") && !ws.can("invoices.view")) throw forbidden("Your role can't see billing.");
+    if (!ws.can("workspace.billing.manage") && !ws.can("invoicing.invoice.read")) throw forbidden("Your role can't see billing.");
     const t = await db().tenant.findUniqueOrThrow({ where: { id: ws.tenantId }, include: { plan: true } });
     const [invoices, plans, g, s, pending] = await Promise.all([
       db().invoice.findMany({ where: { tenantId: t.id }, orderBy: { createdAt: "desc" }, take: 50 }),
@@ -67,7 +67,7 @@ export async function billingRoutes(app: FastifyInstance, opts: { fetch?: Fetch 
 
   app.get<{ Params: { id: string } }>("/billing/invoices/:id", async (request) => {
     const ws = workspaceOf(request);
-    if (!ws.can("billing.manage") && !ws.can("invoices.view")) throw forbidden("Your role can't see billing.");
+    if (!ws.can("workspace.billing.manage") && !ws.can("invoicing.invoice.read")) throw forbidden("Your role can't see billing.");
     const i = await db().invoice.findFirst({ where: { id: request.params.id, tenantId: ws.tenantId }, include: { payments: { where: { status: { in: ["paid", "refunded"] } }, select: { provider: true, amount: true, paidAt: true, providerRef: true, status: true } } } });
     if (!i) throw notFound("Invoice not found.");
     const names = new Map((await db().plan.findMany({ select: { id: true, name: true } })).map((p) => [p.id, p.name]));

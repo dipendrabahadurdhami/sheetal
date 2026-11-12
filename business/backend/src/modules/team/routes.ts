@@ -125,7 +125,7 @@ export async function teamRoutes(app: FastifyInstance) {
   // ───── Business profile: name and contact details shown on the website, bills and invoices ─────
   app.patch("/workspace/profile", async (request) => {
     const ws = workspaceOf(request);
-    if (!ws.can("settings.business")) throw forbidden("Your role can't change the business profile.");
+    if (!ws.can("workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete")) throw forbidden("Your role can't change the business profile.");
     const text = (max: number) => z.string().trim().max(max).transform((x) => x || null).nullish();
     const b = z.object({
       name: z.string().trim().min(2, "Enter the business name.").max(80).optional(),
@@ -145,7 +145,7 @@ export async function teamRoutes(app: FastifyInstance) {
   // ───── Branding (Business and Pro): the business's logo and its colours (read from the logo, or picked) ─────
   app.put("/workspace/branding", { bodyLimit: 4 * 1024 * 1024 }, async (request) => {
     const ws = workspaceOf(request);
-    if (!ws.can("settings.business")) throw forbidden("Your role can't change the branding.");
+    if (!ws.can("workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete")) throw forbidden("Your role can't change the branding.");
     // Own logo and colours come with the Business and Pro plans; Starter keeps Sheetal's look.
     if (!ws.member.tenant.plan.price) throw new AppError(402, "plan_feature", "Your own logo and colours come with the Business and Pro plans.");
     const b = z.object({
@@ -170,7 +170,7 @@ export async function teamRoutes(app: FastifyInstance) {
     const db = dbOf(app);
     const [members, invites, roles, activity] = await Promise.all([
       db.membership.findMany({ where: { tenantId: ws.tenantId, status: { in: ["active", "paused"] } }, include: { user: true, branches: linksInclude }, orderBy: { createdAt: "asc" } }),
-      ws.can("team.manage") ? db.invite.findMany({ where: { tenantId: ws.tenantId, status: "pending" }, include: { branches: linksInclude }, orderBy: { createdAt: "desc" } }) : Promise.resolve([]),
+      ws.can("workspace.team.read+workspace.team.invite+workspace.team.update+workspace.team.remove") ? db.invite.findMany({ where: { tenantId: ws.tenantId, status: "pending" }, include: { branches: linksInclude }, orderBy: { createdAt: "desc" } }) : Promise.resolve([]),
       db.role.findMany({ where: { tenantId: ws.tenantId }, orderBy: [{ system: "desc" }, { key: "asc" }] }),
       db.auditLog.findMany({ where: { tenantId: ws.tenantId }, orderBy: { createdAt: "desc" }, take: 50 }),
     ]);
@@ -202,7 +202,7 @@ export async function teamRoutes(app: FastifyInstance) {
     return r;
   }
 
-  const manage = (ws: Workspace) => { if (!ws.can("team.manage")) throw forbidden("Only people who manage the team can do this."); };
+  const manage = (ws: Workspace) => { if (!ws.can("workspace.team.read+workspace.team.invite+workspace.team.update+workspace.team.remove")) throw forbidden("Only people who manage the team can do this."); };
 
   // ───── Invitations ─────
   app.post("/team/invites", { config: { rateLimit: { max: 20, timeWindow: "1 hour" } } }, async (request) => {
@@ -350,7 +350,7 @@ export async function teamRoutes(app: FastifyInstance) {
     if (r.refused.length) throw badRequest(r.refused.join(" "));
     return r.perms;
   };
-  const rolesAdmin = (ws: Workspace) => { if (!ws.can("roles.manage")) throw forbidden("Only people who manage roles can do this."); };
+  const rolesAdmin = (ws: Workspace) => { if (!ws.can("workspace.role.read+workspace.role.create+workspace.role.update+workspace.role.delete")) throw forbidden("Only people who manage roles can do this."); };
 
   app.post("/team/roles", async (request) => {
     const ws = workspaceOf(request); rolesAdmin(ws);
