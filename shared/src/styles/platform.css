@@ -1672,3 +1672,12 @@ button.pf-card-row { cursor: pointer; }
 .pf-form-stack { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
 .pf-guide { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 12px; }
 .pf-guide p { margin: 2px 0 4px; }
+
+/* Stage 1.4 settings screens: the revenue figures in a row, and the theme preview box (its own variables, so it never changes the page around it). */
+.pf-stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin: 16px 0; }
+.pf-table th.num, .pf-table td.num { text-align: right; }
+.pf-theme-preview { background: var(--pv-page); color: var(--pv-text); padding: 20px; border-radius: var(--pv-radius); border: 1px solid var(--line); }
+.pf-theme-card { background: var(--pv-surface); border-radius: var(--pv-radius); padding: 16px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.pf-theme-card p { margin: 0; }
+.pf-theme-btn { background: var(--pv-button); color: #fff; padding: 8px 14px; border-radius: var(--pv-radius); font-weight: 600; }
+.pf-theme-link { color: var(--pv-brand); text-decoration: underline; }
