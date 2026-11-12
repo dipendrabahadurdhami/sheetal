@@ -24,7 +24,7 @@ import type { SettingDef } from "./types.js";
 export interface SettingsRoutesOptions { db: Db; settings: SettingsService; staffOf: (req: FastifyRequest) => StaffContext }
 
 const PutBody = z.object({ value: z.unknown(), reason: z.string().max(400).optional() }).strict();
-const FormBody = z.object({ label: FormDef.innerType().shape.label, fields: FormDef.innerType().shape.fields }).strict();
+const FormBody = z.object({ label: FormDef.shape.label, fields: FormDef.shape.fields }).strict();
 const ReportQuery = z.object({ range: z.enum(["today", "7d", "30d", "custom"]).default("7d"), from: z.string().max(10).optional(), to: z.string().max(10).optional(), format: z.enum(["json", "csv"]).default("json") }).strict();
 
 export async function settingsAdminRoutes(app: FastifyInstance, o: SettingsRoutesOptions) {
