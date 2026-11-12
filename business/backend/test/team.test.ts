@@ -136,11 +136,11 @@ describe("members", () => {
 
 describe("roles", () => {
   it("creates a role with this business's permissions only", async () => {
-    expect((await call("owner", "POST", "/team/roles", { name: "Photographer", perms: ["listings.manage", "pos.restaurant"] })).statusCode).toBe(400);
-    const res = await call("owner", "POST", "/team/roles", { name: "Photographer", perms: ["listings.manage"] });
+    expect((await call("owner", "POST", "/team/roles", { name: "Photographer", perms: ["listings.listing.read", "pos.restaurant.use"] })).statusCode).toBe(400);
+    const res = await call("owner", "POST", "/team/roles", { name: "Photographer", perms: ["listings.listing.read"] });
     expect(res.statusCode).toBe(200);
     const roles = (await call("owner", "GET", "/team")).json().data.roles;
-    expect(roles.find((r: { name: string }) => r.name === "Photographer")).toMatchObject({ perms: ["listings.manage"], system: false });
+    expect(roles.find((r: { name: string }) => r.name === "Photographer")).toMatchObject({ perms: [expect.stringMatching(/^listings\.listing\.read:(own|branch|all)$/)], system: false });
     ids.photoRole = res.json().data.id;
   });
 

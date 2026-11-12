@@ -68,13 +68,13 @@ describe("busOf", () => {
 describe("role catalog round trip", () => {
   const catalog = catalogForTypes(["real_estate"]);
   const oldAllowed = new Set(Object.keys(LEGACY_ALIASES));
-  it("an old name is kept as sent and shows up as new names in grants", () => {
-    const old = Object.keys(LEGACY_ALIASES).find((k) => k.startsWith("expenses."));
-    if (!old) return;
-    const n = normalizeRolePerms([old], { catalog, oldAllowed });
-    expect(n.perms).toEqual([old]);
-    expect(toGrants([old]).length).toBeGreaterThan(0);
-    expect(toGrants([old]).every((g) => /^[a-z_]+\.[a-z_]+\.[a-z_]+:(own|branch|all)$/.test(g))).toBe(true);
+  it("an old name is an unknown permission for the role routes (they allow none since stage 1.5) and gives no grant", () => {
+    const old = Object.keys(LEGACY_ALIASES).find((k) => k.startsWith("expenses."))!;
+    const n = normalizeRolePerms([old], { catalog, oldAllowed: new Set() });
+    expect(n.perms).toEqual([]);
+    expect(n.unknown).toEqual([old]);
+    expect(toGrants([old])).toEqual([]);
+    expect(toGrants([old, "expenses.expense.read:branch"])).toEqual(["expenses.expense.read:branch"]);
   });
   it("a new name gets an explicit scope and survives toGrants unchanged", () => {
     const n = normalizeRolePerms(["expenses.expense.read:branch"], { catalog, oldAllowed });

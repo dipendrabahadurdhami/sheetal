@@ -45,6 +45,9 @@ const typesOf = (ws: Workspace): BusinessType[] => (isAllAccess(ws.member.tenant
 // Seats on the plan plus any extra seats bought as add-ons.
 const seatLimit = async (db: Parameters<typeof effectiveLimits>[0], ws: Workspace) => ((await effectiveLimits(db, ws.tenantId, ws.member.tenant.plan)).limits as Record<string, number>).seats ?? 1;
 
+/** Since stage 1.5 a role is saved in the manifests' names only: an old name ("leads.view") is answered as an unknown permission. */
+const NO_OLD_NAMES: ReadonlySet<string> = new Set();
+
 export async function teamRoutes(app: FastifyInstance) {
   /** Refuses when `adding` more people would pass the seat limit: active members plus pending, unexpired invitations (paused ones don't count). */
   const requireFreeSeat = async (ws: Workspace, adding: number) => {
@@ -345,7 +348,7 @@ export async function teamRoutes(app: FastifyInstance) {
   const roleBody = z.object({ name: z.string().trim().min(2).max(60), perms: z.array(z.string()).max(200) });
   // Accepts the OLD names (kept as sent, until the rewrite) and the NEW names with a scope (stored with the scope written out). ACCESS.md 5.2 and 8.
   const checkPerms = (ws: Workspace, perms: string[]) => {
-    const r = normalizeRolePerms(perms, { catalog: catalogForTypes(typesOf(ws)), oldAllowed: new Set(businessPermsFor(typesOf(ws))) });
+    const r = normalizeRolePerms(perms, { catalog: catalogForTypes(typesOf(ws)), oldAllowed: NO_OLD_NAMES });
     if (r.unknown.length) throw badRequest(`Unknown permissions: ${r.unknown.join(", ")}`);
     if (r.refused.length) throw badRequest(r.refused.join(" "));
     return r.perms;

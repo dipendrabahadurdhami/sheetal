@@ -59,7 +59,7 @@ beforeAll(async () => {
   await join(ids.agent!, (await role("agent")).id);
   await join(ids.pokhara!, (await role("accountant")).id, { scopes: ["Pokhara"] });
   await join(ids.reader!, await custom("reader_new", ["expenses.expense.read:branch"]));       // only the NEW name, read only
-  await join(ids.oldview!, await custom("viewer_old", ["expenses.view"]));                     // only the OLD name
+  await join(ids.oldview!, await custom("viewer_old", ["expenses.expense.read", "expenses.recurring.read", "expenses.profit.read"]));                     // what the old name expenses.view stood for
 });
 afterAll(async () => { await app.close(); rmSync(media, { recursive: true, force: true }); });
 

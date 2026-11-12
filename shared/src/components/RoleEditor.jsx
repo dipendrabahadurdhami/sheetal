@@ -5,7 +5,7 @@
 
 import React, { useState } from "react";
 import { useT } from "../core/i18n";
-import { permCount, roleDesc, roleName } from "../core/rbac";
+import { holds, permCount, roleDesc, roleName } from "../core/rbac";
 import { Button, Checkbox, Confirm, Field, Input, useToast } from "../core/ui";
 import { Icon } from "../core/icons";
 
@@ -51,12 +51,15 @@ function RoleForm({ role, groups, canManage, members, onSave, onDelete }) {
   const allPerms = groups.flatMap((g) => g.perms);
   const [name, setName] = useState(roleName(role, t));
   const [desc, setDesc] = useState(roleDesc(role, t));
-  const [perms, setPerms] = useState(owner ? allPerms : role.perms.filter((p) => allPerms.includes(p)));
+  // `perms` here is the ticked permission NAMES; a grant the role already holds keeps its scope when saved ("crm.lead.read:own" stays as it is).
+  const start = owner ? allPerms : allPerms.filter((p) => holds(role.perms, p));
+  const [perms, setPerms] = useState(start);
+  const stored = (p) => role.perms.find((g) => g === p || g.startsWith(`${p}:`)) || p;
   const [confirm, setConfirm] = useState(false);
   const has = (p) => perms.includes(p);
   const flip = (p, v) => setPerms((x) => (v ? [...x, p] : x.filter((y) => y !== p)));
   const same = (a, b) => JSON.stringify([...a].sort()) === JSON.stringify([...b].sort());
-  const dirty = !locked && (name.trim() !== roleName(role, t) || desc !== roleDesc(role, t) || !same(perms, role.perms.filter((p) => allPerms.includes(p))));
+  const dirty = !locked && (name.trim() !== roleName(role, t) || desc !== roleDesc(role, t) || !same(perms, start));
   const people = `${members} ${members === 1 ? "person has" : "people have"} this role`;
   return (
     <>
@@ -71,10 +74,10 @@ function RoleForm({ role, groups, canManage, members, onSave, onDelete }) {
             const on = g.perms.filter(has).length;
             const full = on === g.perms.length;
             return (
-              <section key={g.module} className="pf-rbox-group" aria-label={t(`permgroup.${g.module}`)}>
-                <header><b>{t(`permgroup.${g.module}`)}</b>
+              <section key={g.module} className="pf-rbox-group" aria-label={g.title}>
+                <header><b>{g.title}</b>
                   {!locked && <button type="button" className="pf-rbox-all" onClick={() => setPerms((x) => (full ? x.filter((p) => !g.perms.includes(p)) : [...new Set([...x, ...g.perms])]))}>{full ? "Clear" : "All"}</button>}</header>
-                {g.perms.map((p) => <Checkbox key={p} checked={has(p)} disabled={locked} label={t(`perm.${p}`)} onChange={(v) => flip(p, v)} />)}
+                {g.perms.map((p) => <Checkbox key={p} checked={has(p)} disabled={locked} label={g.labels?.[p]?.en || p} onChange={(v) => flip(p, v)} />)}
               </section>
             );
           })}
@@ -84,7 +87,7 @@ function RoleForm({ role, groups, canManage, members, onSave, onDelete }) {
         {canManage && !owner ? <Button variant="outline" size="sm" className="pf-danger" icon="trash-2" disabled={members > 0} title={members > 0 ? t("roles.deleteBlocked") : undefined} onClick={() => setConfirm(true)}>Delete role</Button> : <span />}
         <div className="pf-row-actions">
           <span className="small muted">{dirty ? t("common.unsaved") : people}</span>
-          {!locked && <Button size="sm" disabled={!dirty || !name.trim()} onClick={() => onSave({ ...role, system: false, name: name.trim(), desc, perms })}>Save role</Button>}
+          {!locked && <Button size="sm" disabled={!dirty || !name.trim()} onClick={() => onSave({ ...role, system: false, name: name.trim(), desc, perms: perms.map(stored) })}>Save role</Button>}
         </div>
       </div>
       <Confirm open={confirm} onClose={() => setConfirm(false)} onConfirm={onDelete} danger title={t("roles.deleteTitle")} confirmLabel={t("common.delete")}>{t("roles.deleteText")}</Confirm>

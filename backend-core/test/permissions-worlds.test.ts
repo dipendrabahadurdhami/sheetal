@@ -49,8 +49,8 @@ describe("staff and business permissions stay apart", () => {
   });
 
   it("the known overlap is the only one, and it is why the lists must stay apart", () => {
-    // A business role with the old "roles.manage" answers true for the staff name: documented, not used anywhere.
-    expect(hasPerm(["roles.manage"], "platform.role.manage")).toBe(true);
+    // Until stage 1.5 a business role with the old "roles.manage" answered true for the staff name through the alias layer. The layer is gone: it gives nothing.
+    expect(hasPerm(["roles.manage"], "platform.role.manage")).toBe(false);
     // Staff roles without it do not get it.
     expect(hasPerm(PLATFORM_ROLES.support!, "platform.role.manage")).toBe(false);
   });

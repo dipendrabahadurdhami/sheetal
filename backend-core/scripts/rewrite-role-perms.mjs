@@ -13,7 +13,7 @@
 // Lead decision (ACCESS.md 5.4): a role that holds leads.view AND leads.assign gets crm.lead.read:branch + crm.lead.assign:branch; leads.view alone gets crm.lead.read:own.
 // roles.perms_v1 gets the old list, only when it is empty (running twice never overwrites the backup).
 // THE PROOF: before writing, for every changed role and for EVERY old name and EVERY new business name in the catalogs, it asks
-// hasPerm(before, name) and hasPerm(after, name), with the server rule AND the screens' rule (shared/src/core/rbac.js).
+// hasPerm(before, name) and hasPerm(after, name), with the rule the server and the screens used before stage 1.5 (kept in this file: makeHasPerm).
 //   - a name that goes true -> false (access LOST): --apply refuses, always;
 //   - a name that goes false -> true (access GAINED): --apply refuses unless the name is on ALLOWED_WIDENING below;
 //   - the server and the screens giving different answers: --apply refuses.
@@ -29,7 +29,6 @@ import vm from "node:vm";
 const core = join(dirname(fileURLToPath(import.meta.url)), "..");
 const root = join(core, "..");
 const GENERATED = join(root, "platform", "src", "tenancy", "permissions.generated.ts");
-const SCREENS = join(root, "shared", "src", "core", "rbac.js");
 
 /**
  * Names that MAY go from "not held" to "held" for a role (the widening allow-list). Each is a "view" name whose new name is also part of the
@@ -84,7 +83,8 @@ export function loadCatalogs(file = GENERATED) {
   return { aliases, platformAliases, catalog, byId, businessNames, oldNames: Object.keys(aliases) };
 }
 
-// ───────────── The permission check (the same rule as platform/src/tenancy/aliases.ts; a test runs both on the same cases) ─────────────
+// ───────────── The permission check as it was BEFORE stage 1.5 (old and new names both understood). The servers no longer have it: ─────────────
+// ───────────── this copy is what lets the script compare a role before and after. For lists in new names it equals today's rule (tested). ─────────────
 
 export function makeHasPerm(aliasMaps) {
   const oldToNew = new Map();
@@ -183,7 +183,7 @@ export async function runRewrite(db, { mode = "dry-run", force = false, verbose 
   const server = makeHasPerm([cat.aliases, cat.platformAliases]);
   const checks = [{ label: "server", fn: server }];
   if (screens) checks.push({ label: "screens", fn: screens });
-  else log("WARNING  the screens' rule (shared/src/core/rbac.js) was not loaded; only the server rule is proved.");
+
 
   const rows = await (only ? db.$queryRawUnsafe(ROLES_SQL(mode !== "dry-run", true), only) : db.$queryRawUnsafe(ROLES_SQL(mode !== "dry-run", false)));
   const label = (r) => `${mask(r.business)} (${String(r.tenantId).slice(0, 8)})`;
@@ -311,15 +311,10 @@ async function main() {
   const { PrismaClient } = require("@prisma/client");
   const db = new PrismaClient();
   try {
-    let screens;
-    try {
-      const mod = await import(pathToFileURL(SCREENS).href);
-      screens = (perms, perm) => mod.can({ perms }, perm);
-    } catch (e) {
-      throw new Error(`could not load the screens' rule (shared/src/core/rbac.js): ${e.message}. Run npm install first.`);
-    }
+    // Since stage 1.5 the servers and the screens only understand the new names, so the proof stands on this script's own copy of the rule they both
+    // used before (makeHasPerm above). `screens` stays an option of runRewrite for the tests.
     const catalogs = loadCatalogs();
-    const result = await db.$transaction((tx) => runRewrite(tx, { mode, force: args.includes("--force"), verbose: args.includes("--verbose"), only: only.length ? only : null, catalogs, screens }), { timeout: 120_000, maxWait: 20_000 });
+    const result = await db.$transaction((tx) => runRewrite(tx, { mode, force: args.includes("--force"), verbose: args.includes("--verbose"), only: only.length ? only : null, catalogs }), { timeout: 120_000, maxWait: 20_000 });
     exitCode = result.exitCode;
   } catch (e) {
     console.log(`ERROR  ${e.message}\nFAIL: nothing was written (the transaction was rolled back).`);
