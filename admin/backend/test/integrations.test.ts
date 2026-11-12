@@ -197,8 +197,10 @@ describe("integration center: a single-mode connection (Cloudflare) and its old 
     expect(old.zoneId).toBe(zone);
     expect(old.apiToken!.startsWith("v1:")).toBe(true);            // the old readers get the old format
     expect(vault.open(old.apiToken!)).toBe("cf-token-abc");
-    const view = (await call("boss", "GET", "/admin/settings/integrations")).json().data;
-    expect(JSON.stringify(view)).not.toContain("cf-token-abc");
+    const view = await call("boss", "GET", "/admin/settings/integrations/cloudflare");     // the old screen's route still answers, without the secret
+    expect(view.statusCode).toBe(200);
+    expect(view.json().data.zoneId).toBe(zone);
+    expect(view.body).not.toContain("cf-token-abc");
   });
 
   it("the health job tells staff once after three failures, never pauses, and clears on the first success", async () => {
