@@ -5,8 +5,8 @@
 // Sheetal staff checks (admin/…) use the staff map, business checks use the business map ("roles.manage" is in both, with different meanings).
 // Only string literals that sit in a permission-check position are touched: staffOf(request, "x"), ws.can("x"), can(role, "x"), guard("x" / ["x", …]),
 // perm: "x", permAny: ["x", …], the helpers need(ws, "x", …) / any("x", …) / teamWith(db, id, ["x"]) and named lists (VIEW_PERMS = […]). Anything else (an audit action or a translation key that happens to look like a permission) is reported, never changed.
-// Rules: never run --apply on tests (old tests keep proving the old names still work while the alias layer is on). The role templates and the scripts that
-// rewrite stored roles keep old names on purpose until the alias layer is removed.
+// Rules: since stage 1.5 part 2 nothing understands an old name at run time. packages/config/src/no-old-names.test.js uses this file to keep it so:
+// no permission check may name an old permission, and the few strings that merely look like one (audit actions, translation keys) are listed there.
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { execSync } from "node:child_process";
@@ -28,7 +28,10 @@ export function kindOf(file) {
   return null;
 }
 
-const SKIP = /(\.test\.|\/test\/|generated|node_modules|^docs\/|^handovers\/|legacy-v1|^scripts\/|backend-core\/scripts\/|domain\/permissions\.ts$|core\/rbac\.js$)/;
+// Never looked at: tests, generated files, and the few places that hold the old names ON PURPOSE as data (the legacy table, the role rewrite script and
+// this tool with the manifest check that compares old and new).
+const SKIP = /(\.test\.|\/test\/|generated|node_modules|^docs\/|^handovers\/|legacy-v1|^scripts\/|backend-core\/scripts\/rewrite-role-perms\.mjs$)/;
+export const isSkipped = (file) => SKIP.test(file);
 const Q = `["']`;
 const NAME = `[a-z_]+\\.[a-z_]+`;
 // The shapes that are permission checks. Group 1 = everything before the names, group 2 = one literal or a [list] of literals.

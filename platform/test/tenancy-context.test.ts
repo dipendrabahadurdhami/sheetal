@@ -10,7 +10,6 @@ import {
   IMPERSONATION_DENY,
 } from "../src/tenancy/context.js";
 import { PERMISSION_CATALOG } from "../src/tenancy/permissions.generated.js";
-import { oldNamesOf } from "../src/tenancy/aliases.js";
 import { reconcileOldNames } from "../src/tenancy/branch-links.js";
 import type { BranchInfo } from "../src/core/context.js";
 
@@ -72,7 +71,7 @@ describe("BranchScope", () => {
   });
 
   it("reads a membership: owners always all; limited people by the link rows; the old names only as a fallback", () => {
-    const agent = { perms: ["leads.view"] };
+    const agent = { perms: ["crm.lead.read:own"] };
     const owner = { perms: ["*"] };
     expect(accessOfMember({ scopes: ["Pokhara"], allBranches: false, branches: [], role: owner })).toEqual({ allowed: "all", names: "all" });
     expect(accessOfMember({ scopes: "all", allBranches: true, branches: [], role: agent })).toEqual({ allowed: "all", names: "all" });
@@ -86,7 +85,7 @@ describe("BranchScope", () => {
 
 describe("rows written only the old way (fail closed, Lead fix after the first CI run)", () => {
   const branches = [{ id: "b-head", name: "Head office" }, { id: "b-pokhara", name: "Pokhara" }];
-  const role = { perms: ["expenses.view"] };
+  const role = { perms: ["expenses.expense.read:branch"] };
 
   it("reads a list of names with the flag left at 'all' as limited to those names, never every branch", () => {
     const m = reconcileOldNames({ scopes: ["pokhara"], allBranches: true, branches: [], role }, branches);
@@ -151,24 +150,15 @@ describe("PermissionSet", () => {
     expect(p.scopeOf("workspace.team.read")).toBe("all");
   });
 
-  it("accepts OLD names from a role that holds old names, with the scope they have today", () => {
+  it("does not understand the OLD names any more (stage 1.5): not as a grant, not as a check", () => {
     const p = buildPermissionSet(["expenses.manage", "team.manage", "leads.view"]);
-    expect(p.can("expenses.manage")).toBe(true);
-    expect(p.scopeOf("expenses.manage")).toBe("branch");         // data: branch
-    expect(p.scopeOf("team.manage")).toBe("all");                 // team, roles, settings, billing: the whole business
-    expect(p.scopeOf("leads.view")).toBe("branch");
-    expect(p.can("bookings.view")).toBe(false);
-  });
-
-  it("answers a NEW name for a role that holds the old name, and an OLD name for a role that holds all the new names", () => {
-    const old = buildPermissionSet(["expenses.manage"]);
-    expect(old.can("expenses.expense.create")).toBe(true);
-    expect(old.scopeOf("expenses.expense.create")).toBe("branch");
-    expect(old.can("crm.lead.read")).toBe(false);
+    expect(p.can("expenses.expense.create")).toBe(false);          // an old name in a role gives nothing
+    expect(p.scopeOf("crm.lead.read")).toBeNull();
     const fresh = buildPermissionSet(["expenses.expense.read:branch", "expenses.recurring.read:branch", "expenses.profit.read:branch"]);
-    expect(fresh.can("expenses.view")).toBe(true);
-    expect(fresh.scopeOf("expenses.view")).toBe("branch");
-    expect(buildPermissionSet(["expenses.expense.read:branch"]).can("expenses.view")).toBe(false);   // not all of them
+    expect(fresh.can("expenses.view")).toBe(false);                // an old name in a check asks for nothing a role can hold
+    expect(fresh.scopeOf("expenses.view")).toBeNull();
+    expect(fresh.can("expenses.expense.read+expenses.recurring.read+expenses.profit.read")).toBe(true);   // what "expenses.view" stood for
+    expect(fresh.scopeOf("expenses.expense.read+expenses.recurring.read+expenses.profit.read")).toBe("branch");
   });
 
   it("require() returns the scope or refuses with 403 and the message given", () => {
@@ -185,15 +175,15 @@ describe("PermissionSet", () => {
     const p = buildImpersonationPermissions();
     expect(p.can("expenses.expense.read")).toBe(true);
     for (const denied of ["workspace.role.create", "workspace.team.invite", "workspace.team.remove", "workspace.billing.manage", "workspace.settings.update",
-      "roles.manage", "team.manage", "billing.manage", "settings.business"]) {
+      "workspace.role.create+workspace.role.update", "workspace.team.read+workspace.team.invite", "expenses.expense.read+workspace.billing.manage"]) {
       expect(p.can(denied), denied).toBe(false);
       expect(p.scopeOf(denied), denied).toBeNull();
       expect(() => p.require(denied), denied).toThrowError();
     }
-    expect(p.can("team.view")).toBe(true);   // only seeing the team is fine
+    expect(p.can("workspace.team.read")).toBe(true);   // only seeing the team is fine
   });
 
-  it("denies EVERY permission each deny-list entry covers, by its new name and every old name (QA, P1-BE-3 fix 3)", () => {
+  it("denies EVERY permission each deny-list entry covers, alone and joined with another name (QA, P1-BE-3 fix 3)", () => {
     const p = buildImpersonationPermissions();
     const covered = (id: string) => IMPERSONATION_DENY.some((d) => (d.endsWith(".*") ? id.startsWith(d.slice(0, -1)) : id === d));
     for (const entry of IMPERSONATION_DENY) {
@@ -201,7 +191,7 @@ describe("PermissionSet", () => {
       expect(ids.length, `deny entry ${entry} matches a real permission`).toBeGreaterThan(0);
       for (const id of ids) {
         expect(p.can(id), id).toBe(false);
-        for (const old of oldNamesOf(id)) expect(p.can(old), `${old} (old name of ${id})`).toBe(false);
+        expect(p.can(`expenses.expense.read+${id}`), `${id} joined with another name`).toBe(false);
       }
     }
     // Everything not on the list stays allowed for the session (it is the owner's view), so the list is the only thing that narrows it.
@@ -257,11 +247,11 @@ describe("Entitlements and app access", () => {
     }
     const hotelOwner = { entitlements: ent("hotel"), permissions: buildPermissionSet(["*"]) };
     expect(() => requireAppAccess(hotelOwner, "pos")).not.toThrow();
-    const hotelCleaner = { entitlements: ent("hotel"), permissions: buildPermissionSet(["calendar.view"]) };
+    const hotelCleaner = { entitlements: ent("hotel"), permissions: buildPermissionSet(["hotel.calendar.read:branch"]) };
     try { requireAppAccess(hotelCleaner, "pos"); expect.unreachable(); } catch (e) {
       expect(e).toMatchObject({ statusCode: 403, code: "forbidden" });
     }
-    expect(canUseApp(hotelCleaner, "hotel")).toBe(true);       // calendar.view stands for hotel.calendar.read
+    expect(canUseApp(hotelCleaner, "hotel")).toBe(true);       // holds hotel.calendar.read
     expect(canUseApp(hotelCleaner, "pos")).toBe(false);
     expect(canUseApp(hotelCleaner, "workspace")).toBe(true);   // always on for a member
   });
@@ -271,17 +261,17 @@ describe("StaffContext", () => {
   const info = { db: {} as never, headers: {}, ip: "127.0.0.1", requestId: "r1", log: {} as never };
   const staff = (platformRole: string | null) => buildStaffContext({ ...info, user: { id: "u1", userName: "Sita", platformRole } });
 
-  it("takes the permissions of the platform role, old names working through the alias layer", () => {
+  it("takes the permissions of the platform role, in the manifest names", () => {
     const ops = staff("operations");
     expect(ops.staff).toEqual({ id: "u1", role: "operations" });
     expect(ops.actor).toEqual({ kind: "staff", staffId: "u1", name: "Sita", role: "operations" });
-    expect(ops.permissions.can("tenants.view")).toBe(true);
+    expect(ops.permissions.can("tenants.view")).toBe(false);          // an old name is not understood
     expect(ops.permissions.can("platform.business.read")).toBe(true);
     expect(ops.permissions.can("platform.business.impersonate")).toBe(true);
     expect(ops.permissions.can("platform.business.impersonate_write")).toBe(false);
-    expect(ops.permissions.can("plans.manage")).toBe(false);
+    expect(ops.permissions.can("platform.plan.update")).toBe(false);
     expect(staff("super_admin").permissions.can("platform.business.impersonate_write")).toBe(true);
-    expect(staff("finance").permissions.can("billing.refund")).toBe(true);
+    expect(staff("finance").permissions.can("platform.billing.refund")).toBe(true);
   });
 
   it("refuses anyone who is not Sheetal staff", () => {

@@ -57,8 +57,8 @@ beforeAll(async () => {
   const join = (userId: string, roleId: string, extra: object = {}) => db.membership.create({ data: { tenantId: ids.agency!, userId, roleId, status: "active", ...extra } });
   await join(ids.newread!, await custom("rv_new_read", ["reviews.review.read:branch"]));                                      // new names
   await join(ids.newreply!, await custom("rv_new_reply", ["reviews.review.reply:branch"]));
-  await join(ids.oldview!, await custom("rv_old_view", ["customers.view"]));                                                  // old names
-  await join(ids.oldreply!, await custom("rv_old_reply", ["reviews.reply"]));
+  await join(ids.oldview!, await custom("rv_old_view", ["crm.customer.read", "reviews.review.read"]));                                                  // what the old name customers.view stood for
+  await join(ids.oldreply!, await custom("rv_old_reply", ["reviews.review.read", "reviews.review.reply"]));
   await join(ids.pokhara!, await custom("rv_pokhara", ["reviews.review.read:branch", "reviews.review.reply:branch"]), { scopes: ["Pokhara"] });
   await join(ids.nobody!, await custom("rv_nobody", ["expenses.expense.read:branch"]));                                       // no review permission
 

@@ -48,6 +48,7 @@ beforeAll(async () => {
   await app.db!.$executeRawUnsafe(`TRUNCATE users, tenants, plans, app_settings, audit_logs, notifications, integration_connections, help_guides RESTART IDENTITY CASCADE`);
   await person("boss", "admin@sheetal.test", "super_admin");
   await person("finance", "finance@sheetal.test", "finance");
+  await person("editor", "editor@sheetal.test", "content_editor");
   await person("nobody", "visitor@sheetal.test", null);
 });
 afterAll(async () => { await app.close(); });
@@ -65,7 +66,10 @@ describe("integration center: who may", () => {
     expect(res.json().meta.canManage).toBe(true);
   });
   it("refuses staff without the permission and people who are not staff", async () => {
-    expect((await call("finance", "GET", "/admin/integrations")).statusCode).toBe(403);
+    // Since stage 1.5 staff roles come from the platform manifest (ACCESS.md section 7): finance may SEE the status of connections, never change them.
+    expect((await call("finance", "GET", "/admin/integrations")).statusCode).toBe(200);
+    expect((await call("finance", "GET", "/admin/integrations")).json().meta.canManage).toBe(false);
+    expect((await call("editor", "GET", "/admin/integrations")).statusCode).toBe(403);
     expect((await call("finance", "PUT", "/admin/integrations/khalti", { values: { secretKey: "x" } })).statusCode).toBe(403);
     expect((await call("nobody", "GET", "/admin/integrations")).statusCode).toBe(403);
     expect((await app.inject({ method: "GET", url: "/v1/admin/integrations" })).statusCode).toBe(401);

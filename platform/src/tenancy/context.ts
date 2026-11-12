@@ -7,7 +7,7 @@
 //   buildStaffContext()         Sheetal staff (platform role from PLATFORM_ROLES) -> StaffContext for the admin API
 //   buildImpersonationContext() staff "logging in as" a business -> BusinessContext with actor = staff, read-only unless write mode
 //   createBranchScope()         pure: the branches a person may use, the picked one, idsFor(), branchForNew(), canSee()
-//   buildPermissionSet()        pure: grants like "expenses.expense.read:branch" or old names ("expenses.view"), through the alias layer
+//   buildPermissionSet()        pure: grants like "expenses.expense.read:branch" (the manifest's names only; old names are not understood)
 //   buildEntitlements()         pure: today's plan and business type -> hasApp, limit, feature, seats
 //   requireAppAccess()          the two refusals of ACCESS.md section 7: app_not_available, and "your role can't use it"
 // Rules: nothing here writes to the database. This file never imports backend-core (it would be a circle); the one thing it needs from
@@ -23,8 +23,9 @@ import {
 } from "../core/context.js";
 import type { Db } from "../db/client.js";
 import { APPS } from "./apps.generated.js";
-import { hasPerm, newNamesOf } from "./aliases.js";
-import { LEGACY_PLATFORM_ROLES, PERMISSION_CATALOG } from "./permissions.generated.js";
+import { hasPerm } from "./perms.js";
+import { PERMISSION_CATALOG } from "./permissions.generated.js";
+import { STAFF_GRANTS } from "./staff-roles.js";
 
 // ───────────── Input shapes (structural, so the Prisma session user fits without importing backend-core) ─────────────
 
@@ -70,17 +71,8 @@ const RANK: Record<DataScope, number> = { own: 0, branch: 1, all: 2 };
 const isScope = (s: string): s is DataScope => s === "own" || s === "branch" || s === "all";
 const CATALOG = new Map(PERMISSION_CATALOG.map((p) => [p.id, p]));
 
-/** The scope a grant without a suffix gets: the manifest default; for an OLD name, the narrowest default of the new names it stands for. */
-function defaultScope(name: string): DataScope {
-  const own = CATALOG.get(name)?.default;
-  if (own) return own;
-  let best: DataScope | null = null;
-  for (const n of newNamesOf(name)) {
-    const d = CATALOG.get(n)?.default;
-    if (d && (best === null || RANK[d] < RANK[best])) best = d;
-  }
-  return best ?? "all";
-}
+/** The scope a grant without a suffix gets: the manifest default ("all" for a name no manifest declares). */
+const defaultScope = (name: string): DataScope => CATALOG.get(name)?.default ?? "all";
 
 /** The scope this exact name is held at ("name" or "name:scope"), the widest if it is listed twice; null when not held. */
 function heldScope(perms: readonly string[], name: string): DataScope | null {
@@ -97,21 +89,16 @@ function heldScope(perms: readonly string[], name: string): DataScope | null {
   return best;
 }
 
-/** A PermissionSet over a role's stored permission list (old names, new names, with or without ":scope", or "*"). */
+/** A PermissionSet over a role's stored permission list (manifest names, with or without ":scope", or "*"). */
 export function buildPermissionSet(perms: readonly string[]): PermissionSet {
   const scopeOf = (perm: PermissionId): DataScope | null => {
     if (perms.includes("*")) return "all";
     if (perm.includes("+")) {
-      // Several names joined with "+": all are needed, and the scope is the narrowest of them (see hasPerm in aliases.ts).
+      // Several names joined with "+": all are needed, and the scope is the narrowest of them (see hasPerm in perms.ts).
       const parts = perm.split("+").map((p) => (p ? scopeOf(p) : null));
       return parts.some((x) => x === null) ? null : (parts as DataScope[]).reduce(narrowest);
     }
-    const direct = heldScope(perms, perm);
-    if (direct) return direct;
-    if (!hasPerm(perms, perm)) return null;
-    // Reached through the alias layer: an old name held for a new one, or all the new names held for an old one.
-    const through = newNamesOf(perm).map((n) => heldScope(perms, n)).filter((s): s is DataScope => s !== null);
-    return through.length ? through.reduce(narrowest) : defaultScope(perm);
+    return heldScope(perms, perm);
   };
   return {
     can: (perm) => hasPerm(perms, perm),
@@ -129,8 +116,8 @@ export function buildPermissionSet(perms: readonly string[]): PermissionSet {
 export const IMPERSONATION_DENY = [
   "workspace.role.*", "workspace.team.invite", "workspace.team.update", "workspace.team.remove", "workspace.billing.manage", "workspace.settings.update",
 ];
-/** Whether a permission is on the fixed deny list of a support session (also through the alias layer: an old name counts when one of its new names is denied). */
-export const deniedInSupport = (perm: string) => [perm, ...newNamesOf(perm)].some((n) => IMPERSONATION_DENY.some((d) => (d.endsWith(".*") ? n.startsWith(d.slice(0, -1)) : n === d)));
+/** Whether a permission is on the fixed deny list of a support session (for names joined with "+": when any of them is). */
+export const deniedInSupport = (perm: string) => perm.split("+").some((n) => IMPERSONATION_DENY.some((d) => (d.endsWith(".*") ? n.startsWith(d.slice(0, -1)) : n === d)));
 
 /** The permission set of a support session: the owner role minus the fixed deny list. */
 export function buildImpersonationPermissions(): PermissionSet {
@@ -327,11 +314,11 @@ export async function buildBusinessContext(r: RequestInfo & { user: SessionUserL
   }, null);
 }
 
-/** The context of the admin API: only people with a platform role, with the permissions of that role (old names work through the alias layer). */
+/** The context of the admin API: only people with a platform role, with the permissions of that role (PLATFORM_ROLE_TEMPLATES_V2, from the platform manifest). */
 export function buildStaffContext(r: RequestInfo & { user: Pick<SessionUserLike, "id" | "userName" | "platformRole"> }): StaffContext {
   const role = r.user.platformRole;
-  // Object.hasOwn: a role string like "constructor" or "__proto__" must never match something inherited from Object.prototype.
-  const perms = role && Object.hasOwn(LEGACY_PLATFORM_ROLES, role) ? LEGACY_PLATFORM_ROLES[role] : undefined;
+  // A Map: a role string like "constructor" or "__proto__" can never match something inherited from Object.prototype.
+  const perms = role ? STAFF_GRANTS.get(role) : undefined;
   if (!role || !perms) throw forbidden("This is for Sheetal staff only.");
   return {
     ...base(r),

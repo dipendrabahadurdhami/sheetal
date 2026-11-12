@@ -1,40 +1,27 @@
-// Permissions: business role templates per business type, and Sheetal staff roles.
-// Where it fits: business roles are created from these templates for every new business; the APIs check permissions
-// with hasPerm(); the admin API checks staff with PLATFORM_ROLES.
-// How it works: since P1-BE-2 this file is a shim. The lists come from platform/src/tenancy/permissions.generated.ts, which
-// `npm run gen:permissions` writes from the app manifests; the names and values are exactly the old ones. hasPerm() also accepts
-// the new `app.resource.action` name of an old permission and the other way round (platform/src/tenancy/aliases.ts).
-// Rules: do not edit the lists here (change a manifest and run the generator). Stored roles still hold the OLD names.
+// Permissions and built-in roles, for the server code that still imports them from here (ACCESS.md sections 4 to 7).
+// Where it fits: createWorkspace() gives a new business its built-in roles from roleTemplatesFor(); the business API checks a membership's role with
+// hasPerm(); the admin API checks staff with PLATFORM_ROLES. The data is not written here: `npm run gen:permissions` writes it from the app manifests
+// (ROLE_TEMPLATES_V2, PLATFORM_ROLE_TEMPLATES_V2, PERMISSION_CATALOG in platform/src/tenancy/permissions.generated.ts).
+// Rules: only the manifests' names ("crm.lead.read:branch"). The old names ("leads.view") ended with stage 1.5: stored roles were rewritten by
+// scripts/rewrite-role-perms.mjs and nothing here understands them. A new permission is added in an app's manifest, never here.
 
-import { hasPerm as hasPermWithAliases } from "@sheetal/platform/tenancy/aliases";
-import {
-  BUSINESS_TYPE_IDS, LEGACY_ALIASES, LEGACY_BUSINESS_GROUPS, LEGACY_PLATFORM_ALIASES, LEGACY_PLATFORM_GROUPS, LEGACY_PLATFORM_ROLES, LEGACY_TEMPLATES,
-} from "@sheetal/platform/tenancy/permissions.generated";
-import type { PermGroup } from "@sheetal/platform/tenancy/types";
+import { hasPerm } from "@sheetal/platform/tenancy/perms";
+import { catalogForTypes } from "@sheetal/platform/tenancy/catalog";
+import { BUSINESS_TYPE_IDS, ROLE_TEMPLATES_V2 } from "@sheetal/platform/tenancy/permissions.generated";
+import { STAFF_ROLES } from "@sheetal/platform/tenancy/staff-roles";
 
 export const BUSINESS_TYPES = BUSINESS_TYPE_IDS;
 export type BusinessType = (typeof BUSINESS_TYPES)[number];
 
-export const BUSINESS_PERMS: PermGroup[] = LEGACY_BUSINESS_GROUPS;
-export const PLATFORM_PERMS: PermGroup[] = LEGACY_PLATFORM_GROUPS;
-
-/** Old permission name -> the new names it stands for (ACCESS.md section 6). Added in P1-BE-2. */
-export { LEGACY_ALIASES, LEGACY_PLATFORM_ALIASES };
-
-const permsForTypes = (types: readonly BusinessType[]) => BUSINESS_PERMS.filter((g) => g.types === "all" || types.some((t) => (g.types as BusinessType[]).includes(t)));
-const allOf = (groups: PermGroup[]) => groups.flatMap((g) => g.perms);
-
-// null = every permission of the type except managing roles and billing (a manager, not an owner).
-const TEMPLATES = LEGACY_TEMPLATES;
-
+/** The built-in roles of a business type, as stored: grants with their scope ("expenses.expense.read:branch"); the owner holds "*". */
 export function roleTemplatesFor(type: BusinessType): { key: string; perms: string[] }[] {
-  const all = allOf(permsForTypes([type]));
-  return TEMPLATES[type].map(([key, perms]) => ({ key, perms: perms ?? all.filter((p) => p !== "roles.manage" && p !== "billing.manage") }));
+  return ROLE_TEMPLATES_V2[type].map((r) => ({ key: r.key, perms: [...r.grants] }));
 }
 
-export const PLATFORM_ROLES: Record<string, string[]> = LEGACY_PLATFORM_ROLES;
+/** Staff role -> its permissions. Fixed in code; a user row only names its role. */
+export const PLATFORM_ROLES: Record<string, string[]> = STAFF_ROLES;
 
-export const hasPerm = (perms: readonly string[], perm: string) => hasPermWithAliases(perms, perm);
+export { hasPerm };
 
 /** Every permission id a business of these types can give out (Pro plans see every type's). */
-export const businessPermsFor = (types: readonly BusinessType[]) => allOf(permsForTypes(types));
+export const businessPermsFor = (types: readonly BusinessType[]): string[] => catalogForTypes(types).map((e) => e.id);

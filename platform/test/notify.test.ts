@@ -32,7 +32,7 @@ describe("notifyStaff", () => {
     const findMany = vi.fn(async () => [{ id: "s1" }, { id: "s2" }]);
     const createMany = vi.fn(async () => ({ count: 2 }));
     const db = { user: { findMany }, notification: { createMany } } as never;
-    await notifyStaff(db, "moderation.kyc", { type: "kyc", title: "Check a document", link: "/admin/kyc" });
+    await notifyStaff(db, "platform.verification.review", { type: "kyc", title: "Check a document", link: "/admin/kyc" });
     const roles = ((findMany.mock.calls[0] as unknown as [{ where: { platformRole: { in: string[] } } }])[0].where.platformRole.in).sort();
     expect(roles).toEqual(["operations", "super_admin"]);        // finance, support and the content editor do not handle KYC
     expect((createMany.mock.calls[0] as unknown as [{ data: Record<string, unknown>[] }])[0].data.map((d) => d.tenantId)).toEqual([null, null]);
@@ -52,23 +52,23 @@ describe("teamWith", () => {
   it("finds owners and people whose role has one of the permissions, at the branch by id", async () => {
     const db = dbWith([
       m("owner", ["*"]),
-      m("desk-pokhara", ["leads.view"], { allBranches: false, branches: [{ branchId: "b1" }], scopes: ["Pokhara"] }),
-      m("desk-chitwan", ["leads.view"], { allBranches: false, branches: [{ branchId: "b2" }], scopes: ["Chitwan"] }),
+      m("desk-pokhara", ["crm.lead.read"], { allBranches: false, branches: [{ branchId: "b1" }], scopes: ["Pokhara"] }),
+      m("desk-chitwan", ["crm.lead.read"], { allBranches: false, branches: [{ branchId: "b2" }], scopes: ["Chitwan"] }),
       m("cook", ["pos.view"]),
-      m("manager", ["messages.reply"]),
+      m("manager", ["crm.message.reply"]),
     ]);
     expect((await leadPeople(db, "biz", "b1")).sort()).toEqual(["desk-pokhara", "manager", "owner"]);
     expect((await teamWith(db, "biz", ["pos.view"])).sort()).toEqual(["cook", "owner"]);   // no branch given: everyone with the permission
   });
 
   it("a membership written only the old way (names, flag left at all) is never 'every branch' (fail closed)", async () => {
-    const db = dbWith([m("old-style", ["leads.view"], { scopes: ["Pokhara"], allBranches: true, branches: [] })]);
-    expect(await teamWith(db, "biz", ["leads.view"], "b1")).toEqual(["old-style"]);     // its names match Pokhara
-    expect(await teamWith(db, "biz", ["leads.view"], "b2")).toEqual([]);                 // and not Chitwan
+    const db = dbWith([m("old-style", ["crm.lead.read"], { scopes: ["Pokhara"], allBranches: true, branches: [] })]);
+    expect(await teamWith(db, "biz", ["crm.lead.read"], "b1")).toEqual(["old-style"]);     // its names match Pokhara
+    expect(await teamWith(db, "biz", ["crm.lead.read"], "b2")).toEqual([]);                 // and not Chitwan
   });
 
   it("a limited person with no branch rows is told about nothing at a branch", async () => {
-    const db = dbWith([m("nowhere", ["leads.view"], { allBranches: false, branches: [], scopes: [] })]);
-    expect(await teamWith(db, "biz", ["leads.view"], "b1")).toEqual([]);
+    const db = dbWith([m("nowhere", ["crm.lead.read"], { allBranches: false, branches: [], scopes: [] })]);
+    expect(await teamWith(db, "biz", ["crm.lead.read"], "b1")).toEqual([]);
   });
 });

@@ -1,8 +1,9 @@
-// Tests for "all of these names" written with + (stage 1.5): the server resolver and the permission set of a context. Pure: no database.
+// Tests for "all of these names" written with + (stage 1.5): the server resolver, the staff roles and the permission set of a context. Pure: no database.
 import { describe, expect, it } from "vitest";
-import { hasPerm } from "../src/tenancy/aliases.js";
+import { hasPerm } from "../src/tenancy/perms.js";
 import { buildPermissionSet } from "../src/tenancy/context.js";
 import { LEGACY_PLATFORM_ALIASES, LEGACY_PLATFORM_ROLES } from "../src/tenancy/permissions.generated.js";
+import { STAFF_GRANTS } from "../src/tenancy/staff-roles.js";
 
 describe("permissions joined with +", () => {
   it("needs every name, with new names, old names and scopes", () => {
@@ -12,14 +13,16 @@ describe("permissions joined with +", () => {
     expect(hasPerm(["a.b.read"], "a.b.read+")).toBe(false);
     expect(hasPerm(["a.b.read"], "+")).toBe(false);
   });
-  it("a staff role in old names passes exactly the new-name checks its old name stood for", () => {
-    for (const [role, perms] of Object.entries(LEGACY_PLATFORM_ROLES)) {
+  it("a staff role passes exactly the joined checks its OLD permissions stood for", () => {
+    for (const [role, olds] of Object.entries(LEGACY_PLATFORM_ROLES)) {
+      const now = STAFF_GRANTS.get(role)!;
       for (const [old, news] of Object.entries(LEGACY_PLATFORM_ALIASES)) {
-        expect(hasPerm(perms, news.join("+")), `${role}: ${old}`).toBe(hasPerm(perms, old));
+        expect(hasPerm(now, news.join("+")), `${role}: ${old}`).toBe(olds.includes("*") || olds.includes(old));
       }
     }
-    expect(hasPerm(LEGACY_PLATFORM_ROLES.finance!, "platform.plan.read+platform.plan.create+platform.plan.update+platform.plan.delete")).toBe(true);
-    expect(hasPerm(LEGACY_PLATFORM_ROLES.support!, "platform.plan.read+platform.plan.create+platform.plan.update+platform.plan.delete")).toBe(false);
+    expect(hasPerm(STAFF_GRANTS.get("finance")!, "platform.plan.read+platform.plan.create+platform.plan.update+platform.plan.delete")).toBe(true);
+    expect(hasPerm(STAFF_GRANTS.get("support")!, "platform.plan.read+platform.plan.create+platform.plan.update+platform.plan.delete")).toBe(false);
+    expect(STAFF_GRANTS.get("constructor")).toBeUndefined();
   });
   it("a permission set gives the narrowest scope of the joined names, or refuses", () => {
     const set = buildPermissionSet(["expenses.expense.read:all", "expenses.expense.create:branch"]);

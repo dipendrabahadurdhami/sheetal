@@ -118,10 +118,10 @@ describe("the four checks (ACCESS.md section 1)", () => {
 
   it("3. a role without the permission is forbidden", async () => {
     const desk = await ctxFor("desk");
-    expect(desk.permissions.can("bookings.view")).toBe(true);
-    expect(desk.permissions.can("hotel.booking.read")).toBe(true);     // the new name works for a role that holds the old one
-    expect(desk.permissions.scopeOf("bookings.view")).toBe("branch");
-    expect(() => desk.permissions.require("settings.business")).toThrowError();
+    expect(desk.permissions.can("hotel.booking.read")).toBe(true);
+    expect(desk.permissions.can("hotel.booking.read")).toBe(true);     // held by the built-in front desk role
+    expect(desk.permissions.scopeOf("hotel.booking.read")).toBe("branch");
+    expect(() => desk.permissions.require("workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete")).toThrowError();
     expect(() => desk.permissions.require("workspace.branch.create")).toThrowError();
     expect((await call("desk", "POST", "/branches", { name: "Desk's own" })).statusCode).toBe(403);
     expect(() => requireAppAccess(desk, "expenses")).toThrowError("Your role can't use");   // a front desk has no expenses permission
@@ -394,9 +394,9 @@ describe("the staff context and support sessions", () => {
   it("builds a StaffContext from the platform role, and refuses people who are not staff", async () => {
     const staff = await staffCtx("support");
     expect(staff.staff.role).toBe("support");
-    expect(staff.permissions.can("tenants.view")).toBe(true);
+    expect(staff.permissions.can("platform.business.read")).toBe(true);
     expect(staff.permissions.can("platform.business.impersonate")).toBe(true);
-    expect(staff.permissions.can("plans.manage")).toBe(false);
+    expect(staff.permissions.can("platform.plan.read+platform.plan.create+platform.plan.update+platform.plan.delete")).toBe(false);
     await expect(staffCtx("owner")).rejects.toMatchObject({ statusCode: 403, message: "This is for Sheetal staff only." });
   });
 
@@ -413,7 +413,7 @@ describe("the staff context and support sessions", () => {
     await expect(probe.remove(ctx, "x")).rejects.toMatchObject({ statusCode: 403 });
     // Even with the owner's powers, the deny list holds.
     expect(ctx.permissions.can("expenses.expense.read")).toBe(true);
-    for (const p of ["workspace.role.update", "workspace.team.invite", "workspace.billing.manage", "workspace.settings.update", "team.manage"]) expect(ctx.permissions.can(p), p).toBe(false);
+    for (const p of ["workspace.role.update", "workspace.team.invite", "workspace.billing.manage", "workspace.settings.update", "workspace.team.read+workspace.team.invite+workspace.team.update+workspace.team.remove"]) expect(ctx.permissions.can(p), p).toBe(false);
   });
 
   it("write mode needs the super admin, a reason of 10 to 300 characters, and a business that isn't suspended", async () => {

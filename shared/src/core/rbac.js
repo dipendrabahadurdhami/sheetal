@@ -1,73 +1,71 @@
 // Permissions, role templates and business types for the screens.
 // Where it fits: menus and buttons hide what a role can't do (the server checks again).
-// How it works: can(role, perm) and canAny(role, perms); labels come from i18n (perm.*, role.*). Since P1-BE-2 the lists come from
-// @sheetal/config/permissions (generated from the app manifests by `npm run gen:permissions`); the names and values are the old ones.
-// can() also accepts the new `app.resource.action` name of an old permission and the other way round (the alias layer, ACCESS.md 6.3).
-// Rules: do not edit the lists here (change a manifest and run the generator). Stored roles still hold the OLD names.
+// How it works: can(role, perm) and canAny(role, perms). A role holds "*" or grants in the manifests' names ("crm.lead.read:branch"); a check names a
+// permission, or several joined with "+" (all are needed). The lists come from @sheetal/config/permissions, which `npm run gen:permissions` writes from
+// the app manifests: the catalog (with its labels), the built-in roles of each business type and the staff roles.
+// Rules: do not edit the lists here (change a manifest and run the generator). Only the manifests' names are understood: the old names ("leads.view")
+// ended with stage 1.5. The same rule runs on the server (platform/src/tenancy/perms.ts); a test runs both on the same cases.
 
-import {
-  BUSINESS_TYPE_DEFS, LEGACY_ALIASES, LEGACY_BUSINESS_GROUPS, LEGACY_PLATFORM_ALIASES, LEGACY_PLATFORM_GROUPS, LEGACY_PLATFORM_ROLES, LEGACY_TEMPLATES,
-} from "@sheetal/config/permissions";
+import { APPS } from "@sheetal/config/apps";
+import { BUSINESS_TYPE_DEFS, PERMISSION_CATALOG, PLATFORM_ROLE_TEMPLATES_V2, ROLE_TEMPLATES_V2 } from "@sheetal/config/permissions";
 
 export const BUSINESS_TYPES = BUSINESS_TYPE_DEFS;
 
-// Old permission name -> the new names it stands for (ACCESS.md section 6). Added in P1-BE-2.
-export { LEGACY_ALIASES, LEGACY_PLATFORM_ALIASES };
+const APP_NAME = Object.fromEntries(APPS.map((a) => [a.id, a.name?.en || a.id]));
+/** The catalog as the groups a role screen shows: one per app and group, with the label of each permission. */
+function groupsOf(entries) {
+  const out = [];
+  for (const p of entries) {
+    const key = `${p.app}:${p.group || ""}`;
+    let g = out.find((x) => x.module === key);
+    if (!g) {
+      const app = p.app === "platform" ? "" : APP_NAME[p.app] || p.app;
+      g = { module: key, title: [app, p.group].filter(Boolean).filter((x, i, a) => a.indexOf(x) === i).join(": ") || "Other", types: p.types, perms: [], labels: {} };
+      out.push(g);
+    }
+    g.perms.push(p.id);
+    g.labels[p.id] = p.label;
+  }
+  return out;
+}
 
 // Business workspace permissions. `types` = which business types see the group.
-export const BUSINESS_PERMS = LEGACY_BUSINESS_GROUPS;
-
+export const BUSINESS_PERMS = groupsOf(PERMISSION_CATALOG.filter((p) => p.app !== "platform"));
 // Sheetal staff permissions for /admin.
-export const PLATFORM_PERMS = LEGACY_PLATFORM_GROUPS;
+export const PLATFORM_PERMS = groupsOf(PERMISSION_CATALOG.filter((p) => p.app === "platform"));
 
-export const permsForType = (type) => BUSINESS_PERMS.filter((g) => g.types === "all" || g.types.includes(type));
-export const permsForTypes = (types) => BUSINESS_PERMS.filter((g) => g.types === "all" || types.some((x) => g.types.includes(x)));
+const forTypes = (types) => groupsOf(PERMISSION_CATALOG.filter((p) => p.app !== "platform" && (p.types === "all" || types.some((x) => p.types.includes(x)))));
+export const permsForType = (type) => forTypes([type]);
+export const permsForTypes = (types) => forTypes(types);
 const allOf = (groups) => groups.flatMap((g) => g.perms);
 
-const T = LEGACY_TEMPLATES;
-
+/** The built-in roles of a business type, as a new business gets them: grants with their scope; the owner holds "*". */
 export function roleTemplatesFor(type) {
-  const all = allOf(permsForType(type));
-  return T[type].map(([key, perms]) => ({
-    key, system: true, name: null,
-    perms: perms || all.filter((p) => p !== "roles.manage" && p !== "billing.manage"),
-  }));
+  return ROLE_TEMPLATES_V2[type].map((r) => ({ key: r.key, system: true, name: null, perms: [...r.grants] }));
 }
 
-export const PLATFORM_ROLE_TEMPLATES = Object.entries(LEGACY_PLATFORM_ROLES).map(([key, perms]) => ({ key, perms, system: true, name: null }));
+export const PLATFORM_ROLE_TEMPLATES = PLATFORM_ROLE_TEMPLATES_V2.map((r) => ({ key: r.key, perms: [...r.grants], system: true, name: null }));
 
-// ── The alias layer: the same rule as platform/src/tenancy/aliases.ts (a test runs both on the same cases). ──
-const oldToNew = new Map();   // old name -> list of sets of new names (business set and/or staff set)
-const newToOld = new Map();   // new name -> old names that give it
-for (const map of [LEGACY_ALIASES, LEGACY_PLATFORM_ALIASES]) {
-  for (const [old, news] of Object.entries(map)) {
-    oldToNew.set(old, [...(oldToNew.get(old) || []), news]);
-    for (const n of news) newToOld.set(n, [...(newToOld.get(n) || []), old]);
-  }
-}
-// Does the list hold this exact name, with or without a ":scope" suffix?
-function holds(perms, name) {
+/** Does the list hold this exact name, with or without a ":scope" suffix? */
+export function holds(perms, name) {
   for (const p of perms) {
     if (p === name) return true;
-    if (p.length > name.length && p.charCodeAt(name.length) === 58 && p.startsWith(name)) return true;
+    if (p.length > name.length && p.charCodeAt(name.length) === 58 && p.startsWith(name)) return true;   // 58 = ":"
   }
   return false;
 }
-// `perm` may join several names with "+": then ALL of them are needed (the same rule as the server; stage 1.5).
+
+// `perm` may join several names with "+": then ALL of them are needed (the same rule as the server).
 function hasPerm(perms, perm) {
   if (perm.includes("+")) return perm.split("+").every((p) => p !== "" && hasPerm(perms, p));
-  if (perms.includes("*") || holds(perms, perm)) return true;
-  const sets = oldToNew.get(perm);
-  if (sets && sets.some((set) => set.every((n) => holds(perms, n)))) return true;
-  const olds = newToOld.get(perm);
-  return !!olds && olds.some((o) => holds(perms, o));
+  return perms.includes("*") || holds(perms, perm);
 }
 
 export const can = (role, perm) => !!role && hasPerm(role.perms, perm);
 export const canAny = (role, perms) => perms.some((p) => can(role, p));
 export const roleName = (role, t) => (!role ? "—" : role.system ? t(`role.${role.key}`) : role.name);
 export const roleDesc = (role, t) => (!role ? "" : role.system ? t(`roledesc.${role.key}`) : role.desc || "");
-export const permCount = (role, groups) => (role.perms.includes("*") ? allOf(groups).length : role.perms.filter((p) => allOf(groups).includes(p)).length);
+export const permCount = (role, groups) => (role.perms.includes("*") ? allOf(groups).length : allOf(groups).filter((p) => holds(role.perms, p)).length);
 
 // Hide nav items the role can't use, drop empty groups. `type` is one business type or a list (Pro plans see every type).
 export function filterNav(nav, role, type) {
