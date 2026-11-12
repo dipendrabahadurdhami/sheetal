@@ -29,6 +29,7 @@ import { AdminAudit, AdminBilling, AdminContent, AdminInbox, AdminModeration } f
 import { AdminChannels } from "./AdminChannels";
 import { AdminIntegrations } from "./AdminIntegrations";
 import { IntegrationCenter } from "./IntegrationCenter";
+import { FieldBuilderPage, MoreSettings, RevenuePage, ThemePage } from "./SettingsStore";
 import { AdminStatus } from "./AdminStatus";
 import { otaOf } from "@sheetal/shared/data/ota";
 import { config } from "@sheetal/shared/core/config";
@@ -158,7 +159,11 @@ export default function AdminApp() {
         { path: "/admin/audit", render: () => guard("audit.view", <AdminAudit />) },
         { path: "/admin/inbox", render: () => guard("tenants.view", inboxHub()) },
         { path: "/admin/staff", render: () => guard("staff.view", <AdminStaff role={role} />) },
-        { path: "/admin/settings", render: () => guard("settings.platform", isStaffLive() ? <LivePlatformSettings /> : <AdminSettings />) },
+        { path: "/admin/settings", render: () => guard("settings.platform", isStaffLive() ? <><LivePlatformSettings /><MoreSettings /></> : <AdminSettings />) },
+        // Stage 1.4: screens on the typed settings store (signed in to the admin API only).
+        { path: "/admin/settings/fields", render: () => guard("settings.platform", isStaffLive() ? <FieldBuilderPage /> : <AdminSettings />) },
+        { path: "/admin/settings/theme", render: () => guard("settings.platform", isStaffLive() ? <ThemePage /> : <AdminSettings />) },
+        { path: "/admin/settings/revenue", render: () => guard("settings.platform", isStaffLive() ? <RevenuePage /> : <AdminSettings />) },
         { path: "/admin/status", render: () => guard("settings.platform", isStaffLive() ? <><LiveStatus /><LiveOutbox /></> : <AdminStatus />) },
         // Signed in to the admin API: the Integration Center (stage 1.3). Not signed in: the old sample screen. LiveSetup keeps the AI and Meta key forms
         // until those connections are built in the Center.
