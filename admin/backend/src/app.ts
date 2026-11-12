@@ -28,6 +28,8 @@ import { adminTemplateRoutes } from "./modules/templates.js";
 import { adminReminderRoutes } from "./modules/reminders.js";
 import { adminJobs, adminPlatformJobs, integrationsOf } from "./jobs.js";
 import { integrationAdminRoutes } from "@sheetal/platform/integrations/routes";
+import { settingsAdminRoutes } from "@sheetal/platform/settings/routes";
+import { SettingsService } from "@sheetal/platform/settings/service";
 import { buildStaffContext } from "@sheetal/platform/tenancy/context";
 import { dbOf } from "@sheetal/backend-core/lib/db";
 import { requireUser } from "@sheetal/backend-core/modules/auth/sessions";
@@ -66,6 +68,13 @@ export async function buildApp(config: Config, deps: AppDeps & { fetch?: Fetch }
   await app.register(adminImpersonationRoutes, { prefix: "/v1" });
   // The Integration Center (stage 1.3): every outside service in one place, details -> test -> live -> paused. The old Admin -> Settings connection
   // routes above stay as aliases; platform/src/integrations/legacy.ts keeps their settings rows and the connections in step.
+  // The typed settings store, the field builder, the theme and the revenue report (stage 1.4).
+  if (app.db) {
+    await app.register(settingsAdminRoutes, {
+      prefix: "/v1", db: dbOf(app), settings: new SettingsService(dbOf(app), app.log),
+      staffOf: (request) => buildStaffContext({ db: dbOf(app), user: requireUser(request), headers: request.headers, ip: request.ip, requestId: String(request.id), log: request.log }),
+    });
+  }
   const integrations = app.db ? integrationsOf(app, deps.fetch) : null;
   if (integrations) {
     app.decorate("integrations", integrations);
