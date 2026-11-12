@@ -28,9 +28,9 @@ export function LiveOverview({ tenant, role }) {
   useEffect(() => { setD(null); load(); const every = setInterval(load, 60_000); return () => clearInterval(every); }, [load]);
 
   const quick = [
-    can(role, "listings.manage") || can(role, "projects.manage") || can(role, "investments.manage") || can(role, "calendar.edit") || role.perms.includes("*") ? { icon: "house-plus", label: t("listings.new"), to: "/business/listings/new" } : null,
+    can(role, "listings.listing.read+listings.listing.create+listings.listing.update+listings.listing.delete+listings.listing.publish") || can(role, "projects.project.read+projects.project.create+projects.project.update+projects.project.delete") || can(role, "investments.offering.read+investments.offering.create+investments.offering.update+investments.offering.delete") || can(role, "hotel.calendar.update") || role.perms.includes("*") ? { icon: "house-plus", label: t("listings.new"), to: "/business/listings/new" } : null,
     { icon: "file-pen-line", label: t("ag.new"), to: "/business/agreements" },
-    can(role, "team.manage") ? { icon: "user-plus", label: t("team.invite"), to: "/business/team" } : null,
+    can(role, "workspace.team.read+workspace.team.invite+workspace.team.update+workspace.team.remove") ? { icon: "user-plus", label: t("team.invite"), to: "/business/team" } : null,
     { icon: "messages-square", label: t("nav.inbox"), to: "/business/inbox" },
     (tenant.type === "hotel" || tenant.type === "host") && { icon: "calendar-days", label: t("nav.calendar"), to: "/business/calendar" },
     { icon: "git-branch", label: t("nav.branches"), to: "/business/branches" },
@@ -78,7 +78,7 @@ export function LiveOverview({ tenant, role }) {
             <li key={x.id}><span className="pf-li-ico"><Icon name={x.icon} size={17} /></span><div><span>{x.text}</span></div><Button variant="outline" size="sm" onClick={() => navigate(x.to)}>{x.cta}</Button></li>
           ))}</ul> : <p className="pf-pad small muted">{t("bdash.allClear")}</p>}
         </Panel>
-        {p && <Panel title={t("bdash.planUsage")} className="side" pad actions={can(role, "billing.manage") ? <Link to="/business/billing" className="link small">{t("bdash.managePlan")}</Link> : undefined}>
+        {p && <Panel title={t("bdash.planUsage")} className="side" pad actions={can(role, "workspace.billing.manage") ? <Link to="/business/billing" className="link small">{t("bdash.managePlan")}</Link> : undefined}>
           <div className="pf-stack">
             {p.usage.map((u) => u.used == null
               ? <div key={u.key} className="pf-meter"><div className="pf-meter-top"><span>{LIMIT_LABEL[u.key] || u.key}</span><b className="tnum">{u.limit === -1 ? "Unlimited" : `Up to ${u.limit}`}</b></div></div>

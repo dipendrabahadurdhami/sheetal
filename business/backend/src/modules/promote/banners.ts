@@ -19,7 +19,7 @@ import { BANNER_PHASE, BANNER_SIZES, BannerText, Picture, bannerFreeStart, banne
 import { mediaBase } from "@sheetal/backend-core/lib/photos";
 import { workspaceOf, type Workspace } from "../access.js";
 
-const VIEW_PERMS = ["listings.manage", "projects.manage", "investments.manage", "calendar.edit", "billing.manage"];
+const VIEW_PERMS = ["listings.listing.read+listings.listing.create+listings.listing.update+listings.listing.delete+listings.listing.publish", "projects.project.read+projects.project.create+projects.project.update+projects.project.delete", "investments.offering.read+investments.offering.create+investments.offering.update+investments.offering.delete", "hotel.calendar.update", "workspace.billing.manage"];
 const Day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use a date like 2026-11-04.").refine((s) => { const d = dayOf(s); return !Number.isNaN(d.getTime()) && ymd(d) === s; }, "That date doesn't exist.");
 const Ask = z.object({ days: z.coerce.number().int().min(1).max(90), startOn: Day.optional() });
 const big = { bodyLimit: 4 * 1024 * 1024 };
@@ -32,7 +32,7 @@ export async function bannerRoutes(app: FastifyInstance) {
     if (!VIEW_PERMS.some((p) => ws.can(p))) throw forbidden("Your role can't promote.");
     return ws;
   };
-  const payer = (ws: Workspace) => { if (!ws.can("billing.manage")) throw forbidden("Only people who manage billing can book banners. Ask the owner."); };
+  const payer = (ws: Workspace) => { if (!ws.can("workspace.billing.manage")) throw forbidden("Only people who manage billing can book banners. Ask the owner."); };
   const pic = (f: string) => `${media}/banner/main/${encodeURIComponent(f)}`;
   const audit = (ws: Workspace, ip: string, action: string, target: string) => db().auditLog.create({ data: { tenantId: ws.tenantId, actorId: ws.user.id, action, target, ip } });
 
@@ -60,7 +60,7 @@ export async function bannerRoutes(app: FastifyInstance) {
     const pending = new Set(checking.map((c) => c.invoiceId));
     return {
       data: {
-        canBuy: ws.can("billing.manage"), price: s.hero.price, spots: s.hero.spots, active: s.hero.active, lengths: s.lengths, sizes: BANNER_SIZES, maxBytes: 1024 * 1024, today: today(),
+        canBuy: ws.can("workspace.billing.manage"), price: s.hero.price, spots: s.hero.spots, active: s.hero.active, lengths: s.lengths, sizes: BANNER_SIZES, maxBytes: 1024 * 1024, today: today(),
         rows: rows.map((b) => {
           const i = b.invoiceId ? I.get(b.invoiceId) : undefined;
           const phase = bannerPhase(b, { checking: !!b.invoiceId && pending.has(b.invoiceId), invoiceOpen: i ? i.status === "open" : undefined });

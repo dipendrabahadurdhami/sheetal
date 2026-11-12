@@ -36,7 +36,7 @@ export const COUNTED: ListingStatus[] = ["draft", "pending", "published", "sold"
 export const LIVE_STATUSES: ListingStatus[] = ["published", "sold", "rented"];
 
 /** The roles that work with listings, whatever the business type. */
-export const LISTING_PERMS = ["listings.manage", "projects.manage", "investments.manage", "calendar.edit"];
+export const LISTING_PERMS = ["listings.listing.read+listings.listing.create+listings.listing.update+listings.listing.delete+listings.listing.publish", "projects.project.read+projects.project.create+projects.project.update+projects.project.delete", "investments.offering.read+investments.offering.create+investments.offering.update+investments.offering.delete", "hotel.calendar.update"];
 
 /** Days until an approved listing is first asked about in check-ups. */
 export const FIRST_CHECKUP_DAYS = 30;

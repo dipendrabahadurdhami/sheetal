@@ -92,14 +92,14 @@ export function AdminModeration({ role, queue }) {
   const { db, update } = useStore();
   const toast = useToast();
   const { navigate } = useRouter();
-  const [tab, setTab] = useState(can(role, "moderation.listings") ? "listings" : "kyc");
+  const [tab, setTab] = useState(can(role, "platform.listing.moderate") ? "listings" : "kyc");
   const [open, setOpen] = useState(null);
   const [reason, setReason] = useState("blurry");
   const pendingLocal = db.listings.filter((l) => l.status === "in_review");
   const kyc = db.tenants.filter((x) => x.status === "pending_verification");
   const l = db.listings.find((x) => x.id === open);
   const decide = (id, status) => { update((d) => { const x = d.listings.find((y) => y.id === id); x.status = status; if (status === "rejected") x.reason = reason; audit(d, `${status === "published" ? "approved" : "rejected"} listing ${id}`); }); setOpen(null); toast(t(status === "published" ? "mod.toastApproved" : "mod.toastRejected")); };
-  const tabs = [can(role, "moderation.listings") && { id: "listings", label: t("mod.listings"), count: queue ? queue.waiting : pendingLocal.length, icon: "house" }, can(role, "moderation.kyc") && { id: "kyc", label: t("mod.kyc"), count: isStaffLive() ? undefined : kyc.length, icon: "badge-check" }, !queue && { id: "reports", label: t("mod.reports"), count: 2, icon: "flag" }].filter(Boolean);
+  const tabs = [can(role, "platform.listing.moderate") && { id: "listings", label: t("mod.listings"), count: queue ? queue.waiting : pendingLocal.length, icon: "house" }, can(role, "platform.verification.review") && { id: "kyc", label: t("mod.kyc"), count: isStaffLive() ? undefined : kyc.length, icon: "badge-check" }, !queue && { id: "reports", label: t("mod.reports"), count: 2, icon: "flag" }].filter(Boolean);
   return (
     <>
       <PageHead title={t("nav.moderation")} sub={t("mod.sub")} />
@@ -378,7 +378,7 @@ function SampleBilling({ role }) {
           { key: "a", label: t("billing.amount"), num: true, align: "right", render: (r) => rs(r.amount) },
           { key: "d", label: t("billing.date"), num: true, render: (r) => fdate(r.date) },
           { key: "s", label: t("common.status"), render: (r) => <StatusBadge status={r.status} /> },
-          { key: "x", label: "", align: "right", render: (r) => r.status === "pending" && can(role, "billing.refund") && <Button size="sm" onClick={() => toast(t("pbill.toastPayout"))}>{t("pbill.release")}</Button> },
+          { key: "x", label: "", align: "right", render: (r) => r.status === "pending" && can(role, "platform.billing.refund") && <Button size="sm" onClick={() => toast(t("pbill.toastPayout"))}>{t("pbill.release")}</Button> },
         ]} />}
         {tab === "refunds" && <Table rows={refunds} minWidth={720} columns={[
           { key: "id", label: t("pbill.refund"), num: true, render: (r) => <b className="pf-strong">{r.id}</b> },
@@ -386,7 +386,7 @@ function SampleBilling({ role }) {
           { key: "a", label: t("billing.amount"), num: true, align: "right", render: (r) => rs(r.amount) },
           { key: "m", label: t("pos.method"), render: (r) => r.method },
           { key: "s", label: t("common.status"), render: (r) => <StatusBadge status={r.status} /> },
-          { key: "x", label: "", align: "right", render: (r) => r.status === "pending" && can(role, "billing.refund") && <Button size="sm" onClick={() => toast(t("pbill.toastRefund"))}>{t("pbill.approve")}</Button> },
+          { key: "x", label: "", align: "right", render: (r) => r.status === "pending" && can(role, "platform.billing.refund") && <Button size="sm" onClick={() => toast(t("pbill.toastRefund"))}>{t("pbill.approve")}</Button> },
         ]} />}
       </section>
     </>

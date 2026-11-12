@@ -53,7 +53,9 @@ function holds(perms, name) {
   }
   return false;
 }
+// `perm` may join several names with "+": then ALL of them are needed (the same rule as the server; stage 1.5).
 function hasPerm(perms, perm) {
+  if (perm.includes("+")) return perm.split("+").every((p) => p !== "" && hasPerm(perms, p));
   if (perms.includes("*") || holds(perms, perm)) return true;
   const sets = oldToNew.get(perm);
   if (sets && sets.some((set) => set.every((n) => holds(perms, n)))) return true;

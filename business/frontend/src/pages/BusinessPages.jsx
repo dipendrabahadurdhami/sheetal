@@ -49,9 +49,9 @@ export function BusinessOverview({ tenant, role }) {
     ...(tenant.status === "past_due" ? [{ icon: "credit-card", text: t("bdash.todoPastDue"), to: "/business/billing", cta: t("bdash.payNow") }] : []),
   ];
   const quick = [
-    can(role, "listings.manage") || can(role, "projects.manage") || can(role, "investments.manage") || can(role, "calendar.edit") || role.perms.includes("*") ? { icon: "house-plus", label: t("listings.new"), to: "/business/listings/new" } : null,
+    can(role, "listings.listing.read+listings.listing.create+listings.listing.update+listings.listing.delete+listings.listing.publish") || can(role, "projects.project.read+projects.project.create+projects.project.update+projects.project.delete") || can(role, "investments.offering.read+investments.offering.create+investments.offering.update+investments.offering.delete") || can(role, "hotel.calendar.update") || role.perms.includes("*") ? { icon: "house-plus", label: t("listings.new"), to: "/business/listings/new" } : null,
     { icon: "file-pen-line", label: t("ag.new"), to: "/business/agreements" },
-    can(role, "team.manage") ? { icon: "user-plus", label: t("team.invite"), to: "/business/team" } : null,
+    can(role, "workspace.team.read+workspace.team.invite+workspace.team.update+workspace.team.remove") ? { icon: "user-plus", label: t("team.invite"), to: "/business/team" } : null,
     { icon: "messages-square", label: t("nav.inbox"), to: "/business/inbox" },
     (tenant.type === "hotel" || tenant.type === "host") && { icon: "calendar-days", label: t("nav.calendar"), to: "/business/calendar" },
     { icon: "git-branch", label: t("nav.branches"), to: "/business/branches" },
@@ -89,10 +89,10 @@ export function TeamHub({ tenant, role, start = "members" }) {
   const t = useT();
   const [tab, setTab] = React.useState(start);
   const tabs = [
-    can(role, "team.view") && { id: "members", label: t("team.members"), icon: "users" },
-    can(role, "team.view") && { id: "structure", label: t("org.tab"), icon: "network" },
+    can(role, "workspace.team.read") && { id: "members", label: t("team.members"), icon: "users" },
+    can(role, "workspace.team.read") && { id: "structure", label: t("org.tab"), icon: "network" },
     { id: "attendance", label: t("hr.tabAttendance"), icon: "map-pin" },
-    can(role, "roles.manage") && { id: "roles", label: t("nav.roles"), icon: "key-round" },
+    can(role, "workspace.role.read+workspace.role.create+workspace.role.update+workspace.role.delete") && { id: "roles", label: t("nav.roles"), icon: "key-round" },
   ].filter(Boolean);
   return (
     <>
@@ -120,7 +120,7 @@ export function BusinessTeam({ tenant, role, embedded }) {
       {!embedded && <PageHeadT k="team" />}
       <TeamPanel members={(db.members[tid] || []).filter((m) => (live ? worksAt(m, branchId, branch) : branch === "all" || m.scopes === "all" || m.scopes.includes(branch)))} invites={db.invites[tid] || []} roles={db.tenantRoles[tid]} groups={permsForTypes(typesFor(tenant, plan))}
         scopes={{ label: useT()(`scope.${tenant.type}`), options: tenant.scopes }} seats={{ limit: plan.limits.seats, plan: plan.name }}
-        canManage={can(role, "team.manage")} activity={db.activity[tid] || []}
+        canManage={can(role, "workspace.team.read+workspace.team.invite+workspace.team.update+workspace.team.remove")} activity={db.activity[tid] || []}
         onInvite={(list) => update((d) => { list.forEach((i) => { (d.invites[tid] = d.invites[tid] || []).unshift({ id: uid("i"), ...i, by: d.session.userName, sent: TODAY, expires: `${inDays(7)}T10:00`, status: "pending" }); log(d, `invited ${i.email}`); }); })}
         onUpdateMember={(id, patch) => update((d) => { const m = d.members[tid].find((x) => x.id === id); Object.assign(m, patch); log(d, `updated ${m.name}`); })}
         onRemoveMember={(id) => update((d) => { const m = d.members[tid].find((x) => x.id === id); d.members[tid] = d.members[tid].filter((x) => x.id !== id); log(d, `removed ${m.name}`); })}
@@ -142,11 +142,11 @@ export function BusinessRoles({ tenant, role, embedded }) {
   const counts = {};
   (db.members[tid] || []).forEach((m) => { counts[m.roleId] = (counts[m.roleId] || 0) + 1; });
   // Signed in: the role screen on the new permission names with scopes (stage 1.2). The sample workspace keeps the old editor.
-  if (live) return <>{!embedded && <PageHeadT k="roles" />}<LiveRoles key={tid} tenant={tenant} canManage={can(role, "roles.manage")} customAllowed={plan.features.custom_roles} /></>;
+  if (live) return <>{!embedded && <PageHeadT k="roles" />}<LiveRoles key={tid} tenant={tenant} canManage={can(role, "workspace.role.read+workspace.role.create+workspace.role.update+workspace.role.delete")} customAllowed={plan.features.custom_roles} /></>;
   return (
     <>
       {!embedded && <PageHeadT k="roles" />}
-      <RoleEditor roles={db.tenantRoles[tid]} groups={permsForTypes(typesFor(tenant, plan))} counts={counts} canManage={can(role, "roles.manage")} customAllowed={plan.features.custom_roles}
+      <RoleEditor roles={db.tenantRoles[tid]} groups={permsForTypes(typesFor(tenant, plan))} counts={counts} canManage={can(role, "workspace.role.read+workspace.role.create+workspace.role.update+workspace.role.delete")} customAllowed={plan.features.custom_roles}
         onCreate={(r) => { const id = uid(`${tid}-role`); update((d) => { d.tenantRoles[tid].push({ id, key: id, system: false, ...r }); }); return id; }}
         onSave={(r) => update((d) => { d.tenantRoles[tid][d.tenantRoles[tid].findIndex((x) => x.id === r.id)] = r; })}
         onDelete={(id) => update((d) => { d.tenantRoles[tid] = d.tenantRoles[tid].filter((x) => x.id !== id); })}

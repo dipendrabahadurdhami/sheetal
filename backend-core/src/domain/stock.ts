@@ -151,7 +151,7 @@ export async function runLowStock(db: Db, opts: { today?: string } = {}) {
   for (const [key, list] of groups) {
     const [tenantId, branchId] = key.split("|") as [string, string];
     const link = `/business/stock?low=1&branch=${branchId}`;
-    const people = await teamWith(db, tenantId, ["pos.restaurant", "settings.business"], branchId);
+    const people = await teamWith(db, tenantId, ["pos.restaurant.use", "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"], branchId);
     const done = new Set((await db.notification.findMany({ where: { tenantId, type: "stock.low", link, createdAt: { gte: since }, userId: { in: people } }, select: { userId: true } })).map((n) => n.userId));
     const fresh = people.filter((p) => !done.has(p));
     if (!fresh.length) continue;

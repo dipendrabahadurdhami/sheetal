@@ -21,7 +21,7 @@ export function AdminStaff({ role }) {
   const [tab, setTab] = useState("staff");
   const counts = {};
   db.platformStaff.forEach((m) => { counts[m.roleId] = (counts[m.roleId] || 0) + 1; });
-  const manage = can(role, "staff.manage");
+  const manage = can(role, "platform.staff.read+platform.staff.create+platform.staff.update+platform.staff.remove");
   const toast = useToast();
   // Live: people and their staff role come from the admin API; roles are the fixed staff roles (not editable yet).
   const live = isStaffLive() ? liveAdmin(toast) : null;
@@ -50,7 +50,7 @@ export function AdminStaff({ role }) {
           onRevoke={(id) => update((d) => { d.platformInvites.find((i) => i.id === id).status = "revoked"; })} />
       )}
       {tab === "roles" && (
-        <RoleEditor roles={db.platformRoles} groups={PLATFORM_PERMS} counts={counts} canManage={can(role, "roles.manage") && !live}
+        <RoleEditor roles={db.platformRoles} groups={PLATFORM_PERMS} counts={counts} canManage={can(role, "platform.role.manage") && !live}
           onCreate={(r) => { const id = uid("p-role"); update((d) => { d.platformRoles.push({ id, key: id, system: false, ...r }); }); return id; }}
           onSave={(r) => update((d) => { d.platformRoles[d.platformRoles.findIndex((x) => x.id === r.id)] = r; })}
           onDelete={(id) => update((d) => { d.platformRoles = d.platformRoles.filter((x) => x.id !== id); })} />

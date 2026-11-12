@@ -23,7 +23,7 @@ export interface EarningsRow { month: string; plans: number; addons: number; boo
 
 export async function adminEarningsRoutes(app: FastifyInstance) {
   app.get("/admin/earnings", async (request) => {
-    staffOf(request, "billing.view");
+    staffOf(request, "platform.billing.read");
     const now = nepalDay().slice(0, 7);
     const q = z.object({ from: Month.optional(), to: Month.optional() }).parse(request.query);
     const to = q.to ?? now;

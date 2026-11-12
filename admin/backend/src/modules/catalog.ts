@@ -38,12 +38,12 @@ export async function adminCatalogRoutes(app: FastifyInstance) {
   };
 
   app.get("/admin/catalog", async (request) => {
-    staffOf(request, "content.edit");
+    staffOf(request, "platform.content.update");
     return { data: await readCatalog(db()) };
   });
 
   app.put<{ Params: { key: string } }>("/admin/catalog/lists/:key", async (request) => {
-    const staff = staffOf(request, "content.edit");
+    const staff = staffOf(request, "platform.content.update");
     if (!KEY.test(request.params.key)) throw badRequest("Unknown list.");
     const { items } = z.object({ items: z.array(Item).max(1000) }).refine((b) => JSON.stringify(b).length <= 400_000, "The list is too long.").parse(request.body);
     const ids = new Set<string>();
@@ -54,7 +54,7 @@ export async function adminCatalogRoutes(app: FastifyInstance) {
   });
 
   app.delete<{ Params: { key: string } }>("/admin/catalog/lists/:key", async (request) => {
-    const staff = staffOf(request, "content.edit");
+    const staff = staffOf(request, "platform.content.update");
     const cur = await readCatalog(db());
     const lists = { ...(cur.lists ?? {}) };
     delete lists[request.params.key];
@@ -63,7 +63,7 @@ export async function adminCatalogRoutes(app: FastifyInstance) {
   });
 
   app.put<{ Params: { key: string; parent: string } }>("/admin/catalog/groups/:key/:parent", async (request) => {
-    const staff = staffOf(request, "content.edit");
+    const staff = staffOf(request, "platform.content.update");
     const { key, parent } = request.params;
     const kind = GROUPED[key];
     if (!kind || !PARENT.test(parent)) throw badRequest("Unknown list.");
@@ -85,7 +85,7 @@ export async function adminCatalogRoutes(app: FastifyInstance) {
   });
 
   app.delete<{ Params: { key: string; parent: string } }>("/admin/catalog/groups/:key/:parent", async (request) => {
-    const staff = staffOf(request, "content.edit");
+    const staff = staffOf(request, "platform.content.update");
     const { key, parent } = request.params;
     const cur = await readCatalog(db());
     const prev = cur.lists?.[key];
@@ -109,7 +109,7 @@ export async function adminCatalogRoutes(app: FastifyInstance) {
     })).max(80).default([]),
   });
   app.put<{ Params: { kind: string } }>("/admin/catalog/forms/:kind", async (request) => {
-    const staff = staffOf(request, "content.edit");
+    const staff = staffOf(request, "platform.content.update");
     const { kind } = request.params;
     if (!(LISTING_KINDS as readonly string[]).includes(kind)) throw badRequest("Unknown listing type.");
     const setup = FormSetup.parse(request.body);
@@ -118,7 +118,7 @@ export async function adminCatalogRoutes(app: FastifyInstance) {
     return { message: "Form saved. New and edited listings use it now.", data: value };
   });
   app.delete<{ Params: { kind: string } }>("/admin/catalog/forms/:kind", async (request) => {
-    const staff = staffOf(request, "content.edit");
+    const staff = staffOf(request, "platform.content.update");
     const cur = await readCatalog(db());
     const forms = { ...(cur.forms ?? {}) };
     delete forms[request.params.kind];
@@ -127,7 +127,7 @@ export async function adminCatalogRoutes(app: FastifyInstance) {
   });
 
   app.put("/admin/catalog/kinds", async (request) => {
-    const staff = staffOf(request, "content.edit");
+    const staff = staffOf(request, "platform.content.update");
     const types = [...BUSINESS_TYPES, "owner"] as [string, ...string[]];
     const { kindsByType } = z.object({ kindsByType: z.partialRecord(z.enum(types), z.array(z.enum(LISTING_KINDS)).max(LISTING_KINDS.length)) }).parse(request.body);
     const cur = await readCatalog(db());

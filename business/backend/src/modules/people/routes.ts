@@ -45,8 +45,8 @@ export async function peopleRoutes(app: FastifyInstance) {
   const db = () => dbOf(app);
   const audit = (ws: Workspace, ip: string, action: string, target?: string, meta?: object) =>
     db().auditLog.create({ data: { tenantId: ws.tenantId, actorId: ws.user.id, action, target, ip, meta: meta as object | undefined } });
-  const sees = (ws: Workspace) => ws.can("people.view") || ws.can("people.manage");
-  const manages = (ws: Workspace) => ws.can("people.manage");
+  const sees = (ws: Workspace) => ws.can("people.person.read") || ws.can("people.person.read+people.person.create+people.person.update+people.person.delete");
+  const manages = (ws: Workspace) => ws.can("people.person.read+people.person.create+people.person.update+people.person.delete");
   const owns = (ws: Workspace) => ws.member.role.perms.includes("*");
 
   /** The branch for the person's own check-in or leave: the one asked for or picked, else their first open branch. */
@@ -251,7 +251,7 @@ export async function peopleRoutes(app: FastifyInstance) {
     const branchId = homeBranch(await branchView(db(), request, ws), b.branchId);
     const row = await db().leaveRequest.create({ data: { tenantId: ws.tenantId, branchId, userId: ws.user.id, typeId: type.id, fromDay: dayOf(b.from), toDay: dayOf(b.to), days: n, halfDay: b.halfDay, reason: b.reason || null } });
     await audit(ws, request.ip, "people.leave_request", row.id, { type: type.name, from: b.from, to: b.to, days: n });
-    const who = (await teamWith(db(), ws.tenantId, ["people.manage"], branchId)).filter((id) => id !== ws.user.id);
+    const who = (await teamWith(db(), ws.tenantId, ["people.person.read+people.person.create+people.person.update+people.person.delete"], branchId)).filter((id) => id !== ws.user.id);
     await notify(db(), who, { tenantId: ws.tenantId, type: "people", title: `Leave request from ${nameOf(ws.user as never)}`, message: `${type.name}: ${b.from}${b.to !== b.from ? ` to ${b.to}` : ""} (${n} ${n === 1 ? "day" : "days"})`, link: "/business/people" });
     return { status: 201, message: "Leave requested.", data: { id: row.id } };
   });

@@ -29,7 +29,7 @@ export function People({ tenant, role, embedded }) {
   const members = db.members[tenant.id] || [];
   const hr = db.hr?.[tenant.id] || seedHR(members);
   const setHR = (fn) => update((d) => { d.hr = d.hr || {}; d.hr[tenant.id] = d.hr[tenant.id] || seedHR(members); fn(d.hr[tenant.id]); });
-  const manage = can(role, "team.manage");
+  const manage = can(role, "workspace.team.read+workspace.team.invite+workspace.team.update+workspace.team.remove");
   const [tab, setTab] = useState("today");
   const [apply, setApply] = useState(false);
   const [lv, setLv] = useState({ type: "casual", days: 1, from: inDays(1), note: "" });

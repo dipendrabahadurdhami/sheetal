@@ -56,7 +56,7 @@ const Setup = z.object({
 type SetupT = z.infer<typeof Setup>;
 const DEFAULTS = { perDay: 5, recent: "1m", expiring: "1m", extendMonths: 3, reviewers: {} as Record<string, "all" | string[]>, access: {} as Record<string, z.infer<typeof Access>> };
 /** A person's level when the owner hasn't set one: owners High, managers Medium, everyone else Low. */
-const defaultLevel = (perms: string[]) => (perms.includes("*") ? "high" : hasPerm(perms, "settings.business") || hasPerm(perms, "leads.assign") ? "medium" : "low");
+const defaultLevel = (perms: string[]) => (perms.includes("*") ? "high" : hasPerm(perms, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete") || hasPerm(perms, "crm.lead.assign") ? "medium" : "low");
 const groupsOf = (a: z.infer<typeof Access> | undefined, perms: string[]) => (a?.level === "custom" ? a.groups ?? [] : LEVELS[a?.level ?? defaultLevel(perms)] ?? []);
 
 /** Takes the votes of the day's changes and applies the winners; a field with no winner is left for the owner. */
@@ -117,7 +117,7 @@ export async function reviewRoutes(app: FastifyInstance) {
       return [b.id, { name: b.name, pool: pool.map((m) => ({ id: m.userId, name: m.user.userName, role: m.role.name || m.role.key.replace(/_/g, " "), lists: lists(m), perms: m.role.perms })), ids: list.map((m) => m.userId).sort() }];
     }));
   }
-  const canManage = (ws: Workspace) => ws.can("settings.business") || ws.can("leads.assign");
+  const canManage = (ws: Workspace) => ws.can("workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete") || ws.can("crm.lead.assign");
 
   // ───── Setup (owners and managers) ─────
   app.get("/checkups/setup", async (request) => {

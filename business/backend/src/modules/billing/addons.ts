@@ -14,8 +14,8 @@ import { workspaceOf, type Workspace } from "../access.js";
 
 export async function addonRoutes(app: FastifyInstance) {
   const db = () => dbOf(app);
-  const reader = (ws: Workspace) => { if (!ws.can("billing.manage") && !ws.can("invoices.view")) throw forbidden("Your role can't see billing."); };
-  const payer = (ws: Workspace) => { if (!ws.can("billing.manage")) throw forbidden("Only people who manage billing can buy add-ons."); };
+  const reader = (ws: Workspace) => { if (!ws.can("workspace.billing.manage") && !ws.can("invoicing.invoice.read")) throw forbidden("Your role can't see billing."); };
+  const payer = (ws: Workspace) => { if (!ws.can("workspace.billing.manage")) throw forbidden("Only people who manage billing can buy add-ons."); };
 
   app.get("/billing/addons", async (request) => {
     const ws = workspaceOf(request); reader(ws);
@@ -29,7 +29,7 @@ export async function addonRoutes(app: FastifyInstance) {
     const months = monthsLeft(t.renewsAt);
     return {
       data: {
-        paid, canBuy: paid && ws.can("billing.manage"), monthsLeft: months, renewsAt: t.renewsAt,
+        paid, canBuy: paid && ws.can("workspace.billing.manage"), monthsLeft: months, renewsAt: t.renewsAt,
         addons: cat.filter((a) => a.active && a.types.includes(t.type as never) && base[a.limitKey] !== undefined).map((a) => {
           const o = owned.find((x) => x.addonId === a.id);
           return { id: a.id, name: a.name, sub: a.sub, unit: a.unit, price: a.price, step: a.step, limitKey: a.limitKey,

@@ -23,12 +23,12 @@ export async function adminAiFeatureRoutes(app: FastifyInstance) {
   const db = () => dbOf(app);
 
   app.get("/admin/ai/features", async (request) => {
-    staffOf(request, "settings.platform");
+    staffOf(request, "platform.settings.read+platform.settings.update");
     return { data: { ...(await aiFeatureSettings(db())), features: AI_FEATURES.map((id) => ({ id, name: AI_FEATURE_NAMES[id] })) } };
   });
 
   app.put("/admin/ai/features", async (request) => {
-    const s = staffOf(request, "settings.platform");
+    const s = staffOf(request, "platform.settings.read+platform.settings.update");
     const b = body.parse(request.body);
     const cur = await aiFeatureSettings(db());
     const unknown = Object.keys(b.plans ?? {}).filter((n) => !cur.plans[n]);
@@ -52,7 +52,7 @@ export async function adminAiFeatureRoutes(app: FastifyInstance) {
   });
 
   app.get("/admin/ai/usage", async (request) => {
-    staffOf(request, "settings.platform");
+    staffOf(request, "platform.settings.read+platform.settings.update");
     return { data: await usageByBusiness(db()) };
   });
 }

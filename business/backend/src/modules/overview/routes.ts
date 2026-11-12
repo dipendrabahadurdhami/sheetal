@@ -49,7 +49,7 @@ export async function overviewRoutes(app: FastifyInstance) {
     const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
     // ───── Listings ─────
-    if (any(ws, "listings.manage", "projects.manage", "investments.manage", "calendar.edit")) {
+    if (any(ws, "listings.listing.read+listings.listing.create+listings.listing.update+listings.listing.delete+listings.listing.publish", "projects.project.read+projects.project.create+projects.project.update+projects.project.delete", "investments.offering.read+investments.offering.create+investments.offering.update+investments.offering.delete", "hotel.calendar.update")) {
       const rows = await db().listing.groupBy({ by: ["status"], where: { tenantId: ws.tenantId, ...branch }, _count: true });
       const n = (s: string) => rows.find((r) => r.status === s)?._count ?? 0;
       out.listings = { published: n("published"), pending: n("pending"), drafts: n("draft"), rejected: n("rejected"), paused: n("paused") };
@@ -57,8 +57,8 @@ export async function overviewRoutes(app: FastifyInstance) {
     }
 
     // ───── Leads (people who can assign leads see all; others their own and unassigned) ─────
-    if (any(ws, "leads.view", "messages.reply")) {
-      const all = ws.can("leads.assign") || ws.member.role.key === "owner";
+    if (any(ws, "crm.lead.read", "crm.message.reply")) {
+      const all = ws.can("crm.lead.assign") || ws.member.role.key === "owner";
       const mine: Prisma.LeadWhereInput = { tenantId: ws.tenantId, ...branch, ...(all ? {} : { OR: [{ assigneeId: ws.user.id }, { assigneeId: null }] }) };
       const open = { notIn: ["won", "lost"] };
       const [week, recent, followUps] = await Promise.all([
@@ -74,7 +74,7 @@ export async function overviewRoutes(app: FastifyInstance) {
 
     // ───── By business type ─────
     const today_: Record<string, unknown> = {};
-    if ((type === "hotel" || type === "host") && ws.can("bookings.view")) {
+    if ((type === "hotel" || type === "host") && ws.can("hotel.booking.read")) {
       const [arrivals, departures, inHouse, rooms, stays] = await Promise.all([
         db().booking.count({ where: { tenantId: ws.tenantId, ...branch, status: { in: ["requested", "confirmed"] }, checkIn: todayD } }),
         db().booking.count({ where: { tenantId: ws.tenantId, ...branch, status: "checked_in", checkOut: todayD } }),
@@ -87,14 +87,14 @@ export async function overviewRoutes(app: FastifyInstance) {
       const nights = stays.reduce((s, b) => s + Math.max(0, Math.round((Math.min(b.checkOut.getTime(), monthTo.getTime()) - Math.max(b.checkIn.getTime(), monthFrom.getTime())) / 864e5)), 0);
       today_.stays = { arrivals, departures, inHouse, rooms, nightsSold: nights, days, occupancyPct: rooms ? Math.min(100, Math.round((nights / (rooms * days)) * 100)) : null };
     }
-    if (type === "agency" && any(ws, "viewings.manage", "leads.view")) {
+    if (type === "agency" && any(ws, "listings.viewing.read+listings.viewing.create+listings.viewing.update+listings.viewing.delete", "crm.lead.read")) {
       const viewings = await db().lead.count({ where: { tenantId: ws.tenantId, ...branch, status: "viewing", followAt: { gte: startOfDay(today), lt: weekEnd } } });
       today_.agency = { viewingsThisWeek: viewings };
     }
     if (type === "developer") {
       const sub: Record<string, number> = {};
-      if (ws.can("visits.manage")) sub.siteVisits = await db().lead.count({ where: { tenantId: ws.tenantId, ...branch, kind: "site_visit", status: { notIn: ["won", "lost"] } } });
-      if (ws.can("reservations.manage")) {
+      if (ws.can("projects.visit.read+projects.visit.create+projects.visit.update+projects.visit.delete")) sub.siteVisits = await db().lead.count({ where: { tenantId: ws.tenantId, ...branch, kind: "site_visit", status: { notIn: ["won", "lost"] } } });
+      if (ws.can("projects.reservation.read+projects.reservation.create+projects.reservation.update+projects.reservation.delete")) {
         const [reserved, sold] = await Promise.all([db().reservation.count({ where: { tenantId: ws.tenantId, status: "reserved" } }), db().reservation.count({ where: { tenantId: ws.tenantId, status: "sold" } })]);
         sub.reservations = reserved; sub.sold = sold;
       }
@@ -104,7 +104,7 @@ export async function overviewRoutes(app: FastifyInstance) {
 
     // ───── Money this month ─────
     const money: Record<string, unknown> = {};
-    if (ws.can("invoices.view")) {
+    if (ws.can("invoicing.invoice.read")) {
       const sent = await db().bizInvoice.findMany({ where: { tenantId: ws.tenantId, ...branch, kind: "invoice", status: "sent" }, select: { total: true, issuedOn: true, dueOn: true, receipts: { select: { amount: true } } }, take: 20_000 });
       let sentN = 0, sentTotal = 0, paidN = 0, overdueN = 0, overdueTotal = 0;
       for (const i of sent) {
@@ -115,7 +115,7 @@ export async function overviewRoutes(app: FastifyInstance) {
       money.invoices = { sent: sentN, sentTotal, paid: paidN, overdue: overdueN, overdueTotal };
       if (overdueN) todo("overdue", "receipt", `${plural(overdueN, "invoice")} overdue`, "/business/invoices", "Open");
     }
-    if (ws.can("expenses.view")) {
+    if (ws.can("expenses.expense.read+expenses.recurring.read+expenses.profit.read")) {
       const [spent, receipts, payouts] = await Promise.all([
         db().expense.aggregate({ where: { tenantId: ws.tenantId, ...branch, status: "confirmed", spentOn: { gte: monthFrom, lt: monthTo } }, _sum: { amount: true }, _count: true }),
         // Money received directly: receipts without VAT; what Sheetal collected reaches the business as a payout.
@@ -126,7 +126,7 @@ export async function overviewRoutes(app: FastifyInstance) {
       const expenses = spent._sum.amount ?? 0;
       money.expenses = { total: expenses, count: spent._count, received, profit: received - expenses };
     }
-    if (ws.can("payouts.view")) {
+    if (ws.can("invoicing.payout.read")) {
       const [pending, waiting] = await Promise.all([
         db().payout.aggregate({ where: { tenantId: ws.tenantId, ...branch, status: "pending" }, _sum: { net: true }, _count: true }),
         db().payoutItem.aggregate({ where: { tenantId: ws.tenantId, ...branch, payoutId: null }, _sum: { net: true } }),
@@ -135,7 +135,7 @@ export async function overviewRoutes(app: FastifyInstance) {
     }
     if (Object.keys(money).length) out.money = money;
 
-    if (type === "agency" && ws.can("rentals.view")) {
+    if (type === "agency" && ws.can("rentals.rental.read")) {
       const bills = await db().rentBill.findMany({ where: { tenantId: ws.tenantId, ...branch, OR: [{ month }, { dueOn: { lt: todayD } }] }, select: { month: true, dueOn: true, amount: true, lateFee: true, paid: true }, take: 20_000 });
       let due = 0, dueN = 0, late = 0, lateN = 0;
       for (const b of bills) {
@@ -149,7 +149,7 @@ export async function overviewRoutes(app: FastifyInstance) {
     }
 
     // ───── Plan, boosts and banners ─────
-    if (any(ws, "overview.view", "billing.manage")) {
+    if (any(ws, "workspace.overview.read", "workspace.billing.manage")) {
       const plan = await effectiveLimits(db(), ws.tenantId, tenant.plan);
       const limits = (plan.limits ?? {}) as Record<string, number>;
       const [seats, listings, featured] = await Promise.all([
@@ -159,9 +159,9 @@ export async function overviewRoutes(app: FastifyInstance) {
       ]);
       const used: Record<string, number> = { seats, listings, featured };
       out.plan = { id: plan.id, name: plan.name, price: plan.price, status: tenant.status, renewsAt: tenant.renewsAt ? ymd(tenant.renewsAt) : null, usage: Object.entries(limits).map(([key, limit]) => ({ key, limit, used: used[key] ?? null })) };
-      if (tenant.status === "past_due" && ws.can("billing.manage")) todo("past-due", "credit-card", "Your plan payment is late", "/business/billing", "Pay now");
+      if (tenant.status === "past_due" && ws.can("workspace.billing.manage")) todo("past-due", "credit-card", "Your plan payment is late", "/business/billing", "Pay now");
     }
-    if (any(ws, "listings.manage", "projects.manage", "investments.manage", "calendar.edit", "billing.manage")) {
+    if (any(ws, "listings.listing.read+listings.listing.create+listings.listing.update+listings.listing.delete+listings.listing.publish", "projects.project.read+projects.project.create+projects.project.update+projects.project.delete", "investments.offering.read+investments.offering.create+investments.offering.update+investments.offering.delete", "hotel.calendar.update", "workspace.billing.manage")) {
       const live = { startOn: { lte: todayD }, endOn: { gte: todayD } };
       const [boosts, banners, unpaidBoosts, unpaidBanners] = await Promise.all([
         db().boost.count({ where: { tenantId: ws.tenantId, status: "paid", ...live } }),
@@ -172,7 +172,7 @@ export async function overviewRoutes(app: FastifyInstance) {
       out.promote = { liveBoosts: boosts, liveBanners: banners, unpaid: unpaidBoosts + unpaidBanners };
       if (unpaidBoosts + unpaidBanners) todo("unpaid-boost", "megaphone", `${plural(unpaidBoosts + unpaidBanners, "boost or banner")} waiting for payment`, "/business/promote", "Pay");
     }
-    if (ws.can("settings.business") && (tenant.verification === "none" || tenant.verification === "rejected")) {
+    if (ws.can("workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete") && (tenant.verification === "none" || tenant.verification === "rejected")) {
       todo("verify", "badge-check", tenant.verification === "rejected" ? "Your business verification was sent back" : "Verify your business to show the badge", "/business/settings/verification", "Open");
     }
 

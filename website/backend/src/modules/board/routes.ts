@@ -70,7 +70,7 @@ export async function boardRoutes(app: FastifyInstance) {
     if (!lead) throw notFound("This requirement isn't open any more.");
     const listing = await db().listing.findFirst({ where: { id: b.property_id, status: "published" } });
     if (!listing) throw notFound("Choose one of your live listings.");
-    const mine = listing.userId === user.id || (!!listing.tenantId && user.memberships.some((m) => m.tenantId === listing.tenantId && hasPerm(m.role.perms, "listings.manage")));
+    const mine = listing.userId === user.id || (!!listing.tenantId && user.memberships.some((m) => m.tenantId === listing.tenantId && hasPerm(m.role.perms, "listings.listing.read+listings.listing.create+listings.listing.update+listings.listing.delete+listings.listing.publish")));
     if (!mine) throw forbidden("You can offer only your own listings.");
     if (lead.userId && lead.userId === user.id) throw badRequest("This is your own requirement.");
     const exists = await db().demandMatch.findUnique({ where: { leadId_listingId: { leadId: lead.id, listingId: listing.id } } });

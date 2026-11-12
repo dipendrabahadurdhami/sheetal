@@ -93,7 +93,7 @@ export async function formRoutes(app: FastifyInstance, opts: { fetch?: Fetch } =
       return { lead, response };
     });
 
-    const people = await teamWith(db(), f.tenantId, ["leads.view"], branchId);
+    const people = await teamWith(db(), f.tenantId, ["crm.lead.read"], branchId);
     const matchLine = f.dest === "requirements" ? (matches.length ? `${matches.length} of your listings match` : "No listing matches yet") : "";
     await notify(db(), [...people, f.assigneeId], { tenantId: f.tenantId, type: "lead", title: `New response to ${f.title}`, message: [who.name, who.phone, matchLine].filter(Boolean).join(" · "), link: "/business/inbox" });
 

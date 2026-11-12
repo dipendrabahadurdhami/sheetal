@@ -20,7 +20,7 @@ export async function adminListingRoutes(app: FastifyInstance) {
   const db = () => dbOf(app);
 
   app.get("/admin/listings", async (request) => {
-    staffOf(request, "moderation.listings");
+    staffOf(request, "platform.listing.moderate");
     const q = z.object({
       status: z.enum(STATUSES).default("pending"), q: z.string().trim().max(80).optional(), tenantId: z.string().max(40).optional(),
       page: z.coerce.number().int().min(1).default(1),
@@ -57,7 +57,7 @@ export async function adminListingRoutes(app: FastifyInstance) {
 
   /** Everything a moderator checks, including the private owner details and papers the business entered. */
   app.get<{ Params: { id: string } }>("/admin/listings/:id", async (request) => {
-    staffOf(request, "moderation.listings");
+    staffOf(request, "platform.listing.moderate");
     const l = await db().listing.findUnique({ where: { id: Number(request.params.id) || -1 }, include: { photos: { orderBy: { sort: "asc" } } } });
     if (!l) throw notFound("Listing not found.");
     const [tenant, poster, history] = await Promise.all([
@@ -79,7 +79,7 @@ export async function adminListingRoutes(app: FastifyInstance) {
   });
 
   app.post<{ Params: { id: string } }>("/admin/listings/:id/review", async (request) => {
-    const s = staffOf(request, "moderation.listings");
+    const s = staffOf(request, "platform.listing.moderate");
     const b = z.object({ decision: z.enum(["approve", "reject"]), note: z.string().trim().max(1000).optional() }).parse(request.body);
     if (b.decision === "reject" && !b.note) throw badRequest("Say what needs to change, so the business can fix it.", { note: ["Say what needs to change."] });
     const l = await db().listing.findUnique({ where: { id: Number(request.params.id) || -1 } });

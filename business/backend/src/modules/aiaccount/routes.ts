@@ -20,7 +20,7 @@ import { workspaceOf, type Workspace } from "../access.js";
 export async function aiAccountRoutes(app: FastifyInstance, opts: { ai?: { client: AiClient; model: string } }) {
   const db = () => dbOf(app);
   const vault = new Vault(app.config.SECRETS_KEY, app.config.NODE_ENV === "production");
-  const need = (ws: Workspace) => { if (!ws.can("settings.business")) throw forbidden("Your role can't change AI accounts."); };
+  const need = (ws: Workspace) => { if (!ws.can("workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete")) throw forbidden("Your role can't change AI accounts."); };
   const audit = (ws: Workspace, ip: string, action: string, meta?: object) =>
     db().auditLog.create({ data: { tenantId: ws.tenantId, actorId: ws.user.id, action, target: "ai", ip, meta: meta as object | undefined } });
   const load = async (tenantId: string) => ((await db().appSetting.findUnique({ where: { key: tenantAiKey(tenantId) } }))?.value ?? {}) as TenantAi;

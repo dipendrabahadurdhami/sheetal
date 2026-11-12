@@ -21,6 +21,19 @@ export async function notify(db: Db, userIds: (string | null | undefined)[], not
   await db.notification.createMany({ data: ids.map((userId) => ({ userId, tenantId: note.tenantId ?? null, type: note.type, title: note.title.slice(0, 200), message: (note.message ?? "").slice(0, 1000), link: note.link })) });
 }
 
+/**
+ * Which Sheetal staff a notice is for, by the staff permission that handles that work. Business and website code names the WORK here
+ * (STAFF_FOR.listingReview) and never writes a staff permission itself: backend-core/test/permissions-worlds.test.ts keeps the two worlds apart.
+ */
+export const STAFF_FOR = {
+  /** Listings and paid requirements waiting for a check. */
+  listingReview: "platform.listing.moderate",
+  /** Leads and messages meant for Sheetal itself. */
+  leads: "platform.business.read",
+  /** Requests about a business that staff act on (plan upgrades, channel requests). */
+  businessRequests: "platform.business.read+platform.business.create+platform.business.update",
+} as const;
+
 /** Sheetal staff whose platform role covers `perm` (super admins always). */
 export async function notifyStaff(db: Db, perm: string, note: Omit<Note, "tenantId">) {
   const roles = Object.entries(LEGACY_PLATFORM_ROLES).filter(([, perms]) => hasPerm(perms, perm)).map(([r]) => r);
@@ -43,4 +56,4 @@ export async function teamWith(db: Db, tenantId: string, perms: string[], branch
 }
 
 /** Everyone in a business whose role can see leads (owners always). */
-export const leadPeople = (db: Db, tenantId: string, branchId?: string | null) => teamWith(db, tenantId, ["leads.view", "messages.reply"], branchId);
+export const leadPeople = (db: Db, tenantId: string, branchId?: string | null) => teamWith(db, tenantId, ["crm.lead.read", "crm.message.reply"], branchId);

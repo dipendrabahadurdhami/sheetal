@@ -72,7 +72,7 @@ export async function settingsRoutes(app: FastifyInstance) {
     const pick = z.enum(SECTIONS).safeParse(request.params.section);
     if (!pick.success) throw notFound("No such settings.");
     const section = pick.data;
-    const allowed = section === "checkups" ? ws.can("settings.business") || ws.can("leads.assign") : ws.can("settings.business");
+    const allowed = section === "checkups" ? ws.can("workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete") || ws.can("crm.lead.assign") : ws.can("workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete");
     if (!allowed) throw forbidden("Your role can't change these settings.");
     let next: Obj = z.record(z.string().max(60), z.unknown()).refine((v) => JSON.stringify(v).length <= 20_000, "Too many settings.").parse(request.body);
     if (section === "checkups") next = Checkups.parse(next);
@@ -90,7 +90,7 @@ export async function settingsRoutes(app: FastifyInstance) {
   // A payment QR (Fonepay or bank) shown to customers when they pay.
   app.post("/workspace/settings/qr", { bodyLimit: 28 * 1024 * 1024 }, async (request) => {
     const ws = workspaceOf(request);
-    if (!ws.can("settings.business")) throw forbidden("Your role can't change payment settings.");
+    if (!ws.can("workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete")) throw forbidden("Your role can't change payment settings.");
     const b = z.object({ data: z.string().min(16).max(27 * 1024 * 1024) }).parse(request.body);
     const file = await savePhoto(app.config.MEDIA_DIR, Buffer.from(b.data, "base64"), "brand");
     return { data: { url: photoUrl(mediaBase(app.config), "main", file, "brand") } };

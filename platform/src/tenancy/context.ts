@@ -101,6 +101,11 @@ function heldScope(perms: readonly string[], name: string): DataScope | null {
 export function buildPermissionSet(perms: readonly string[]): PermissionSet {
   const scopeOf = (perm: PermissionId): DataScope | null => {
     if (perms.includes("*")) return "all";
+    if (perm.includes("+")) {
+      // Several names joined with "+": all are needed, and the scope is the narrowest of them (see hasPerm in aliases.ts).
+      const parts = perm.split("+").map((p) => (p ? scopeOf(p) : null));
+      return parts.some((x) => x === null) ? null : (parts as DataScope[]).reduce(narrowest);
+    }
     const direct = heldScope(perms, perm);
     if (direct) return direct;
     if (!hasPerm(perms, perm)) return null;

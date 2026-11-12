@@ -31,7 +31,12 @@ function holds(perms: readonly string[], name: string): boolean {
   return false;
 }
 
+/**
+ * Does the list give this permission? `perm` may join several names with "+" ("a.b.read+a.b.update"): then ALL of them are needed. That is how a call site
+ * that used one old bundle name ("plans.manage") is written in new names without changing who passes (stage 1.5).
+ */
 export function hasPerm(perms: readonly string[], perm: string): boolean {
+  if (perm.includes("+")) return perm.split("+").every((p) => p !== "" && hasPerm(perms, p));
   if (perms.includes("*") || holds(perms, perm)) return true;
   const sets = oldToNew.get(perm);                                   // perm is an old name: all of its new names
   if (sets && sets.some((set) => set.every((n) => holds(perms, n)))) return true;

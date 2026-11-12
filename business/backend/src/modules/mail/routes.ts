@@ -51,10 +51,10 @@ export async function mailRoutes(app: FastifyInstance, opts: MailOptions) {
   const used = async (tenantId: string) => (await dbOf(app).mailMessage.aggregate({ where: { tenantId }, _sum: { size: true } }))._sum.size ?? 0;
   const quotaOf = (ws: Workspace) => mailQuotaBytes(ws.member.tenant.plan);
   const paidOnly = (ws: Workspace) => { if (!quotaOf(ws)) throw new AppError(402, "upgrade_needed", "Team email is part of the Business and Pro plans."); };
-  const manage = (ws: Workspace) => { paidOnly(ws); if (!ws.can("settings.business")) throw forbidden("Only owners and managers can set up email."); };
+  const manage = (ws: Workspace) => { paidOnly(ws); if (!ws.can("workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete")) throw forbidden("Only owners and managers can set up email."); };
 
   /** Mailboxes this person may open in this business. */
-  const visibleWhere = (ws: Workspace): Prisma.MailboxWhereInput => ws.can("team.manage")
+  const visibleWhere = (ws: Workspace): Prisma.MailboxWhereInput => ws.can("workspace.team.read+workspace.team.invite+workspace.team.update+workspace.team.remove")
     ? { tenantId: ws.tenantId }
     : { tenantId: ws.tenantId, OR: [{ userId: ws.user.id }, { access: { some: { userId: ws.user.id } } }] };
 
@@ -95,8 +95,8 @@ export async function mailRoutes(app: FastifyInstance, opts: MailOptions) {
     return {
       data: {
         paid: quotaOf(ws) > 0,
-        canManage: ws.can("settings.business"),
-        canSeeAll: ws.can("team.manage"),
+        canManage: ws.can("workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"),
+        canSeeAll: ws.can("workspace.team.read+workspace.team.invite+workspace.team.update+workspace.team.remove"),
         quota: { used: usedBytes, limit: quotaOf(ws) },
         domains: domains.map(domainJson),
         mailboxes: boxes.map((b) => ({ id: b.id, address: b.address, name: b.name, kind: b.kind, userId: b.userId, active: b.active, mine: b.userId === ws.user.id, accessUserIds: b.access.map((a) => a.userId), unread: unreadOf.get(b.id) ?? 0 })),

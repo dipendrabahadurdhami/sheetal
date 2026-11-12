@@ -18,7 +18,7 @@ const MAX_ACTIVE = 20;
 
 export async function devKeyRoutes(app: FastifyInstance) {
   const db = () => dbOf(app);
-  const need = (ws: Workspace) => { if (!ws.can("settings.business")) throw forbidden("Your role can't manage developer keys."); };
+  const need = (ws: Workspace) => { if (!ws.can("workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete")) throw forbidden("Your role can't manage developer keys."); };
   const audit = (ws: Workspace, ip: string, action: string, target?: string, meta?: object) =>
     db().auditLog.create({ data: { tenantId: ws.tenantId, actorId: ws.user.id, action, target, ip, meta: meta as object | undefined } });
 

@@ -37,7 +37,7 @@ export async function adminPayoutRoutes(app: FastifyInstance) {
 
   // ───── The list, with what is waiting ─────
   app.get("/admin/payouts", async (request) => {
-    staffOf(request, "billing.view");
+    staffOf(request, "platform.billing.read");
     const q = z.object({ status: z.enum(["pending", "paid", "failed", "all"]).default("pending") }).parse(request.query);
     const cfg = await payoutSettings(db());
     const today = nepalDay();
@@ -69,14 +69,14 @@ export async function adminPayoutRoutes(app: FastifyInstance) {
 
   // ───── What one business has waiting, for the manual payout form ─────
   app.get<{ Params: { tenantId: string } }>("/admin/payouts/waiting/:tenantId", async (request) => {
-    staffOf(request, "billing.view");
+    staffOf(request, "platform.billing.read");
     const w = await db().payoutItem.aggregate({ where: { tenantId: request.params.tenantId.slice(0, 40), payoutId: null }, _sum: { gross: true, fee: true, net: true }, _count: true });
     return { data: { count: w._count, gross: w._sum.gross ?? 0, fee: w._sum.fee ?? 0, net: w._sum.net ?? 0 } };
   });
 
   // ───── Run: waiting money older than the hold days becomes pending payouts ─────
   app.post("/admin/payouts/run", async (request) => {
-    const s = staffOf(request, "billing.refund");
+    const s = staffOf(request, "platform.billing.refund");
     const cfg = await payoutSettings(db());
     const today = nepalDay();
     const upTo = dayOf(holdCutoff(today, cfg.holdDays));
@@ -108,7 +108,7 @@ export async function adminPayoutRoutes(app: FastifyInstance) {
 
   // ───── Mark paid (the transfer was sent from the bank) ─────
   app.post<{ Params: { id: string } }>("/admin/payouts/:id/paid", async (request) => {
-    const s = staffOf(request, "billing.refund");
+    const s = staffOf(request, "platform.billing.refund");
     const b = z.object({ bankRef: z.string().trim().max(60).optional(), paidOn: Day.optional() }).parse(request.body ?? {});
     const p = await db().payout.findUnique({ where: { id: request.params.id.slice(0, 40) } });
     if (!p) throw notFound("Payout not found.");
@@ -121,7 +121,7 @@ export async function adminPayoutRoutes(app: FastifyInstance) {
 
   // ───── Failed (the bank sent it back): the money goes back to waiting ─────
   app.post<{ Params: { id: string } }>("/admin/payouts/:id/fail", async (request) => {
-    const s = staffOf(request, "billing.refund");
+    const s = staffOf(request, "platform.billing.refund");
     const b = z.object({ reason: z.string().trim().min(1, "Say why it failed.").max(200) }).parse(request.body);
     const p = await db().payout.findUnique({ where: { id: request.params.id.slice(0, 40) } });
     if (!p) throw notFound("Payout not found.");
@@ -137,7 +137,7 @@ export async function adminPayoutRoutes(app: FastifyInstance) {
 
   // ───── Manual payout: a settlement paid outside the run ─────
   app.post("/admin/payouts/manual", async (request) => {
-    const s = staffOf(request, "billing.refund");
+    const s = staffOf(request, "platform.billing.refund");
     const b = z.object({
       tenantId: z.string().min(1).max(40), branchId: z.string().max(40).nullish(),
       /** Pay out the money waiting for the business instead of a typed amount. */
@@ -191,14 +191,14 @@ export async function adminPayoutRoutes(app: FastifyInstance) {
 
   // ───── Commission, weekday and hold days ─────
   app.get("/admin/settings/payouts", async (request) => {
-    staffOf(request, "billing.view");
+    staffOf(request, "platform.billing.read");
     let canEdit = true;
-    try { staffOf(request, "settings.platform"); } catch { canEdit = false; }
+    try { staffOf(request, "platform.settings.read+platform.settings.update"); } catch { canEdit = false; }
     return { data: { ...(await payoutSettings(db())), canEdit } };
   });
 
   app.put("/admin/settings/payouts", async (request) => {
-    const s = staffOf(request, "settings.platform");
+    const s = staffOf(request, "platform.settings.read+platform.settings.update");
     const pct = z.number().min(0).max(50);
     const b = z.object({ commission: z.object({ stays: pct, projects: pct, agency: pct, investments: pct }), day: z.enum(WEEKDAYS), holdDays: z.number().int().min(0).max(30) }).parse(request.body);
     const value = { commission: Object.fromEntries(Object.entries(b.commission).map(([k, v]) => [k, Math.round(v * 100) / 100])), day: b.day, holdDays: b.holdDays };

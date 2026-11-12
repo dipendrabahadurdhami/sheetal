@@ -73,8 +73,8 @@ function check(b: DraftBody) {
 
 export async function invoicingRoutes(app: FastifyInstance) {
   const db = () => dbOf(app);
-  const canView = (ws: Workspace) => { if (!ws.can("invoices.view") && !ws.can("invoices.create")) throw forbidden("Your role can't see invoices."); };
-  const canWrite = (ws: Workspace) => { if (!ws.can("invoices.create")) throw forbidden("Your role can't create or change invoices."); };
+  const canView = (ws: Workspace) => { if (!ws.can("invoicing.invoice.read") && !ws.can("invoicing.invoice.read+invoicing.invoice.create")) throw forbidden("Your role can't see invoices."); };
+  const canWrite = (ws: Workspace) => { if (!ws.can("invoicing.invoice.read+invoicing.invoice.create")) throw forbidden("Your role can't create or change invoices."); };
   const audit = (ws: Workspace, ip: string, action: string, target: string) => db().auditLog.create({ data: { tenantId: ws.tenantId, actorId: ws.user.id, action, target, ip } });
 
   function present(i: Row, names: Map<string, string>) {
