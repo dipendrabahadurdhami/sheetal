@@ -7,8 +7,8 @@
 
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { badRequest, notFound } from "@sheetal/backend-core/lib/errors";
+import { dbOf } from "@sheetal/platform/db/client";
+import { badRequest, notFound } from "@sheetal/platform/core/errors";
 import { BUSINESS_TYPES } from "@sheetal/backend-core/domain/permissions";
 import { PERIODS, priceFor } from "@sheetal/backend-core/domain/plans";
 import { staffOf } from "./routes.js";

@@ -9,9 +9,9 @@
 
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { badRequest, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
-import { Vault } from "@sheetal/backend-core/lib/vault";
+import { dbOf } from "@sheetal/platform/db/client";
+import { badRequest, forbidden, notFound } from "@sheetal/platform/core/errors";
+import { Vault } from "@sheetal/platform/auth/vault";
 import type { Fetch } from "@sheetal/backend-core/lib/payments";
 import {
   INTEGRATION_IDS, SECRET_FIELDS, SUPER_ONLY, integrationSettings, openSecret, platformSettings, saveIntegration, savePlatform,

@@ -8,9 +8,9 @@
 
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
+import { dbOf } from "@sheetal/platform/db/client";
 import { checkCaptcha } from "@sheetal/backend-core/lib/captcha";
-import { Vault } from "@sheetal/backend-core/lib/vault";
+import { Vault } from "@sheetal/platform/auth/vault";
 import type { Fetch } from "@sheetal/backend-core/lib/payments";
 import type { JobSpec } from "@sheetal/platform/jobs/registry";
 import { DEMO_HOURS, DEMO_TYPES, cleanupDemos, startDemo } from "./service.js";

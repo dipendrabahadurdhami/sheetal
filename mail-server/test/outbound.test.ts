@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, inject, it } from "vitest";
 // Brings in the test database declaration (inject("databaseUrl")).
-import type {} from "@sheetal/backend-core/test/setup-db";
+import type {} from "@sheetal/platform/test/setup-db";
 import mailauth from "mailauth";
 import { loadMailConfig } from "../src/config.js";
 import { OutboundWorker, RETRY_MINUTES } from "../src/outbound.js";

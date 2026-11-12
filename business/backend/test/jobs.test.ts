@@ -7,8 +7,8 @@
 import Fastify from "fastify";
 import { afterEach, beforeEach, describe, expect, inject, it, vi } from "vitest";
 // Brings in the test database declaration (inject("databaseUrl")).
-import type {} from "@sheetal/backend-core/test/setup-db";
-import { loadConfig } from "@sheetal/backend-core/config";
+import type {} from "@sheetal/platform/test/setup-db";
+import { loadConfig } from "@sheetal/platform/core/config";
 import { jobsOn } from "@sheetal/platform/jobs/registry";
 import { buildApp } from "../src/app.js";
 import { hasSessionDaysReader } from "@sheetal/platform/auth/sessions";

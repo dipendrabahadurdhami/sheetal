@@ -7,8 +7,8 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Prisma, Unit } from "@prisma/client";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { badRequest, conflict, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
+import { dbOf } from "@sheetal/platform/db/client";
+import { badRequest, conflict, forbidden, notFound } from "@sheetal/platform/core/errors";
 import { branchView, inView, workspaceOf, type Workspace } from "../access.js";
 
 const n = (v: bigint | number | null | undefined) => (v == null ? null : Number(v));

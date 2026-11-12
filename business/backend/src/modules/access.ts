@@ -11,9 +11,9 @@
 import type { FastifyRequest } from "fastify";
 import type { PrismaClient } from "@prisma/client";
 import { requireUser, type SessionUser } from "@sheetal/backend-core/modules/auth/sessions";
-import { dbOf } from "@sheetal/backend-core/lib/db";
+import { dbOf } from "@sheetal/platform/db/client";
 import { effectiveLimits } from "@sheetal/backend-core/domain/addons";
-import { badRequest, forbidden } from "@sheetal/backend-core/lib/errors";
+import { badRequest, forbidden } from "@sheetal/platform/core/errors";
 import { hasPerm } from "@sheetal/backend-core/domain/permissions";
 import type { BusinessContext } from "@sheetal/platform/core/context";
 import { accessOfMember, buildBusinessContext, buildSupportContext, createBranchScope, loadBranches, type TenancyDeps } from "@sheetal/platform/tenancy/context";

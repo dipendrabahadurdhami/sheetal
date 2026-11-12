@@ -5,10 +5,10 @@
 // page shows the box and the API asks Cloudflare whether the token is good.
 // Rules: the secret is write-only; when Cloudflare can't be reached the response is refused (asked to try again).
 
-import type { Db } from "./db.js";
+import type { Db } from "@sheetal/platform/db/client";
 import type { Fetch } from "./payments.js";
-import { Vault } from "./vault.js";
-import { badRequest } from "./errors.js";
+import { Vault } from "@sheetal/platform/auth/vault";
+import { badRequest } from "@sheetal/platform/core/errors";
 
 export interface CaptchaSettings { siteKey?: string; secret?: string }
 export const VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";

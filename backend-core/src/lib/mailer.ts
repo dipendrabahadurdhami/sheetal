@@ -5,7 +5,7 @@
 // Rules: never put a password in an email; links carry one-time tokens only.
 
 import type { FastifyBaseLogger } from "fastify";
-import type { Db } from "./db.js";
+import type { Db } from "@sheetal/platform/db/client";
 import { activeTemplate, renderText } from "../domain/templates.js";
 
 /** `template` names the message so staff can change its wording (Admin → Messages); subject and text stay as the built-in fallback. */

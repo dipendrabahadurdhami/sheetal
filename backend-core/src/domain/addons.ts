@@ -9,7 +9,7 @@
 // included like plan prices.
 
 import type { Prisma } from "@prisma/client";
-import type { Db } from "../lib/db.js";
+import type { Db } from "@sheetal/platform/db/client";
 import type { BusinessType } from "./permissions.js";
 
 type Tx = Db | Prisma.TransactionClient;

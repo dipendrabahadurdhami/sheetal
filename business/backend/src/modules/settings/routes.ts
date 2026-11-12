@@ -12,10 +12,10 @@
 import type { FastifyInstance } from "fastify";
 import type { ListingStatus, Prisma } from "@prisma/client";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
+import { dbOf } from "@sheetal/platform/db/client";
 import { cached } from "@sheetal/backend-core/lib/cache";
-import { badRequest, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
-import { Vault } from "@sheetal/backend-core/lib/vault";
+import { badRequest, forbidden, notFound } from "@sheetal/platform/core/errors";
+import { Vault } from "@sheetal/platform/auth/vault";
 import { readCatalog } from "@sheetal/backend-core/lib/catalog";
 import { mediaBase, photoUrl, savePhoto } from "@sheetal/backend-core/lib/photos";
 import { LISTING_PERMS } from "@sheetal/backend-core/domain/listings";

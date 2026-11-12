@@ -8,13 +8,13 @@
 import { writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { PrismaClient } from "@prisma/client";
-import { loadConfig, loadEnvFiles } from "../src/config.js";
-import { hashPassword } from "../src/lib/secrets.js";
+import { loadConfig, loadEnvFiles } from "@sheetal/platform/core/config";
+import { hashPassword } from "@sheetal/platform/auth/secrets";
 import { createWorkspace } from "../src/modules/accounts/workspace.js";
 import { BUSINESS_TYPES, roleTemplatesFor, type BusinessType } from "../src/domain/permissions.js";
 import { listingCode, prefixFor } from "../src/domain/codes.js";
 import { nepalDay, recordCollected } from "../src/domain/payouts.js";
-import { runRentBills } from "../src/domain/rentals.js";
+import { runRentBills } from "@sheetal/app-rentals/backend/bills";
 import { dayOf, ymd } from "../src/domain/money.js";
 
 loadEnvFiles();

@@ -8,7 +8,7 @@
 import type { FastifyInstance } from "fastify";
 import { startJobs, type JobSpec } from "@sheetal/platform/jobs/registry";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
+import { dbOf } from "@sheetal/platform/db/client";
 import { planReminders, recentReminders, reminderSettings, runReminders, saveReminderSettings, type ReminderSettings } from "@sheetal/backend-core/domain/reminders";
 import { staffOf } from "./routes.js";
 

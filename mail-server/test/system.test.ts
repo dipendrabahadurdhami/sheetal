@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, inject, it } from "vitest";
 // Brings in the test database declaration (inject("databaseUrl")).
-import type {} from "@sheetal/backend-core/test/setup-db";
+import type {} from "@sheetal/platform/test/setup-db";
 import { mkdtempSync, readFileSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

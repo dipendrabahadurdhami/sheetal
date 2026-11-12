@@ -11,14 +11,14 @@ import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
 import multipart from "@fastify/multipart";
 import { randomUUID } from "node:crypto";
-import type { Config } from "./config.js";
+import type { Config } from "@sheetal/platform/core/config";
 import { createCache, type Cache } from "./lib/cache.js";
-import { createDb, type Db } from "./lib/db.js";
-import { errorHandler, notFoundHandler } from "./lib/errors.js";
+import { createDb, type Db } from "@sheetal/platform/db/client";
+import { errorHandler, notFoundHandler } from "@sheetal/platform/core/errors";
 import { healthRoutes } from "./routes/health.js";
 import { Mailer } from "./lib/mailer.js";
 import { registerAuth } from "./modules/auth/sessions.js";
-import { configureStorage } from "./lib/storage.js";
+import { configureStorage } from "@sheetal/platform/files/storage";
 
 declare module "fastify" {
   interface FastifyInstance {

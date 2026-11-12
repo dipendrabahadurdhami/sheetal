@@ -11,9 +11,9 @@
 import type { FastifyInstance } from "fastify";
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { AppError, badRequest, forbidden } from "@sheetal/backend-core/lib/errors";
-import { Vault } from "@sheetal/backend-core/lib/vault";
+import { dbOf } from "@sheetal/platform/db/client";
+import { AppError, badRequest, forbidden } from "@sheetal/platform/core/errors";
+import { Vault } from "@sheetal/platform/auth/vault";
 import { DEFAULT_MODEL, OWN_MODELS, creditsUsed, tenantAiKey, type AiClient, type TenantAi } from "@sheetal/backend-core/lib/ai";
 import { workspaceOf, type Workspace } from "../access.js";
 

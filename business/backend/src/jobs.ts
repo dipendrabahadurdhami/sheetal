@@ -7,7 +7,7 @@
 // 70 s / 6 h, check-ups no first run / 15 min); the business API runs none of the admin API's jobs. JOBS=off turns all of them off.
 
 import type { FastifyInstance } from "fastify";
-import { dbOf } from "@sheetal/backend-core/lib/db";
+import { dbOf } from "@sheetal/platform/db/client";
 import { createDispatcher } from "@sheetal/platform/jobs/dispatcher";
 import { PrismaOutboxStore } from "@sheetal/platform/jobs/outbox-store";
 import type { JobSpec } from "@sheetal/platform/jobs/registry";

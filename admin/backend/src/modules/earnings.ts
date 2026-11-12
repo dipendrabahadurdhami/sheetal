@@ -8,8 +8,8 @@
 
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { dbOf, type Db } from "@sheetal/backend-core/lib/db";
-import { badRequest } from "@sheetal/backend-core/lib/errors";
+import { dbOf, type Db } from "@sheetal/platform/db/client";
+import { badRequest } from "@sheetal/platform/core/errors";
 import { nepalDay } from "@sheetal/backend-core/domain/payouts";
 import { staffOf } from "./routes.js";
 

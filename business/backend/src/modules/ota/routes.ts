@@ -8,8 +8,8 @@
 
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { badRequest, forbidden } from "@sheetal/backend-core/lib/errors";
+import { dbOf } from "@sheetal/platform/db/client";
+import { badRequest, forbidden } from "@sheetal/platform/core/errors";
 import { savePrivateFile } from "@sheetal/backend-core/lib/files";
 import { OTA_CHANNELS, askForChannel, otaAccounts, otaSettings, pauseRequest, presentRequest, replyToRequest } from "@sheetal/backend-core/domain/ota-requests";
 import { branchView, inView, workspaceOf, type Workspace } from "../access.js";

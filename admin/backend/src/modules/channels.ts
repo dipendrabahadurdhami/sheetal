@@ -9,8 +9,8 @@
 import type { FastifyInstance } from "fastify";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { notFound } from "@sheetal/backend-core/lib/errors";
+import { dbOf } from "@sheetal/platform/db/client";
+import { notFound } from "@sheetal/platform/core/errors";
 import { readPrivateFile } from "@sheetal/backend-core/lib/files";
 import {
   OTA_CHANNELS, OTA_STATUSES, isChannel, logOf, otaAccounts, otaRef, otaSettings, presentRequest, saveOtaSettings, setRequestStatus, type OtaSettings,

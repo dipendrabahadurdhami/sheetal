@@ -1,7 +1,7 @@
 // Starts the website API on WEBSITE_API_PORT (4000 by default).
 // How it works: loads backend-core/.env, builds the app and listens; stops cleanly on Ctrl+C.
 
-import { loadConfig, loadEnvFiles } from "@sheetal/backend-core/config";
+import { loadConfig, loadEnvFiles } from "@sheetal/platform/core/config";
 import { buildApp } from "./app.js";
 
 loadEnvFiles();

@@ -1,5 +1,5 @@
 // Tests for maker-checker approvals and staff support sessions on the business API (P1-REST Stage 1; ACCESS.md section 13 rows "Approvals" and "Impersonation").
-// Where it fits: runs with the business API tests (needs the throwaway PostgreSQL from backend-core/test/setup-db.ts): npm run test -w @sheetal/business-api
+// Where it fits: runs with the business API tests (needs the throwaway PostgreSQL from platform/test/setup-db.ts): npm run test -w @sheetal/business-api
 // How it works: a real business API with an owner, an accountant and a support staff member. Approvals go through HTTP using Expenses' "confirm" action; a support
 // session is written straight into the table and signed with the same key the admin API uses, then used as a Bearer token on the business API.
 // Rules: rules are OFF until a business switches one on; the maker never decides their own request; a support session is read-only, can't decide approvals,
@@ -8,9 +8,9 @@ import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type {} from "@sheetal/backend-core/test/setup-db";
+import type {} from "@sheetal/platform/test/setup-db";
 import type { FastifyInstance } from "fastify";
-import { loadConfig } from "@sheetal/backend-core/config";
+import { loadConfig } from "@sheetal/platform/core/config";
 import { PLANS } from "@sheetal/backend-core/domain/plans";
 import { createWorkspace } from "@sheetal/backend-core/modules/accounts/workspace";
 import { createSession } from "@sheetal/backend-core/modules/auth/sessions";

@@ -6,10 +6,10 @@
 import type { FastifyInstance } from "fastify";
 import { createHash } from "node:crypto";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { AppError, badRequest } from "@sheetal/backend-core/lib/errors";
+import { dbOf } from "@sheetal/platform/db/client";
+import { AppError, badRequest } from "@sheetal/platform/core/errors";
 import { isBotRequest, isSearchEngine } from "@sheetal/backend-core/lib/bots";
-import { Vault } from "@sheetal/backend-core/lib/vault";
+import { Vault } from "@sheetal/platform/auth/vault";
 import { aiFor, compareListings, type AiClient } from "@sheetal/backend-core/lib/ai";
 import { requireAskAi } from "@sheetal/backend-core/domain/ai-features";
 import { listingCard, mediaBase } from "../catalog/present.js";

@@ -4,7 +4,7 @@
 // Usage: npm run listings:codes -- [--dry-run]   (--dry-run only lists what would change)
 // Safe to run again: a business that already has a prefix is left as it is.
 import { PrismaClient } from "@prisma/client";
-import { loadConfig, loadEnvFiles } from "../src/config.js";
+import { loadConfig, loadEnvFiles } from "@sheetal/platform/core/config";
 import { initialsOf, recodeListings } from "../src/domain/codes.js";
 
 loadEnvFiles();

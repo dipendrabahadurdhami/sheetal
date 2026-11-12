@@ -9,7 +9,7 @@
 
 import { writeFileSync } from "node:fs";
 import { PrismaClient, type Prisma } from "@prisma/client";
-import { loadConfig, loadEnvFiles } from "../src/config.js";
+import { loadConfig, loadEnvFiles } from "@sheetal/platform/core/config";
 
 loadEnvFiles();
 const config = loadConfig(process.env, "website");

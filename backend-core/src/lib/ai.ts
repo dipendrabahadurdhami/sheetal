@@ -10,9 +10,9 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
-import type { Db } from "./db.js";
-import { Vault } from "./vault.js";
-import { AppError } from "./errors.js";
+import type { Db } from "@sheetal/platform/db/client";
+import { Vault } from "@sheetal/platform/auth/vault";
+import { AppError } from "@sheetal/platform/core/errors";
 
 export const DEFAULT_MODEL = "claude-opus-5-5";
 export const AI_CREDITS: Record<string, number> = { Starter: 500, Business: 2000, Pro: 6000 }; // mirrors shared/src/core/plans.js

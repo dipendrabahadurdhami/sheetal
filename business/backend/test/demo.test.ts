@@ -1,5 +1,5 @@
 // Tests for "Try the demo" on the business API (stage 1.2; FRONTEND-KIT.md section 8).
-// Where it fits: runs with the business API tests (needs the throwaway PostgreSQL from backend-core/test/setup-db.ts): npm run test -w @sheetal/business-api
+// Where it fits: runs with the business API tests (needs the throwaway PostgreSQL from platform/test/setup-db.ts): npm run test -w @sheetal/business-api
 // How it works: a real business API. A visitor starts a demo over HTTP, uses the token on the kit pages, and is refused everywhere that reaches outside.
 // The cleanup is called with a clock one day ahead. A normal business next to the demo proves isolation and that cleanup never touches real data.
 // Rules: a demo is fenced by an allow-list; its sample rows are its own; cleanup deletes only demo businesses whose time is up, and only demo users.
@@ -7,9 +7,9 @@ import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type {} from "@sheetal/backend-core/test/setup-db";
+import type {} from "@sheetal/platform/test/setup-db";
 import type { FastifyInstance } from "fastify";
-import { loadConfig } from "@sheetal/backend-core/config";
+import { loadConfig } from "@sheetal/platform/core/config";
 import { PLANS } from "@sheetal/backend-core/domain/plans";
 import { createWorkspace } from "@sheetal/backend-core/modules/accounts/workspace";
 import { createSession } from "@sheetal/backend-core/modules/auth/sessions";

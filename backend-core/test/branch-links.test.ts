@@ -5,6 +5,7 @@
 // How it works: each test runs inside one database transaction that is rolled back at the end, so the shared test database
 // is left exactly as it was. All statements are plain SQL on the real tables.
 // Rules: the backfill is read from the migration file, never copied here, so the test checks what will really run.
+import type {} from "@sheetal/platform/test/setup-db";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { PrismaClient, type Prisma } from "@prisma/client";

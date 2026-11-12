@@ -11,8 +11,8 @@
 
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { forbidden, notFound } from "@sheetal/backend-core/lib/errors";
+import { dbOf } from "@sheetal/platform/db/client";
+import { forbidden, notFound } from "@sheetal/platform/core/errors";
 import { requireUser } from "@sheetal/backend-core/modules/auth/sessions";
 import { buildStaffContext } from "@sheetal/platform/tenancy/context";
 import { endSupportSession, startSupportSession } from "@sheetal/platform/support/sessions";

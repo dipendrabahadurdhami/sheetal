@@ -8,13 +8,13 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import { syncCovered } from "@sheetal/backend-core/domain/billing";
 import type { Prisma, TenantStatus } from "@prisma/client";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { badRequest, conflict, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
-import { newToken, sha256 } from "@sheetal/backend-core/lib/secrets";
+import { dbOf } from "@sheetal/platform/db/client";
+import { badRequest, conflict, forbidden, notFound } from "@sheetal/platform/core/errors";
+import { newToken, sha256 } from "@sheetal/platform/auth/secrets";
 import { requireUser, revokeAllSessions, type SessionUser } from "@sheetal/backend-core/modules/auth/sessions";
 import { BUSINESS_TYPES, hasPerm, PLATFORM_ROLES } from "@sheetal/backend-core/domain/permissions";
 import { createWorkspace } from "@sheetal/backend-core/modules/accounts/workspace";
-import { notify } from "@sheetal/backend-core/lib/notify";
+import { notify } from "@sheetal/platform/notify/index";
 
 export interface Staff { user: SessionUser; role: string; can: (perm: string) => boolean }
 

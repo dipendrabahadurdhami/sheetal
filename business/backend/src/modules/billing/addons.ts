@@ -6,8 +6,8 @@
 
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { badRequest, forbidden, notFound } from "@sheetal/backend-core/lib/errors";
+import { dbOf } from "@sheetal/platform/db/client";
+import { badRequest, forbidden, notFound } from "@sheetal/platform/core/errors";
 import { addonCatalog, addonExtras, monthsLeft } from "@sheetal/backend-core/domain/addons";
 import { billingSettings, createAddonInvoice, invoiceNumber, repriceOpenPlanInvoices } from "@sheetal/backend-core/domain/billing";
 import { workspaceOf, type Workspace } from "../access.js";

@@ -3,7 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import sharp from "sharp";
 import { PrismaClient } from "@prisma/client";
-import { loadConfig, loadEnvFiles } from "../src/config.js";
+import { loadConfig, loadEnvFiles } from "@sheetal/platform/core/config";
 
 loadEnvFiles();
 const config = loadConfig(process.env, "website");

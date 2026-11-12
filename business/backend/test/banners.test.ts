@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import type {} from "@sheetal/backend-core/test/setup-db";
+import type {} from "@sheetal/platform/test/setup-db";
 import type { FastifyInstance } from "fastify";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { deflateSync } from "node:zlib";
-import { loadConfig } from "@sheetal/backend-core/config";
+import { loadConfig } from "@sheetal/platform/core/config";
 import { PLANS } from "@sheetal/backend-core/domain/plans";
 import { applyPayment } from "@sheetal/backend-core/domain/billing";
 import { addDays, today } from "@sheetal/backend-core/domain/promote";

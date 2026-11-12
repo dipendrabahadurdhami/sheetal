@@ -8,9 +8,9 @@
 
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { badRequest, notFound } from "@sheetal/backend-core/lib/errors";
-import { STAFF_FOR, notifyStaff } from "@sheetal/backend-core/lib/notify";
+import { dbOf } from "@sheetal/platform/db/client";
+import { badRequest, notFound } from "@sheetal/platform/core/errors";
+import { STAFF_FOR, notifyStaff } from "@sheetal/platform/notify/index";
 import { workspaceOf, type Workspace } from "../access.js";
 
 export const ticketNo = (seq: number) => `SUP-${String(seq).padStart(4, "0")}`;

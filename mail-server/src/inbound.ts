@@ -9,7 +9,7 @@ import { readFileSync } from "node:fs";
 import { SMTPServer, type SMTPServerAddress, type SMTPServerSession } from "smtp-server";
 import { simpleParser, type AddressObject } from "mailparser";
 import mailauth from "mailauth";
-import type { Db } from "@sheetal/backend-core/lib/db";
+import type { Db } from "@sheetal/platform/db/client";
 import type { MailConfig } from "./config.js";
 
 export interface InboundPayload {

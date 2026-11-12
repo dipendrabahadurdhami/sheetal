@@ -1,14 +1,14 @@
 // Tests for Reviews on the kernel (P1-BE-6): what the move to apps/reviews/backend added. The old review test (branches.test.ts) and the website write test are NOT repeated here.
-// Where it fits: runs with the business API tests (needs the throwaway PostgreSQL started by backend-core/test/setup-db.ts): npm run test -w @sheetal/business-api
+// Where it fits: runs with the business API tests (needs the throwaway PostgreSQL started by platform/test/setup-db.ts): npm run test -w @sheetal/business-api
 // How it works: a real business API with a few people in "Everest Realty" (owner, a Pokhara-only reader, roles with the old and the new permission names) and one more
 // business; calls go through HTTP (app.inject), the database is read straight afterwards to check what was really written.
 // Rules: covers isolation (other business, other branch), unpublished and deleted reviews, the reply audit/event/notification, the old and new permission names, the
 // read-only support session, a stale version (409) and the event rolling back with the reply. Counts of shared tables (audit_logs, event_outbox, notifications) are
 // always filtered by this test's own ids.
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
-import type {} from "@sheetal/backend-core/test/setup-db";
+import type {} from "@sheetal/platform/test/setup-db";
 import type { FastifyInstance } from "fastify";
-import { loadConfig } from "@sheetal/backend-core/config";
+import { loadConfig } from "@sheetal/platform/core/config";
 import { PLANS } from "@sheetal/backend-core/domain/plans";
 import { createWorkspace } from "@sheetal/backend-core/modules/accounts/workspace";
 import { createSession } from "@sheetal/backend-core/modules/auth/sessions";

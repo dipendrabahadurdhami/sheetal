@@ -9,8 +9,8 @@
 import type { FastifyInstance } from "fastify";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { forbidden, notFound } from "@sheetal/backend-core/lib/errors";
+import { dbOf } from "@sheetal/platform/db/client";
+import { forbidden, notFound } from "@sheetal/platform/core/errors";
 import { dayOf, ymd } from "@sheetal/backend-core/domain/money";
 import { holdCutoff, maskBank, nepalDay, nextPayoutOn, payoutNo, payoutSettings } from "@sheetal/backend-core/domain/payouts";
 import { branchView, inView, workspaceOf, type BranchView, type Workspace } from "../access.js";

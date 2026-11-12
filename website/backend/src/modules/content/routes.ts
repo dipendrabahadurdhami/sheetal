@@ -6,8 +6,8 @@
 import type { FastifyInstance } from "fastify";
 import type { BlogCategory, BlogPost, JobPost, Prisma } from "@prisma/client";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { badRequest, notFound } from "@sheetal/backend-core/lib/errors";
+import { dbOf } from "@sheetal/platform/db/client";
+import { badRequest, notFound } from "@sheetal/platform/core/errors";
 import { mediaBase, photoUrl } from "@sheetal/backend-core/lib/photos";
 import { savePrivateFile } from "@sheetal/backend-core/lib/files";
 

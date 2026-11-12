@@ -16,8 +16,8 @@ import { randomBytes } from "node:crypto";
 import { mkdir, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import sharp, { type Metadata } from "sharp";
-import { AppError, badRequest } from "./errors.js";
-import { putObject } from "./storage.js";
+import { AppError, badRequest } from "@sheetal/platform/core/errors";
+import { putObject } from "@sheetal/platform/files/storage";
 
 /** Phones make photos of 5 to 15 MB; they are made much smaller here, so a big upload is fine. */
 export const MAX_PHOTO_BYTES = 20 * 1024 * 1024;

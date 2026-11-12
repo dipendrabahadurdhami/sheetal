@@ -20,9 +20,9 @@ import { existsSync } from "node:fs";
 import { cpus } from "node:os";
 import { join } from "node:path";
 import sharp from "sharp";
-import { loadConfig, loadEnvFiles } from "../src/config.js";
+import { loadConfig, loadEnvFiles } from "@sheetal/platform/core/config";
 import { SIZES, contentTypeOf, formatOf, longSide, renderSize, writeAtomic, type PhotoArea } from "../src/lib/photos.js";
-import { configureStorage, putObject, storageOn } from "../src/lib/storage.js";
+import { configureStorage, putObject, storageOn } from "@sheetal/platform/files/storage";
 
 loadEnvFiles();
 const config = loadConfig(process.env, "website");

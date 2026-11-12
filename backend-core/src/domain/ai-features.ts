@@ -7,8 +7,8 @@
 // Rules: Ask AI on the website has no plan (visitors), so it is one switch for everyone (askAi).
 
 import type { Prisma } from "@prisma/client";
-import type { Db } from "../lib/db.js";
-import { AppError } from "../lib/errors.js";
+import type { Db } from "@sheetal/platform/db/client";
+import { AppError } from "@sheetal/platform/core/errors";
 import { AI_CREDITS, type AiSettings } from "../lib/ai.js";
 
 /** Tools a business gets by plan. */

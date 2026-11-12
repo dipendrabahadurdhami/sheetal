@@ -7,6 +7,7 @@
 // Rules: the lists and the permission rule are read from the real files (generated catalog, platform aliases.ts, shared rbac.js);
 // nothing is copied here. The owners-report query is read from check-branch-links.mjs between its marker lines.
 // Run with: npm run test -w @sheetal/backend-core
+import type {} from "@sheetal/platform/test/setup-db";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { PrismaClient, type Prisma } from "@prisma/client";

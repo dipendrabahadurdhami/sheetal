@@ -3,8 +3,8 @@
 // How it works: starts the SMTP listener and two senders that look at their queues every few seconds; stops cleanly.
 
 import pino from "pino";
-import { loadEnvFiles } from "@sheetal/backend-core/config";
-import { createDb } from "@sheetal/backend-core/lib/db";
+import { loadEnvFiles } from "@sheetal/platform/core/config";
+import { createDb } from "@sheetal/platform/db/client";
 import { loadMailConfig } from "./config.js";
 import { apiHandOff, createInboundServer } from "./inbound.js";
 import { OutboundWorker } from "./outbound.js";

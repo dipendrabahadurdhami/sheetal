@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 // Brings in the test database declaration (inject("databaseUrl")).
-import type {} from "@sheetal/backend-core/test/setup-db";
+import type {} from "@sheetal/platform/test/setup-db";
 import type { FastifyInstance } from "fastify";
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { loadConfig } from "@sheetal/backend-core/config";
+import { loadConfig } from "@sheetal/platform/core/config";
 import { buildApp } from "../src/app.js";
 
 let app: FastifyInstance;

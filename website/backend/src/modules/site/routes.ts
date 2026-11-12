@@ -6,7 +6,7 @@
 // Rules: nothing secret ever goes out here; keys and tokens (Maps, WhatsApp, Cloudflare) are not part of this answer.
 
 import type { FastifyInstance } from "fastify";
-import { dbOf } from "@sheetal/backend-core/lib/db";
+import { dbOf } from "@sheetal/platform/db/client";
 import { publicSite } from "@sheetal/backend-core/domain/platform";
 import { PLATFORM_ROLES } from "@sheetal/backend-core/domain/permissions";
 import { requireUser } from "@sheetal/backend-core/modules/auth/sessions";

@@ -16,7 +16,7 @@ import { DEMO_EMAIL_DOMAIN } from "@sheetal/platform/demo/guard";
 import { BUSINESS_TYPES, type BusinessType } from "@sheetal/backend-core/domain/permissions";
 import { createWorkspace } from "@sheetal/backend-core/modules/accounts/workspace";
 import { createSession } from "@sheetal/backend-core/modules/auth/sessions";
-import { newToken } from "@sheetal/backend-core/lib/secrets";
+import { newToken } from "@sheetal/platform/auth/secrets";
 
 export const DEMO_HOURS = 24;
 export const DEMO_TYPES = BUSINESS_TYPES;

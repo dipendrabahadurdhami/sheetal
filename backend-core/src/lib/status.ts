@@ -2,7 +2,7 @@
 // How it works: checks the database and the cache and reports their state and speed.
 
 import type { Cache } from "./cache.js";
-import { pingDb, type Db } from "./db.js";
+import { pingDb, type Db } from "@sheetal/platform/db/client";
 
 export type ServiceState = "up" | "down" | "off";
 export interface ServiceStatus { id: string; name: string; state: ServiceState; ms: number | null; detail?: string }

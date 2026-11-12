@@ -6,7 +6,7 @@
 // the old call with branch NAMES still works until `scopes` is frozen. worksAt() itself now lives in platform/src/tenancy/works-at.ts
 // and is re-exported from here.
 
-import type { Db } from "../lib/db.js";
+import type { Db } from "@sheetal/platform/db/client";
 
 /** The business's first open branch (its head office), or null for a business without one. */
 export async function headOffice(db: Db, tenantId: string): Promise<string | null> {

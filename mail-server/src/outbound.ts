@@ -8,8 +8,8 @@
 import { promises as nodeDns } from "node:dns";
 import { randomUUID } from "node:crypto";
 import nodemailer from "nodemailer";
-import type { Db } from "@sheetal/backend-core/lib/db";
-import { Vault } from "@sheetal/backend-core/lib/vault";
+import type { Db } from "@sheetal/platform/db/client";
+import { Vault } from "@sheetal/platform/auth/vault";
 import type { MailConfig } from "./config.js";
 
 export interface MxResolver { resolveMx(domain: string): Promise<{ exchange: string; priority: number }[]> }

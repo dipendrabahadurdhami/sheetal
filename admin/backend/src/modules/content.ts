@@ -8,12 +8,12 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { badRequest, notFound } from "@sheetal/backend-core/lib/errors";
+import { dbOf } from "@sheetal/platform/db/client";
+import { badRequest, notFound } from "@sheetal/platform/core/errors";
 import { mediaBase, photoUrl, savePhoto } from "@sheetal/backend-core/lib/photos";
 import { readPrivateFile } from "@sheetal/backend-core/lib/files";
 import { htmlText, sanitizeHtml } from "@sheetal/backend-core/lib/html";
-import { notify } from "@sheetal/backend-core/lib/notify";
+import { notify } from "@sheetal/platform/notify/index";
 import { staffOf } from "./routes.js";
 
 const slugify = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || "post";

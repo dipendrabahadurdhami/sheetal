@@ -6,11 +6,11 @@
 import type { FastifyInstance } from "fastify";
 import type { ListingStatus, Prisma } from "@prisma/client";
 import { z } from "zod";
-import { dbOf } from "@sheetal/backend-core/lib/db";
-import { badRequest, notFound } from "@sheetal/backend-core/lib/errors";
+import { dbOf } from "@sheetal/platform/db/client";
+import { badRequest, notFound } from "@sheetal/platform/core/errors";
 import { mediaBase, photoUrl } from "@sheetal/backend-core/lib/photos";
 import { FIRST_CHECKUP_DAYS } from "@sheetal/backend-core/domain/listings";
-import { notify } from "@sheetal/backend-core/lib/notify";
+import { notify } from "@sheetal/platform/notify/index";
 import { staffOf } from "./routes.js";
 
 const STATUSES = ["pending", "published", "rejected", "paused", "draft", "sold", "rented", "archived"] as const;
