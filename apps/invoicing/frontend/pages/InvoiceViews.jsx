@@ -1,29 +1,25 @@
-// Customer invoices (drafts, credit notes, receipts, printable PDF) and payouts.
-// Where it fits: Business → Customer invoices. InvoicesView is the one screen: Invoices below runs it on the sample
-// workspace (data kept in the browser, marked Preview), and LiveMoney.jsx runs it on the business API, passing the
-// actions that talk to the server.
-// How it works: an "actions" object does every change (save, send, pay, cancel, credit, delete, import) and shows its
-// own message; the screen waits for it and only closes a form when it worked. Server invoices bring their own totals
-// (inv.t, worked out on the server); sample ones are worked out here.
-// Rules: the screen never works out money for a server invoice, except the preview inside the editor.
+// The Customer invoices screen (drafts, credit notes, receipts, printable PDF) and the Payouts screen, on the business API.
+// Where it fits: Business → Customer invoices and Payouts. Moved here from business/frontend/src/pages/Money.jsx in P2-W6. InvoicesPage.jsx runs
+// InvoicesView with the actions that talk to the server; the panel's LiveMoney.jsx passes the business's settings (`settings`: receipt texts,
+// payment set-up) and PayoutsView's data.
+// How it works: an "actions" object does every change (save, send, pay, cancel, credit, delete, import) and shows its own message; the screen waits
+// for it and only closes a form when it worked. Server invoices bring their own totals (inv.t, worked out on the server).
+// Rules: the screen never works out money for a server invoice, except the preview inside the editor (invoiceMath.js).
 
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { DataActions, exportCSV } from "@sheetal/shared/components/DataIO";
-import { DeleteConfirm, useUndo, restoreAt } from "@sheetal/shared/components/Crud";
+import { DeleteConfirm } from "@sheetal/shared/components/Crud";
 import { useT } from "@sheetal/shared/core/i18n";
-import { useStore } from "@sheetal/shared/core/store";
 import { fdate, rs, TODAY } from "@sheetal/shared/core/format";
-import { Badge, Button, Drawer, Empty, Field, Input, Modal, PageHead, Seg, Select, Stat, StatusBadge, Table, Tabs, Textarea, ToggleRow, useToast } from "@sheetal/shared/core/ui";
+import { Badge, Button, Drawer, Empty, Field, Input, Modal, PageHead, Seg, Select, Stat, StatusBadge, Table, Tabs, Textarea, ToggleRow, useToast } from "@sheetal/ui/primitives";
 import { Icon } from "@sheetal/shared/core/icons";
-import { defaultTenantSettings } from "./BusinessSettings";
 import { Link } from "@sheetal/shared/core/router";
-import { Counter } from "./ListingWizard";
-import { addDays, invoicesOf, invoiceFromRow, invoiceRow, nextNo, totals as sampleTotals } from "@sheetal/shared/demo/money";
+import { addDays, invoiceRow, nextNo, totals as sampleTotals } from "../invoiceMath.js";
 
 const DAY = TODAY.slice(0, 10);
 const ST = { draft: ["neutral", "Draft", "file-pen"], unpaid: ["progress", "Sent", "send"], partly: ["progress", "Part paid", "clock"], overdue: ["action", "Overdue", "circle-alert"], paid: ["done", "Paid", "check"], credit: ["neutral", "Credit note", "rotate-ccw"], cancelled: ["problem", "Cancelled", "ban"] };
-// Totals of an invoice: the server's own when it has them, else worked out from the lines (sample invoices, the editor).
+// Totals of an invoice: the server's own when it has them, else worked out from the lines (the editor's preview).
 const T = (inv) => inv.t || sampleTotals(inv);
 // draft | cancelled | credit | paid | partly | overdue | unpaid
 export function statusOf(inv) {
@@ -42,52 +38,12 @@ const QUICK = ["Room night", "Breakfast", "Airport pickup", "Service fee", "Cons
 /** A draft opened for editing: its own copy, without the totals the server worked out for the old lines. */
 const draftCopy = (inv) => { const c = structuredClone(inv); delete c.t; return c; };
 
-function useMoney(tenant) {
-  const { db, update } = useStore();
-  const list = invoicesOf(db, tenant.id);
-  const set = (fn) => update((d) => { d.money = d.money || {}; d.money[tenant.id] = d.money[tenant.id] || {}; if (!d.money[tenant.id].invoices) d.money[tenant.id].invoices = invoicesOf(d, tenant.id); fn(d.money[tenant.id].invoices); });
-  return [list, set];
-}
 
-/** The sample workspace: invoices live in the browser. */
-export function Invoices({ tenant }) {
-  const toast = useToast();
-  const undo = useUndo();
-  const [list, setList] = useMoney(tenant);
-  const actions = {
-    save: (inv, send) => {
-      const { isNew, ...x } = inv;
-      setList((l) => { const i = l.findIndex((y) => y.id === x.id); const rec = { ...x, status: send ? "sent" : "draft", ...(send ? { sentOn: DAY } : {}) }; if (i >= 0) l[i] = rec; else l.unshift(rec); });
-      toast(send ? `${x.id} sent to ${x.to}` : "Draft saved");
-      return x.id;
-    },
-    send: (inv) => { setList((l) => { Object.assign(l.find((y) => y.id === inv.id), { status: "sent", sentOn: DAY }); }); toast(`${inv.id} sent to ${inv.to}`); },
-    pay: (inv, r) => {
-      setList((l) => { const x = l.find((y) => y.id === inv.id); x.receipts = [...(x.receipts || []), { id: nextNo(l.flatMap((y) => y.receipts || []), "RC-"), ...r }]; });
-      toast("Payment recorded. Receipt ready to print or send.");
-    },
-    cancel: (inv, reason) => {
-      setList((l) => { Object.assign(l.find((y) => y.id === inv.id), { status: "cancelled", cancelReason: reason, cancelledOn: DAY }); });
-      undo(`${inv.id} cancelled`, () => setList((l) => { const x = l.find((y) => y.id === inv.id); x.status = inv.status; delete x.cancelReason; delete x.cancelledOn; }));
-    },
-    credit: (inv, lines, reason) => {
-      const id = nextNo(list, "CN-");
-      setList((l) => { l.unshift({ id, kind: "credit", creditFor: inv.id, reason, to: inv.to, phone: inv.phone, pan: inv.pan, order: inv.order, date: DAY, due: DAY, vatPct: inv.vatPct, status: "sent", lines, receipts: [] }); });
-      toast(`Credit note ${id} issued against ${inv.id}`);
-      return id;
-    },
-    remove: (x) => setList((l) => { l.splice(l.findIndex((y) => y.id === x.id), 1); }),
-    restore: (x) => setList((l) => { restoreAt(l, x, 0); }),
-    importRows: (r) => setList((l) => { r.forEach((x) => l.unshift(invoiceFromRow(x, l))); }),
-  };
-  return <InvoicesView tenant={tenant} list={list} actions={actions} />;
-}
 
-export function InvoicesView({ tenant, list, actions, branches }) {
+export function InvoicesView({ tenant, list, actions, branches, settings }) {
   const t = useT();
   const toast = useToast();
-  const { db } = useStore();
-  const ts = db.tenantSettings[tenant.id] || defaultTenantSettings(tenant);
+  const ts = settings;
   const [tab, setTab] = useState("all");
   const [openId, setOpenId] = useState(null);
   const [edit, setEdit] = useState(null);
@@ -343,15 +299,14 @@ function PrintDoc({ doc, inv, receipt, biz, onDone }) {
     </div>, document.body);
 }
 
-/** Payouts, on the sample workspace (no data) or from the server: LivePayouts in LiveMoney.jsx passes "data" (what the
+/** Payouts from the server: LivePayouts in LiveMoney.jsx passes "data" (what the
  *  payouts API sent) and "actions" (lines of one payout, the statement download). Read-only: Sheetal makes and sends payouts. */
-export function PayoutsView({ tenant, data, actions }) {
+export function PayoutsView({ tenant, data, actions, settings }) {
   const t = useT();
   const toast = useToast();
-  const { db } = useStore();
   const [open, setOpen] = useState(null);
   const [lines, setLines] = useState(null);
-  const ts = db.tenantSettings[tenant.id] || defaultTenantSettings(tenant);
+  const ts = settings;
   const own = data ? data.mode === "own" : ts.payments.mode === "own";
   const bank = (data ? data.bank.bank : ts.payments.payoutBank.bank) || "your bank";
   const rows = data?.payouts || [];
@@ -406,6 +361,13 @@ export function PayoutsView({ tenant, data, actions }) {
   );
 }
 
-export function Payouts({ tenant }) {
-  return <PayoutsView tenant={tenant} data={null} />; // the sample workspace has no payouts; the live page is in LiveMoney.jsx
+/** A − n + counter (the same control as the listing wizard's). */
+function Counter({ value, min = 0, max = 99, onChange, label }) {
+  return (
+    <div className="pf-counter" role="group" aria-label={label}>
+      <button type="button" aria-label={`${label} −`} disabled={value <= min} onClick={() => onChange(Math.max(min, value - 1))}><Icon name="minus" size={16} /></button>
+      <b className="tnum" aria-live="polite">{value}</b>
+      <button type="button" aria-label={`${label} +`} disabled={value >= max} onClick={() => onChange(Math.min(max, value + 1))}><Icon name="plus" size={16} /></button>
+    </div>
+  );
 }

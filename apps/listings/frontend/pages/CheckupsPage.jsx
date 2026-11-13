@@ -1,14 +1,14 @@
 // Listing check-ups for signed-in businesses: today's few listings for each reviewer, the changes waiting for a
 // decision, who reviewed what, and the owner's settings per branch.
-// Where it fits: Business → Listing check-ups (ListingCheckups.jsx shows this when the business is on the server).
+// Where it fits: Business → Listing check-ups. Moved here from business/frontend/src/pages/LiveCheckups.jsx in P2-W6 (ListingCheckups.jsx is the shim).
 // How it works: everything comes from the business API (modules/reviews/checkups.ts) for the branch picked at the top.
 // "All correct" and "Skip" keep the listing on the website; a change takes it off for the day until it is decided.
 
 import React, { useEffect, useState } from "react";
 import { useStore } from "@sheetal/shared/core/store";
-import { Badge, Button, Checkbox, Drawer, Empty, Field, Input, PageHead, Panel, Seg, Tabs, useToast } from "@sheetal/shared/core/ui";
+import { Badge, Button, Checkbox, Drawer, Empty, Field, Input, PageHead, Panel, Seg, Tabs, useToast } from "@sheetal/ui/primitives";
 import { Icon } from "@sheetal/shared/core/icons";
-import { bizApi } from "../api";
+import { bizApi } from "@sheetal/sdk/client";
 
 const FIELDS = [["price", "Price (Rs.)"], ["status", "Status"], ["title", "Title"], ["propertyType", "Property type"], ["bedrooms", "Bedrooms"], ["bathrooms", "Bathrooms"], ["area", "Area"], ["district", "District"],
   ["landArea", "Land area"], ["builtArea", "Built-up area"], ["roadAccess", "Road"], ["facing", "Facing"], ["furnishing", "Furnishing"], ["parking", "Parking"]];

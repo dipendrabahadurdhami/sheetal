@@ -2,7 +2,7 @@
   "name": "@sheetal/app-listings",
   "private": true,
   "version": "0.1.0",
-  "description": "Listings app: manifest and backend on the kernel (P2-W5)",
+  "description": "Listings app: manifest and backend on the kernel (P2-W5); screens on the kit (P2-W6)",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -10,7 +10,8 @@
   "exports": {
     "./backend": "./backend/index.ts",
     "./backend/*": "./backend/*.ts",
-    "./manifest": "./app.manifest.ts"
+    "./manifest": "./app.manifest.ts",
+    "./frontend": "./frontend/index.js"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",

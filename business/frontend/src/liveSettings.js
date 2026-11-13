@@ -4,7 +4,7 @@
 // How it works: loads the open business's saved settings into db.tenantSettings (over the defaults), the check-up
 // settings and history into db.checkups, and the options staff set in Admin → Listing setup into db.catalog. It also
 // connects the shared check-up card and Import / Export buttons to the business API, for businesses on the server.
-// Rules: sample workspaces (not on the server) keep working in the browser as before.
+// Rules: the panel keeps only a read copy here (the shell, forms and invoices read it); the Settings page loads and saves on its own.
 
 import { useEffect } from "react";
 import { useStore } from "@sheetal/shared/core/store";
@@ -13,7 +13,7 @@ import { registerCheckupSync } from "@sheetal/shared/components/CheckupCard";
 import { registerDataServer } from "@sheetal/shared/components/DataIO";
 import { bizApi, setActiveTenant } from "./api";
 import { isLive, workRefresh } from "./live";
-import { defaultTenantSettings, mergeSettings } from "./pages/BusinessSettings";
+import { defaultTenantSettings, mergeSettings } from "@sheetal/app-workspace/frontend/settingsModel";
 
 let settingsReload = null;
 /** Loads the open business's settings and check-up history again (after a check-up or a save). */

@@ -1,13 +1,12 @@
 // Customer invoices on the business API: loads the list, and saves, sends, pays, cancels, credits, deletes and imports through the server.
-// Where it fits: Business → Customer invoices. business/frontend/src/pages/LiveMoney.jsx renders it as LiveInvoices and passes in the screen itself (`View`,
-// InvoicesView from Money.jsx), which the sample workspace also uses until it is removed (Phase 2, wave 6). Moved here in P2-W3, on the kit.
+// Where it fits: Business → Customer invoices. business/frontend/src/pages/LiveMoney.jsx renders it as LiveInvoices and passes in the screen itself (`View`:
+// this app's InvoicesView (pages/InvoiceViews.jsx, since P2-W6) given the business's settings). Moved here in P2-W3, on the kit.
 // How it works: useApiGet loads GET /invoices again when the business, the branch picked at the top, or a change happen. Every call shows the server's
 // message; a failure keeps the form open. A draft save sends the version it was loaded with; a stale one (409) reloads the list.
 // Rules: the server works out every total, number and balance; this page never does money sums of its own.
 
 import React, { useEffect } from "react";
 import { TODAY } from "@sheetal/shared/core/format";
-import { useStore } from "@sheetal/shared/core/store";
 import { useToast } from "@sheetal/ui/primitives";
 import { bizApi } from "@sheetal/sdk/client";
 import { useApiGet } from "@sheetal/sdk/hooks";
@@ -28,7 +27,6 @@ export const draftBody = (f) => ({
 export function InvoicesPage({ tenant, View }) {
   const toast = useToast();
   const br = useBranch();
-  const { db } = useStore();
   const { data, error, refresh: reload } = useApiGet("/invoices");
   useEffect(() => { if (error) toast(error.message); }, [error, toast]);
   const today = TODAY.slice(0, 10);
@@ -52,7 +50,7 @@ export function InvoicesPage({ tenant, View }) {
   };
 
   // With several branches and "All branches" picked, a new invoice asks which branch it is for.
-  const open = (db.branches?.[tenant.id] || []).filter((b) => b.status === "open");
+  const open = (useApiGet("/branches").data?.branches || []).filter((b) => b.status === "open");
   const branches = br?.branch === "all" && open.length > 1 ? open.map((b) => ({ id: b.id, label: b.name })) : null;
 
   const list = data ? data.map(toInv) : error ? [] : null;

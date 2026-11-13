@@ -13,9 +13,12 @@ import "@sheetal/shared/styles/platform.css";
 
 import { themeAttr, useSharedTheme } from "@sheetal/shared/core/theme";
 
+const UI_KEYS = ["session", "drafts"];
+
 export default function App() {
   return (
-    <StoreProvider>
+    // Only UI state is kept in the browser (who is signed in to which business, open drafts); business data always comes from the API (P2-W6).
+    <StoreProvider storageKey="sheetal_business_ui" keep={UI_KEYS}>
       <Frame />
     </StoreProvider>
   );

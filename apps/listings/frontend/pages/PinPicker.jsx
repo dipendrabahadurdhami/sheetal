@@ -4,7 +4,7 @@
 import React, { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Button } from "@sheetal/shared/core/ui";
+import { Button } from "@sheetal/ui/primitives";
 import { Icon } from "@sheetal/shared/core/icons";
 import { showsExactLocation } from "@sheetal/shared/data/catalog";
 
