@@ -6,3 +6,4 @@
 export * from "./client.js";
 export * from "./hooks.js";
 export * from "./support.js";
+export * from "./branchAccess.js";

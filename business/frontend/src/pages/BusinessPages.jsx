@@ -1,9 +1,11 @@
 // Overview dashboard, and the Team and Roles hubs.
-// How it works: the team screen uses the shared TeamPanel; signed in, its actions go to the business API. Roles: signed in = LiveRoles (new permission
+// How it works: signed in, Members is the Workspace app's TeamPage (apps/workspace/frontend, P2-W6) and Roles its RolesPage (via LiveRoles); the
+// sample workspace keeps the shared TeamPanel on browser storage until the sample is removed. Roles: signed in = LiveRoles (new permission
 // names with scopes, from the app manifests); the sample workspace = the old shared RoleEditor.
 
 import { SetupPanel } from "./Setup";
-import { isLive, liveTeam } from "../live";
+import { isLive, liveRefresh } from "../live";
+import { TeamPage } from "@sheetal/app-workspace/frontend";
 import React from "react";
 import { useT } from "@sheetal/shared/core/i18n";
 import { useStore, uid } from "@sheetal/shared/core/store";
@@ -12,7 +14,7 @@ import { fdate, inDays, TODAY } from "@sheetal/shared/core/format";
 import { can, permsForTypes } from "@sheetal/shared/core/rbac";
 import { typesFor } from "@sheetal/shared/core/plans";
 import { checkupsOf, todaysList } from "@sheetal/shared/data/checkups";
-import { Badge, Button, PageHead, Panel, Stat, Tabs, useToast } from "@sheetal/shared/core/ui";
+import { Badge, Button, PageHead, Panel, Stat, Tabs } from "@sheetal/shared/core/ui";
 import { People } from "./Workspace";
 import { LivePeople } from "./LivePeople";
 import { useBranch } from "@sheetal/shared/core/branch";
@@ -21,7 +23,6 @@ import { Icon } from "@sheetal/shared/core/icons";
 import { TeamPanel } from "@sheetal/shared/components/TeamPanel";
 import { RoleEditor } from "@sheetal/shared/components/RoleEditor";
 import { LiveRoles } from "./LiveRoles";
-import { worksAt } from "../access/branchAccess";
 
 const KPIS = {
   hotel: [["kpi.occupancy", "79%", "kpi.occupancyNote"], ["kpi.revenueMonth", "Rs. 3.12 Lakh", "kpi.vsLast"], ["kpi.arrivals", "3", "kpi.arrivalsNote"], ["kpi.rating", "4.7", "kpi.ratingNote"]],
@@ -107,18 +108,34 @@ export function TeamHub({ tenant, role, start = "members" }) {
 }
 
 export function BusinessTeam({ tenant, role, embedded }) {
+  // Signed in: the Workspace app's Team page (apps/workspace/frontend, P2-W6) loads and changes the team on the server itself.
+  if (isLive(tenant.id)) return <LiveTeam tenant={tenant} role={role} embedded={embedded} />;
+  return <SampleTeam tenant={tenant} role={role} embedded={embedded} />;
+}
+
+function LiveTeam({ tenant, role, embedded }) {
+  const { db } = useStore();
+  const plan = db.plans.find((p) => p.id === tenant.planId);
+  return (
+    <>
+      {!embedded && <PageHeadT k="team" />}
+      <TeamPage tenant={tenant} groups={permsForTypes(typesFor(tenant, plan))} planName={plan?.name} onChanged={liveRefresh}
+        canManage={can(role, "workspace.team.read+workspace.team.invite+workspace.team.update+workspace.team.remove")} />
+    </>
+  );
+}
+
+/** The sample workspace's team (browser storage only). */
+function SampleTeam({ tenant, role, embedded }) {
   const { db, update } = useStore();
-  const toast = useToast();
-  // Signed in: branch access is sent and filtered by branch ID (access/branchAccess.js); the screen still shows the names.
-  const live = isLive(tenant.id) ? liveTeam(toast, db.branches?.[tenant.id] || []) : null;
   const plan = db.plans.find((p) => p.id === tenant.planId);
   const tid = tenant.id;
-  const { branch, branchId } = useBranch();
+  const { branch } = useBranch();
   const log = (d, what) => { (d.activity[tid] = d.activity[tid] || []).unshift({ id: uid("a"), who: d.session.userName, what, at: new Date().toISOString() }); };
   return (
     <>
       {!embedded && <PageHeadT k="team" />}
-      <TeamPanel members={(db.members[tid] || []).filter((m) => (live ? worksAt(m, branchId, branch) : branch === "all" || m.scopes === "all" || m.scopes.includes(branch)))} invites={db.invites[tid] || []} roles={db.tenantRoles[tid]} groups={permsForTypes(typesFor(tenant, plan))}
+      <TeamPanel members={(db.members[tid] || []).filter((m) => branch === "all" || m.scopes === "all" || m.scopes.includes(branch))} invites={db.invites[tid] || []} roles={db.tenantRoles[tid]} groups={permsForTypes(typesFor(tenant, plan))}
         scopes={{ label: useT()(`scope.${tenant.type}`), options: tenant.scopes }} seats={{ limit: plan.limits.seats, plan: plan.name }}
         canManage={can(role, "workspace.team.read+workspace.team.invite+workspace.team.update+workspace.team.remove")} activity={db.activity[tid] || []}
         onInvite={(list) => update((d) => { list.forEach((i) => { (d.invites[tid] = d.invites[tid] || []).unshift({ id: uid("i"), ...i, by: d.session.userName, sent: TODAY, expires: `${inDays(7)}T10:00`, status: "pending" }); log(d, `invited ${i.email}`); }); })}
@@ -128,15 +145,14 @@ export function BusinessTeam({ tenant, role, embedded }) {
         dataKind="team"
         onResend={(id) => update((d) => { Object.assign(d.invites[tid].find((i) => i.id === id), { status: "pending", sent: TODAY, expires: `${inDays(7)}T10:00` }); })}
         onRevoke={(id) => update((d) => { d.invites[tid].find((i) => i.id === id).status = "revoked"; })}
-        {...(live ? { onInvite: live.onInvite, onUpdateMember: live.onUpdateMember, onRemoveMember: live.onRemoveMember, onRestoreMember: live.onRestoreMember, onResend: live.onResend, onRevoke: live.onRevoke } : {})} />
+        />
     </>
   );
 }
 
 export function BusinessRoles({ tenant, role, embedded }) {
   const { db, update } = useStore();
-  const toast = useToast();
-  const live = isLive(tenant.id) ? liveTeam(toast) : null;
+  const live = isLive(tenant.id);
   const tid = tenant.id;
   const plan = db.plans.find((p) => p.id === tenant.planId);
   const counts = {};
@@ -150,7 +166,7 @@ export function BusinessRoles({ tenant, role, embedded }) {
         onCreate={(r) => { const id = uid(`${tid}-role`); update((d) => { d.tenantRoles[tid].push({ id, key: id, system: false, ...r }); }); return id; }}
         onSave={(r) => update((d) => { d.tenantRoles[tid][d.tenantRoles[tid].findIndex((x) => x.id === r.id)] = r; })}
         onDelete={(id) => update((d) => { d.tenantRoles[tid] = d.tenantRoles[tid].filter((x) => x.id !== id); })}
-        {...(live ? { onCreate: live.onCreateRole, onSave: live.onSaveRole, onDelete: live.onDeleteRole } : {})} />
+        />
     </>
   );
 }

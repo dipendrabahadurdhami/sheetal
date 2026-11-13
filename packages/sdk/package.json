@@ -11,6 +11,7 @@
     ".": "./src/index.js",
     "./client": "./src/client.js",
     "./hooks": "./src/hooks.js",
-    "./support": "./src/support.js"
+    "./support": "./src/support.js",
+    "./branchAccess": "./src/branchAccess.js"
   }
 }
