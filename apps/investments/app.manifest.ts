@@ -14,9 +14,16 @@ const manifest = {
   icon: "trending-up",
   category: "money",
   businessTypes: ["sponsor"],
-  trialDays: null,
-  limits: [],
-  editions: [{ id: "free", name: { en: "Free" }, free: true, limits: {}, features: [], price: null }],
+  // Phase 3 (P3-BE-1): first values only. The live values (prices, limits, trial) are the platform.catalog setting, edited in Admin -> Pricing;
+  // prices are in platform/src/billing/catalog.seed.ts, not here.
+  trialDays: 14,
+  limits: [
+    { key: "open_investments", label: { en: "Open investments" }, unit: "count" },
+  ],
+  editions: [
+    { id: "free", name: { en: "Free" }, free: true, limits: { open_investments: 1 }, features: [], price: null },
+    { id: "full", name: { en: "Full" }, free: false, limits: { open_investments: 5 }, features: ["investments.updates"], price: null },
+  ],
   permissions: [
     { id: "investments.offering.read", label: { en: "See investment opportunities" }, scopes: ["branch", "all"], default: "branch", group: "Opportunities" },
     { id: "investments.offering.create", label: { en: "Add investment opportunities" }, scopes: ["branch", "all"], default: "branch", group: "Opportunities" },

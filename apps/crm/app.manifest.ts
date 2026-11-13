@@ -14,9 +14,17 @@ const manifest = {
   icon: "users",
   category: "sales",
   businessTypes: "all",
-  trialDays: null,
-  limits: [],
-  editions: [{ id: "free", name: { en: "Free" }, free: true, limits: {}, features: [], price: null }],
+  // Phase 3 (P3-BE-1): first values only. The live values (prices, limits, trial) are the platform.catalog setting, edited in Admin -> Pricing;
+  // prices are in platform/src/billing/catalog.seed.ts, not here.
+  trialDays: 14,
+  limits: [
+    { key: "leads", label: { en: "Leads" }, unit: "count" },
+    { key: "pipelines", label: { en: "Pipelines" }, unit: "count" },
+  ],
+  editions: [
+    { id: "free", name: { en: "Free" }, free: true, limits: { leads: 100, pipelines: 1 }, features: [], price: null },
+    { id: "full", name: { en: "Full" }, free: false, limits: { leads: null, pipelines: null }, features: ["crm.assignment", "crm.lead_finder"], price: null },
+  ],
   permissions: [
     { id: "crm.lead.read", label: { en: "See leads" }, scopes: ["own", "branch", "all"], default: "branch", group: "Leads", types: ["agency"] },
     { id: "crm.lead.assign", label: { en: "Assign leads" }, scopes: ["branch", "all"], default: "branch", group: "Leads", types: ["agency"] },

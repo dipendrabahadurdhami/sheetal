@@ -14,9 +14,16 @@ const manifest = {
   icon: "users-round",
   category: "people",
   businessTypes: "all",
-  trialDays: null,
-  limits: [],
-  editions: [{ id: "free", name: { en: "Free" }, free: true, limits: {}, features: [], price: null }],
+  // Phase 3 (P3-BE-1): first values only. The live values (prices, limits, trial) are the platform.catalog setting, edited in Admin -> Pricing;
+  // prices are in platform/src/billing/catalog.seed.ts, not here.
+  trialDays: 14,
+  limits: [
+    { key: "staff_records", label: { en: "Staff records" }, unit: "count" },
+  ],
+  editions: [
+    { id: "free", name: { en: "Free" }, free: true, limits: { staff_records: 5 }, features: [], price: null },
+    { id: "full", name: { en: "Full" }, free: false, limits: { staff_records: 50 }, features: ["people.attendance", "people.leave"], price: null },
+  ],
   permissions: [
     { id: "people.person.read", label: { en: "See people, attendance and leave" }, scopes: ["branch", "all"], default: "branch", group: "People" },
     { id: "people.person.create", label: { en: "Add people, attendance and leave" }, scopes: ["branch", "all"], default: "branch", group: "People" },

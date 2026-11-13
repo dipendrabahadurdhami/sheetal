@@ -14,9 +14,16 @@ const manifest = {
   icon: "bed-double",
   category: "hospitality",
   businessTypes: ["hotel", "host"],
-  trialDays: null,
-  limits: [],
-  editions: [{ id: "free", name: { en: "Free" }, free: true, limits: {}, features: [], price: null }],
+  // Phase 3 (P3-BE-1): first values only. The live values (prices, limits, trial) are the platform.catalog setting, edited in Admin -> Pricing;
+  // prices are in platform/src/billing/catalog.seed.ts, not here.
+  trialDays: 14,
+  limits: [
+    { key: "rooms", label: { en: "Rooms" }, unit: "count" },
+  ],
+  editions: [
+    { id: "free", name: { en: "Free" }, free: true, limits: { rooms: 5 }, features: [], price: null },
+    { id: "full", name: { en: "Full" }, free: false, limits: { rooms: 40 }, features: ["hotel.calendar", "hotel.channel_sync"], price: null },
+  ],
   permissions: [
     { id: "hotel.booking.read", label: { en: "See bookings", ne: "बुकिङ हेर्ने" }, scopes: ["branch", "all"], default: "branch", group: "Bookings" },
     { id: "hotel.booking.create", label: { en: "Create manual bookings", ne: "बुकिङ बनाउने" }, scopes: ["branch", "all"], default: "branch", group: "Bookings" },

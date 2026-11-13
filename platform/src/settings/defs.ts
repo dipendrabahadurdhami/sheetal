@@ -2,6 +2,7 @@
 // Where it fits: service.ts reads and writes these; routes.ts lets staff open the ones their role may. A new setting = one entry here.
 // How it works: the form definitions of the field builder are one setting per form ("platform.fieldDefs.<formId>") whose default is the seed, so a form
 // exists before anyone saves it and a new release never overwrites a saved one.
+// Phase 3 (P3-BE-1) adds platform.catalog and platform.billing (the marketplace; platform/src/billing/catalog.ts).
 // Rules: today's rows "platform", "billing", "payments" and "catalog" are NOT here yet: their own screens and readers keep working unchanged, and they move
 // into this store when their screens are redrawn from data (the close-out note lists it). Integration settings are connections, never settings.
 
@@ -10,6 +11,7 @@ import { FORM_SEEDS, FormDef, checkFormChange } from "./field-defs.js";
 import { REVENUE_SHARE_DEFAULT, RevenueShare } from "./revenue-share.js";
 import { THEME_DEFAULT, ThemeTokens, themeProblems } from "./theme-tokens.js";
 import type { SettingDef } from "./types.js";
+import { BILLING_SETTING, CATALOG_SETTING } from "../billing/catalog.js";
 
 export const REVENUE_SHARE: SettingDef<RevenueShare> = {
   key: "platform.revenueShare", scope: "platform", schema: RevenueShare, default: REVENUE_SHARE_DEFAULT, group: "revenue",
@@ -46,7 +48,7 @@ export const formDefSetting = (seed: FormDef): SettingDef<FormDef> => ({
 export const FORM_SETTINGS: readonly SettingDef<FormDef>[] = FORM_SEEDS.map(formDefSetting);
 export const formSetting = (formId: string): SettingDef<FormDef> | null => FORM_SETTINGS.find((d) => d.key === `platform.fieldDefs.${formId}`) ?? null;
 
-export const SETTING_DEFS: readonly SettingDef<never>[] = [REVENUE_SHARE, PLATFORM_THEME, BUSINESS_THEME, BUSINESS_PROFILE, ...FORM_SETTINGS] as unknown as SettingDef<never>[];
+export const SETTING_DEFS: readonly SettingDef<never>[] = [REVENUE_SHARE, PLATFORM_THEME, BUSINESS_THEME, BUSINESS_PROFILE, ...FORM_SETTINGS, CATALOG_SETTING, BILLING_SETTING] as unknown as SettingDef<never>[];
 export const settingOf = (key: string): SettingDef | null => (SETTING_DEFS as unknown as SettingDef[]).find((d) => d.key === key) ?? null;
 
 /** The definitions of one scope, grouped for a screen (no values, no schema). */
