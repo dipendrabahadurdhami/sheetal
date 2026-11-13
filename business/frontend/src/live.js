@@ -3,7 +3,8 @@
 // How it works: loads the person's businesses and role, then the open business's team, branches, listings, leads
 // and unread email (every minute); exports the actions screens call (team, listings, leads, branches, branding,
 // profile, add a business) and reload helpers.
-// Rules: isLive(tenantId) tells a screen whether to use the API or the sample data.
+// Rules: the panel works only on real data (P2-W6: the browser-storage sample workspace is gone). useWorkspaceState() tells the shell whether the
+// person's businesses are loaded ("ready"), still loading, missing ("empty"), signed out (no token or 401) or failed ("error").
 
 import { useCallback, useEffect, useState } from "react";
 import { useStore } from "@sheetal/shared/core/store";
@@ -18,6 +19,16 @@ takeSupportTokenFromUrl();
 
 const liveIds = new Set();
 let reload = null;
+// Where loading the person's businesses stands; the shell shows a sign-in, loading, "add a business" or error page until it is "ready".
+let wsState = "loading";
+const wsListeners = new Set();
+const setWsState = (v) => { wsState = v; wsListeners.forEach((fn) => fn(v)); };
+/** "loading" | "ready" | "empty" | "signed-out" | "error" for the person's businesses. */
+export function useWorkspaceState() {
+  const [v, setV] = useState(wsState);
+  useEffect(() => { wsListeners.add(setV); setV(wsState); return () => { wsListeners.delete(setV); }; }, []);
+  return v;
+}
 /** True when this business comes from the API (its team actions must go through the API). */
 export const isLive = (tenantId) => liveIds.has(tenantId);
 /** Reloads the team of the open business after a change. */
@@ -46,9 +57,9 @@ export function useLiveWorkspace() {
 
   // 1 Who is signed in and which businesses they belong to (again after adding a business).
   const loadWorkspaces = useCallback((open) => {
-    if (!bizApiReady() || !signedIn()) return Promise.resolve();
+    if (!bizApiReady() || !signedIn()) { setWsState("signed-out"); return Promise.resolve(); }
     return bizApi("GET", "/workspaces").then(({ data }) => {
-      if (!data.workspaces.length) return;
+      if (!data.workspaces.length) { setWsState("empty"); return; }
       data.workspaces.forEach((w) => liveIds.add(w.id));
       setKnown((n) => n + 1);
       update((d) => {
@@ -66,7 +77,8 @@ export function useLiveWorkspace() {
           d.activity[w.id] = d.activity[w.id] || [];
         }
       });
-    }).catch(() => { /* not signed in on the API, or it's off: the panel keeps working on its own data */ });
+      setWsState("ready");
+    }).catch((e) => setWsState(e?.status === 401 ? "signed-out" : "error"));
   }, []);
   useEffect(() => { wsReload = loadWorkspaces; loadWorkspaces(); return () => { if (wsReload === loadWorkspaces) wsReload = null; }; }, [loadWorkspaces]);
 
@@ -130,7 +142,7 @@ export const addBusiness = async (body) => {
   await wsReload?.(r.data.id);
   return r;
 };
-/** Reloads the person's businesses (plans, roles) after a change such as joining a Pro plan. */
+/** Loads the person's businesses again (after an error, or a change such as joining a Pro plan). */
 export const workspacesReload = () => wsReload?.();
 /** Whether the panel is signed in to the API (adding a business needs it). */
 export const canAddBusiness = () => bizApiReady() && signedIn();
