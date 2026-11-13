@@ -14,9 +14,16 @@ const manifest = {
   icon: "file-text",
   category: "money",
   businessTypes: "all",
-  trialDays: null,
-  limits: [],
-  editions: [{ id: "free", name: { en: "Free" }, free: true, limits: {}, features: [], price: null }],
+  // Phase 3 (P3-BE-1): first values only. The live values (prices, limits, trial) are the platform.catalog setting, edited in Admin -> Pricing;
+  // prices are in platform/src/billing/catalog.seed.ts, not here.
+  trialDays: 14,
+  limits: [
+    { key: "invoices_per_month", label: { en: "Invoices a month" }, unit: "per_month" },
+  ],
+  editions: [
+    { id: "free", name: { en: "Free" }, free: true, limits: { invoices_per_month: 20 }, features: [], price: null },
+    { id: "full", name: { en: "Full" }, free: false, limits: { invoices_per_month: null }, features: ["invoicing.credit_notes", "invoicing.tax_link"], price: null },
+  ],
   permissions: [
     { id: "invoicing.invoice.read", label: { en: "See invoices and receipts", ne: "बिल र रसिद हेर्ने" }, scopes: ["branch", "all"], default: "branch", group: "Invoices" },
     { id: "invoicing.invoice.create", label: { en: "Create invoices" }, scopes: ["branch", "all"], default: "branch", group: "Invoices" },

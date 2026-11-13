@@ -14,9 +14,16 @@ const manifest = {
   icon: "star",
   category: "growth",
   businessTypes: "all",
-  trialDays: null,
-  limits: [],
-  editions: [{ id: "free", name: { en: "Free" }, free: true, limits: {}, features: [], price: null }],
+  // Phase 3 (P3-BE-1): first values only. The live values (prices, limits, trial) are the platform.catalog setting, edited in Admin -> Pricing;
+  // prices are in platform/src/billing/catalog.seed.ts, not here.
+  trialDays: 14,
+  limits: [
+    { key: "reviews_per_month", label: { en: "Reviews a month" }, unit: "per_month" },
+  ],
+  editions: [
+    { id: "free", name: { en: "Free" }, free: true, limits: { reviews_per_month: 20 }, features: [], price: null },
+    { id: "full", name: { en: "Full" }, free: false, limits: { reviews_per_month: null }, features: ["reviews.replies", "reviews.widgets"], price: null },
+  ],
   permissions: [
     { id: "reviews.review.read", label: { en: "See reviews" }, scopes: ["branch", "all"], default: "branch", group: "Reviews" },
     { id: "reviews.review.reply", label: { en: "Reply to reviews" }, scopes: ["branch", "all"], default: "branch", group: "Reviews" },

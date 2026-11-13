@@ -14,9 +14,17 @@ const manifest = {
   icon: "house",
   category: "property",
   businessTypes: ["agency"],
-  trialDays: null,
-  limits: [],
-  editions: [{ id: "free", name: { en: "Free" }, free: true, limits: {}, features: [], price: null }],
+  // Phase 3 (P3-BE-1): first values only. The live values (prices, limits, trial) are the platform.catalog setting, edited in Admin -> Pricing;
+  // prices are in platform/src/billing/catalog.seed.ts, not here.
+  trialDays: 14,
+  limits: [
+    { key: "listings", label: { en: "Listings" }, unit: "count" },
+    { key: "stays", label: { en: "Stays (homes for short stays)" }, unit: "count" },
+  ],
+  editions: [
+    { id: "free", name: { en: "Free" }, free: true, limits: { listings: 3, stays: null }, features: [], price: null },
+    { id: "full", name: { en: "Full" }, free: false, limits: { listings: 500, stays: null }, features: ["listings.checkups"], price: null },
+  ],
   permissions: [
     { id: "listings.listing.read", label: { en: "See listings" }, scopes: ["branch", "all"], default: "branch", group: "Listings" },
     { id: "listings.listing.create", label: { en: "Add listings" }, scopes: ["branch", "all"], default: "branch", group: "Listings" },
