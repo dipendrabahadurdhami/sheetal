@@ -1,4 +1,4 @@
-# CONTINUE Phase 2: where it stands (13 Nov 2026, Nepal time)
+# CONTINUE Phase 2: where it stands (13 Nov 2026, 22:00 Nepal time)
 
 Stopped at a merged, green boundary. Pattern for every app (follow it exactly): `apps/<app>/backend` on the kernel (repository = only table code, service = rules
 in ONE transaction with audit line + event, controller = HTTP only, `scope.ts` capped in `PHASE_ONE_CAPS`), additive migration with the kernel columns,
@@ -29,15 +29,27 @@ dependency + Vite alias, a source test next to the page. Root `npm test`/`typech
 | W6 | Workspace part 2d: business email (setup audited, support sessions read only) | #53 |
 | W6 | Listing check-ups into apps/listings (with the 15-minute job; first tests for them) | #55 |
 | W6 | Workspace part 2e: growth split by owner (Workspace analytics/channels, CRM lead finder + Meta webhook, Hotel feeds/iCal/other-site requests) | #54 |
+| W6 screens | Inbox -> `apps/crm/frontend/InboxPage` (leads + team from the API, `version` on changes, lead finder passed in as `Finder`) | #57 |
+| W6 screens | Email -> `apps/workspace/frontend/MailPage` (shim passes the top bar's re-count) | #58 |
+| W6 screens | Team -> `TeamPage` (loads /team + /branches itself, branch ids, seat limit from the server) and Roles -> `RolesPage`; `branchAccess` -> `@sheetal/sdk/branchAccess`, `roleGrants` -> apps/workspace/frontend (shims at old paths) | #59 |
+| W6 screens | Branches -> `BranchesPage` (loads /branches + /team itself, `version` on edit and close/reopen; `live.js` `branchesRefresh()`) | #60 |
 
-## Not done yet
-- W1 Rentals follow-ups: paisa columns + backfill; soft delete for owner/unit/payment/statement.
-- W2: Business -> Settings tab per app.
-- W3 follow-up: the invoice screen (`InvoicesView` in Money.jsx) moves into apps/invoicing/frontend when the sample workspace goes (W6).
-- W4 follow-up: the online travel sites are in apps/hotel (#54); a feed sync's booking writes (backend-core `domain/ota.ts`) should still take the
-  room-type hold (`RoomRepository.lockType`).
-- W6 Website API on the kernel where it writes business data; remove the browser-storage sample workspace; delete the last shims.
+## Not done yet (in this order)
+1. **W6 screens still on the panel store:** Listings (`ListingsManager.jsx` + `ListingWizard.jsx`, which keeps its draft in the store's `drafts`, and
+   reads `db.catalog.listingKinds`; `OtaPanel.jsx`), Listing check-ups (`ListingCheckups.jsx`), Business settings (`BusinessSettings.jsx` + `liveSettings.js`),
+   the Overview's sample (`BusinessOverview`). Pattern of #57-#60: the live page goes to `apps/<app>/frontend/pages`, loads its own data with the SDK,
+   sends `version`, gets what the shell knows as props, the old file renders it for `isLive(tenant.id)` and keeps the sample screen until step 3.
+2. W3 follow-up: `InvoicesView` (Money.jsx) into apps/invoicing/frontend.
+3. **Remove the browser-storage sample workspace:** every `isLive(...) ? Live : Sample` in `BusinessApp.jsx` becomes the live page (not signed in = sign-in /
+   "Try the demo"); delete the sample screens (`Sector.jsx`, `Rentals.jsx`, `POS.jsx` sample parts, `Forms.jsx`, `Money.jsx` sample, `Agreements.jsx`, the
+   `Sample*` functions added in #57/#59), `shared/src/demo/*` seed shrinks to session + catalog. The shell still reads `db.tenants/tenantRoles/members/branches`
+   that `live.js` fills: keep `live.js` as the shell's loader, but drop its sample fall-backs. Big: plan it as 2-3 PRs.
+4. W6 Website API on the kernel where it writes business data (enquiries create leads, the sign module, bookings).
+5. Leftovers: a feed sync's booking writes (`domain/ota.ts`) take the room-type hold (`RoomRepository.lockType`); Business -> Settings tab per app;
+   Rentals paisa columns + backfill and soft delete; delete every shim nothing imports; Phase 2 close-out note (like Phase 1's).
 
+Lesson (13 Nov night): after `git merge origin/main` on a stacked branch, run `grep -rn "<<<<<<<"` before committing (#59 needed a fix commit),
+or merge with `-X ours` (the branch already holds main's earlier squash).
 ## Owner steps after these merges
 `RUN-UPDATE` (applies migrations `20261113090000_people_kernel_columns`, `20261113100000_agreements_kernel_columns`, `20261113110000_projects_kernel_columns`,
 `20261113110100_investments_kernel_columns`, `20261113120000_invoicing_kernel_columns`, `20261113130000_pos_kernel_columns`, `20261113140000_hotel_kernel_columns`, `20261113150000_crm_kernel_columns`, `20261113160000_listings_kernel_columns`, `20261113170000_workspace_kernel_columns`; all additive, it backs up first).
