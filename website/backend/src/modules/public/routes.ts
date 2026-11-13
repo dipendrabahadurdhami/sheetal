@@ -17,6 +17,7 @@ import { leadPeople, notify } from "@sheetal/platform/notify/index";
 import { headOffice } from "@sheetal/backend-core/domain/branches";
 import { dayOf, ymd } from "@sheetal/backend-core/domain/money";
 import { listingCard, mediaBase } from "../catalog/present.js";
+import { infoOf, leadIntake } from "../intake.js";
 
 const RUNNING = ["active", "trial", "past_due"];
 const Paging = z.object({ page: z.coerce.number().int().min(1).max(10_000).default(1), per: z.coerce.number().int().min(1).max(50).default(20) });
@@ -64,7 +65,8 @@ export async function publicApiRoutes(app: FastifyInstance) {
     const listing = code ? await db().listing.findFirst({ where: { tenantId: key.tenantId, OR: [{ code }, { oldCodes: { has: code } }] }, select: { id: true, branchId: true } }) : null;
     if (code && !listing) throw badRequest("That listing code isn't one of this business's listings.");
     const branchId = listing?.branchId ?? (await headOffice(db(), key.tenantId));
-    const lead = await db().lead.create({ data: { tenantId: key.tenantId, branchId, listingId: listing?.id, kind: "api", name: b.name, email: b.email || null, phone: b.phone || null, message: b.message, details: { channel: "api", key: key.name } } });
+    // The CRM app writes the lead, its audit line and its event in one transaction (P2-W6).
+    const lead = await leadIntake(app).receive(infoOf(request), { tenantId: key.tenantId, branchId, listingId: listing?.id, kind: "api", name: b.name, email: b.email || null, phone: b.phone || null, message: b.message, details: { channel: "api", key: key.name } }, "api");
     await notify(db(), await leadPeople(db(), key.tenantId, branchId), { tenantId: key.tenantId, type: "lead", title: `New enquiry from ${b.name}`, message: b.message.slice(0, 140), link: "/business/inbox" });
     return { status: 201, message: "Enquiry received.", data: { id: lead.id } };
   });
