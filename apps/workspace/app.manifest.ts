@@ -1,6 +1,6 @@
 // Workspace: the always-on part of every business: overview, team, roles, branches, settings and billing.
 // Where it fits: read as data by scripts/gen-permissions.mjs (permission lists, role templates) and scripts/check-manifests.mjs.
-// How it works: a plain object, declaration only (id, name, icon, business types, permissions, roles, models): branches, business settings and check-ups are in backend/ (P2-W5/W6); the team, overview, import/export, forms, mail and growth move next.
+// How it works: a plain object, declaration only (id, name, icon, business types, permissions, roles, models): branches, business settings and check-ups (P2-W5/W6) and the team (P2-W6 part 2) are in backend/; the overview, import/export, forms, mail and growth move next.
 // Rules: no functions or logic, only "import type" lines; every permission starts with "workspace."; models match the "/// @app workspace" tags in schema.prisma.
 
 import type { AppManifest } from "@sheetal/platform/core/manifest";
@@ -75,6 +75,18 @@ const manifest = {
       { name: "workspace.branch.removed", v: 1, label: "A branch was removed", payload: { id: "id" } },
       { name: "workspace.settings.saved", v: 1, label: "A settings section was saved", payload: { section: "string" } },
       { name: "workspace.checkup.done", v: 1, label: "A listing check-up was recorded", payload: { code: "string", action: "string" } },
+      { name: "workspace.business.created", v: 1, label: "A person added a business they own", payload: { id: "id" } },
+      { name: "workspace.business.covered", v: 1, label: "A business started or stopped being covered by the owner's Pro plan", payload: { on: "boolean" } },
+      { name: "workspace.profile.saved", v: 1, label: "The business profile was saved", payload: { id: "id" } },
+      { name: "workspace.branding.saved", v: 1, label: "The business logo and colours were saved", payload: { id: "id" } },
+      { name: "workspace.invite.sent", v: 1, label: "An invitation was sent (or sent again)", payload: { id: "id" } },
+      { name: "workspace.invite.revoked", v: 1, label: "An invitation was cancelled", payload: { id: "id" } },
+      { name: "workspace.member.joined", v: 1, label: "Someone accepted an invitation", payload: { userId: "id" } },
+      { name: "workspace.member.updated", v: 1, label: "A member's role, status or branches changed", payload: { userId: "id", status: "string" } },
+      { name: "workspace.member.removed", v: 1, label: "A member was removed or left", payload: { userId: "id", left: "boolean" } },
+      { name: "workspace.role.created", v: 1, label: "A role was added", payload: { id: "id" } },
+      { name: "workspace.role.updated", v: 1, label: "A role was changed", payload: { id: "id" } },
+      { name: "workspace.role.deleted", v: 1, label: "A role was deleted", payload: { id: "id" } },
     ],
     consumes: [],
   },
