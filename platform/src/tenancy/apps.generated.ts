@@ -91,6 +91,8 @@ export const APPS: readonly AppManifest[] = [
         { name: "workspace.mailbox.updated", v: 1, label: "A mailbox was renamed, switched on or off, or shared", payload: { id: "id" } },
         { name: "workspace.mailbox.removed", v: 1, label: "A mailbox and its mail were deleted", payload: { id: "id" } },
         { name: "workspace.mail.sent", v: 1, label: "An email was sent", payload: { id: "string", recipients: "number" } },
+        { name: "workspace.channel.connected", v: 1, label: "A WhatsApp, Messenger or Instagram account was connected", payload: { id: "id", kind: "string" } },
+        { name: "workspace.channel.disconnected", v: 1, label: "A chat channel was disconnected", payload: { id: "id" } },
       ],
       consumes: [],
     },
@@ -234,6 +236,8 @@ export const APPS: readonly AppManifest[] = [
     menu: [],
     events: {
       publishes: [
+        { name: "crm.lead.found", v: 1, label: "The AI lead finder added leads", payload: { count: "number" } },
+        { name: "crm.lead.received", v: 1, label: "A chat message came in (WhatsApp, Messenger, Instagram)", payload: { id: "id", channel: "string" } },
         { name: "crm.lead.updated", v: 1, label: "A lead was changed (owner, follow-up, tags, value, read)", payload: { id: "id", stage: "string", assigneeId: "id" } },
         { name: "crm.lead.stage_changed", v: 1, label: "A lead moved to another stage", payload: { id: "id", stage: "string", assigneeId: "id" } },
         { name: "crm.lead.replied", v: 1, label: "Someone replied to a lead", payload: { id: "id", channel: "string" } },
@@ -413,6 +417,11 @@ export const APPS: readonly AppManifest[] = [
     menu: [],
     events: {
       publishes: [
+        { name: "hotel.feed.added", v: 1, label: "Another site's calendar was connected", payload: { id: "id" } },
+        { name: "hotel.feed.synced", v: 1, label: "Another site's calendar was read", payload: { id: "id", added: "number", updated: "number", cancelled: "number" } },
+        { name: "hotel.otarequest.sent", v: 1, label: "Asked Sheetal to sell a stay on another site", payload: { id: "id", channel: "string" } },
+        { name: "hotel.otarequest.replied", v: 1, label: "Answered Sheetal's channel team", payload: { id: "id" } },
+        { name: "hotel.otarequest.paused", v: 1, label: "Asked to stop selling on another site", payload: { id: "id" } },
         { name: "hotel.room.added", v: 1, label: "Rooms were added", payload: { count: "number", type: "string" } },
         { name: "hotel.room.updated", v: 1, label: "A room was changed or cleaned", payload: { id: "id", status: "string" } },
         { name: "hotel.calendar.changed", v: 1, label: "Night prices, closed dates or rules changed", payload: { type: "string" } },
