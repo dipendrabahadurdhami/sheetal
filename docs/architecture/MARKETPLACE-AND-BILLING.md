@@ -22,7 +22,10 @@ editions and free limits per app; website posting free (unverified posters revie
 every app AI-powered (Sheetal AI subscription or own key); two separate payment systems; Sheetal earns a commission on each sale plus a technology
 partner share; every price, limit, trial, legal text and required field is a super admin setting; the public brand is only "Sheetal Property".
 
-The five questions, with my answer used in this document until the owner replies:
+**Answered by the owner on 13 Nov 2026 (20:30 Nepal time): all five recommendations accepted (Q1 per limit, Q2 paid period + 12 months / free 90 days,
+Q3 split per app with partner share as a % of commission, Q4 trial-only AI credits, Q5 VAT included and yearly = 10 months).** The table below is now the decision.
+
+The five questions, with the answer the owner accepted:
 
 | # | Question | My recommendation (used below) | Alternative |
 |---|---|---|---|
@@ -789,7 +792,7 @@ Database guards (CHECK or trigger): statuses and sources are fixed words; `remai
 
 | # | Assumption | Section |
 |---|---|---|
-| 1 | Q1 to Q5 above | 0 |
+| 1 | Q1 to Q5 above (**answered 13 Nov: recommendations accepted**) | 0 |
 | 2 | The three new apps (payroll, accounting, restaurant) and the Promote and Mail apps are shown; payroll is paid-only | 2, 3.4 |
 | 3 | Prices include VAT; yearly = 10 months; free seats = 2; the starting price list | 3.4 |
 | 4 | Billing periods offered: month and year only (old 3 and 6 months are kept for existing subscriptions) | 3.1 |
