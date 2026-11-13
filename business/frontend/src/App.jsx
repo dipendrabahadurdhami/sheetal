@@ -8,7 +8,6 @@ import { RouterProvider, match, useRouter } from "@sheetal/shared/core/router";
 import { ToastProvider } from "@sheetal/shared/core/ui";
 import { config } from "@sheetal/shared/core/config";
 import BusinessApp from "./pages/BusinessApp";
-import { PublicForm } from "./pages/Forms";
 import { AcceptInvite } from "./pages/AcceptInvite";
 import "@sheetal/shared/styles/platform.css";
 
@@ -42,12 +41,12 @@ function Frame() {
   );
 }
 
-// Public forms (/business/f/:slug) and team invitations (/business/accept-invite) open on their own,
-// without the workspace shell (the invited person may not be in any business yet).
+// Team invitations (/business/accept-invite) open on their own, without the workspace shell (the invited person may not be in any business yet).
+// An old public-form link (/business/f/:slug) goes to the website's form page (/f/:slug), where online forms live since the sample was removed.
 function Gate() {
   const { path } = useRouter();
   const m = match("/business/f/:slug", path);
-  if (m) return <PublicForm slug={m.slug} />;
+  if (m) { if (typeof window !== "undefined") window.location.replace(`/f/${encodeURIComponent(m.slug)}`); return null; }
   if (path === "/business/accept-invite") return <AcceptInvite />;
   return <BusinessApp />;
 }

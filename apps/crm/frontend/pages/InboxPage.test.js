@@ -23,8 +23,8 @@ describe("Inbox on the kit", () => {
   it("keeps the six pipeline stages the server knows", () => {
     expect(STAGES).toEqual(["new", "contacted", "viewing", "negotiating", "won", "lost"]);
   });
-  it("is used for real businesses, with the lead finder passed in", () => {
+  it("is what the old Inbox renders (a shim since the sample workspace went), with the lead finder passed in", () => {
     expect(old).toContain('import { InboxPage } from "@sheetal/app-crm/frontend";');
-    expect(old).toMatch(/isLive\(tenant\.id\)\) return <InboxPage tenant=\{tenant\} Finder=\{AIStudio\}/);
+    expect(old).toMatch(/return <InboxPage tenant=\{tenant\} Finder=\{AIStudio\} onChanged=\{workRefresh\} \/>/);
   });
 });

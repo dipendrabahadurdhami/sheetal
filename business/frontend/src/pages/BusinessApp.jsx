@@ -1,13 +1,12 @@
 // The business panel itself: the menu, the top bar, the switchers and every page's route and permission check.
 // Where it fits: rendered by App.jsx for every /business path.
-// How it works: picks the open business, the person's role and branch access; builds the menu for the business type,
-// plan and role; sends the picked branch with every API call; routes each path to its live screen when signed in,
-// or the sample screen otherwise.
-// Rules: PREVIEW lists the pages that still show sample data when signed in; remove a path once its page is on the
-// server. Each route keeps its permission guard.
+// How it works: BusinessApp loads the person's businesses (live.js) and shows a sign-in page (with "Try the demo"), a loading page, an "add your
+// first business" page or an error until they are ready; then Workspace picks the open business, the person's role and branch access; builds the
+// menu for the business type, plan and role; sends the picked branch with every API call; and routes each path to its screen on the server.
+// Rules: there is no browser-storage sample workspace any more (P2-W6): every page works on the business API. PREVIEW lists the pages that are not
+// built yet (shown as previews). Each route keeps its permission guard.
 
 import { inkFor, btnInkFor } from "@sheetal/shared/core/contrast";
-import { Rentals } from "./Rentals";
 import { SetupChip } from "./Setup";
 import React from "react";
 import { PANEL_THEMES, THEMES } from "@sheetal/shared/core/theme";
@@ -18,28 +17,26 @@ import { useStore } from "@sheetal/shared/core/store";
 import { Link, Routes, useRouter } from "@sheetal/shared/core/router";
 import { can, canAny, filterNav, roleName } from "@sheetal/shared/core/rbac";
 import { manifestNavItem } from "@sheetal/config/menu";
-import { Button, Select, Tabs } from "@sheetal/shared/core/ui";
+import { Button, Empty, Select, Tabs } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { MenuButton, MenuLink, MenuSep, NoAccess, Pending, Shell } from "@sheetal/shared/layout/Shell";
-import { BusinessOverview, BusinessRoles, TeamHub } from "./BusinessPages";
+import { BusinessRoles, TeamHub } from "./BusinessPages";
 import { LiveOverview } from "./LiveOverview";
 import { ListingWizard } from "./ListingWizard";
 import { ListingsPage } from "./ListingsManager";
-import { Agreements } from "./Agreements";
 import { BusinessSettings, defaultTenantSettings } from "./BusinessSettings";
 import { SettingsShell, settingsSections } from "./SettingsHub";
 import { config } from "@sheetal/shared/core/config";
 import { BusinessBilling, BusinessData } from "./BusinessBilling";
 import { BillingReturn } from "./LiveBilling";
 import { Help, Tour } from "./Help";
-import { MyProfile, NotificationsPage, businessSeed, useNotifs, useServerNotifs } from "@sheetal/shared/components/Me";
+import { MyProfile, NotificationsPage, useServerNotifs } from "@sheetal/shared/components/Me";
 import { Domains } from "./Domains";
 import { Mail } from "./Mail";
-import { canAddBusiness, isLive, useBrand, useLiveWorkspace, workRefresh } from "../live";
+import { canAddBusiness, isLive, useBrand, useLiveWorkspace, useWorkspaceState, workRefresh, workspacesReload } from "../live";
 import { useLiveSettings } from "../liveSettings";
 import { bizApi, bizApiReady, setActiveBranch, signedIn } from "../api";
 import { AddBusiness } from "./AddBusiness";
-import { POS, Bookings } from "./POS";
 import { LiveBookings, LiveFrontDesk, LiveInvestors, LivePOS, LiveProjects, LiveCalendar } from "./LiveOps";
 import { LiveAnalytics, LiveChannels } from "./LiveGrowth";
 import { ReviewsPage } from "@sheetal/app-reviews/frontend";
@@ -48,27 +45,21 @@ import { Inbox } from "./Inbox";
 import { Approvals } from "./Approvals";
 import { SupportBanner } from "./SupportBanner";
 import { DemoBar, TryDemo } from "./TryDemo";
-import { Forms } from "./Forms";
 import { LiveForms } from "./LiveForms";
 import { LiveAgreements } from "./LiveAgreements";
-import { formsOf } from "@sheetal/shared/core/forms";
-import { Invoices, Payouts } from "./Money";
 import { LiveInvoices, LivePayouts } from "./LiveMoney";
 import { ExpensesPage } from "@sheetal/app-expenses/frontend";
 import { LiveStock } from "./LiveStock";
 import { LiveDevelopers } from "./LiveDevelopers";
 import { LiveAiAccounts } from "./LiveAiAccounts";
 import { LiveRentals } from "./LiveRentals";
-import { Analytics, Developers } from "./Workspace";
 import { BackupOnly } from "./BusinessBilling";
-import { Branches, Calendar, LiveBranches, branchesOf } from "./Branches";
-import { Promote } from "./Promote";
+import { LiveBranches, branchesOf } from "./Branches";
 import { LivePromote } from "./LivePromote";
 import { BranchProvider } from "@sheetal/shared/core/branch";
-import { Collections, Expenses, Investors, Projects, Reviews, Stock } from "./Sector";
 import { atListingCap, isFree, listingCap, planOf, typesFor } from "@sheetal/shared/core/plans";
 import { UpgradeNeeded } from "./planBits";
-import { AiAccounts, Channels, Social, VoiceAssistant } from "./Connections";
+import { Social, VoiceAssistant } from "./Connections";
 import { ListingCheckups } from "./ListingCheckups";
 import { checkupsOf, todaysList } from "@sheetal/shared/data/checkups";
 import { TODAY } from "@sheetal/shared/core/format";
@@ -81,12 +72,57 @@ const PREVIEW = [
 const TYPE_ICON = { hotel: "hotel", host: "bed-double", developer: "building-2", agency: "briefcase", sponsor: "hand-coins" };
 
 export default function BusinessApp() {
+  const { db } = useStore();
+  useLiveWorkspace(); // the person's businesses, role and team (../live.js)
+  useLiveSettings(); // settings, check-ups, listing options and import/export on the server (../liveSettings.js)
+  const state = useWorkspaceState();
+  const open = db.tenants.find((x) => x.id === db.session.tenantId);
+  if (!bizApiReady() || !signedIn() || state === "signed-out") return <SignedOut />;
+  if (state === "empty") return <FirstBusiness />;
+  if (state === "error") return <Gatepage icon="circle-alert" title="Your business couldn't load" action={<Button onClick={workspacesReload}>Try again</Button>}>Check your internet connection, then try again.</Gatepage>;
+  if (state !== "ready" || !open || !isLive(open.id)) return <div className="pf-root-loading"><div className="sk" style={{ height: "60vh", margin: 24, borderRadius: "var(--r)" }} /></div>;
+  return <Workspace />;
+}
+
+/** A page on its own (no menu), for signing in, a first business or an error. */
+function Gatepage({ icon, title, children, action }) {
+  return (
+    <main className="pf-gate" style={{ maxWidth: 560, margin: "10vh auto", padding: 16 }}>
+      <section className="card pf-panel"><Empty icon={icon} title={title} action={action}>{children}</Empty></section>
+    </main>
+  );
+}
+
+/** Nobody is signed in: sign in on the website, or try a demo business (TryDemo.jsx). */
+function SignedOut() {
+  return (
+    <main className="pf-gate" style={{ maxWidth: 640, margin: "8vh auto", padding: 16 }}>
+      <section className="card pf-panel" style={{ marginBottom: 16 }}>
+        <Empty icon="log-in" title="Sign in to your business" action={<a className="btn btn-primary" href="/">Sign in on the website</a>}>Your business panel uses your Sheetal Property account.</Empty>
+      </section>
+      {bizApiReady() && <TryDemo page="Sheetal Business" />}
+    </main>
+  );
+}
+
+/** Signed in, but not in any business yet: add one (or accept an invitation from the email). */
+function FirstBusiness() {
+  const [adding, setAdding] = React.useState(false);
+  return (
+    <>
+      <Gatepage icon="building-2" title="Add your business" action={<Button icon="plus" onClick={() => setAdding(true)}>Add a business</Button>}>
+        You are not in a business yet. Add yours, or open the invitation email your team sent you.
+      </Gatepage>
+      <AddBusiness open={adding} onClose={() => setAdding(false)} onAdded={() => workspacesReload()} />
+    </>
+  );
+}
+
+function Workspace() {
   const t = useT();
-  const { db, update, reset } = useStore();
+  const { db, update } = useStore();
   const { navigate } = useRouter();
   const [adding, setAdding] = React.useState(false);
-  useLiveWorkspace(); // real businesses, role and team when signed in (../live.js)
-  useLiveSettings(); // settings, check-ups, listing options and import/export on the server (../liveSettings.js)
   const s = db.session;
   // Sheetal staff support sessions end on their own after 30 minutes.
   React.useEffect(() => {
@@ -114,7 +150,7 @@ export default function BusinessApp() {
   const openBranches = branchesOf(db, tenant).filter((b) => b.status === "open").map((b) => b.name);
   // Signed in: the person's own branch access from the server (owners always all). Samples and role previews use a
   // sample member of that role.
-  const mine = isLive(tenant.id) && !s.previewRoleId ? s.liveScopes?.[tenant.id] : undefined;
+  const mine = !s.previewRoleId ? s.liveScopes?.[tenant.id] : undefined;
   const sample = (db.members[tenant.id] || []).find((m) => m.roleId === role.id);
   const canAll = mine !== undefined ? mine === "all" : role.perms.includes("*") || role.key === "manager" || !sample || sample.scopes === "all";
   const allowed = canAll ? openBranches : openBranches.filter((b) => (mine ?? sample.scopes).includes(b));
@@ -122,8 +158,8 @@ export default function BusinessApp() {
   const branch = canAll ? (picked === "all" || allowed.includes(picked) ? picked : "all") : (allowed.includes(picked) ? picked : allowed[0] || "all");
   // Signed in: every call carries the picked branch, so each branch shows only its own work.
   const branchId = branch === "all" ? "all" : (db.branches?.[tenant.id] || []).find((b) => b.name === branch)?.id || "all";
-  if (isLive(tenant.id)) setActiveBranch(branchId);
-  React.useEffect(() => { if (isLive(tenant.id)) workRefresh(); }, [tenant.id, branchId]);
+  setActiveBranch(branchId);
+  React.useEffect(() => { workRefresh(); }, [tenant.id, branchId]);
   const brand = ts.branding.useBrand ? ts.branding.color : null;
   const T = tenant.type;
   // Pro sees every type's modules; Starter (free) sees only the basics.
@@ -137,7 +173,6 @@ export default function BusinessApp() {
   const newLeads = (opsOf(db, tenant.id).conversations || []).filter((c) => c.unread).length;
   // Unread emails in the person's own and shared mailboxes (checked every minute), for the Email button.
   const newMail = s.mailUnread?.[tenant.id] || 0;
-  const pendingAg = (db.agreements[tenant.id] || []).filter((a) => a.status === "sent").length;
   const ck = checkupsOf(db, tenant.id);
   const toCheck = todaysList(db.listings.filter((l) => l.tenantId === tenant.id), ck.settings, ck.log, TODAY.slice(0, 10)).length;
 
@@ -157,7 +192,7 @@ export default function BusinessApp() {
       { to: "/business/mail", icon: "mail", key: "nav.mail" },
       { to: "/business/voice", paid: true, icon: "phone-call", key: "nav.bizVoice", permAny: ["crm.message.reply", "crm.lead.read", "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"] },
       { to: "/business/forms", icon: "file-text", key: "nav.forms", permAny: ["crm.message.reply", "crm.lead.read", "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"] },
-      { to: "/business/agreements", paid: true, icon: "file-pen-line", key: "nav.agreements", permAny: isLive(tenant.id) ? ["agreements.agreement.read+agreements.agreement.create+agreements.agreement.update+agreements.agreement.delete"] : ["crm.customer.read+reviews.review.read", "listings.listing.read+listings.listing.create+listings.listing.update+listings.listing.delete+listings.listing.publish", "projects.reservation.read+projects.reservation.create+projects.reservation.update+projects.reservation.delete", "investments.offering.read+investments.offering.create+investments.offering.update+investments.offering.delete", "workspace.overview.read"], count: isLive(tenant.id) ? undefined : pendingAg, countTone: "action" },
+      { to: "/business/agreements", paid: true, icon: "file-pen-line", key: "nav.agreements", permAny: ["agreements.agreement.read+agreements.agreement.create+agreements.agreement.update+agreements.agreement.delete"], count: undefined, countTone: "action" },
     ] },
     // Starter (free) gets its type's core tools within its limits; point of sale and stock are paid.
     { group: "group.operate", items: [
@@ -182,15 +217,11 @@ export default function BusinessApp() {
     ] },
   ]), role, types));
 
-  // Nobody signed in and the business API is connected: the pages on the screen kit offer a real demo business instead of the old sample screens (TryDemo.jsx).
-  const offerDemo = bizApiReady() && !signedIn();
   const guard = (ok, el) => (ok ? el : <NoAccess />);
   const paid = (ok, el) => (free ? <UpgradeNeeded /> : guard(ok, el));
   const ended = ["suspended", "cancelled"].includes(tenant.status) && s.impersonating !== tenant.id;
-  // Signed in: the bell comes from the server (this business's notifications); otherwise the sample's.
-  const sampleNotifs = useNotifs(`b-${tenant.id}`, businessSeed(tenant));
-  const serverNotifs = useServerNotifs(bizApi, "/notifications", isLive(tenant.id), tenant.id);
-  const notifs = isLive(tenant.id) ? serverNotifs : sampleNotifs;
+  const serverNotifs = useServerNotifs(bizApi, "/notifications", true, tenant.id);
+  const notifs = serverNotifs;
   const notifications = notifs.list.slice(0, 6).map((n) => ({ ...n, onOpen: () => notifs.read(n.id) }));
 
   // The business at the top of the sidebar. With its own branding (logo or colours) it takes Sheetal's logo spot;
@@ -210,7 +241,7 @@ export default function BusinessApp() {
   const wsSwitcher = <WorkspaceSwitcher footer={addWs} current={wsList.find((w) => w.id === tenant.id) || { id: tenant.id, name: tenant.name, logoUrl: logoOf(tenant) }} list={wsList} onPick={pickWs} big sub={`${t(`type.${tenant.type}`)} · ${tenant.city || "Nepal"}`} label={t("ws.switch")} />;
 
   return (
-    <Shell sub={t("brand.business")} nav={nav} themes={hasColours ? PANEL_THEMES : THEMES} brandSlot={wsSwitcher} switcher={null} preview={isLive(tenant.id) ? PREVIEW : []} notifications={notifications} notifTo="/business/notifications" onReadAll={notifs.readAll}
+    <Shell sub={t("brand.business")} nav={nav} themes={hasColours ? PANEL_THEMES : THEMES} brandSlot={wsSwitcher} switcher={null} preview={PREVIEW} notifications={notifications} notifTo="/business/notifications" onReadAll={notifs.readAll}
       quickCreate={[
         any("listings.listing.read+listings.listing.create+listings.listing.update+listings.listing.delete+listings.listing.publish", "projects.project.read+projects.project.create+projects.project.update+projects.project.delete", "investments.offering.read+investments.offering.create+investments.offering.update+investments.offering.delete", "hotel.calendar.update") && { icon: "house-plus", label: t("listings.new"), to: "/business/listings/new" },
         stays && can(role, "hotel.booking.create") && { icon: "calendar-plus", label: t("bk.manual"), to: "/business/bookings" },
@@ -227,7 +258,6 @@ export default function BusinessApp() {
         ...(opsOf(db, tenant.id).bookings || []).map((b) => ({ icon: "clipboard-list", label: `${b.id} · ${b.guest}`, sub: b.type, to: "/business/bookings" })),
         ...db.listings.filter((l) => l.tenantId === tenant.id).map((l) => ({ icon: "house", label: l.title, sub: l.id, to: "/business/listings" })),
         ...(db.agreements[tenant.id] || []).map((a) => ({ icon: "file-pen-line", label: a.title, sub: a.id, to: "/business/agreements" })),
-        ...(isLive(tenant.id) ? [] : formsOf(db, tenant)).map((f) => ({ icon: "file-text", label: f.title, sub: "Form", to: `/business/forms/${f.id}` })),
         ...(db.members[tenant.id] || []).map((m) => ({ icon: "user", label: m.name, sub: m.email, to: "/business/team" })),
       ]}
       style={brand ? { "--accent": brand, "--accent-ink": inkFor(brand), "--btn-bg": brand, "--btn-ink": btnInkFor(brand), "--btn-bg-hover": `color-mix(in srgb, ${brand} 82%, white)`, "--accent-soft": `color-mix(in srgb, ${brand} 10%, var(--card))` } : undefined}
@@ -256,59 +286,58 @@ export default function BusinessApp() {
         <MenuButton icon="map" onClick={() => update((d) => { d.session.tourDone = { ...(d.session.tourDone || {}), [tenant.id]: false }; })}>{t("tour.restart")}</MenuButton>
         <MenuSep />
         {(config.demo || s.platformRoleId) && <MenuLink to="/admin" icon="shield-check">{t("menu.admin")}</MenuLink>}
-        {config.demo && <MenuButton icon="rotate-ccw" onClick={reset}>{t("psettings.resetDemo")}</MenuButton>}
         <MenuButton icon="log-out" onClick={() => { try { localStorage.removeItem("sheetal_token"); } catch { /* storage off */ } window.location.href = "/"; }}>{t("menu.signOut")}</MenuButton>
       </>}>
       <AddBusiness open={adding} onClose={() => setAdding(false)} onAdded={() => navigate("/business")} />
       {/* A new key on switching branch reloads every page's data for that branch. */}
       <BranchProvider key={branchId} value={{ branch, branchId, allowed, canAll, first: openBranches[0] }}>
       {ended ? <BackupOnly tenant={tenant} /> : <Routes fallback={<Pending part={2} />} routes={[
-        { path: "/business", render: () => (isLive(tenant.id) ? <LiveOverview key={tenant.id} tenant={tenant} role={role} /> : <BusinessOverview tenant={tenant} role={role} />) },
-        { path: "/business/approvals", render: () => <Approvals key={tenant.id} tenant={tenant} live={isLive(tenant.id)} tab="pending" /> },
-        { path: "/business/approvals/:tab", render: ({ tab }) => <Approvals key={tenant.id + tab} tenant={tenant} live={isLive(tenant.id)} tab={["decided", "rules"].includes(tab) ? tab : "pending"} /> },
+        { path: "/business", render: () => (<LiveOverview key={tenant.id} tenant={tenant} role={role} />) },
+        { path: "/business/approvals", render: () => <Approvals key={tenant.id} tenant={tenant} live tab="pending" /> },
+        { path: "/business/approvals/:tab", render: ({ tab }) => <Approvals key={tenant.id + tab} tenant={tenant} live tab={["decided", "rules"].includes(tab) ? tab : "pending"} /> },
         { path: "/business/team", render: () => <TeamHub key={tenant.id + "m"} tenant={tenant} role={role} start={can(role, "workspace.team.read") ? "members" : "attendance"} /> },
         { path: "/business/roles", render: () => <TeamHub key={tenant.id + "r"} tenant={tenant} role={role} start="roles" /> },
         { path: "/business/listings", render: () => <ListingsPage tenant={tenant} canEdit={any("listings.listing.read+listings.listing.create+listings.listing.update+listings.listing.delete+listings.listing.publish", "projects.project.read+projects.project.create+projects.project.update+projects.project.delete", "investments.offering.read+investments.offering.create+investments.offering.update+investments.offering.delete", "hotel.calendar.update")} /> },
         { path: "/business/listings/new", render: () => (!db.drafts[tenant.id]?.editId && atListingCap(plan, db.listings.filter((l) => l.tenantId === tenant.id && l.status !== "archived" && l.status !== "rejected").length) ? <UpgradeNeeded cap={listingCap(plan)} /> : guard(any("listings.listing.read+listings.listing.create+listings.listing.update+listings.listing.delete+listings.listing.publish", "projects.project.read+projects.project.create+projects.project.update+projects.project.delete", "investments.offering.read+investments.offering.create+investments.offering.update+investments.offering.delete", "hotel.calendar.update"), <ListingWizard key={tenant.id} tenant={tenant} />)) },
-        { path: "/business/agreements", render: () => (isLive(tenant.id) ? paid(can(role, "agreements.agreement.read+agreements.agreement.create+agreements.agreement.update+agreements.agreement.delete"), <LiveAgreements key={tenant.id} tenant={tenant} />) : paid(any("crm.customer.read+reviews.review.read", "listings.listing.read+listings.listing.create+listings.listing.update+listings.listing.delete+listings.listing.publish", "projects.reservation.read+projects.reservation.create+projects.reservation.update+projects.reservation.delete", "investments.offering.read+investments.offering.create+investments.offering.update+investments.offering.delete", "workspace.overview.read"), <Agreements tenant={tenant} />)) },
-        { path: "/business/agreements/new/:from/:fromId", render: ({ from, fromId }) => (isLive(tenant.id) ? paid(can(role, "agreements.agreement.read+agreements.agreement.create+agreements.agreement.update+agreements.agreement.delete"), <LiveAgreements key={tenant.id + from + fromId} tenant={tenant} from={from} fromId={fromId} />) : paid(true, <Agreements tenant={tenant} />)) },
-        { path: "/business/agreements/:id", render: ({ id }) => (isLive(tenant.id) ? paid(can(role, "agreements.agreement.read+agreements.agreement.create+agreements.agreement.update+agreements.agreement.delete"), <LiveAgreements key={tenant.id + id} tenant={tenant} id={id} />) : paid(true, <Agreements tenant={tenant} />)) },
+        { path: "/business/agreements", render: () => (paid(can(role, "agreements.agreement.read+agreements.agreement.create+agreements.agreement.update+agreements.agreement.delete"), <LiveAgreements key={tenant.id} tenant={tenant} />)) },
+        { path: "/business/agreements/new/:from/:fromId", render: ({ from, fromId }) => (paid(can(role, "agreements.agreement.read+agreements.agreement.create+agreements.agreement.update+agreements.agreement.delete"), <LiveAgreements key={tenant.id + from + fromId} tenant={tenant} from={from} fromId={fromId} />)) },
+        { path: "/business/agreements/:id", render: ({ id }) => (paid(can(role, "agreements.agreement.read+agreements.agreement.create+agreements.agreement.update+agreements.agreement.delete"), <LiveAgreements key={tenant.id + id} tenant={tenant} id={id} />)) },
         { path: "/business/settings", render: () => guard(can(role, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"), <SettingsShell role={role}><BusinessSettings key={tenant.id} tenant={tenant} tab="profile" /></SettingsShell>) },
-        { path: "/business/settings/verification", render: () => guard(can(role, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"), <SettingsShell role={role}>{isLive(tenant.id) ? <Verification key={tenant.id} tenant={tenant} /> : <Pending part={2} />}</SettingsShell>) },
+        { path: "/business/settings/verification", render: () => guard(can(role, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"), <SettingsShell role={role}>{<Verification key={tenant.id} tenant={tenant} />}</SettingsShell>) },
         { path: "/business/settings/roles", render: () => guard(can(role, "workspace.role.read+workspace.role.create+workspace.role.update+workspace.role.delete"), <SettingsShell role={role}><BusinessRoles key={tenant.id} tenant={tenant} role={role} /></SettingsShell>) },
         { path: "/business/settings/:tab", render: ({ tab }) => guard(can(role, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"), <SettingsShell role={role}><BusinessSettings key={tenant.id} tenant={tenant} tab={tab} /></SettingsShell>) },
         { path: "/business/billing/return/:provider/:id", render: ({ provider, id }) => <BillingReturn provider={provider} id={id} /> },
         { path: "/business/billing", render: () => guard(can(role, "workspace.billing.manage"), <SettingsShell role={role}><BusinessBilling tenant={tenant} canManage /></SettingsShell>) },
         { path: "/business/data", render: () => guard(can(role, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"), <SettingsShell role={role}><BusinessData tenant={tenant} /></SettingsShell>) },
-        { path: "/business/pos", render: () => paid(any("pos.frontdesk.use", "pos.restaurant.use", "pos.extra.create", "pos.shift.close"), (isLive(tenant.id) ? <LivePOSHub key={tenant.id} tenant={tenant} role={role} /> : <POS key={tenant.id} tenant={tenant} role={role} />)) },
-        { path: "/business/bookings", render: () => guard(can(role, "hotel.booking.read"), (isLive(tenant.id) ? <LiveBookings key={tenant.id} tenant={tenant} role={role} /> : <Bookings tenant={tenant} role={role} />)) },
+        { path: "/business/pos", render: () => paid(any("pos.frontdesk.use", "pos.restaurant.use", "pos.extra.create", "pos.shift.close"), (<LivePOSHub key={tenant.id} tenant={tenant} role={role} />)) },
+        { path: "/business/bookings", render: () => guard(can(role, "hotel.booking.read"), (<LiveBookings key={tenant.id} tenant={tenant} role={role} />)) },
         { path: "/business/inbox", render: () => guard(any("crm.message.reply", "crm.lead.read"), <Inbox key={tenant.id} tenant={tenant} />) },
-        { path: "/business/forms", render: () => guard(any("crm.message.reply", "crm.lead.read", "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"), (isLive(tenant.id) ? <LiveForms key={tenant.id} tenant={tenant} /> : <Forms key={tenant.id} tenant={tenant} />)) },
-        { path: "/business/forms/responses", render: () => guard(any("crm.message.reply", "crm.lead.read", "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"), (isLive(tenant.id) ? <LiveForms key={tenant.id + "r"} tenant={tenant} view="responses" /> : <Forms key={tenant.id + "r"} tenant={tenant} view="responses" />)) },
-        { path: "/business/forms/responses/:dest", render: ({ dest }) => guard(any("crm.message.reply", "crm.lead.read", "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"), (isLive(tenant.id) ? <LiveForms key={tenant.id + "r" + dest} tenant={tenant} view="responses" dest={dest} /> : <Forms key={tenant.id + "r"} tenant={tenant} view="responses" dest={dest} />)) },
-        { path: "/business/forms/:id", render: ({ id }) => guard(any("crm.message.reply", "crm.lead.read", "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"), (isLive(tenant.id) ? <LiveForms key={tenant.id + id} tenant={tenant} view="build" id={id} /> : <Forms key={tenant.id + id} tenant={tenant} view="build" id={id} />)) },
-        { path: "/business/invoices", render: () => guard(can(role, "invoicing.invoice.read"), (isLive(tenant.id) ? <LiveInvoices key={tenant.id} tenant={tenant} /> : <Invoices tenant={tenant} />)) },
-        { path: "/business/payouts", render: () => guard(can(role, "invoicing.payout.read"), (isLive(tenant.id) ? <LivePayouts key={tenant.id} tenant={tenant} /> : <Payouts tenant={tenant} />)) },
-        { path: "/business/projects", render: () => guard(any("projects.project.read+projects.project.create+projects.project.update+projects.project.delete", "projects.progress.create"), (isLive(tenant.id) ? <LiveProjects key={tenant.id} tenant={tenant} role={role} /> : <Projects key={tenant.id} tenant={tenant} />)) },
-        { path: "/business/collections", render: () => guard(can(role, "collections.payment.read+collections.payment.create"), (isLive(tenant.id) ? <LiveProjects key={tenant.id + "c"} tenant={tenant} role={role} /> : <Collections key={tenant.id} tenant={tenant} />)) },
-        { path: "/business/investors", render: () => guard(can(role, "investments.investor.read"), (isLive(tenant.id) ? <LiveInvestors key={tenant.id} tenant={tenant} role={role} /> : <Investors key={tenant.id} tenant={tenant} />)) },
-        { path: "/business/reviews", render: () => guard(any("reviews.review.read+reviews.review.reply", "crm.customer.read+reviews.review.read"), (isLive(tenant.id) ? <ReviewsPage key={tenant.id} tenant={tenant} /> : offerDemo ? <TryDemo type={tenant.type} page="Reviews" /> : <Reviews key={tenant.id} tenant={tenant} />)) },
-        { path: "/business/expenses", render: () => paid(can(role, "expenses.expense.read+expenses.recurring.read+expenses.profit.read"), (isLive(tenant.id) ? <ExpensesPage key={tenant.id} tenant={tenant} /> : offerDemo ? <TryDemo type={tenant.type} page="Expenses" /> : <Expenses key={tenant.id} tenant={tenant} />)) },
-        { path: "/business/rentals", render: () => guard(any("rentals.rental.read", "rentals.rental.read+rentals.rental.create+rentals.rental.update+rentals.rental.delete"), (isLive(tenant.id) ? <LiveRentals key={tenant.id} tenant={tenant} /> : <Rentals key={tenant.id} tenant={tenant} />)) },
-        { path: "/business/rentals/:tab", render: ({ tab }) => guard(any("rentals.rental.read", "rentals.rental.read+rentals.rental.create+rentals.rental.update+rentals.rental.delete"), (isLive(tenant.id) ? <LiveRentals key={tenant.id} tenant={tenant} tab={tab} /> : <Rentals key={tenant.id} tenant={tenant} tab={tab} />)) },
-        { path: "/business/stock", render: () => paid(any("pos.restaurant.use", "pos.extra.create", "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"), (isLive(tenant.id) ? <LiveStock key={tenant.id} tenant={tenant} /> : <Stock key={tenant.id} tenant={tenant} />)) },
-        { path: "/business/promote", render: () => guard(any("listings.listing.read+listings.listing.create+listings.listing.update+listings.listing.delete+listings.listing.publish", "projects.project.read+projects.project.create+projects.project.update+projects.project.delete", "investments.offering.read+investments.offering.create+investments.offering.update+investments.offering.delete", "hotel.calendar.update", "workspace.billing.manage"), isLive(tenant.id) ? <LivePromote key={tenant.id} tenant={tenant} /> : <Promote tenant={tenant} />) },
-        { path: "/business/promote/boost/:code", render: ({ code }) => guard(any("listings.listing.read+listings.listing.create+listings.listing.update+listings.listing.delete+listings.listing.publish", "projects.project.read+projects.project.create+projects.project.update+projects.project.delete", "investments.offering.read+investments.offering.create+investments.offering.update+investments.offering.delete", "hotel.calendar.update", "workspace.billing.manage"), isLive(tenant.id) ? <LivePromote key={tenant.id} tenant={tenant} code={code} /> : <Promote tenant={tenant} />) },
-        { path: "/business/promote/:tab", render: ({ tab }) => guard(any("listings.listing.read+listings.listing.create+listings.listing.update+listings.listing.delete+listings.listing.publish", "projects.project.read+projects.project.create+projects.project.update+projects.project.delete", "investments.offering.read+investments.offering.create+investments.offering.update+investments.offering.delete", "hotel.calendar.update", "workspace.billing.manage"), isLive(tenant.id) ? <LivePromote key={tenant.id} tenant={tenant} tab={tab} /> : <Promote tenant={tenant} />) },
-        { path: "/business/branches", render: () => guard(can(role, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"), <SettingsShell role={role}>{isLive(tenant.id) ? <LiveBranches tenant={tenant} role={role} /> : <Branches tenant={tenant} role={role} />}</SettingsShell>) },
-        { path: "/business/calendar", render: () => guard(can(role, "hotel.calendar.read"), (isLive(tenant.id) ? <LiveCalendar key={tenant.id} tenant={tenant} role={role} /> : <Calendar key={tenant.id} tenant={tenant} role={role} />)) },
-        { path: "/business/analytics", render: () => guard(can(role, "workspace.overview.read"), (isLive(tenant.id) ? <LiveAnalytics key={tenant.id} tenant={tenant} /> : <Analytics tenant={tenant} />)) },
+        { path: "/business/forms", render: () => guard(any("crm.message.reply", "crm.lead.read", "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"), (<LiveForms key={tenant.id} tenant={tenant} />)) },
+        { path: "/business/forms/responses", render: () => guard(any("crm.message.reply", "crm.lead.read", "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"), (<LiveForms key={tenant.id + "r"} tenant={tenant} view="responses" />)) },
+        { path: "/business/forms/responses/:dest", render: ({ dest }) => guard(any("crm.message.reply", "crm.lead.read", "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"), (<LiveForms key={tenant.id + "r" + dest} tenant={tenant} view="responses" dest={dest} />)) },
+        { path: "/business/forms/:id", render: ({ id }) => guard(any("crm.message.reply", "crm.lead.read", "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"), (<LiveForms key={tenant.id + id} tenant={tenant} view="build" id={id} />)) },
+        { path: "/business/invoices", render: () => guard(can(role, "invoicing.invoice.read"), (<LiveInvoices key={tenant.id} tenant={tenant} />)) },
+        { path: "/business/payouts", render: () => guard(can(role, "invoicing.payout.read"), (<LivePayouts key={tenant.id} tenant={tenant} />)) },
+        { path: "/business/projects", render: () => guard(any("projects.project.read+projects.project.create+projects.project.update+projects.project.delete", "projects.progress.create"), (<LiveProjects key={tenant.id} tenant={tenant} role={role} />)) },
+        { path: "/business/collections", render: () => guard(can(role, "collections.payment.read+collections.payment.create"), (<LiveProjects key={tenant.id + "c"} tenant={tenant} role={role} />)) },
+        { path: "/business/investors", render: () => guard(can(role, "investments.investor.read"), (<LiveInvestors key={tenant.id} tenant={tenant} role={role} />)) },
+        { path: "/business/reviews", render: () => guard(any("reviews.review.read+reviews.review.reply", "crm.customer.read+reviews.review.read"), (<ReviewsPage key={tenant.id} tenant={tenant} />)) },
+        { path: "/business/expenses", render: () => paid(can(role, "expenses.expense.read+expenses.recurring.read+expenses.profit.read"), (<ExpensesPage key={tenant.id} tenant={tenant} />)) },
+        { path: "/business/rentals", render: () => guard(any("rentals.rental.read", "rentals.rental.read+rentals.rental.create+rentals.rental.update+rentals.rental.delete"), (<LiveRentals key={tenant.id} tenant={tenant} />)) },
+        { path: "/business/rentals/:tab", render: ({ tab }) => guard(any("rentals.rental.read", "rentals.rental.read+rentals.rental.create+rentals.rental.update+rentals.rental.delete"), (<LiveRentals key={tenant.id} tenant={tenant} tab={tab} />)) },
+        { path: "/business/stock", render: () => paid(any("pos.restaurant.use", "pos.extra.create", "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"), (<LiveStock key={tenant.id} tenant={tenant} />)) },
+        { path: "/business/promote", render: () => guard(any("listings.listing.read+listings.listing.create+listings.listing.update+listings.listing.delete+listings.listing.publish", "projects.project.read+projects.project.create+projects.project.update+projects.project.delete", "investments.offering.read+investments.offering.create+investments.offering.update+investments.offering.delete", "hotel.calendar.update", "workspace.billing.manage"), <LivePromote key={tenant.id} tenant={tenant} />) },
+        { path: "/business/promote/boost/:code", render: ({ code }) => guard(any("listings.listing.read+listings.listing.create+listings.listing.update+listings.listing.delete+listings.listing.publish", "projects.project.read+projects.project.create+projects.project.update+projects.project.delete", "investments.offering.read+investments.offering.create+investments.offering.update+investments.offering.delete", "hotel.calendar.update", "workspace.billing.manage"), <LivePromote key={tenant.id} tenant={tenant} code={code} />) },
+        { path: "/business/promote/:tab", render: ({ tab }) => guard(any("listings.listing.read+listings.listing.create+listings.listing.update+listings.listing.delete+listings.listing.publish", "projects.project.read+projects.project.create+projects.project.update+projects.project.delete", "investments.offering.read+investments.offering.create+investments.offering.update+investments.offering.delete", "hotel.calendar.update", "workspace.billing.manage"), <LivePromote key={tenant.id} tenant={tenant} tab={tab} />) },
+        { path: "/business/branches", render: () => guard(can(role, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"), <SettingsShell role={role}>{<LiveBranches tenant={tenant} role={role} />}</SettingsShell>) },
+        { path: "/business/calendar", render: () => guard(can(role, "hotel.calendar.read"), (<LiveCalendar key={tenant.id} tenant={tenant} role={role} />)) },
+        { path: "/business/analytics", render: () => guard(can(role, "workspace.overview.read"), (<LiveAnalytics key={tenant.id} tenant={tenant} />)) },
         { path: "/business/people", render: () => <TeamHub key={tenant.id + "a"} tenant={tenant} role={role} start="attendance" /> },
-        { path: "/business/developers", render: () => guard(can(role, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"), <SettingsShell role={role}>{isLive(tenant.id) ? <LiveDevelopers key={tenant.id} tenant={tenant} /> : <Developers tenant={tenant} />}</SettingsShell>) },
+        { path: "/business/developers", render: () => guard(can(role, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"), <SettingsShell role={role}>{<LiveDevelopers key={tenant.id} tenant={tenant} />}</SettingsShell>) },
         { path: "/business/mail", render: () => <Mail key={tenant.id} /> },
         { path: "/business/domains", render: () => guard(can(role, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"), <SettingsShell role={role}><Domains key={tenant.id} tenant={tenant} /></SettingsShell>) },
-        { path: "/business/channels", render: () => guard(can(role, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"), <SettingsShell role={role}>{isLive(tenant.id) ? <LiveChannels key={tenant.id} tenant={tenant} /> : <Channels key={tenant.id} tenant={tenant} />}</SettingsShell>) },
-        { path: "/business/ai-accounts", render: () => guard(can(role, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"), <SettingsShell role={role}>{isLive(tenant.id) ? <LiveAiAccounts key={tenant.id} tenant={tenant} /> : <AiAccounts key={tenant.id} tenant={tenant} />}</SettingsShell>) },
+        { path: "/business/channels", render: () => guard(can(role, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"), <SettingsShell role={role}>{<LiveChannels key={tenant.id} tenant={tenant} />}</SettingsShell>) },
+        { path: "/business/ai-accounts", render: () => guard(can(role, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"), <SettingsShell role={role}>{<LiveAiAccounts key={tenant.id} tenant={tenant} />}</SettingsShell>) },
         { path: "/business/voice", render: () => paid(any("crm.message.reply", "crm.lead.read", "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"), <VoiceAssistant key={tenant.id} tenant={tenant} />) },
         { path: "/business/checkups", render: () => guard(any("listings.listing.read+listings.listing.create+listings.listing.update+listings.listing.delete+listings.listing.publish", "projects.project.read+projects.project.create+projects.project.update+projects.project.delete", "investments.offering.read+investments.offering.create+investments.offering.update+investments.offering.delete", "hotel.calendar.update"), <ListingCheckups key={tenant.id} tenant={tenant} role={role} />) },
         { path: "/business/social", render: () => guard(any("listings.listing.read+listings.listing.create+listings.listing.update+listings.listing.delete+listings.listing.publish", "projects.project.read+projects.project.create+projects.project.update+projects.project.delete", "investments.offering.read+investments.offering.create+investments.offering.update+investments.offering.delete", "hotel.calendar.update"), <Social key={tenant.id} tenant={tenant} />) },

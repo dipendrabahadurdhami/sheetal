@@ -33,7 +33,7 @@ describe("Team page on the kit", () => {
     expect(activityText({ what: "business.member_invited", target: "a@x" })).toBe("member invited a@x");
   });
   it("is used for real businesses; the old role file is a shim", () => {
-    expect(pages).toMatch(/if \(isLive\(tenant\.id\)\) return <LiveTeam/);
+    expect(pages).toMatch(/return <LiveTeam tenant=\{tenant\} role=\{role\} embedded=\{embedded\} \/>/);
     expect(pages).toContain('import { TeamPage } from "@sheetal/app-workspace/frontend";');
     expect(rolesShim).toContain("<RolesPage {...props} onChanged={liveRefresh} />");
   });
