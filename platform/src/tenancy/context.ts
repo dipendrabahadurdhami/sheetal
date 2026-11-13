@@ -26,6 +26,7 @@ import { APPS } from "./apps.generated.js";
 import { hasPerm } from "./perms.js";
 import { PERMISSION_CATALOG } from "./permissions.generated.js";
 import { STAFF_GRANTS } from "./staff-roles.js";
+import { entitlementsFor } from "../billing/load.js";
 
 // ───────────── Input shapes (structural, so the Prisma session user fits without importing backend-core) ─────────────
 
@@ -37,7 +38,7 @@ export interface MembershipLike {
   allBranches?: boolean;
   branches?: readonly { branchId: string; branch?: { name: string } }[];
   role: { id: string; key: string; perms: string[] };
-  tenant: { id: string; name: string; type: string; status: string; planId: string; plan: PlanLike };
+  tenant: { id: string; name: string; type: string; status: string; planId: string; plan: PlanLike; billingMode?: string };
 }
 export interface PlanLike { id: string; price: number; limits: unknown; features: unknown }
 export interface SessionUserLike { id: string; userName: string; platformRole?: string | null; memberships: readonly MembershipLike[] }
@@ -238,6 +239,10 @@ export function buildEntitlements(o: EntitlementInput): Entitlements {
     feature: (key) => !!features[key],
     seats: () => ({ used: o.seatsUsed, limit: seatLimit === -1 ? null : seatLimit }),
     ai: () => "locked",
+    // Phase 3 methods with today's meaning: a plan never makes an app read-only, and writes are never refused for billing.
+    mode: "plans",
+    access: (appId) => (hasApp(appId) ? "full" : "none"),
+    requireWrite: () => undefined,
   };
 }
 
@@ -281,7 +286,7 @@ const base = (r: RequestInfo) => ({ requestId: r.requestId, ip: r.ip, now: r.now
 
 async function businessParts(
   r: RequestInfo, deps: TenancyDeps,
-  t: { id: string; name: string; type: string; status: string; planId: string; plan: PlanLike },
+  t: { id: string; name: string; type: string; status: string; planId: string; plan: PlanLike; billingMode?: unknown },
   access: BranchAccess,
 ): Promise<{ branches: BranchScope; entitlements: Entitlements }> {
   const now = r.now ?? new Date();
@@ -292,7 +297,11 @@ async function businessParts(
   ]);
   return {
     branches: createBranchScope({ all, allowed: access.allowed, wanted: header(r.headers, "x-branch") }),
-    entitlements: buildEntitlements({ type: t.type, plan: t.plan, limits: plan.limits, seatsUsed }),
+    // Phase 3: billingMode "plans" (every business today) gets exactly this v1 answer; "shadow" and "apps" see platform/src/billing/load.ts.
+    entitlements: await entitlementsFor({
+      db: r.db, log: r.log, now, tenant: t, seatsUsed, oldLimits: plan.limits, oldFeatures: t.plan.features,
+      v1: buildEntitlements({ type: t.type, plan: t.plan, limits: plan.limits, seatsUsed }),
+    }),
   };
 }
 
