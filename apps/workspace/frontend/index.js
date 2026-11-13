@@ -4,3 +4,4 @@
 export { MailPage } from "./pages/MailPage.jsx";
 export { TeamPage, toMember, toInvite, toRole, memberBody, activityText } from "./pages/TeamPage.jsx";
 export { RolesPage } from "./pages/RolesPage.jsx";
+export { BranchesPage, branchFields } from "./pages/BranchesPage.jsx";
