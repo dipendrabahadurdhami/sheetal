@@ -1,4 +1,4 @@
-# CONTINUE Phase 2: where it stands (13 Nov 2026, 22:00 Nepal time)
+# CONTINUE Phase 2: FINISHED (13 Nov 2026, night). See CLOSE-OUT-phase-2.md. Kept as history.
 
 Stopped at a merged, green boundary. Pattern for every app (follow it exactly): `apps/<app>/backend` on the kernel (repository = only table code, service = rules
 in ONE transaction with audit line + event, controller = HTTP only, `scope.ts` capped in `PHASE_ONE_CAPS`), additive migration with the kernel columns,
@@ -34,22 +34,11 @@ dependency + Vite alias, a source test next to the page. Root `npm test`/`typech
 | W6 screens | Team -> `TeamPage` (loads /team + /branches itself, branch ids, seat limit from the server) and Roles -> `RolesPage`; `branchAccess` -> `@sheetal/sdk/branchAccess`, `roleGrants` -> apps/workspace/frontend (shims at old paths) | #59 |
 | W6 screens | Branches -> `BranchesPage` (loads /branches + /team itself, `version` on edit and close/reopen; `live.js` `branchesRefresh()`) | #60 |
 
-## Not done yet (in this order)
-1. **W6 screens still on the panel store:** Listings (`ListingsManager.jsx` + `ListingWizard.jsx`, which keeps its draft in the store's `drafts`, and
-   reads `db.catalog.listingKinds`; `OtaPanel.jsx`), Listing check-ups (`ListingCheckups.jsx`), Business settings (`BusinessSettings.jsx` + `liveSettings.js`),
-   the Overview's sample (`BusinessOverview`). Pattern of #57-#60: the live page goes to `apps/<app>/frontend/pages`, loads its own data with the SDK,
-   sends `version`, gets what the shell knows as props, the old file renders it for `isLive(tenant.id)` and keeps the sample screen until step 3.
-2. W3 follow-up: `InvoicesView` (Money.jsx) into apps/invoicing/frontend.
-3. **Remove the browser-storage sample workspace:** every `isLive(...) ? Live : Sample` in `BusinessApp.jsx` becomes the live page (not signed in = sign-in /
-   "Try the demo"); delete the sample screens (`Sector.jsx`, `Rentals.jsx`, `POS.jsx` sample parts, `Forms.jsx`, `Money.jsx` sample, `Agreements.jsx`, the
-   `Sample*` functions added in #57/#59), `shared/src/demo/*` seed shrinks to session + catalog. The shell still reads `db.tenants/tenantRoles/members/branches`
-   that `live.js` fills: keep `live.js` as the shell's loader, but drop its sample fall-backs. Big: plan it as 2-3 PRs.
-4. W6 Website API on the kernel where it writes business data (enquiries create leads, the sign module, bookings).
-5. Leftovers: a feed sync's booking writes (`domain/ota.ts`) take the room-type hold (`RoomRepository.lockType`); Business -> Settings tab per app;
-   Rentals paisa columns + backfill and soft delete; delete every shim nothing imports; Phase 2 close-out note (like Phase 1's).
+| W6 | Sample workspace removed from the business panel | #61 |
+| W6 | Listings, Settings, invoice screens into their apps; only UI state in the browser | #62 |
+| W6 | Website writes of business data on the kernel (leads, signing) | #63 |
+| Leftovers | Feed bookings hold the room type; Settings tab per app; Rentals paisa + soft delete; shims deleted; close-out | #64 |
 
-Lesson (13 Nov night): after `git merge origin/main` on a stacked branch, run `grep -rn "<<<<<<<"` before committing (#59 needed a fix commit),
-or merge with `-X ours` (the branch already holds main's earlier squash).
 ## Owner steps after these merges
 `RUN-UPDATE` (applies migrations `20261113090000_people_kernel_columns`, `20261113100000_agreements_kernel_columns`, `20261113110000_projects_kernel_columns`,
 `20261113110100_investments_kernel_columns`, `20261113120000_invoicing_kernel_columns`, `20261113130000_pos_kernel_columns`, `20261113140000_hotel_kernel_columns`, `20261113150000_crm_kernel_columns`, `20261113160000_listings_kernel_columns`, `20261113170000_workspace_kernel_columns`; all additive, it backs up first).
