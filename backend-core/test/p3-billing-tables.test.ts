@@ -3,7 +3,7 @@
 // Where it fits: the suite's temporary database (platform/test/setup-db.ts) has migrations 20261113200000_p3_subscriptions and
 // 20261113210000_p3_invoicing_revenue applied. Nothing in the app writes these tables yet (P3-BE tasks do); these tests prove the database
 // itself keeps the money rules, so no later code can break them by mistake.
-// How it works: plain SQL, every test inside one transaction that is rolled back (savepoints for the statements that must fail), so the
+// How it works: plain SQL (PostgreSQL names the CHECK or foreign key in its message; for a unique key it names the columns),  every test inside one transaction that is rolled back (savepoints for the statements that must fail), so the
 // shared test database stays as it was.
 // Run with: npm run test -w @sheetal/backend-core
 import type {} from "@sheetal/platform/test/setup-db";
@@ -77,7 +77,7 @@ describe("migration 20261113200000_p3_subscriptions", () => {
     await rolledBack(async (tx) => {
       const t = await business(tx);
       await exec(tx, SUB, "s1", t, "hotel", "free", "active", null, null, "install");
-      expect(await refused(tx, SUB, "s2", t, "hotel", "full", "trialing", null, null, "trial")).toMatch(/subscriptions_tenant_id_app_id_key/);
+      expect(await refused(tx, SUB, "s2", t, "hotel", "full", "trialing", null, null, "trial")).toMatch(/Key \(tenant_id, app_id\)/);
       expect(await refused(tx, SUB, "s3", t, "crm", "full", "paused", null, null, "install")).toMatch(/subscriptions_status_check/);
       expect(await refused(tx, SUB, "s4", t, "crm", "full", "active", null, null, "bought")).toMatch(/subscriptions_source_check/);
       expect(await refused(tx, SUB, "s5", t, "crm", "full", "active", 1, null, "purchase")).toMatch(/subscriptions_period_end_check/);
@@ -115,11 +115,11 @@ describe("migration 20261113200000_p3_subscriptions", () => {
       const add = `INSERT INTO addon_subscriptions (id, tenant_id, app_id, addon_key, qty, renew_qty, unit_price_gross_paisa, period_months, current_period_end, updated_at)
                    VALUES ($1, $2, $3, 'seats', 2, 2, 15000, 1, now(), now())`;
       await exec(tx, add, "a1", t, "");
-      expect(await refused(tx, add, "a2", t, "")).toMatch(/addon_subscriptions_tenant_id_app_id_addon_key_key/);
+      expect(await refused(tx, add, "a2", t, "")).toMatch(/Key \(tenant_id, app_id, addon_key\)/);
       await exec(tx, add, "a3", t, "hotel");
       const lock = `INSERT INTO billing_locks (tenant_id, legacy_monthly_gross_paisa, legacy_period_months, lock_end, migration_run_id) VALUES ($1, 150000, 1, now(), 'run-1')`;
       await exec(tx, lock, t);
-      expect(await refused(tx, lock, t)).toMatch(/billing_locks_pkey/);
+      expect(await refused(tx, lock, t)).toMatch(/Key \(tenant_id\)/);
     });
   });
 
@@ -161,7 +161,7 @@ describe("migration 20261113210000_p3_invoicing_revenue", () => {
       await exec(tx, NEW_INVOICE, "i2", t);
       expect(await refused(tx, `UPDATE invoices SET no = 1 WHERE id = 'i1'`)).toMatch(/invoices_number_check/);
       await exec(tx, `UPDATE invoices SET no = 1, fy = '2083-84', issued_at = now(), status = 'paid' WHERE id = 'i1'`);
-      expect(await refused(tx, `UPDATE invoices SET no = 1, fy = '2083-84', issued_at = now() WHERE id = 'i2'`)).toMatch(/invoices_fy_no_key/);
+      expect(await refused(tx, `UPDATE invoices SET no = 1, fy = '2083-84', issued_at = now() WHERE id = 'i2'`)).toMatch(/Key \(fy, no\)/);
       await exec(tx, `UPDATE invoices SET no = 1, fy = '2084-85', issued_at = now() WHERE id = 'i2'`); // the next year starts at 1 again
       expect(await refused(tx, `UPDATE invoices SET total_paisa = 39999 WHERE id = 'i1'`)).toMatch(/issued tax invoice can't be changed/);
       expect(await refused(tx, `UPDATE invoices SET no = 7 WHERE id = 'i1'`)).toMatch(/issued tax invoice can't be changed/);
@@ -194,7 +194,7 @@ describe("migration 20261113210000_p3_invoicing_revenue", () => {
                      commission_bp, commission_paisa, partner_bp, partner_paisa, sheetal_net_paisa, publisher_paisa, method, mode, paid_at)
                    VALUES ($1, 'pay', 'inv', $2, $3, 'sale', 'new', 40000, 4602, 35398, 10000, 35398, 2000, 7080, 28318, 0, 'esewa', $4, now())`;
       await exec(tx, rev, "r1", "l1", t, "live");
-      expect(await refused(tx, rev, "r2", "l1", t, "live")).toMatch(/revenue_entries_payment_id_invoice_line_id_kind_key/);
+      expect(await refused(tx, rev, "r2", "l1", t, "live")).toMatch(/Key \(payment_id, invoice_line_id, kind\)/);
       expect(await refused(tx, rev, "r3", "l9", t, "test")).toMatch(/revenue_entries_mode_check/);
       expect(await refused(tx, `UPDATE revenue_entries SET method = 'khalti' WHERE id = 'r1'`)).toMatch(/can't be changed or deleted/);
       expect(await refused(tx, `DELETE FROM revenue_entries WHERE id = 'r1'`)).toMatch(/can't be changed or deleted/);
@@ -211,12 +211,12 @@ describe("migration 20261113210000_p3_invoicing_revenue", () => {
       const coupon = `INSERT INTO coupons (id, code, kind, value, created_by, updated_at) VALUES ($1, $2, $3, $4, 'staff-1', now())`;
       await exec(tx, coupon, "c1", "LAUNCH20", "percent", 20);
       expect(await refused(tx, coupon, "c2", "launch20", "percent", 20)).toMatch(/coupons_code_check/);
-      expect(await refused(tx, coupon, "c3", "LAUNCH20", "percent", 10)).toMatch(/coupons_code_key/);
+      expect(await refused(tx, coupon, "c3", "LAUNCH20", "percent", 10)).toMatch(/Key \(code\)/);
       expect(await refused(tx, coupon, "c4", "TOOMUCH", "percent", 101)).toMatch(/coupons_value_check/);
       await exec(tx, coupon, "c5", "RS500OFF", "fixed_paisa", 50_000);
       const red = `INSERT INTO coupon_redemptions (id, coupon_id, tenant_id, user_id, invoice_id, discount_paisa) VALUES ($1, 'c1', $2, 'u1', 'inv-1', 8000)`;
       await exec(tx, red, "cr1", t);
-      expect(await refused(tx, red, "cr2", t)).toMatch(/coupon_redemptions_coupon_id_tenant_id_invoice_id_key/);
+      expect(await refused(tx, red, "cr2", t)).toMatch(/Key \(coupon_id, tenant_id, invoice_id\)/);
       expect(await refused(tx, `DELETE FROM coupons WHERE id = 'c1'`)).toMatch(/coupon_redemptions_coupon_id_fkey/); // a used coupon stays
       const appr = `INSERT INTO platform_approvals (id, action, resource, payload, maker_id, checker_id, expires_at) VALUES ($1, 'platform.billing.refund', 'payment', '{}', 'staff-1', $2, now())`;
       await exec(tx, appr, "pa1", "staff-2");

@@ -35,3 +35,8 @@ Nothing to see yet. The next RUN-UPDATE backs up and applies both migrations.
 ## Go back
 Revert the PR before any Phase 3 sale. If applied: drop the 12 new tables, the new columns, and the functions `invoices_paisa_sync`, `invoices_issued_guard`,
 `payments_paisa_fill`, `revenue_entries_append_only` (with their triggers), and re-add NOT NULL on `invoices.plan_id`.
+
+## Fixed after the first CI run
+- The new tests matched unique keys by constraint name; PostgreSQL names the columns instead (`Key (tenant_id, app_id)`): matched on that.
+- An old test (`business/backend/test/people-kernel.test.ts`, the 409 attendance fix) failed when the suite ran between 00:00 and 09:00 Nepal time:
+  it moved a check-in to 09:00 while the check-out was "now". The test now sends a check-out of 23:59 as well; its assertions are unchanged.
