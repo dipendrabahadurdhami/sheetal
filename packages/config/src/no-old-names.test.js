@@ -21,6 +21,7 @@ const LOOK_ALIKES = {
   "admin/backend/src/modules/verification.ts": 1,        // a comment
   "admin/frontend/src/pages/AdminGrowth.jsx": 1,         // t("content.publish")
   "admin/frontend/src/pages/AdminOps.jsx": 1,            // t("content.publish")
+  "apps/pos/backend/pos.service.ts": 1,                  // audit action "pos.void" (moved from modules/pos in P2-W4)
   "business/backend/src/modules/billing/routes.ts": 1,   // a comment
   "business/backend/src/modules/branches/routes.ts": 1,  // a comment
   "business/backend/src/modules/mail/routes.ts": 2,      // comments

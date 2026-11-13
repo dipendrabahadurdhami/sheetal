@@ -14,4 +14,4 @@ The Stock tables are tagged `pos`, so Stock is part of the POS app.
 - Screens: `LivePOS` moved out of `LiveOps.jsx` to `apps/pos/frontend/pages/PosPage.jsx`; `LiveStock.jsx` to `apps/pos/frontend/pages/StockPage.jsx` (sends
   `version`, reloads on 409). The old names are re-exports. The POS page now also reloads when the branch picked at the top changes.
 - Tests: `operations.test.ts`, `stock.test.ts`, `jobs.test.ts` unchanged; new `business/backend/test/pos-kernel.test.ts` and `apps/pos/frontend/pages/screens.test.js`.
-  `packages/config/src/no-old-names.test.js`: the look-alike `pos.void` audit string left the old POS file (the guard doesn't scan apps/), so its entry is removed.
+  `packages/config/src/no-old-names.test.js`: the look-alike `pos.void` audit string moved from the old POS file to `apps/pos/backend/pos.service.ts`; the pinned list follows it.
