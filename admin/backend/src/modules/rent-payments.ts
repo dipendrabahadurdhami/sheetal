@@ -21,7 +21,7 @@ export async function adminRentPaymentRoutes(app: FastifyInstance) {
     staffOf(request, "platform.billing.read");
     const q = z.object({ status: z.enum(["pending", "confirmed", "rejected", "all"]).default("pending"), to: z.enum(["sheetal", "business", "all"]).default("sheetal") }).parse(request.query);
     const rows = await db().rentPayment.findMany({
-      where: { source: "online", ...(q.status === "all" ? {} : { status: q.status }), ...(q.to === "all" ? {} : { collectedBy: q.to }) },
+      where: { source: "online", deletedAt: null, ...(q.status === "all" ? {} : { status: q.status }), ...(q.to === "all" ? {} : { collectedBy: q.to }) },
       orderBy: { createdAt: "desc" }, take: 300,
       include: { bill: { include: { lease: { include: { unit: { select: { property: true, name: true } } } } } } },
     });
@@ -37,7 +37,7 @@ export async function adminRentPaymentRoutes(app: FastifyInstance) {
 
   app.get<{ Params: { id: string } }>("/admin/rent-payments/:id/proof", async (request) => {
     staffOf(request, "platform.billing.read");
-    const p = await db().rentPayment.findUnique({ where: { id: request.params.id.slice(0, 40) }, select: { proofFile: true } });
+    const p = await db().rentPayment.findFirst({ where: { id: request.params.id.slice(0, 40), deletedAt: null }, select: { proofFile: true } });
     const f = p?.proofFile ? await readPrivateFile(app.config.MEDIA_DIR, "proofs", p.proofFile) : null;
     if (!f) throw notFound("No screenshot was sent with this payment.");
     return { data: { type: f.type, data: f.data.toString("base64") } };
@@ -45,7 +45,7 @@ export async function adminRentPaymentRoutes(app: FastifyInstance) {
 
   app.post<{ Params: { id: string } }>("/admin/rent-payments/:id/confirm", async (request) => {
     const s = staffOf(request, "platform.billing.refund");
-    const p = await db().rentPayment.findUnique({ where: { id: request.params.id.slice(0, 40) }, select: { tenantId: true } });
+    const p = await db().rentPayment.findFirst({ where: { id: request.params.id.slice(0, 40), deletedAt: null }, select: { tenantId: true } });
     if (!p) throw notFound("Payment not found.");
     const r = await confirmRentPayment(db(), { paymentId: request.params.id.slice(0, 40), by: s.user.id });
     await audit(s.user.id, request.ip, "rent.payment_confirmed", `${r.bill} Rs. ${r.amount}`, p.tenantId);
@@ -55,7 +55,7 @@ export async function adminRentPaymentRoutes(app: FastifyInstance) {
   app.post<{ Params: { id: string } }>("/admin/rent-payments/:id/reject", async (request) => {
     const s = staffOf(request, "platform.billing.refund");
     const b = z.object({ note: z.string().trim().min(3, "Say why, so the tenant knows.").max(300) }).parse(request.body);
-    const p = await db().rentPayment.findUnique({ where: { id: request.params.id.slice(0, 40) }, select: { tenantId: true } });
+    const p = await db().rentPayment.findFirst({ where: { id: request.params.id.slice(0, 40), deletedAt: null }, select: { tenantId: true } });
     if (!p) throw notFound("Payment not found.");
     await rejectRentPayment(db(), { paymentId: request.params.id.slice(0, 40), by: s.user.id, note: b.note });
     await audit(s.user.id, request.ip, "rent.payment_rejected", b.note, p.tenantId);

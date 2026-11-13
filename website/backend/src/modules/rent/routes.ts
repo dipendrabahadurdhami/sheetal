@@ -47,7 +47,7 @@ export async function rentRoutes(app: FastifyInstance) {
     const out = [];
     for (const l of leases) {
       const view = l.status === "active" ? await leaseView(db(), l.id) : null;
-      const payments = await db().rentPayment.findMany({ where: { bill: { leaseId: l.id }, OR: [{ userId: user.id }, { status: "confirmed" }] }, orderBy: { createdAt: "desc" }, take: 24, include: { bill: { select: { seq: true, month: true } } } });
+      const payments = await db().rentPayment.findMany({ where: { bill: { leaseId: l.id }, deletedAt: null, OR: [{ userId: user.id }, { status: "confirmed" }] }, orderBy: { createdAt: "desc" }, take: 24, include: { bill: { select: { seq: true, month: true } } } });
       out.push({ leaseId: l.id, lease: leaseNo(l.seq), status: l.status, start: ymd(l.startOn), end: ymd(l.endOn), rent: l.rent, view,
         payments: payments.map((p) => ({ id: p.id, bill: billNo(p.bill.seq), month: p.bill.month, amount: p.amount, method: p.method, paidOn: ymd(p.paidOn), status: p.status, note: p.status === "rejected" ? p.reviewNote ?? "" : "" })) });
     }
