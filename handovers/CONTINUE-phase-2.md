@@ -27,16 +27,15 @@ dependency + Vite alias, a source test next to the page. Root `npm test`/`typech
 | W6 | Workspace part 2b: the business Overview (read only); `ChannelAccount` owner decided (workspace) | #51 |
 | W6 | Workspace part 2c: Import / Export (all rows or none) and online forms (kernel columns on forms) | #52 |
 | W6 | Workspace part 2d: business email (setup audited, support sessions read only) | #53 |
+| W6 | Workspace part 2e: growth split by owner (Workspace analytics/channels, CRM lead finder + Meta webhook, Hotel feeds/iCal/other-site requests) | #54 |
 
 ## Not done yet
 - W1 Rentals follow-ups: paisa columns + backfill; soft delete for owner/unit/payment/statement.
 - W2: Business -> Settings tab per app.
 - W3 follow-up: the invoice screen (`InvoicesView` in Money.jsx) moves into apps/invoicing/frontend when the sample workspace goes (W6).
-- W4 follow-up: the online travel sites (`modules/ota`, backend-core `domain/ota.ts`; models OtaFeed, OtaRequest, OtaAccount) move into apps/hotel;
-  their booking writes should take the same room-type hold (`RoomRepository.lockType`).
-- W5/W6 Workspace part 2 (rest): `growth` (229 lines; split it: analytics + channels + AI usage → workspace, AI lead finder + Meta webhook → crm,
-  calendar feeds + iCal → hotel together with `modules/ota`); then move `modules/reviews/checkups.ts`
-  (253 lines + a daily job) into apps/listings. Their screens load from the panel store (`business/frontend/src/live.js`) that W6 replaces.
+- W4 follow-up: the online travel sites are in apps/hotel (#54); a feed sync's booking writes (backend-core `domain/ota.ts`) should still take the
+  room-type hold (`RoomRepository.lockType`).
+- Listings: move `modules/reviews/checkups.ts` (253 lines + a daily job) into apps/listings.
 - W6 Website API on the kernel where it writes business data; remove the browser-storage sample workspace; delete the last shims.
 
 ## Owner steps after these merges
