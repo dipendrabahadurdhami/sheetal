@@ -10,7 +10,7 @@
 import { narrowest, type BusinessContext, type DataScope, type PermissionId, type PermissionSet } from "./context.js";
 
 /** App id -> the widest scope its permissions may reach in Phase 1. An app that is not listed has no cap. */
-export const PHASE_ONE_CAPS: Readonly<Record<string, DataScope>> = { expenses: "branch", reviews: "branch", people: "branch", agreements: "branch", projects: "branch", investments: "branch", invoicing: "branch", pos: "branch" };
+export const PHASE_ONE_CAPS: Readonly<Record<string, DataScope>> = { expenses: "branch", reviews: "branch", people: "branch", agreements: "branch", projects: "branch", investments: "branch", invoicing: "branch", pos: "branch", hotel: "branch" };
 
 export const phaseOneCap = (appId: string): DataScope | null => PHASE_ONE_CAPS[appId] ?? null;
 

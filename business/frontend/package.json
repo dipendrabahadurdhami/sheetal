@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@sheetal/app-expenses": "*",
+    "@sheetal/app-hotel": "*",
     "@sheetal/app-pos": "*",
     "@sheetal/app-invoicing": "*",
     "@sheetal/app-investments": "*",
