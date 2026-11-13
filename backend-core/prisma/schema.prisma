@@ -497,6 +497,12 @@ model Listing {
   legacyId      Int?           @unique @map("legacy_id")
   publishedAt   DateTime?      @map("published_at")
   createdAt     DateTime       @default(now()) @map("created_at")
+  /// Kernel columns (P2-W5): who changed it last, the version for 409 conflicts, and the soft-delete marks.
+  createdBy   String?   @map("created_by")
+  updatedBy   String?   @map("updated_by")
+  version     Int       @default(1)
+  deletedAt   DateTime? @map("deleted_at")
+  deletedBy   String?   @map("deleted_by")
   updatedAt     DateTime       @updatedAt @map("updated_at")
   photos        ListingPhoto[]
 
