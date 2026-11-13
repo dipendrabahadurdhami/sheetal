@@ -105,7 +105,7 @@ export const APPS = [
       { id: "crm.customer.read", label: { en: "See customer details and IDs" }, scopes: ["branch", "all"], default: "branch", group: "Customers" },
       { id: "crm.message.reply", label: { en: "Reply to messages", ne: "सन्देशको जवाफ दिने" }, scopes: ["branch", "all"], default: "branch", group: "Messages" },
     ],
-    dependencies: { requires: [], optional: [] },
+    dependencies: { requires: [], optional: ["listings"] },
     branchOwned: [{ model: "Lead", label: { en: "lead" } }],
   },
   {

@@ -197,9 +197,16 @@ export const APPS: readonly AppManifest[] = [
     ],
     approvals: [],
     menu: [],
-    events: { publishes: [], consumes: [] },
+    events: {
+      publishes: [
+        { name: "crm.lead.updated", v: 1, label: "A lead was changed (owner, follow-up, tags, value, read)", payload: { id: "id", stage: "string", assigneeId: "id" } },
+        { name: "crm.lead.stage_changed", v: 1, label: "A lead moved to another stage", payload: { id: "id", stage: "string", assigneeId: "id" } },
+        { name: "crm.lead.replied", v: 1, label: "Someone replied to a lead", payload: { id: "id", channel: "string" } },
+      ],
+      consumes: [],
+    },
     ai: [],
-    dependencies: { requires: [], optional: [], reads: [] },
+    dependencies: { requires: [], optional: ["listings"], reads: ["Listing", "ChannelAccount"] },
     models: ["Lead", "LeadMessage"],
     branchOwned: [{ model: "Lead", label: { en: "lead" } }],
     settings: [],
