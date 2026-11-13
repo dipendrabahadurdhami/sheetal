@@ -13,7 +13,6 @@ import type { Config } from "@sheetal/platform/core/config";
 import { buildBaseApp, type AppDeps } from "@sheetal/backend-core/app";
 import { mailRoutes } from "./modules/mail/routes.js";
 import { teamRoutes } from "./modules/team/routes.js";
-import { listingRoutes } from "./modules/listings/routes.js";
 import { billingRoutes } from "./modules/billing/routes.js";
 import { addonRoutes } from "./modules/billing/addons.js";
 import { growthRoutes } from "./modules/growth/routes.js";
@@ -34,6 +33,7 @@ import { invoicingRoutes } from "@sheetal/app-invoicing/backend";
 import { posRoutes } from "@sheetal/app-pos/backend";
 import { hotelRoutes } from "@sheetal/app-hotel/backend";
 import { leadRoutes } from "@sheetal/app-crm/backend";
+import { listingRoutes } from "@sheetal/app-listings/backend";
 import { listingCodeRoutes } from "./modules/listings/codes.js";
 import { formRoutes } from "./modules/forms/routes.js";
 import { promoteRoutes } from "./modules/promote/routes.js";
@@ -95,7 +95,7 @@ export async function buildApp(config: Config, deps: AppDeps & { resolver?: Reso
   // The bell: the person's notifications about the open business.
   await app.register(async (a) => notificationRoutes(a, "/notifications", (request) => { const ws = workspaceOf(request); return { userId: ws.user.id, tenantId: ws.tenantId }; }), { prefix: "/v1" });
   await app.register(mailRoutes, { prefix: "/v1", resolver: deps.resolver });
-  await app.register(listingRoutes, { prefix: "/v1" });
+  await app.register(listingRoutes, { prefix: "/v1", contextOf: businessContextOf });
   await app.register(leadRoutes, { prefix: "/v1", contextOf: businessContextOf, fetch: deps.fetch });
   await app.register(billingRoutes, { prefix: "/v1", fetch: deps.fetch });
   await app.register(addonRoutes, { prefix: "/v1" });

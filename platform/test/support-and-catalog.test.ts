@@ -44,9 +44,9 @@ describe("support role", () => {
 
 describe("scope cap (one copy, in platform)", () => {
   it("the apps moved onto the kernel are capped at branch; other apps are not", () => {
-    // Phase 2 adds each app here as it moves (CRM in P2-W5); Listings has not moved yet, so it is the example of an app with no cap.
-    for (const app of ["expenses", "reviews", "people", "agreements", "projects", "investments", "invoicing", "pos", "hotel", "crm"]) expect(phaseOneCap(app)).toBe("branch");
-    expect(phaseOneCap("listings")).toBeNull();
+    // Phase 2 adds each app here as it moves (CRM in P2-W5); Workspace has not moved yet, so it is the example of an app with no cap.
+    for (const app of ["expenses", "reviews", "people", "agreements", "projects", "investments", "invoicing", "pos", "hotel", "crm", "listings"]) expect(phaseOneCap(app)).toBe("branch");
+    expect(phaseOneCap("workspace")).toBeNull();
   });
   it("narrows scopes, keeps held/not-held, and uses the message for a missing permission", () => {
     const p = capPermissions(makeTestPermissions({ "expenses.expense.read": "all", "expenses.expense.create": "own" }), "branch", () => "No.");
