@@ -212,6 +212,13 @@ model Branch {
   status    String     @default("open")
   sort      Int        @default(0)
   createdAt DateTime   @default(now()) @map("created_at")
+  /// Kernel columns (P2-W5): who changed it last, the version for 409 conflicts, and the soft-delete marks.
+  createdBy   String?   @map("created_by")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+  updatedBy   String?   @map("updated_by")
+  version     Int       @default(1)
+  deletedAt   DateTime? @map("deleted_at")
+  deletedBy   String?   @map("deleted_by")
   tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   listings  Listing[]
   leads     Lead[]

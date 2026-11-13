@@ -18,10 +18,8 @@ import { addonRoutes } from "./modules/billing/addons.js";
 import { growthRoutes } from "./modules/growth/routes.js";
 import { otaRoutes } from "./modules/ota/routes.js";
 import { supportRoutes } from "./modules/support/routes.js";
-import { branchRoutes } from "./modules/branches/routes.js";
 import { reviewRoutes } from "@sheetal/app-reviews/backend";
 import { verificationRoutes } from "./modules/verification/routes.js";
-import { settingsRoutes } from "./modules/settings/routes.js";
 import { dataRoutes } from "./modules/data/routes.js";
 import { expenseRoutes } from "@sheetal/app-expenses/backend";
 import { rentalRoutes } from "@sheetal/app-rentals/backend";
@@ -34,6 +32,7 @@ import { posRoutes } from "@sheetal/app-pos/backend";
 import { hotelRoutes } from "@sheetal/app-hotel/backend";
 import { leadRoutes } from "@sheetal/app-crm/backend";
 import { listingRoutes } from "@sheetal/app-listings/backend";
+import { workspaceRoutes } from "@sheetal/app-workspace/backend";
 import { listingCodeRoutes } from "./modules/listings/codes.js";
 import { formRoutes } from "./modules/forms/routes.js";
 import { promoteRoutes } from "./modules/promote/routes.js";
@@ -72,10 +71,9 @@ export async function buildApp(config: Config, deps: AppDeps & { resolver?: Reso
   await app.register(approvalRoutes, { prefix: "/v1", contextOf: businessContextOf, service: approvals });
   await app.register(supportSessionRoutes, { prefix: "/v1" });
   await app.register(teamRoutes, { prefix: "/v1" });
-  await app.register(branchRoutes, { prefix: "/v1" });
+  await app.register(workspaceRoutes, { prefix: "/v1", contextOf: businessContextOf });   // branches, business settings, check-ups
   await app.register(reviewRoutes, { prefix: "/v1", contextOf: businessContextOf });
   await app.register(verificationRoutes, { prefix: "/v1" });
-  await app.register(settingsRoutes, { prefix: "/v1" });
   await app.register(dataRoutes, { prefix: "/v1" });
   await app.register(invoicingRoutes, { prefix: "/v1", contextOf: businessContextOf });   // customer invoices and payouts
   // Expenses is the first app on the kernel (P1-BE-5): its code lives in apps/expenses/backend; it gets the request-context builder from here.
