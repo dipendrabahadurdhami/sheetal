@@ -104,7 +104,13 @@ const manifest = {
     },
   ],
   menu: [],
-  events: { publishes: [], consumes: [] },
+  events: {
+    // Phase 3 billing (MARKETPLACE-AND-BILLING.md section 16; the design's "billing.*" names follow the rule that a manifest's events start with its id).
+    publishes: [
+      { name: "platform.invoice.issued", v: 1, label: "A tax invoice was issued (a subscription paid)", payload: { invoiceId: "id", tenantId: "id", number: "string", totalPaisa: "paisa" } },
+    ],
+    consumes: [],
+  },
   ai: [],
   dependencies: { requires: [], optional: [], reads: [] },
   models: [

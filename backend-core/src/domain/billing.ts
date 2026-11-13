@@ -20,6 +20,12 @@ import { applyAddonLines, endAddons, linesTotal, renewalLines, type AddonLine } 
 import { activateBoosts } from "./promote.js";
 import { platformSaved, platformSettings } from "./platform.js";
 import { payBanners } from "./banners.js";
+import { SettingsService } from "@sheetal/platform/settings/service";
+import { REVENUE_SHARE } from "@sheetal/platform/settings/defs";
+import { applySubscriptionPayment } from "@sheetal/platform/billing/invoice";
+
+/** The settings store only logs a stored value that no longer fits its definition (it then uses the default). */
+const QUIET = { warn: () => undefined };
 
 export interface BillingSettings { vatRate: number; graceDays: number; autoSuspend: boolean; reminderDays: number[]; bank: { name?: string; account?: string; accountName?: string; note?: string } }
 const BILLING_DEFAULTS: BillingSettings = { vatRate: 13, graceDays: 7, autoSuspend: true, reminderDays: [7, 1], bank: {} };
@@ -151,6 +157,13 @@ export async function applyPayment(db: Db, mailer: Mailer, o: { paymentId: strin
     if (p.status === "paid" || p.invoice.status === "paid") return null;
     if (p.invoice.status === "void") throw new Error("This invoice was cancelled.");
     const tenant = await tx.tenant.findUniqueOrThrow({ where: { id: p.tenantId } });
+    if (p.invoice.kind === "subscription") {
+      // Phase 3: per-app subscriptions (platform/src/billing/invoice.ts): tax invoice number at payment, subscriptions, revenue rows.
+      const share = await new SettingsService(db, QUIET).get(REVENUE_SHARE);
+      const seller = { name: (await platformSettings(db)).siteName };
+      const r = await applySubscriptionPayment(tx, { paymentId: p.id, now, providerRef: o.providerRef ?? null, raw: o.raw, reviewedBy: o.reviewedBy ?? null, appSales: share.appSales, share, seller });
+      return r.applied ? { p, tenant, end: now, v3: true as const } : null;
+    }
     if (p.invoice.kind === "banner") {
       // A home page banner: paid, it waits for Sheetal to check the picture.
       await tx.payment.update({ where: { id: p.id }, data: { status: "paid", paidAt: now, providerRef: o.providerRef ?? p.providerRef, raw: (o.raw ?? p.raw ?? undefined) as Prisma.InputJsonValue | undefined, reviewedBy: o.reviewedBy } });
@@ -191,6 +204,7 @@ export async function applyPayment(db: Db, mailer: Mailer, o: { paymentId: strin
     return { p, tenant, end };
   });
   if (!done) return false;
+  if ("v3" in done) return true; // Phase 3 mails come with the lifecycle job (P3-BE-5)
   if (done.p.invoice.kind === "addon") await repriceOpenPlanInvoices(db, done.tenant.id);
   const plan = done.p.invoice.planId ? await db.plan.findUnique({ where: { id: done.p.invoice.planId } }) : null;
   const owner = await ownerOf(db, done.tenant.id);
