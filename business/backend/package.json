@@ -18,6 +18,7 @@
     "@prisma/client": "^6.19.3",
     "@sheetal/app-agreements": "*",
     "@sheetal/app-expenses": "*",
+    "@sheetal/app-listings": "*",
     "@sheetal/app-crm": "*",
     "@sheetal/app-hotel": "*",
     "@sheetal/app-pos": "*",
