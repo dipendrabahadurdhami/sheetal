@@ -45,6 +45,8 @@ const manifest = {
       { name: "agreements.agreement.reminded", v: 1, label: "A signing link was sent again", payload: { id: "id", ref: "string" } },
       { name: "agreements.agreement.cancelled", v: 1, label: "An agreement was cancelled", payload: { id: "id", ref: "string" } },
       { name: "agreements.agreement.removed", v: 1, label: "A draft was removed", payload: { id: "id", ref: "string" } },
+      { name: "agreements.agreement.signed", v: 1, label: "Someone signed an agreement on the website", payload: { id: "id", ref: "string" } },
+      { name: "agreements.agreement.completed", v: 1, label: "Everyone has signed an agreement", payload: { id: "id", ref: "string" } },
     ],
     consumes: [],
   },

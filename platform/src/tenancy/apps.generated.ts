@@ -162,6 +162,8 @@ export const APPS: readonly AppManifest[] = [
         { name: "agreements.agreement.reminded", v: 1, label: "A signing link was sent again", payload: { id: "id", ref: "string" } },
         { name: "agreements.agreement.cancelled", v: 1, label: "An agreement was cancelled", payload: { id: "id", ref: "string" } },
         { name: "agreements.agreement.removed", v: 1, label: "A draft was removed", payload: { id: "id", ref: "string" } },
+        { name: "agreements.agreement.signed", v: 1, label: "Someone signed an agreement on the website", payload: { id: "id", ref: "string" } },
+        { name: "agreements.agreement.completed", v: 1, label: "Everyone has signed an agreement", payload: { id: "id", ref: "string" } },
       ],
       consumes: [],
     },
@@ -237,7 +239,7 @@ export const APPS: readonly AppManifest[] = [
     events: {
       publishes: [
         { name: "crm.lead.found", v: 1, label: "The AI lead finder added leads", payload: { count: "number" } },
-        { name: "crm.lead.received", v: 1, label: "A chat message came in (WhatsApp, Messenger, Instagram)", payload: { id: "id", channel: "string" } },
+        { name: "crm.lead.received", v: 1, label: "A lead came in (website enquiry, online form, public API, WhatsApp, Messenger, Instagram)", payload: { id: "id", channel: "string" } },
         { name: "crm.lead.updated", v: 1, label: "A lead was changed (owner, follow-up, tags, value, read)", payload: { id: "id", stage: "string", assigneeId: "id" } },
         { name: "crm.lead.stage_changed", v: 1, label: "A lead moved to another stage", payload: { id: "id", stage: "string", assigneeId: "id" } },
         { name: "crm.lead.replied", v: 1, label: "Someone replied to a lead", payload: { id: "id", channel: "string" } },

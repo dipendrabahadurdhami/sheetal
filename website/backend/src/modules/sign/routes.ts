@@ -5,6 +5,7 @@
 // signing record once everyone has. POST /code emails a new code (only its hash is kept). POST checks the code and
 // records the signature: the typed name, the time, the address and browser. When the last person signs, the
 // agreement becomes signed, everyone gets an email with their link to the signed copy, and the business is notified.
+// Every signature also gets the Agreements app's audit line and event in its transaction (apps/agreements/backend/signing.ts, P2-W6).
 // Rules: codes last 10 minutes and allow 5 tries; 5 codes per link, at least a minute apart (the business can send a
 // new link); cancelled agreements can't be signed; the texts never change after sending.
 
@@ -15,6 +16,8 @@ import { dbOf } from "@sheetal/platform/db/client";
 import { AppError, badRequest, notFound } from "@sheetal/platform/core/errors";
 import { safeEqual, sha256 } from "@sheetal/platform/auth/secrets";
 import { notify, teamWith } from "@sheetal/platform/notify/index";
+import { recordSigning } from "@sheetal/app-agreements/backend/signing";
+import { websiteBus } from "../intake.js";
 import { AGREEMENT_PERM, OTP_GAP_SECONDS, OTP_MINUTES, OTP_SENDS, OTP_TRIES, agreementNo, maskEmail, nepalTime, otpHash, roleLabel, type Kind } from "@sheetal/backend-core/domain/agreements";
 
 export async function signRoutes(app: FastifyInstance) {
@@ -87,9 +90,11 @@ export async function signRoutes(app: FastifyInstance) {
       const n = await tx.agreementSigner.updateMany({ where: { id: s.id, status: "pending", otpHash: s.otpHash }, data: { status: "signed", signedAt: now, signedName: b.name, channel: "email", ip: request.ip, userAgent: ua(request), otpHash: null, otpExpires: null } });
       if (!n.count) return "again" as const;
       const left = await tx.agreementSigner.count({ where: { agreementId: a.id, status: "pending" } });
-      if (left) return "signed" as const;
-      const done = await tx.agreement.updateMany({ where: { id: a.id, status: "sent" }, data: { status: "signed", signedAt: now } });
-      return done.count ? ("complete" as const) : ("signed" as const);
+      const done = left ? 0 : (await tx.agreement.updateMany({ where: { id: a.id, status: "sent" }, data: { status: "signed", signedAt: now } })).count;
+      // The Agreements app's audit trail and events, in this same transaction (P2-W6).
+      await recordSigning(tx, websiteBus, { requestId: request.id, ip: request.ip, log: request.log },
+        { tenantId: a.tenantId, agreementId: a.id, ref: agreementNo(a.seq), branchId: a.branchId, signerId: s.id, signerName: b.name, complete: done > 0 });
+      return done ? ("complete" as const) : ("signed" as const);
     });
     if (result === "again") throw badRequest("You have already signed this agreement.");
 

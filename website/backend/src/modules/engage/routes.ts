@@ -16,6 +16,7 @@ import { headOffice } from "@sheetal/backend-core/domain/branches";
 import { STAFF_FOR, leadPeople, notify, notifyStaff, teamWith } from "@sheetal/platform/notify/index";
 import { listingCard, mediaBase } from "../catalog/present.js";
 import { feeSettings } from "../board/routes.js";
+import { infoOf, leadIntake } from "../intake.js";
 
 const LIVE: Prisma.ListingWhereInput = { status: { in: ["published", "sold", "rented"] } };
 const strict = (max: number) => ({ config: { rateLimit: { max, timeWindow: "1 minute" } } });
@@ -103,7 +104,8 @@ export async function engageRoutes(app: FastifyInstance) {
         feeData = { feeStatus: "pending", feeAmount: fee.amount, feeRef: ref || null, feeProof: await savePrivateFile(app.config.MEDIA_DIR, "proofs", proof) };
       }
       const branchId = tenantId ? listing?.branchId ?? await headOffice(db, tenantId) : null;
-      const lead = await db.lead.create({ data: { tenantId, branchId, listingId: listing?.id, userId: request.user?.id, kind, name: b.name, email: b.email || null, phone: contact, message, details, ip: request.ip, public: board && !fee?.enabled, ...feeData } });
+      // The CRM app writes the lead, its audit line and its event in one transaction (P2-W6).
+      const lead = await leadIntake(app).receive(infoOf(request), { tenantId, branchId, listingId: listing?.id, userId: request.user?.id, kind, name: b.name, email: b.email || null, phone: contact, message, details, ip: request.ip, public: board && !fee?.enabled, ...feeData }, "website");
       // A requirement fee proof waits for Sheetal's team.
       if (feeData.feeStatus === "pending") await notifyStaff(db, STAFF_FOR.listingReview, { type: "requirement", title: "Requirement fee to check", message: `${b.name} · Rs. ${feeData.feeAmount}`, link: "/admin/demand" });
       if (tenantId) await notify(db, await leadPeople(db, tenantId, branchId), { tenantId, type: "lead", title: `New enquiry from ${b.name}`, message: listing ? `${listing.title} (${listing.code})` : message.slice(0, 140), link: "/business/inbox" });
