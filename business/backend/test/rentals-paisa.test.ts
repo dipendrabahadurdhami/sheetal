@@ -1,6 +1,6 @@
 // Rentals leftovers of Phase 2 (P2-W6): money also kept in paisa (the database trigger keeps every *_paisa column equal to rupees × 100, on every
-// writer), and owners, units, payments and statements removed with a soft delete that every other reader skips (the page, the branch-closing check,
-// profit, the website's "my rent" page). rentals.test.ts and rentals-kernel.test.ts (the old tests) pass unchanged.
+// writer), and payments and statements removed with a soft delete that every other reader skips (the page, profit, the website's "my rent" page);
+// owners and units stay real deletes because their branch link is ON DELETE RESTRICT. rentals.test.ts and rentals-kernel.test.ts (the old tests) pass unchanged.
 // Where it fits: runs with the business API tests (needs the throwaway PostgreSQL started by platform/test/setup-db.ts): npm run test -w @sheetal/business-api
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import type {} from "@sheetal/platform/test/setup-db";
@@ -53,7 +53,7 @@ describe("money in paisa, kept by the database", () => {
   });
 });
 
-describe("soft delete of owners, units, payments and statements", () => {
+describe("soft delete of payments and statements; real delete of owners and units", () => {
   it("a removed payment stays as a row, leaves the page, and comes off the bill", async () => {
     const p = await app.db!.rentPayment.findFirstOrThrow({ where: { billId: ids.bill1 } });
     expect((await call("owner", "DELETE", `/rentals/payments/${p.id}`)).statusCode).toBe(200);
@@ -74,25 +74,23 @@ describe("soft delete of owners, units, payments and statements", () => {
     expect(await app.db!.ownerStatement.findUniqueOrThrow({ where: { id: s.id } })).toMatchObject({ deletedAt: null, deletedBy: null });
   });
 
-  it("a removed owner (no units) is hidden, kept as a row, and no longer blocks closing its branch", async () => {
+  it("owners and units stay real deletes, so removing their branch afterwards works (its link to the branch is ON DELETE RESTRICT)", async () => {
     const pk = (await app.db!.branch.create({ data: { tenantId: ids.agency!, name: "Pokhara" } })).id;
     const o = (await call("owner", "POST", "/rentals/owners", { name: "Short stay", feePct: 8, branchId: pk })).json().data.id as string;
-    const blocked = await call("owner", "PATCH", `/branches/${pk}`, { status: "closed" });
-    expect(blocked.statusCode).toBeGreaterThanOrEqual(400);
+    const u = (await call("owner", "POST", "/rentals/units", { ownerId: o, property: "Lakeside", name: "Room 1", kind: "Room", rent: 9_000 })).json().data.id as string;
+    expect((await call("owner", "DELETE", `/branches/${pk}`)).statusCode).toBe(400);              // it still has rentals
+    expect((await call("owner", "DELETE", `/rentals/owners/${o}`)).statusCode).toBe(400);          // owns a unit
+    expect((await call("owner", "DELETE", `/rentals/units/${u}`)).statusCode).toBe(200);
     expect((await call("owner", "DELETE", `/rentals/owners/${o}`)).statusCode).toBe(200);
-    expect((await app.db!.rentOwner.findUniqueOrThrow({ where: { id: o } })).deletedAt).not.toBeNull();
-    const page = (await call("owner", "GET", "/rentals")).json().data;
-    expect(JSON.stringify(page)).not.toContain(o);
-    expect((await call("owner", "PATCH", `/branches/${pk}`, { status: "closed" })).statusCode).toBe(200);
+    expect(await app.db!.rentUnit.findUnique({ where: { id: u } })).toBeNull();
+    expect(await app.db!.rentOwner.findUnique({ where: { id: o } })).toBeNull();
+    expect((await call("owner", "DELETE", `/branches/${pk}`)).statusCode).toBe(200);
   });
 
-  it("another business's rows are not found, and a removed unit is hidden", async () => {
+  it("another business's rows are not found", async () => {
     expect((await call("other", "DELETE", `/rentals/owners/${ids.owner1}`, undefined, ids.second)).statusCode).toBe(404);
-    const o = (await call("owner", "POST", "/rentals/owners", { name: "Empty owner", feePct: 8, branchId: ids.head })).json().data.id as string;
-    const u = (await call("owner", "POST", "/rentals/units", { ownerId: o, property: "Baneshwor", name: "Shop 2", kind: "Shop", rent: 9_000 })).json().data.id as string;
-    expect((await call("owner", "DELETE", `/rentals/units/${u}`)).statusCode).toBe(200);
-    expect((await app.db!.rentUnit.findUniqueOrThrow({ where: { id: u } })).deletedAt).not.toBeNull();
-    expect(JSON.stringify((await call("owner", "GET", "/rentals")).json().data)).not.toContain(u);
-    expect((await call("owner", "DELETE", `/rentals/owners/${o}`)).statusCode).toBe(200);   // its only unit is removed, so the owner can go
-  });
+    expect((await call("other", "DELETE", `/rentals/units/${ids.unit1}`, undefined, ids.second)).statusCode).toBe(404);
+    const p = await app.db!.rentPayment.findFirstOrThrow({ where: { billId: ids.bill1 } });
+    expect((await call("other", "DELETE", `/rentals/payments/${p.id}`, undefined, ids.second)).statusCode).toBe(404);
+});
 });

@@ -2,7 +2,8 @@
 // Where it fits: UnitService, LeaseService, RepairService and OverviewService call it.
 // How it works: a RentalRepository on model "rentUnit". Named methods: `takeIfFree` (the compare-and-set that stops two leases starting on one unit),
 // `countOfOwner`, and two read-only queries on the listings table (`ownListing`, `listingsOf`), which belongs to the Listings app (listed in this app's manifest under reads).
-// Rules: `remove` is a soft delete (P2-W6); a unit with any lease or repair is never removed; the branch-closing check skips deleted units. A unit is let to one lease at a time.
+// Rules: `remove` is a REAL delete, not a soft one, for the same reason as owners (rent_units.branch_id is ON DELETE RESTRICT, so a hidden unit would block
+// removing its branch); a unit with any lease or repair is never deleted anyway. The audit line keeps the record (P2-W6 decision).
 
 import type { BusinessContext, DataScope } from "@sheetal/platform/core/context";
 import { RentalRepository } from "./rental.repository.js";
@@ -44,5 +45,5 @@ export class UnitRepository extends RentalRepository<UnitRow, UnitCreate, UnitCh
   }
 
   /** Real delete (see the header). The service has already checked that the unit has no lease and no repair. */
-  remove(ctx: BusinessContext, id: string, scope: DataScope): Promise<void> { return this.softDeleteRow(ctx, id, scope); }
+  remove(ctx: BusinessContext, id: string, scope: DataScope): Promise<void> { return this.deleteRow(ctx, id, scope); }
 }
