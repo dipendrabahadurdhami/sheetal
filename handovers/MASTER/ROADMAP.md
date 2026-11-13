@@ -1,6 +1,6 @@
 # Roadmap: every phase still to do (one "next" = one phase)
 
-Progress on 13 Nov 2026, 17:15 Nepal time: Phase 0 100% · **Phase 1 100% (closed, see `handovers/CLOSE-OUT-phase-1.md`)** · **Phase 2 about 75%** · Phase 3 plan done, build 0% · whole project about 53% (rough).
+Progress on 13 Nov 2026, 19:30 Nepal time: Phase 0 100% · **Phase 1 100% (closed, see `handovers/CLOSE-OUT-phase-1.md`)** · **Phase 2 about 80%** · Phase 3 plan done, build 0% · whole project about 53% (rough).
 Work strictly in this order. Details of each stage are in the architecture docs named. Each stage = one branch, one PR, CI green, merged.
 
 ---
@@ -12,12 +12,12 @@ Work strictly in this order. Details of each stage are in the architecture docs 
 ## Phase 2: every business app on the kernel, screens on the kit
 Already merged (see `handovers/CONTINUE-phase-2.md` for the table): Rentals backend #18; People #29 (+ screens #30); Agreements #31 (+ screens);
 Rentals screens #32; Projects + Investments #34 (+ screens); Invoicing #36 + Payouts #37 (live page in the app); POS + Stock #39 (+ screens);
-Hotel #41 (+ screens; no double booking at the same moment); CRM #43; Listings #45; Workspace part 1 (branches, settings, check-ups) #47.
+Hotel #41 (+ screens; no double booking at the same moment); CRM #43; Listings #45; Workspace part 1 (branches, settings, check-ups) #47;
+Workspace part 2a the team #50; part 2b the Overview + `ChannelAccount` owner (workspace) #51.
 
 **Still to do in Phase 2, in this order:**
-1. **Workspace part 2** (`business/backend/src/modules/`): `team` (389 lines: members, roles, invites; access-critical, test every refusal and every
-   "can't remove the last owner" style rule), `overview`, `data` (import/export), `forms` (has public endpoints), `mail`, `growth`. Decide the
-   `ChannelAccount` owner (workspace vs crm) and record it in MODEL-OWNERS.md. Move `modules/reviews/checkups.ts` into apps/listings.
+1. **Workspace part 2 (rest)** (`business/backend/src/modules/`): `data` (import/export), `forms` (has public endpoints), `mail`, `growth`; then move
+   `modules/reviews/checkups.ts` into apps/listings. Details in `handovers/CONTINUE-phase-2.md`.
 2. **Wave 6** (W6): screens that still read the panel store `business/frontend/src/live.js` (Inbox, Listings, Team, Branches, Settings) move onto the
    kit/SDK, page by page; `InvoicesView` moves into apps/invoicing/frontend; then remove the browser-storage sample workspace (keep "Try the demo",
    which is a real demo business); then website API writes of business data on the kernel (enquiries create leads, the sign module, bookings).
