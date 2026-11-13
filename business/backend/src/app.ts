@@ -36,7 +36,6 @@ import { listingCodeRoutes } from "./modules/listings/codes.js";
 import { formRoutes } from "./modules/forms/routes.js";
 import { promoteRoutes } from "./modules/promote/routes.js";
 import { bannerRoutes } from "./modules/promote/banners.js";
-import { overviewRoutes } from "./modules/overview/routes.js";
 import { devKeyRoutes } from "./modules/devkeys/routes.js";
 import { aiAccountRoutes } from "./modules/aiaccount/routes.js";
 import { reviewRoutes as checkupRoutes } from "./modules/reviews/checkups.js";
@@ -69,7 +68,7 @@ export async function buildApp(config: Config, deps: AppDeps & { resolver?: Reso
   app.decorate("approvals", approvals);
   await app.register(approvalRoutes, { prefix: "/v1", contextOf: businessContextOf, service: approvals });
   await app.register(supportSessionRoutes, { prefix: "/v1" });
-  await app.register(workspaceRoutes, { prefix: "/v1", contextOf: businessContextOf });   // branches, business settings, check-ups, the team
+  await app.register(workspaceRoutes, { prefix: "/v1", contextOf: businessContextOf });   // branches, business settings, check-ups, the team, the overview
   await app.register(reviewRoutes, { prefix: "/v1", contextOf: businessContextOf });
   await app.register(verificationRoutes, { prefix: "/v1" });
   await app.register(dataRoutes, { prefix: "/v1" });
@@ -84,7 +83,6 @@ export async function buildApp(config: Config, deps: AppDeps & { resolver?: Reso
   await app.register(agreementRoutes, { prefix: "/v1", contextOf: businessContextOf });
   await app.register(promoteRoutes, { prefix: "/v1" });
   await app.register(bannerRoutes, { prefix: "/v1" });
-  await app.register(overviewRoutes, { prefix: "/v1" });
   await app.register(peopleRoutes, { prefix: "/v1", contextOf: businessContextOf });
   await app.register(devKeyRoutes, { prefix: "/v1" });
   await app.register(aiAccountRoutes, { prefix: "/v1", ai: deps.ai });

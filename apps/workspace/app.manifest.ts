@@ -1,6 +1,6 @@
 // Workspace: the always-on part of every business: overview, team, roles, branches, settings and billing.
 // Where it fits: read as data by scripts/gen-permissions.mjs (permission lists, role templates) and scripts/check-manifests.mjs.
-// How it works: a plain object, declaration only (id, name, icon, business types, permissions, roles, models): branches, business settings and check-ups (P2-W5/W6) and the team (P2-W6 part 2) are in backend/; the overview, import/export, forms, mail and growth move next.
+// How it works: a plain object, declaration only (id, name, icon, business types, permissions, roles, models): branches, business settings and check-ups (P2-W5/W6), the team and the overview (P2-W6 part 2) are in backend/; import/export, forms, mail and growth move next.
 // Rules: no functions or logic, only "import type" lines; every permission starts with "workspace."; models match the "/// @app workspace" tags in schema.prisma.
 
 import type { AppManifest } from "@sheetal/platform/core/manifest";

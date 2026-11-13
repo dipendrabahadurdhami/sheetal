@@ -24,6 +24,7 @@ dependency + Vite alias, a source test next to the page. Root `npm test`/`typech
 | W5 | Listings: a business's listings (backend). Screens stay on the panel store until W6 | #45 |
 | W6 | Workspace part 1: branches, business settings, listing check-ups (backend) | #47 |
 | W6 | Workspace part 2a: the team (members, roles, invites, profile, branding, Pro cover; every refusal tested, support sessions too) | #50 |
+| W6 | Workspace part 2b: the business Overview (read only); `ChannelAccount` owner decided (workspace) | #51 |
 
 ## Not done yet
 - W1 Rentals follow-ups: paisa columns + backfill; soft delete for owner/unit/payment/statement.
@@ -31,8 +32,10 @@ dependency + Vite alias, a source test next to the page. Root `npm test`/`typech
 - W3 follow-up: the invoice screen (`InvoicesView` in Money.jsx) moves into apps/invoicing/frontend when the sample workspace goes (W6).
 - W4 follow-up: the online travel sites (`modules/ota`, backend-core `domain/ota.ts`; models OtaFeed, OtaRequest, OtaAccount) move into apps/hotel;
   their booking writes should take the same room-type hold (`RoomRepository.lockType`).
-- W5/W6 Workspace part 2 (rest): overview, data import/export, forms, mail, growth. Their screens load from the panel store
-  (`business/frontend/src/live.js`) that W6 replaces. Also: move `reviews/checkups.ts` to apps/listings; decide `ChannelAccount` owner.
+- W5/W6 Workspace part 2 (rest), in this order: `data` (import/export: the imports write listings and leads, so record the agreed cross-app write in
+  MODEL-OWNERS; a listing import can be 2,000 rows: keep it inside one transaction with a longer timeout or use createManyAndReturn), `forms` (has public
+  endpoints: keep them on their own controller), `mail` (364 lines, DNS checks), `growth` (AI and fetch deps). Then move `modules/reviews/checkups.ts`
+  (253 lines + a daily job) into apps/listings. Their screens load from the panel store (`business/frontend/src/live.js`) that W6 replaces.
 - W6 Website API on the kernel where it writes business data; remove the browser-storage sample workspace; delete the last shims.
 
 ## Owner steps after these merges
