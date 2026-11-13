@@ -35,6 +35,7 @@ import { devKeyRoutes } from "./modules/devkeys/routes.js";
 import { aiAccountRoutes } from "./modules/aiaccount/routes.js";
 import { notificationRoutes } from "@sheetal/backend-core/modules/notifications";
 import { businessContextOf, workspaceOf } from "./modules/access.js";
+import { entitlementRoutes } from "./modules/entitlements/routes.js";
 import { CONSUMERS, businessJobs, eventsOf, platformJobs } from "./jobs.js";
 import { effectiveLimits } from "@sheetal/backend-core/domain/addons";
 import { ApprovalService } from "@sheetal/platform/approvals/service";
@@ -83,6 +84,8 @@ export async function buildApp(config: Config, deps: AppDeps & { resolver?: Reso
   await app.register(leadRoutes, { prefix: "/v1", contextOf: businessContextOf, fetch: deps.fetch, ai: deps.ai });   // the Inbox, the lead finder, Meta's webhook
   await app.register(billingRoutes, { prefix: "/v1", fetch: deps.fetch });
   await app.register(addonRoutes, { prefix: "/v1" });
+  // Phase 3 (P3-BE-3): what the business may use, by app.
+  await app.register(entitlementRoutes, { prefix: "/v1", contextOf: businessContextOf });
   await app.register(hotelRoutes, { prefix: "/v1", contextOf: businessContextOf, fetch: deps.fetch });   // rooms, bookings, front desk, other sites
   await app.register(posRoutes, { prefix: "/v1", contextOf: businessContextOf });   // point of sale and stock
   await app.register(projectRoutes, { prefix: "/v1", contextOf: businessContextOf });

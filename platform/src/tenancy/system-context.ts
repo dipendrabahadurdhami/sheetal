@@ -12,6 +12,7 @@ import type { FastifyBaseLogger } from "fastify";
 import type { SystemContext, Tx } from "../core/context.js";
 import type { Db } from "../db/client.js";
 import { buildEntitlements, buildPermissionSet, countSeats, createBranchScope, loadBranches, type TenancyDeps } from "./context.js";
+import { entitlementsFor } from "../billing/load.js";
 
 export interface SystemContextInput {
   db: Db;
@@ -49,7 +50,10 @@ export async function buildSystemContext(r: SystemContextInput, deps: TenancyDep
     member: { userId: "system", membershipId: "system", roleId: "system", roleKey: "system", isOwner: true },
     branches: createBranchScope({ all, allowed: "all", wanted: undefined }),
     permissions: buildPermissionSet(["*"]),
-    entitlements: buildEntitlements({ type: t.type, plan: t.plan, limits: plan.limits, seatsUsed }),
+    entitlements: await entitlementsFor({
+      db: r.db, log: r.log, now, tenant: t, seatsUsed, oldLimits: plan.limits, oldFeatures: t.plan.features,
+      v1: buildEntitlements({ type: t.type, plan: t.plan, limits: plan.limits, seatsUsed }),
+    }),
     impersonation: null,
   }, null);
 }
