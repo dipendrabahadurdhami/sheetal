@@ -13,6 +13,7 @@ export const settingsSections = (role, t) => [
     { id: "branches", to: "/business/branches", icon: "git-branch", label: t("nav.branches"), perm: "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete", keywords: "branch office location" },
     { id: "roles", to: "/business/settings/roles", icon: "key-round", label: "Roles and access", perm: "workspace.role.read+workspace.role.create+workspace.role.update+workspace.role.delete", keywords: "roles permissions access staff team" },
     { id: "approvals", to: "/business/approvals/rules", icon: "shield-check", label: "Approvals", perm: "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete", keywords: "approval approve second person maker checker rules limit refund" },
+    { id: "apps", to: "/business/settings/apps", icon: "layout-grid", label: "App settings", perm: "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete", keywords: "apps app settings expenses approval limit" },
   ] },
   { group: "Plan and money", items: [
     { id: "billing", to: "/business/billing", icon: "credit-card", label: t("nav.plan"), perm: "workspace.billing.manage", keywords: "plan subscription upgrade billing invoice starter business pro" },
