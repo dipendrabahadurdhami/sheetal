@@ -18,7 +18,6 @@ import { leadRoutes } from "./modules/leads/routes.js";
 import { billingRoutes } from "./modules/billing/routes.js";
 import { addonRoutes } from "./modules/billing/addons.js";
 import { hotelRoutes } from "./modules/hotel/routes.js";
-import { posRoutes } from "./modules/pos/routes.js";
 import { growthRoutes } from "./modules/growth/routes.js";
 import { otaRoutes } from "./modules/ota/routes.js";
 import { supportRoutes } from "./modules/support/routes.js";
@@ -34,12 +33,12 @@ import { agreementRoutes } from "@sheetal/app-agreements/backend";
 import { projectRoutes } from "@sheetal/app-projects/backend";
 import { investmentRoutes } from "@sheetal/app-investments/backend";
 import { invoicingRoutes } from "@sheetal/app-invoicing/backend";
+import { posRoutes } from "@sheetal/app-pos/backend";
 import { listingCodeRoutes } from "./modules/listings/codes.js";
 import { formRoutes } from "./modules/forms/routes.js";
 import { promoteRoutes } from "./modules/promote/routes.js";
 import { bannerRoutes } from "./modules/promote/banners.js";
 import { overviewRoutes } from "./modules/overview/routes.js";
-import { stockRoutes } from "./modules/stock/routes.js";
 import { devKeyRoutes } from "./modules/devkeys/routes.js";
 import { aiAccountRoutes } from "./modules/aiaccount/routes.js";
 import { reviewRoutes as checkupRoutes } from "./modules/reviews/checkups.js";
@@ -90,7 +89,6 @@ export async function buildApp(config: Config, deps: AppDeps & { resolver?: Reso
   await app.register(promoteRoutes, { prefix: "/v1" });
   await app.register(bannerRoutes, { prefix: "/v1" });
   await app.register(overviewRoutes, { prefix: "/v1" });
-  await app.register(stockRoutes, { prefix: "/v1" });
   await app.register(peopleRoutes, { prefix: "/v1", contextOf: businessContextOf });
   await app.register(devKeyRoutes, { prefix: "/v1" });
   await app.register(aiAccountRoutes, { prefix: "/v1", ai: deps.ai });
@@ -102,7 +100,7 @@ export async function buildApp(config: Config, deps: AppDeps & { resolver?: Reso
   await app.register(billingRoutes, { prefix: "/v1", fetch: deps.fetch });
   await app.register(addonRoutes, { prefix: "/v1" });
   await app.register(hotelRoutes, { prefix: "/v1" });
-  await app.register(posRoutes, { prefix: "/v1" });
+  await app.register(posRoutes, { prefix: "/v1", contextOf: businessContextOf });   // point of sale and stock
   await app.register(projectRoutes, { prefix: "/v1", contextOf: businessContextOf });
   await app.register(investmentRoutes, { prefix: "/v1", contextOf: businessContextOf });
   await app.register(growthRoutes, { prefix: "/v1", ai: deps.ai, fetch: deps.fetch });

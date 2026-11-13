@@ -1361,6 +1361,13 @@ model MenuItem {
   price     Int
   active    Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at")
+  /// Kernel columns (P2-W4): who changed it last, the version for 409 conflicts, and the soft-delete marks.
+  createdBy   String?   @map("created_by")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+  updatedBy   String?   @map("updated_by")
+  version     Int       @default(1)
+  deletedAt   DateTime? @map("deleted_at")
+  deletedBy   String?   @map("deleted_by")
   stockRecipes StockRecipe[]
 
   @@index([tenantId, outlet])
@@ -1414,6 +1421,13 @@ model PosBill {
   voidNote  String?  @map("void_note")
   byUserId  String?  @map("by_user_id")
   createdAt DateTime @default(now()) @map("created_at")
+  /// Kernel columns (P2-W4): who changed it last, the version for 409 conflicts, and the soft-delete marks.
+  createdBy   String?   @map("created_by")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+  updatedBy   String?   @map("updated_by")
+  version     Int       @default(1)
+  deletedAt   DateTime? @map("deleted_at")
+  deletedBy   String?   @map("deleted_by")
   shift     Shift?   @relation(fields: [shiftId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, createdAt])
@@ -2521,6 +2535,12 @@ model StockItem {
   cost      Int      @default(0)
   active    Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at")
+  /// Kernel columns (P2-W4): who changed it last, the version for 409 conflicts, and the soft-delete marks.
+  createdBy   String?   @map("created_by")
+  updatedBy   String?   @map("updated_by")
+  version     Int       @default(1)
+  deletedAt   DateTime? @map("deleted_at")
+  deletedBy   String?   @map("deleted_by")
   updatedAt DateTime @updatedAt @map("updated_at")
   moves     StockMove[]
   recipes   StockRecipe[]
