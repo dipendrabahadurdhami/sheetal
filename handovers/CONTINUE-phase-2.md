@@ -19,15 +19,17 @@ dependency + Vite alias, a source test next to the page. Root `npm test`/`typech
 | W3 | Invoicing: customer invoices (backend + live page) and payouts (read only) | #36, #37 |
 | W3 | Collections: settled as part of Projects (manifest note; MODEL-OWNERS.md) | #34, #36 |
 | W4 | POS app: point of sale and Stock (backend + screens; the low-stock job) | #39 |
+| W4 | Hotel: rooms, calendar, bookings, front desk (backend + screens; bookings hold the room type, so no double booking at the same moment) | #41 |
 
 ## Not done yet
 - W1 Rentals follow-ups: paisa columns + backfill; soft delete for owner/unit/payment/statement.
 - W2: Business -> Settings tab per app.
 - W3 follow-up: the invoice screen (`InvoicesView` in Money.jsx) moves into apps/invoicing/frontend when the sample workspace goes (W6).
-- W4 Hotel (`modules/hotel/routes.ts`, 316 lines, plus `modules/ota`; screens LiveFrontDesk, LiveBookings, LiveCalendar in LiveOps.jsx). Note: the Invoicing
-  app keeps its own copy of `bookingCode` (a test checks it equals Hotel's), and POS writes a room-bill line (MODEL-OWNERS.md). W5 CRM (own scope MUST include unassigned leads, with a test), Listings (+ move `checkups.ts`), Workspace; decide `ChannelAccount` owner.
+- W4 follow-up: the online travel sites (`modules/ota`, backend-core `domain/ota.ts`; models OtaFeed, OtaRequest, OtaAccount) move into apps/hotel;
+  their booking writes should take the same room-type hold (`RoomRepository.lockType`).
+- W5 CRM (own scope MUST include unassigned leads, with a test), Listings (+ move `checkups.ts`), Workspace; decide `ChannelAccount` owner.
 - W6 Website API on the kernel where it writes business data; remove the browser-storage sample workspace; delete the last shims.
 
 ## Owner steps after these merges
 `RUN-UPDATE` (applies migrations `20261113090000_people_kernel_columns`, `20261113100000_agreements_kernel_columns`, `20261113110000_projects_kernel_columns`,
-`20261113110100_investments_kernel_columns`, `20261113120000_invoicing_kernel_columns`, `20261113130000_pos_kernel_columns`; all additive, it backs up first).
+`20261113110100_investments_kernel_columns`, `20261113120000_invoicing_kernel_columns`, `20261113130000_pos_kernel_columns`, `20261113140000_hotel_kernel_columns`; all additive, it backs up first).
