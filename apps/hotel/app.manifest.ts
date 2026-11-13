@@ -1,6 +1,6 @@
 // Hotel PMS: bookings, calendar and rates (also used by hosts).
 // Where it fits: read as data by scripts/gen-permissions.mjs (permission lists, role templates) and scripts/check-manifests.mjs.
-// How it works: a plain object, declaration only (id, name, icon, business types, permissions, roles, models): the routes stay in their old modules until the app moves onto the kernel.
+// How it works: a plain object, declaration only (id, name, icon, business types, permissions, roles, models): rooms, calendar, bookings and the front desk are in backend/ (P2-W4); the online travel sites (OtaFeed, OtaRequest, OtaAccount) are still in business/backend/src/modules/ota.
 // Rules: no functions or logic, only "import type" lines; every permission starts with "hotel."; models match the "/// @app hotel" tags in schema.prisma.
 
 import type { AppManifest } from "@sheetal/platform/core/manifest";
@@ -50,7 +50,21 @@ const manifest = {
   ],
   approvals: [],
   menu: [],
-  events: { publishes: [], consumes: [] },
+  events: {
+    publishes: [
+      { name: "hotel.room.added", v: 1, label: "Rooms were added", payload: { count: "number", type: "string" } },
+      { name: "hotel.room.updated", v: 1, label: "A room was changed or cleaned", payload: { id: "id", status: "string" } },
+      { name: "hotel.calendar.changed", v: 1, label: "Night prices, closed dates or rules changed", payload: { type: "string" } },
+      { name: "hotel.booking.created", v: 1, label: "A booking was made", payload: { id: "id", code: "string", nights: "number", rate: "number" } },
+      { name: "hotel.booking.updated", v: 1, label: "A booking was confirmed or changed", payload: { id: "id", code: "string", status: "string" } },
+      { name: "hotel.booking.cancelled", v: 1, label: "A booking was cancelled", payload: { id: "id", code: "string", status: "string" } },
+      { name: "hotel.booking.checked_in", v: 1, label: "A guest checked in", payload: { id: "id", code: "string", roomId: "id" } },
+      { name: "hotel.folio.added", v: 1, label: "An extra or a discount went on a room bill", payload: { id: "id", kind: "string", amount: "number" } },
+      { name: "hotel.payment.received", v: 1, label: "A guest paid at the desk", payload: { id: "id", method: "string", amount: "number" } },
+      { name: "hotel.booking.checked_out", v: 1, label: "A guest checked out", payload: { id: "id", code: "string", total: "number" } },
+    ],
+    consumes: [],
+  },
   ai: [],
   dependencies: { requires: [], optional: [], reads: [] },
   models: ["Room", "RoomRule", "RateDay", "Booking", "FolioLine", "GuestPayment", "OtaFeed", "OtaRequest", "OtaAccount"],

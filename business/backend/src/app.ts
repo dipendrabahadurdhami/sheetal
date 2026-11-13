@@ -17,7 +17,6 @@ import { listingRoutes } from "./modules/listings/routes.js";
 import { leadRoutes } from "./modules/leads/routes.js";
 import { billingRoutes } from "./modules/billing/routes.js";
 import { addonRoutes } from "./modules/billing/addons.js";
-import { hotelRoutes } from "./modules/hotel/routes.js";
 import { growthRoutes } from "./modules/growth/routes.js";
 import { otaRoutes } from "./modules/ota/routes.js";
 import { supportRoutes } from "./modules/support/routes.js";
@@ -34,6 +33,7 @@ import { projectRoutes } from "@sheetal/app-projects/backend";
 import { investmentRoutes } from "@sheetal/app-investments/backend";
 import { invoicingRoutes } from "@sheetal/app-invoicing/backend";
 import { posRoutes } from "@sheetal/app-pos/backend";
+import { hotelRoutes } from "@sheetal/app-hotel/backend";
 import { listingCodeRoutes } from "./modules/listings/codes.js";
 import { formRoutes } from "./modules/forms/routes.js";
 import { promoteRoutes } from "./modules/promote/routes.js";
@@ -99,7 +99,7 @@ export async function buildApp(config: Config, deps: AppDeps & { resolver?: Reso
   await app.register(leadRoutes, { prefix: "/v1", fetch: deps.fetch });
   await app.register(billingRoutes, { prefix: "/v1", fetch: deps.fetch });
   await app.register(addonRoutes, { prefix: "/v1" });
-  await app.register(hotelRoutes, { prefix: "/v1" });
+  await app.register(hotelRoutes, { prefix: "/v1", contextOf: businessContextOf });
   await app.register(posRoutes, { prefix: "/v1", contextOf: businessContextOf });   // point of sale and stock
   await app.register(projectRoutes, { prefix: "/v1", contextOf: businessContextOf });
   await app.register(investmentRoutes, { prefix: "/v1", contextOf: businessContextOf });
