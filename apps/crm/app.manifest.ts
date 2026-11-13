@@ -1,6 +1,6 @@
 // CRM: leads (agencies), customers and inbox messages.
 // Where it fits: read as data by scripts/gen-permissions.mjs (permission lists, role templates) and scripts/check-manifests.mjs.
-// How it works: a plain object, declaration only (id, name, icon, business types, permissions, roles, models): the routes stay in their old modules until the app moves onto the kernel.
+// How it works: a plain object, declaration only (id, name, icon, business types, permissions, roles, models): the Inbox (leads, replies) is in backend/ (P2-W5); the screens read the panel store until wave 6.
 // Rules: no functions or logic, only "import type" lines; every permission starts with "crm."; models match the "/// @app crm" tags in schema.prisma.
 
 import type { AppManifest } from "@sheetal/platform/core/manifest";
@@ -34,9 +34,16 @@ const manifest = {
   ],
   approvals: [],
   menu: [],
-  events: { publishes: [], consumes: [] },
+  events: {
+    publishes: [
+      { name: "crm.lead.updated", v: 1, label: "A lead was changed (owner, follow-up, tags, value, read)", payload: { id: "id", stage: "string", assigneeId: "id" } },
+      { name: "crm.lead.stage_changed", v: 1, label: "A lead moved to another stage", payload: { id: "id", stage: "string", assigneeId: "id" } },
+      { name: "crm.lead.replied", v: 1, label: "Someone replied to a lead", payload: { id: "id", channel: "string" } },
+    ],
+    consumes: [],
+  },
   ai: [],
-  dependencies: { requires: [], optional: [], reads: [] },
+  dependencies: { requires: [], optional: ["listings"], reads: ["Listing", "ChannelAccount"] },
   models: ["Lead", "LeadMessage"],
   branchOwned: [{ model: "Lead", label: { en: "lead" } }],
   settings: [],
