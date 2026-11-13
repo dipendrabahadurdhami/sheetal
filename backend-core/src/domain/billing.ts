@@ -107,7 +107,7 @@ export async function repriceOpenPlanInvoices(db: Tx, tenantId: string) {
   const [open, s, t] = await Promise.all([db.invoice.findMany({ where: { tenantId, status: "open", kind: "plan" }, include: { payments: { where: { status: { in: ["initiated", "pending_review"] } }, select: { id: true } } } }), billingSettings(db as Db), db.tenant.findUniqueOrThrow({ where: { id: tenantId } })]);
   for (const i of open) {
     if (i.payments.length || i.planId !== t.planId) continue; // someone is paying it now, or it is for another plan
-    const plan = await db.plan.findUniqueOrThrow({ where: { id: i.planId } });
+    const plan = await db.plan.findUniqueOrThrow({ where: { id: i.planId ?? t.planId } });
     const lines = await renewalLines(db, tenantId, i.months);
     await db.invoice.update({ where: { id: i.id }, data: { addons: lines as unknown as Prisma.InputJsonValue, ...splitVat(priceFor(plan.price, i.months) + linesTotal(lines), s.vatRate) } });
   }
@@ -175,22 +175,24 @@ export async function applyPayment(db: Db, mailer: Mailer, o: { paymentId: strin
       await tx.auditLog.create({ data: { actorId: o.reviewedBy, tenantId: tenant.id, action: "billing.addons_paid", target: `${invoiceNumber(p.invoice)} · ${p.provider} · Rs. ${p.amount}` } });
       return { p, tenant, end: tenant.renewsAt ?? now };
     }
-    const { start, end } = periodFor(tenant, p.invoice.planId, p.invoice.months, now);
+    // Only old plan invoices reach this line; they always carry a plan (Phase 3 invoices take their own path).
+    const planId = p.invoice.planId ?? tenant.planId;
+    const { start, end } = periodFor(tenant, planId, p.invoice.months, now);
     await tx.payment.update({ where: { id: p.id }, data: { status: "paid", paidAt: now, providerRef: o.providerRef ?? p.providerRef, raw: (o.raw ?? p.raw ?? undefined) as Prisma.InputJsonValue | undefined, reviewedBy: o.reviewedBy } });
     await tx.invoice.update({ where: { id: p.invoiceId }, data: { status: "paid", paidAt: now, periodStart: start, periodEnd: end } });
-    await tx.tenant.update({ where: { id: tenant.id }, data: { planId: p.invoice.planId, period: p.invoice.months, renewsAt: end, status: "active", graceUntil: null, remindedFor: null } });
+    await tx.tenant.update({ where: { id: tenant.id }, data: { planId, period: p.invoice.months, renewsAt: end, status: "active", graceUntil: null, remindedFor: null } });
     // Its own bill now: it stops being covered by another business; businesses it covers follow its new plan.
     if (tenant.coveredById) await tx.tenant.update({ where: { id: tenant.id }, data: { coveredById: null } });
     await syncCovered(tx, tenant.id);
     // Add-ons follow the plan: the ones kept renew with it; on another plan they end.
-    if (tenant.planId === p.invoice.planId) await applyAddonLines(tx, tenant.id, "plan", p.invoice.addons as unknown as AddonLine[]);
+    if (tenant.planId === planId) await applyAddonLines(tx, tenant.id, "plan", p.invoice.addons as unknown as AddonLine[]);
     else await endAddons(tx, tenant.id);
     await tx.auditLog.create({ data: { actorId: o.reviewedBy, tenantId: tenant.id, action: "billing.paid", target: `${invoiceNumber(p.invoice)} · ${p.provider} · Rs. ${p.amount}` } });
     return { p, tenant, end };
   });
   if (!done) return false;
   if (done.p.invoice.kind === "addon") await repriceOpenPlanInvoices(db, done.tenant.id);
-  const plan = await db.plan.findUnique({ where: { id: done.p.invoice.planId } });
+  const plan = done.p.invoice.planId ? await db.plan.findUnique({ where: { id: done.p.invoice.planId } }) : null;
   const owner = await ownerOf(db, done.tenant.id);
   const to = owner?.email ?? done.tenant.email;
   const number = invoiceNumber(done.p.invoice);

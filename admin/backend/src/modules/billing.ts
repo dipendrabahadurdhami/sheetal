@@ -19,6 +19,17 @@ import { PERIODS } from "@sheetal/backend-core/domain/plans";
 import { savePlatform } from "@sheetal/backend-core/domain/platform";
 import { staffOf } from "./routes.js";
 
+
+/** Phase 3 columns these old lists leave out: the paisa columns are BigInt (JSON can't carry them), and the old Billing screen keeps the shape
+ *  it knows. Phase 3 screens use their own routes (P3-BE-7). */
+const PHASE3_INVOICE = ["no", "fy", "issuedAt", "subtotalPaisa", "vatPaisa", "totalPaisa", "sellerSnapshot", "creditForId", "couponId", "catalogVersion"];
+const PHASE3_PAYMENT = ["amountPaisa", "mode", "refundedPaisa", "refundRef", "refundSentAt"];
+function without(row: object, keys: string[]): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...row };
+  for (const k of keys) delete out[k];
+  return out;
+}
+
 export async function adminBillingRoutes(app: FastifyInstance) {
   const db = () => dbOf(app);
   const vault = new Vault(app.config.SECRETS_KEY, app.config.NODE_ENV === "production");
@@ -55,7 +66,7 @@ export async function adminBillingRoutes(app: FastifyInstance) {
     const tenants = new Map((await db().tenant.findMany({ where: { id: { in: rows.map((r) => r.tenantId) } }, select: { id: true, name: true, type: true } })).map((t) => [t.id, t]));
     return {
       data: rows.map(({ raw: _raw, proofFile, invoice, ...p }) => ({
-        ...p, invoice: { id: invoice.id, number: invoiceNumber(invoice), planId: invoice.planId, months: invoice.months, status: invoice.status },
+        ...without(p, PHASE3_PAYMENT), invoice: { id: invoice.id, number: invoiceNumber(invoice), planId: invoice.planId, months: invoice.months, status: invoice.status },
         tenant: tenants.get(p.tenantId) ?? null, proof: proofFile ? `/admin/billing/payments/${p.id}/proof` : null,
       })),
     };
@@ -108,7 +119,7 @@ export async function adminBillingRoutes(app: FastifyInstance) {
     const where: Prisma.InvoiceWhereInput = { ...(q.status !== "all" ? { status: q.status } : {}), ...(q.tenantId ? { tenantId: q.tenantId } : {}) };
     const rows = await db().invoice.findMany({ where, orderBy: { createdAt: "desc" }, take: 300 });
     const tenants = new Map((await db().tenant.findMany({ where: { id: { in: rows.map((r) => r.tenantId) } }, select: { id: true, name: true } })).map((t) => [t.id, t.name]));
-    return { data: rows.map((i) => ({ ...i, number: invoiceNumber(i), tenant: tenants.get(i.tenantId) ?? null })) };
+    return { data: rows.map((i) => ({ ...without(i, PHASE3_INVOICE), number: invoiceNumber(i), tenant: tenants.get(i.tenantId) ?? null })) };
   });
 
   /** Staff bill a business directly (a plan sold by phone, say); the business pays it from its panel. */
