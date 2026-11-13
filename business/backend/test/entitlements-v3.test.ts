@@ -17,7 +17,7 @@ const ids: Record<string, string> = {};
 const call = (who: string, method: "GET" | "POST", url: string, body?: object, tenant?: string) =>
   app.inject({ method, url: `/v1${url}`, payload: body, headers: { authorization: `Bearer ${tok[who]}`, "x-tenant-id": tenant ?? ids.biz! } });
 const day = (offset: number) => new Date(Date.now() + offset * 86_400_000);
-const appOf = (r: { json(): { data: { apps: { appId: string }[] } } }, id: string) => r.json().data.apps.find((a) => a.appId === id) as { access: string; edition: string | null; limits: Record<string, number | null> };
+const appOf = (r: { json(): { data: { apps: { appId: string }[] } } }, id: string) => r.json().data.apps.find((a) => a.appId === id) as unknown as { access: string; edition: string | null; limits: Record<string, number | null> };
 
 beforeAll(async () => {
   app = await buildApp(loadConfig({ NODE_ENV: "test", LOG_LEVEL: "silent", DATABASE_URL: inject("databaseUrl"), SITE_URL: "https://sheetal.test" }, "business"));
@@ -47,8 +47,8 @@ describe("GET /entitlements", () => {
   it("on apps: answers from the subscriptions; another business's rows never count", async () => {
     const db = app.db!;
     await db.tenant.update({ where: { id: ids.biz }, data: { billingMode: "apps" } });
-    await db.subscription.create({ data: { tenantId: ids.biz, appId: "hotel", editionId: "free", status: "active" } });
-    await db.subscription.create({ data: { tenantId: ids.otherBiz, appId: "crm", editionId: "full", status: "active", periodMonths: 1, currentPeriodStart: day(-5), currentPeriodEnd: day(25), priceGrossPaisa: 30_000n } });
+    await db.subscription.create({ data: { tenantId: ids.biz!, appId: "hotel", editionId: "free", status: "active" } });
+    await db.subscription.create({ data: { tenantId: ids.otherBiz!, appId: "crm", editionId: "full", status: "active", periodMonths: 1, currentPeriodStart: day(-5), currentPeriodEnd: day(25), priceGrossPaisa: 30_000n } });
     const r = await call("owner", "GET", "/entitlements");
     expect(r.json().data.mode).toBe("apps");
     expect(appOf(r, "hotel")).toMatchObject({ access: "full", edition: "free", limits: { rooms: 5 } });
@@ -63,7 +63,7 @@ describe("writes follow the subscription (apps mode)", () => {
     const db = app.db!;
     // Expenses has a free edition, so a lapsed paid subscription falls back to it (limited) and still writes; a cancelled-and-ended
     // paid-only app would lock. Here: an Expenses subscription that is uninstalled -> not available at all.
-    const s = await db.subscription.create({ data: { tenantId: ids.biz, appId: "expenses", editionId: "full", status: "active", periodMonths: 1, currentPeriodStart: day(-40), currentPeriodEnd: day(-30), priceGrossPaisa: 20_000n } });
+    const s = await db.subscription.create({ data: { tenantId: ids.biz!, appId: "expenses", editionId: "full", status: "active", periodMonths: 1, currentPeriodStart: day(-40), currentPeriodEnd: day(-30), priceGrossPaisa: 20_000n } });
     const body = { date: new Date().toISOString().slice(0, 10), category: "supplies", amount: 100, method: "cash", branchId: ids.head };
     const limited = await call("owner", "POST", "/expenses", body);
     expect(limited.statusCode).toBe(200); // fell back to the free edition: writes go on within free limits
