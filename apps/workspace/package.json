@@ -11,12 +11,8 @@
     "./backend": "./backend/index.ts",
     "./backend/*": "./backend/*.ts",
     "./manifest": "./app.manifest.ts",
-<<<<<<< HEAD
     "./frontend": "./frontend/index.js",
     "./frontend/roleGrants": "./frontend/roleGrants.js"
-=======
-    "./frontend": "./frontend/index.js"
->>>>>>> origin/main
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
