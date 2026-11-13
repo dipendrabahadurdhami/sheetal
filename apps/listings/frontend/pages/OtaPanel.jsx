@@ -1,5 +1,5 @@
 // A listing on other sites (Booking.com, Airbnb…) on the business API: the table cell and the drawer.
-// Where it fits: OtaPanel.jsx shows these instead of its sample versions when the business is signed in (live).
+// Where it fits: the Listings page's table cell and drawer for stays. Moved here from business/frontend/src/pages/LiveOtaPanel.jsx in P2-W6.
 // How it works: loads GET /ota/requests once per business (kept for 30 seconds, refreshed after every action); the drawer
 // lists the six sites with their state, lets the business ask (mark-up and a note), answer the team's question (text and
 // up to 3 files) and stop selling. Sheetal's channel team does the work; the server tells the business when it moves.
@@ -7,9 +7,9 @@
 // platform asks for (the server says how many); only stays can be sold on other sites.
 
 import React, { useEffect, useState } from "react";
-import { Badge, Button, Drawer, Field, Input, Textarea, useToast } from "@sheetal/shared/core/ui";
+import { Badge, Button, Drawer, Field, Input, Textarea, useToast } from "@sheetal/ui/primitives";
 import { Icon } from "@sheetal/shared/core/icons";
-import { bizApi, fileToBase64 } from "../api";
+import { bizApi, fileToBase64 } from "@sheetal/sdk/client";
 
 const STATUS = { requested: ["Requested", "action"], setting_up: ["Being set up", "progress"], needs_info: ["Needs your reply", "action"], live: ["Live", "done"], paused: ["Paused", "neutral"], rejected: ["Rejected", "problem"] };
 const can_ask = (st) => !st || st === "paused" || st === "rejected";
@@ -34,6 +34,8 @@ const latest = (rows, listingId, ch) => rows.filter((x) => x.listingId === listi
 
 /** Live listings have whole-number ids from the server; the sample ones don't. */
 export const isLiveListing = (l) => Number.isInteger(l?.id);
+/** Only stays can be sold on other sites. */
+export const isStayListing = (l) => String(l.kind).startsWith("stay");
 
 export function LiveOtaCell({ listing, onOpen }) {
   const ota = useOta();
@@ -118,3 +120,7 @@ export function LiveOtaDrawer({ tenant, listing, onClose }) {
     </Drawer>
   );
 }
+
+/** The names the Listings page uses. */
+export const OtaCell = LiveOtaCell;
+export const OtaDrawer = LiveOtaDrawer;
