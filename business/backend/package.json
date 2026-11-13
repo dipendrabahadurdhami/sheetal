@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
+    "@sheetal/app-agreements": "*",
     "@sheetal/app-expenses": "*",
     "@sheetal/app-people": "*",
     "@sheetal/app-rentals": "*",
