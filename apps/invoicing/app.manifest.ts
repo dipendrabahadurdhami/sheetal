@@ -1,6 +1,6 @@
 // Invoicing: invoices, receipts and payouts.
 // Where it fits: read as data by scripts/gen-permissions.mjs (permission lists, role templates) and scripts/check-manifests.mjs.
-// How it works: a plain object, declaration only (id, name, icon, business types, permissions, roles, models): customer invoices are in backend/ (P2-W3); payouts (Payout, PayoutItem) are still in business/backend/src/modules/payouts.
+// How it works: a plain object, declaration only (id, name, icon, business types, permissions, roles, models): customer invoices and payouts (read only; staff write them on the admin API) are in backend/ (P2-W3).
 // Rules: no functions or logic, only "import type" lines; every permission starts with "invoicing."; models match the "/// @app invoicing" tags in schema.prisma.
 
 import type { AppManifest } from "@sheetal/platform/core/manifest";
