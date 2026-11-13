@@ -19,7 +19,6 @@ import { otaRoutes } from "./modules/ota/routes.js";
 import { supportRoutes } from "./modules/support/routes.js";
 import { reviewRoutes } from "@sheetal/app-reviews/backend";
 import { verificationRoutes } from "./modules/verification/routes.js";
-import { dataRoutes } from "./modules/data/routes.js";
 import { expenseRoutes } from "@sheetal/app-expenses/backend";
 import { rentalRoutes } from "@sheetal/app-rentals/backend";
 import { peopleRoutes } from "@sheetal/app-people/backend";
@@ -33,7 +32,6 @@ import { leadRoutes } from "@sheetal/app-crm/backend";
 import { listingRoutes } from "@sheetal/app-listings/backend";
 import { workspaceRoutes } from "@sheetal/app-workspace/backend";
 import { listingCodeRoutes } from "./modules/listings/codes.js";
-import { formRoutes } from "./modules/forms/routes.js";
 import { promoteRoutes } from "./modules/promote/routes.js";
 import { bannerRoutes } from "./modules/promote/banners.js";
 import { devKeyRoutes } from "./modules/devkeys/routes.js";
@@ -68,10 +66,9 @@ export async function buildApp(config: Config, deps: AppDeps & { resolver?: Reso
   app.decorate("approvals", approvals);
   await app.register(approvalRoutes, { prefix: "/v1", contextOf: businessContextOf, service: approvals });
   await app.register(supportSessionRoutes, { prefix: "/v1" });
-  await app.register(workspaceRoutes, { prefix: "/v1", contextOf: businessContextOf });   // branches, business settings, check-ups, the team, the overview
+  await app.register(workspaceRoutes, { prefix: "/v1", contextOf: businessContextOf });   // branches, business settings, check-ups, the team, the overview, import/export, forms
   await app.register(reviewRoutes, { prefix: "/v1", contextOf: businessContextOf });
   await app.register(verificationRoutes, { prefix: "/v1" });
-  await app.register(dataRoutes, { prefix: "/v1" });
   await app.register(invoicingRoutes, { prefix: "/v1", contextOf: businessContextOf });   // customer invoices and payouts
   // Expenses is the first app on the kernel (P1-BE-5): its code lives in apps/expenses/backend; it gets the request-context builder from here.
   await app.register(expenseRoutes, { prefix: "/v1", contextOf: businessContextOf });
@@ -79,7 +76,6 @@ export async function buildApp(config: Config, deps: AppDeps & { resolver?: Reso
   await app.register(rentalRoutes, { prefix: "/v1", contextOf: businessContextOf });
   await app.register(listingCodeRoutes, { prefix: "/v1" });
   await app.register(checkupRoutes, { prefix: "/v1" });
-  await app.register(formRoutes, { prefix: "/v1" });
   await app.register(agreementRoutes, { prefix: "/v1", contextOf: businessContextOf });
   await app.register(promoteRoutes, { prefix: "/v1" });
   await app.register(bannerRoutes, { prefix: "/v1" });

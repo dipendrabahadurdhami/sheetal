@@ -1,6 +1,6 @@
 // Workspace: the always-on part of every business: overview, team, roles, branches, settings and billing.
 // Where it fits: read as data by scripts/gen-permissions.mjs (permission lists, role templates) and scripts/check-manifests.mjs.
-// How it works: a plain object, declaration only (id, name, icon, business types, permissions, roles, models): branches, business settings and check-ups (P2-W5/W6), the team and the overview (P2-W6 part 2) are in backend/; import/export, forms, mail and growth move next.
+// How it works: a plain object, declaration only (id, name, icon, business types, permissions, roles, models): branches, business settings and check-ups (P2-W5/W6), the team, the overview, import/export and forms (P2-W6 part 2) are in backend/; mail and growth move next.
 // Rules: no functions or logic, only "import type" lines; every permission starts with "workspace."; models match the "/// @app workspace" tags in schema.prisma.
 
 import type { AppManifest } from "@sheetal/platform/core/manifest";
@@ -87,6 +87,13 @@ const manifest = {
       { name: "workspace.role.created", v: 1, label: "A role was added", payload: { id: "id" } },
       { name: "workspace.role.updated", v: 1, label: "A role was changed", payload: { id: "id" } },
       { name: "workspace.role.deleted", v: 1, label: "A role was deleted", payload: { id: "id" } },
+      { name: "workspace.data.imported", v: 1, label: "Listings or leads were imported", payload: { kind: "string", count: "number" } },
+      { name: "workspace.form.created", v: 1, label: "An online form was created", payload: { id: "id" } },
+      { name: "workspace.form.saved", v: 1, label: "An online form was saved", payload: { id: "id" } },
+      { name: "workspace.form.published", v: 1, label: "An online form went live", payload: { id: "id" } },
+      { name: "workspace.form.unpublished", v: 1, label: "An online form was taken off", payload: { id: "id" } },
+      { name: "workspace.form.removed", v: 1, label: "An online form was removed (its leads stay)", payload: { id: "id" } },
+      { name: "workspace.response.checked", v: 1, label: "A form payment was confirmed, rejected or set back", payload: { id: "id", pay: "string" } },
     ],
     consumes: [],
   },
