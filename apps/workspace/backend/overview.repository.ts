@@ -74,7 +74,7 @@ export class OverviewRepository {
   }
 
   /** The plan with any add-ons bought, and what is used of its limits. */
-  async planUse(ctx: BusinessContext, plan: Parameters<typeof effectiveLimits>[2]) {
+  async planUse<P extends { price: number; limits: unknown }>(ctx: BusinessContext, plan: P) {
     const t = ctx.business.id;
     const [p, seats, listings, featured] = await Promise.all([
       effectiveLimits(db(ctx) as never, t, plan),
