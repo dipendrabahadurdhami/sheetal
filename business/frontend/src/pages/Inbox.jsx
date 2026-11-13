@@ -1,7 +1,7 @@
 // The Inbox: one place for every conversation, each also a lead in the pipeline.
-// How it works: signed in, conversations are the business's leads (website enquiries, chat channels, the lead finder)
-// for the branches in view; stage, assignee and follow-up changes and replies go to the business API. Online-form
-// leads show their form, and requirement forms the listings that matched. "Make agreement" starts one from the lead.
+// How it works: signed in, the CRM app's page (apps/crm/frontend, P2-W6, on the kit) shows the business's leads and is given the lead finder
+// (AIStudio) and the top bar's unread re-count. Not signed in, the sample screen below still shows the browser-storage sample workspace,
+// until that sample is removed (Phase 2, wave 6); then this file becomes a one-line shim.
 
 import React, { useState } from "react";
 import { DataActions } from "@sheetal/shared/components/DataIO";
@@ -13,7 +13,8 @@ import { fdate, fdatetime, inDays, rsShort } from "@sheetal/shared/core/format";
 import { Badge, Button, Empty, Field, PageHead, Seg, Select, ToggleRow, useToast , Drawer } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { useOps } from "./POS";
-import { isLive, liveLeads } from "../live";
+import { isLive, workRefresh } from "../live";
+import { InboxPage } from "@sheetal/app-crm/frontend";
 
 export const CHANNELS = {
   whatsapp: { icon: "message-circle", label: "WhatsApp" }, messenger: { icon: "facebook", label: "Messenger" }, instagram: { icon: "instagram", label: "Instagram" },
@@ -23,6 +24,12 @@ const STAGES = ["new", "contacted", "viewing", "negotiating", "won", "lost"];
 const QUICK = ["qr_thanks", "qr_visit", "qr_price", "qr_location", "qr_payment"];
 
 export function Inbox({ tenant }) {
+  if (isLive(tenant.id)) return <InboxPage tenant={tenant} Finder={AIStudio} onChanged={workRefresh} />;
+  return <SampleInbox tenant={tenant} />;
+}
+
+/** The sample workspace's Inbox (browser storage only). */
+function SampleInbox({ tenant }) {
   const t = useT();
   // ?extract=1 (old website "lead extractor" links) opens the lead finder straight away
   const [aiLeads, setAiLeads] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("extract") === "1");
@@ -35,7 +42,7 @@ export function Inbox({ tenant }) {
   const [sel, setSel] = useState(ops.conversations[0]?.id);
   const [draft, setDraft] = useState("");
   const team = db.members[tenant.id] || [];
-  const live = isLive(tenant.id) ? liveLeads(toast) : null;
+  const live = null;
   const list = ops.conversations.filter((c) => ch === "all" || (ch === "unread" ? c.unread : c.channel === ch));
   const c = ops.conversations.find((x) => x.id === sel);
   const upd = (patch) => { set((o) => { Object.assign(o.conversations.find((x) => x.id === sel), patch); }); if (live) live.update(sel, patch); };
