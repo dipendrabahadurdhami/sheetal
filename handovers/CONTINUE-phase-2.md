@@ -5,7 +5,7 @@ in ONE transaction with audit line + event, controller = HTTP only, `scope.ts` c
 old route file -> one-line shim, `app.ts` registers the app's routes with `contextOf: businessContextOf`, old tests unchanged, new `<app>-kernel.test.ts`;
 screens: `apps/<app>/frontend/pages/<App>Page.jsx` on `@sheetal/ui` + `@sheetal/sdk` (use `/tmp/port.py`-style move: kit primitives, `useApiGet`,
 `exportCsv`, send `version`, reload on 409), old Live page -> one-line shim, `apps/<app>/package.json` exports `./frontend`, business frontend
-dependency + Vite alias, a source test next to the page. Root `npm test`/`typecheck` list every app package.
+dependency + Vite alias, a source test next to the page. Root `npm test`/`typecheck` list every app package. The old-name guard (`packages/config/src/no-old-names.test.js`) reads git-tracked files only: `git add` new files before running it locally.
 
 ## Done (merged, CI green)
 | Wave | App | PRs |
@@ -18,14 +18,16 @@ dependency + Vite alias, a source test next to the page. Root `npm test`/`typech
 | W3 | Projects (units, holds, reservations + their payments) and Investments (pledges, updates): backend + screens | #34 |
 | W3 | Invoicing: customer invoices (backend + live page) and payouts (read only) | #36, #37 |
 | W3 | Collections: settled as part of Projects (manifest note; MODEL-OWNERS.md) | #34, #36 |
+| W4 | POS app: point of sale and Stock (backend + screens; the low-stock job) | #39 |
 
 ## Not done yet
 - W1 Rentals follow-ups: paisa columns + backfill; soft delete for owner/unit/payment/statement.
 - W2: Business -> Settings tab per app.
 - W3 follow-up: the invoice screen (`InvoicesView` in Money.jsx) moves into apps/invoicing/frontend when the sample workspace goes (W6).
-- W4 Hotel, POS, Stock. W5 CRM (own scope MUST include unassigned leads, with a test), Listings (+ move `checkups.ts`), Workspace; decide `ChannelAccount` owner.
+- W4 Hotel (`modules/hotel/routes.ts`, 316 lines, plus `modules/ota`; screens LiveFrontDesk, LiveBookings, LiveCalendar in LiveOps.jsx). Note: the Invoicing
+  app keeps its own copy of `bookingCode` (a test checks it equals Hotel's), and POS writes a room-bill line (MODEL-OWNERS.md). W5 CRM (own scope MUST include unassigned leads, with a test), Listings (+ move `checkups.ts`), Workspace; decide `ChannelAccount` owner.
 - W6 Website API on the kernel where it writes business data; remove the browser-storage sample workspace; delete the last shims.
 
 ## Owner steps after these merges
 `RUN-UPDATE` (applies migrations `20261113090000_people_kernel_columns`, `20261113100000_agreements_kernel_columns`, `20261113110000_projects_kernel_columns`,
-`20261113110100_investments_kernel_columns`, `20261113120000_invoicing_kernel_columns`; all additive, it backs up first).
+`20261113110100_investments_kernel_columns`, `20261113120000_invoicing_kernel_columns`, `20261113130000_pos_kernel_columns`; all additive, it backs up first).
