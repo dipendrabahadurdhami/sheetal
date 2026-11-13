@@ -32,8 +32,8 @@ export async function billingRoutes(app: FastifyInstance, opts: { fetch?: Fetch 
   function payer(ws: Workspace) {
     if (!ws.can("workspace.billing.manage")) throw forbidden("Only people who manage billing can pay for the plan.");
   }
-  const invoiceJson = (i: { id: string; seq: number; createdAt: Date; planId: string; months: number; kind?: string; addons?: unknown; subtotal: number; vat: number; total: number; status: string; dueAt: Date; paidAt: Date | null; periodStart: Date | null; periodEnd: Date | null; billedTo: unknown }, plans: Map<string, string>) => ({
-    id: i.id, number: invoiceNumber(i), kind: i.kind ?? "plan", addons: i.addons ?? [], plan: i.kind === "addon" ? "Add-ons" : i.kind === "boost" ? "Boost" : i.kind === "banner" ? "Home banner" : plans.get(i.planId) ?? i.planId, planId: i.planId, months: i.months, subtotal: i.subtotal, vat: i.vat, total: i.total, status: i.status,
+  const invoiceJson = (i: { id: string; seq: number; createdAt: Date; planId: string | null; months: number; kind?: string; addons?: unknown; subtotal: number; vat: number; total: number; status: string; dueAt: Date; paidAt: Date | null; periodStart: Date | null; periodEnd: Date | null; billedTo: unknown }, plans: Map<string, string>) => ({
+    id: i.id, number: invoiceNumber(i), kind: i.kind ?? "plan", addons: i.addons ?? [], plan: i.kind === "addon" ? "Add-ons" : i.kind === "boost" ? "Boost" : i.kind === "banner" ? "Home banner" : (i.planId ? plans.get(i.planId) ?? i.planId : "Apps"), planId: i.planId, months: i.months, subtotal: i.subtotal, vat: i.vat, total: i.total, status: i.status,
     issuedAt: i.createdAt, dueAt: i.dueAt, paidAt: i.paidAt, periodStart: i.periodStart, periodEnd: i.periodEnd, billedTo: i.billedTo,
   });
 
