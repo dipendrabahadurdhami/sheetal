@@ -39,7 +39,7 @@ users of each model with its `@app` tag. **No tag is changed in Phase 1**; movin
 |---|---|---|---|
 | `ListingReview` (listing check-ups) | listings | only `business/backend/src/modules/reviews/checkups.ts` | Tag stays (it is listing data). The code is in the wrong folder: `checkups.ts` moves to `apps/listings` with the Listings app. |
 | `ChannelAccount` (WhatsApp / Facebook for the Inbox) | workspace | `business` growth and leads modules | Tag stays for now; decide `workspace` vs `crm` when the CRM app moves (the Inbox is shared by every app today). |
-| `Collection`, `Commitment`, `InvestmentUpdate`, `Unit` | collections, investments, projects | only the old `business` projects module | Tags are right; the code is still one module and splits when Projects, Collections and Investments move. |
+| `Collection`, `Commitment`, `InvestmentUpdate`, `Unit` | collections, investments, projects | `apps/projects/backend`, `apps/investments/backend` (P2-W3) | Split. One agreed exception: a payment on a reservation (`Collection`) is written by the Projects app in the same transaction that marks the reservation and unit sold, so "fully paid = sold" stays one atomic step. The Collections app reads them. |
 | `Invoice`, `Payment` (Sheetal's own billing) | platform | also `apps/invoicing`, `apps/collections` | Tag stays; those reads must go through a platform helper when the apps move (no direct table use across apps). |
 | `BizReceipt`, `Payout`, `OwnerStatement` | invoicing, rentals | also `apps/expenses` (profit) | Allowed read for the profit report today; becomes a read through the owning app when those apps move. |
 | `DocCounter`, `MailboxAccess` | workspace | no direct `db.<model>` call (used through relations or raw SQL) | No change. |

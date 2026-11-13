@@ -1,6 +1,6 @@
 // Projects and units: developer projects and units, progress updates, site visits and reservations.
 // Where it fits: read as data by scripts/gen-permissions.mjs (permission lists, role templates) and scripts/check-manifests.mjs.
-// How it works: a plain object, declaration only (id, name, icon, business types, permissions, roles, models): the routes stay in their old modules until the app moves onto the kernel.
+// How it works: a plain object, declaration only (id, name, icon, business types, permissions, roles, models): the server code is in backend/ (P2-W3; it also writes the payments on a reservation, see backend/repositories.ts).
 // Rules: no functions or logic, only "import type" lines; every permission starts with "projects."; models match the "/// @app projects" tags in schema.prisma.
 
 import type { AppManifest } from "@sheetal/platform/core/manifest";
@@ -69,9 +69,20 @@ const manifest = {
   ],
   approvals: [],
   menu: [],
-  events: { publishes: [], consumes: [] },
+  events: {
+    publishes: [
+      { name: "projects.unit.added", v: 1, label: "Units were added to a project", payload: { listingId: "id", count: "number" } },
+      { name: "projects.unit.updated", v: 1, label: "A unit was changed", payload: { id: "id", status: "string" } },
+      { name: "projects.unit.held", v: 1, label: "A unit was held", payload: { id: "id", days: "number" } },
+      { name: "projects.reservation.created", v: 1, label: "A unit was reserved", payload: { id: "id", unitId: "id", price: "number" } },
+      { name: "projects.reservation.paid", v: 1, label: "A payment or refund was recorded on a reservation", payload: { id: "id", amount: "number", paid: "number" } },
+      { name: "projects.reservation.sold", v: 1, label: "A reservation was fully paid: the unit is sold", payload: { id: "id", amount: "number", paid: "number" } },
+      { name: "projects.reservation.cancelled", v: 1, label: "A reservation was cancelled", payload: { id: "id", unitId: "id" } },
+    ],
+    consumes: [],
+  },
   ai: [],
-  dependencies: { requires: [], optional: [], reads: [] },
+  dependencies: { requires: [], optional: ["collections", "listings"], reads: ["Listing", "Collection"] },
   models: ["Unit", "Reservation"],
   branchOwned: [],
   settings: [],

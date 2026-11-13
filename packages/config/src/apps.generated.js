@@ -240,7 +240,7 @@ export const APPS = [
       { id: "investments.investor.read", label: { en: "See investors" }, scopes: ["branch", "all"], default: "branch", group: "Investors" },
       { id: "investments.update.create", label: { en: "Post investor updates" }, scopes: ["branch", "all"], default: "branch", group: "Investors" },
     ],
-    dependencies: { requires: [], optional: [] },
+    dependencies: { requires: [], optional: ["listings"] },
     branchOwned: [],
   },
   {
@@ -376,7 +376,7 @@ export const APPS = [
       { id: "projects.reservation.update", label: { en: "Change reservations" }, scopes: ["branch", "all"], default: "branch", group: "Reservations" },
       { id: "projects.reservation.delete", label: { en: "Delete reservations" }, scopes: ["branch", "all"], default: "branch", group: "Reservations" },
     ],
-    dependencies: { requires: [], optional: [] },
+    dependencies: { requires: [], optional: ["collections", "listings"] },
     branchOwned: [],
   },
   {

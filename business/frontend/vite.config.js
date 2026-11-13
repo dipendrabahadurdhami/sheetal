@@ -15,6 +15,10 @@ const peopleFrontend = fileURLToPath(new URL("../../apps/people/frontend/index.j
 const agreementsFrontend = fileURLToPath(new URL("../../apps/agreements/frontend/index.js", import.meta.url));
 // The Rentals screens live in apps/rentals/frontend (Phase 2), found the same way.
 const rentalsFrontend = fileURLToPath(new URL("../../apps/rentals/frontend/index.js", import.meta.url));
+// The Projects screens live in apps/projects/frontend (Phase 2), found the same way.
+const projectsFrontend = fileURLToPath(new URL("../../apps/projects/frontend/index.js", import.meta.url));
+// The Investments screens live in apps/investments/frontend (Phase 2), found the same way.
+const investmentsFrontend = fileURLToPath(new URL("../../apps/investments/frontend/index.js", import.meta.url));
 const resolve = { alias: { "@sheetal/shared": shared, "@sheetal/app-expenses/frontend": expensesFrontend, "@sheetal/app-reviews/frontend": reviewsFrontend, "@sheetal/app-people/frontend": peopleFrontend }, dedupe: ["react", "react-dom"] };
 
 // Served under /business/. Open it through the website at http://localhost:5173/business/ (not this port directly),
