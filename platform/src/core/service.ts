@@ -181,6 +181,8 @@ export abstract class BaseService<T extends BusinessEntity, C extends object, U 
 
   /** Refuses when `used` already reaches the app's limit for `key` (null = unlimited): call it before adding one more. */
   protected requireLimit(ctx: BusinessContext, key: string, used: number): void {
+    // Phase 3: a business on per-app subscriptions gets the catalog's hard/soft rule and the one limit_reached body (MB 6.3).
+    if (ctx.entitlements.mode === "apps" && ctx.entitlements.requireLimit) { ctx.entitlements.requireLimit(this.deps.app, key, { used, adding: 1 }); return; }
     const limit = ctx.entitlements.limit(this.deps.app, key);
     if (limit !== null && used >= limit) throw planLimit("app_limit", `Your plan allows ${limit} here. Upgrade to add more.`, { limit, key });
   }
@@ -198,6 +200,8 @@ export abstract class BaseService<T extends BusinessEntity, C extends object, U 
     if (ctx.impersonation?.readOnly) {
       return Promise.reject(forbidden("This is a read-only support session. Changes are not allowed."));
     }
+    // Phase 3 (MB 7.2): a read-only or locked app takes no changes. Today's plans never refuse here (v1's requireWrite does nothing).
+    try { ctx.entitlements.requireWrite?.(this.deps.app); } catch (e) { return Promise.reject(e); }
     return ctx.tx ? fn(ctx) : ctx.transaction(fn);
   }
 
