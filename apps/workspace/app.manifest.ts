@@ -1,6 +1,6 @@
 // Workspace: the always-on part of every business: overview, team, roles, branches, settings and billing.
 // Where it fits: read as data by scripts/gen-permissions.mjs (permission lists, role templates) and scripts/check-manifests.mjs.
-// How it works: a plain object, declaration only (id, name, icon, business types, permissions, roles, models): branches, business settings and check-ups (P2-W5/W6), the team, the overview, import/export and forms (P2-W6 part 2) are in backend/; mail and growth move next.
+// How it works: a plain object, declaration only (id, name, icon, business types, permissions, roles, models): branches, business settings and check-ups (P2-W5/W6), the team, the overview, import/export, forms and email (P2-W6 part 2) are in backend/; growth moves next.
 // Rules: no functions or logic, only "import type" lines; every permission starts with "workspace."; models match the "/// @app workspace" tags in schema.prisma.
 
 import type { AppManifest } from "@sheetal/platform/core/manifest";
@@ -94,6 +94,13 @@ const manifest = {
       { name: "workspace.form.unpublished", v: 1, label: "An online form was taken off", payload: { id: "id" } },
       { name: "workspace.form.removed", v: 1, label: "An online form was removed (its leads stay)", payload: { id: "id" } },
       { name: "workspace.response.checked", v: 1, label: "A form payment was confirmed, rejected or set back", payload: { id: "id", pay: "string" } },
+      { name: "workspace.maildomain.added", v: 1, label: "An email domain was connected", payload: { id: "id" } },
+      { name: "workspace.maildomain.checked", v: 1, label: "An email domain's DNS records were checked", payload: { id: "id", verified: "boolean" } },
+      { name: "workspace.maildomain.removed", v: 1, label: "An email domain was removed", payload: { id: "id" } },
+      { name: "workspace.mailbox.added", v: 1, label: "A mailbox was created", payload: { id: "id" } },
+      { name: "workspace.mailbox.updated", v: 1, label: "A mailbox was renamed, switched on or off, or shared", payload: { id: "id" } },
+      { name: "workspace.mailbox.removed", v: 1, label: "A mailbox and its mail were deleted", payload: { id: "id" } },
+      { name: "workspace.mail.sent", v: 1, label: "An email was sent", payload: { id: "string", recipients: "number" } },
     ],
     consumes: [],
   },
