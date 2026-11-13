@@ -1,6 +1,6 @@
 // Listings: property listings and viewings.
 // Where it fits: read as data by scripts/gen-permissions.mjs (permission lists, role templates) and scripts/check-manifests.mjs.
-// How it works: a plain object, declaration only (id, name, icon, business types, permissions, roles, models): the routes stay in their old modules until the app moves onto the kernel.
+// How it works: a plain object, declaration only (id, name, icon, business types, permissions, roles, models): a business's listings are in backend/ (P2-W5); review by staff stays on the admin API, and the screens read the panel store until wave 6.
 // Rules: no functions or logic, only "import type" lines; every permission starts with "listings."; models match the "/// @app listings" tags in schema.prisma.
 
 import type { AppManifest } from "@sheetal/platform/core/manifest";
@@ -62,7 +62,17 @@ const manifest = {
   ],
   approvals: [],
   menu: [],
-  events: { publishes: [], consumes: [] },
+  events: {
+    publishes: [
+      { name: "listings.listing.drafted", v: 1, label: "A listing was saved as a draft", payload: { id: "id", code: "string", kind: "string" } },
+      { name: "listings.listing.submitted", v: 1, label: "A listing was sent to Sheetal for review", payload: { id: "id", code: "string", kind: "string" } },
+      { name: "listings.listing.updated", v: 1, label: "A draft or a listing was changed", payload: { id: "id", code: "string", kind: "string" } },
+      { name: "listings.listing.status_changed", v: 1, label: "Listings were published, paused, archived or marked sold", payload: { codes: "string[]", status: "string" } },
+      { name: "listings.listing.removed", v: 1, label: "Listings were deleted (kept as removed)", payload: { codes: "string[]" } },
+      { name: "listings.listing.moved", v: 1, label: "A listing moved to another business", payload: { id: "id", code: "string", to: "id" } },
+    ],
+    consumes: [],
+  },
   ai: [],
   dependencies: { requires: [], optional: [], reads: [] },
   models: ["Listing", "ListingPhoto", "ListingReview", "Favourite", "DemandMatch"],
