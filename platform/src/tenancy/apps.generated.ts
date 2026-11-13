@@ -589,6 +589,10 @@ export const APPS: readonly AppManifest[] = [
     menu: [],
     events: {
       publishes: [
+        { name: "listings.checkup.setup_saved", v: 1, label: "The check-up settings were saved", payload: { id: "id" } },
+        { name: "listings.checkup.reviewed", v: 1, label: "A reviewer checked a listing (correct, changed or skipped)", payload: { id: "id", action: "string" } },
+        { name: "listings.checkup.decided", v: 1, label: "The day's check-up changes were decided", payload: { applied: "number", conflicts: "number" } },
+        { name: "listings.checkup.picked", v: 1, label: "The owner picked a value no reviewer majority chose", payload: { id: "id" } },
         { name: "listings.listing.drafted", v: 1, label: "A listing was saved as a draft", payload: { id: "id", code: "string", kind: "string" } },
         { name: "listings.listing.submitted", v: 1, label: "A listing was sent to Sheetal for review", payload: { id: "id", code: "string", kind: "string" } },
         { name: "listings.listing.updated", v: 1, label: "A draft or a listing was changed", payload: { id: "id", code: "string", kind: "string" } },
