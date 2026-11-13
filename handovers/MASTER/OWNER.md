@@ -25,10 +25,9 @@
 - Prices, free limits, trials, required business info, legal pages and other content are **editable in the super admin panel** without code.
 - Public brand: **Sheetal Property** only. The tech/support company behind it (DhamiPlus) and internal details such as PAN are never shown publicly.
 
-## Open questions for the owner (Phase 3, MARKETPLACE-AND-BILLING.md section 0)
-Ask them ONE at a time when Phase 3 starts (each with the recommendation; "use your recommendation" is a valid answer):
-1. At a free limit: warn or stop? (recommended: per limit; new records hard stop, money-in soft to +20%, storage/AI warn 80% stop 100%)
-2. How long do today's businesses keep today's access and price? (recommended: paid period + 12 months, renewal at the lower price; free: 90 days)
-3. What is "commission"? (recommended: sale without VAT split into Sheetal commission % per app and publisher part; partner share is a % of commission)
-4. Free AI credits? (recommended: none monthly for new free businesses; 100 one-time credits during a 14-day trial)
-5. Starting prices? (recommended: MB section 3.4 table, VAT included, yearly = 10 months)
+## Phase 3 answers (13 Nov 2026, 20:30): the owner accepted all five recommendations
+1. At a free limit: **per limit**. New records hard stop; money-in (POS bills, invoices) soft to +20% then stop; storage and AI warn at 80%, stop at 100%.
+2. Today's businesses: **paid period + 12 months** at today's price and access, renewal at the lower of old and new price; free businesses keep today's limits **90 days**.
+3. Commission: **split per app** (sale without VAT = Sheetal commission % per app + publisher part); partner share is a % of commission; default 100% until entered.
+4. Free AI: **no monthly credits** for new free businesses; **100 one-time credits** in a 14-day trial; existing businesses keep credits during their lock.
+5. Prices: **MB section 3.4 table, VAT included, yearly = 10 months** (all editable in Admin -> Pricing).

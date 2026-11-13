@@ -40,7 +40,7 @@ the sample store is gone, CI green, hand test of each app's main page passed.
 
 ## Phase 3: marketplace, per-app subscriptions, pricing
 Design is done and merged: `docs/architecture/MARKETPLACE-AND-BILLING.md` (MB), `PHASE-3-TASKS.md` (22 tasks in order), `PHASE-3-RISKS.md`.
-**First** ask the owner the 5 questions in `OWNER.md` (one at a time). Then build PHASE-3-TASKS.md in its order (QA-1 → DB-1 → DB-2 → BE-1..11
+The 5 owner questions were **answered on 13 Nov** (all recommendations accepted, see `OWNER.md`). Build PHASE-3-TASKS.md in its order (QA-1 → DB-1 → DB-2 → BE-1..11
 → FE-1..6 → OPS-1 → OPS-2). The customer migration (OPS-2: shadow → pilot → all) needs the owner's yes at each step, and a backup first.
 
 **Done when:** every PHASE-3-TASKS task merged, launch gates G1-G10 of PHASE-3-RISKS met, migration done with the owner.
