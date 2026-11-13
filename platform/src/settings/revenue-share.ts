@@ -21,6 +21,9 @@ export const RevenueShare = z.object({
     apps: z.array(id).max(60).default([]),
   }).strict(),
   rounding: z.literal("nearest_paisa").default("nearest_paisa"),
+  /** Phase 3 (MB section 13, the owner's answer to Q3): app sales. A sale without VAT = Sheetal's commission (this %) + the publisher's part.
+   *  100% until the owner enters the split, so nothing is ever paid out wrongly; the partner share above applies to this commission too. */
+  appSales: z.object({ commissionPct: pct, perApp: z.record(id, pct).default({}) }).strict().default({ commissionPct: 100, perApp: {} }),
   effectiveFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use a date like 2026-11-12."),
 }).strict();
 export type RevenueShare = z.infer<typeof RevenueShare>;
@@ -29,7 +32,7 @@ export type RevenueShare = z.infer<typeof RevenueShare>;
 export const REVENUE_SHARE_DEFAULT: RevenueShare = {
   commissionPct: 10, perApp: {}, perGateway: {},
   technologyPartner: { enabled: false, name: "", sharePct: 0, appliesTo: "all", apps: [] },
-  rounding: "nearest_paisa", effectiveFrom: "2026-01-01",
+  rounding: "nearest_paisa", appSales: { commissionPct: 100, perApp: {} }, effectiveFrom: "2026-01-01",
 };
 
 /** percent of an amount in paisa, rounded to the nearest paisa (half up), without floating-point drift. */

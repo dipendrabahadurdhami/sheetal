@@ -44,6 +44,8 @@ export function creditSplit(gross: number, vatPct: number) {
  *  the year it differs, and must be checked against the official calendar before each new fiscal year. */
 const SHRAWAN_1: Record<number, string> = { 2025: "07-17", 2026: "07-17", 2027: "07-17", 2028: "07-16" };
 export function fiscalYearOf(d: Date) {
+  // In Nepal time (P3-BE-4 fix): 00:30 on Shrawan 1 in Nepal is 18:45 UTC the day before and already belongs to the new year.
+  d = new Date(d.getTime() + (5 * 60 + 45) * 60_000);
   const y = d.getUTCFullYear();
   const start = Date.UTC(y, Number((SHRAWAN_1[y] ?? "07-17").slice(0, 2)) - 1, Number((SHRAWAN_1[y] ?? "07-17").slice(3)));
   const bs = (d.getTime() >= start ? y : y - 1) + 57;
