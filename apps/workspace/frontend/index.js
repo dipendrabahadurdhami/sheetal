@@ -5,3 +5,5 @@ export { MailPage } from "./pages/MailPage.jsx";
 export { TeamPage, toMember, toInvite, toRole, memberBody, activityText } from "./pages/TeamPage.jsx";
 export { RolesPage } from "./pages/RolesPage.jsx";
 export { BranchesPage, branchFields } from "./pages/BranchesPage.jsx";
+export { SettingsPage } from "./pages/SettingsPage.jsx";
+export { BRAND_PRESETS, SERVER_SECTIONS, defaultTenantSettings, mergeSettings } from "./settingsModel.js";
