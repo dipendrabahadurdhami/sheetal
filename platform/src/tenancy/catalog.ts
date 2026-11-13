@@ -1,5 +1,5 @@
 // The permission catalog of a business, and the role maths between old and new permission names (ACCESS.md sections 4, 5 and 6).
-// Where it fits: the Team routes (business/backend/src/modules/team/routes.ts) offer `catalogFor…()` to the role screen, check a role being saved with
+// Where it fits: the Team routes (apps/workspace/backend/team.service.ts) offer `catalogFor…()` to the role screen, check a role being saved with
 // normalizeRolePerms(), and send every role's `grants` (toGrants) so the screen can show new names whatever the role stores. The approvals rules screen uses
 // the same catalog. It replaces businessPermsFor() (the old names) at the end of Phase 1; both exist side by side until BE-10.
 // How it works:
