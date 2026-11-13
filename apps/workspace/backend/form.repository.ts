@@ -57,5 +57,5 @@ export class FormRepository {
   response(ctx: BusinessContext, inView: InView, id: string) { return db(ctx).formResponse.findFirst({ where: { id, tenantId: ctx.business.id, form: { tenantId: ctx.business.id, ...inView } } }); }
   setPayment(ctx: BusinessContext, id: string, payStatus: string) { return db(ctx).formResponse.updateMany({ where: { id, tenantId: ctx.business.id }, data: { payStatus } }); }
   /** The agreed cross-app write: a confirmed payment becomes the value of the lead the response made. */
-  leadValue(ctx: BusinessContext, leadId: number, value: bigint) { return db(ctx).lead.updateMany({ where: { id: leadId, tenantId: ctx.business.id }, data: { value } }); }
+  leadValue(ctx: BusinessContext, leadId: string, value: bigint) { return db(ctx).lead.updateMany({ where: { id: leadId, tenantId: ctx.business.id }, data: { value } }); }
 }
