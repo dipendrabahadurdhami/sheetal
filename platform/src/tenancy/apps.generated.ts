@@ -1016,7 +1016,10 @@ export const APPS: readonly AppManifest[] = [
     ],
     approvals: [{ action: "platform.billing.refund", label: { en: "Issue a refund above a limit" }, money: true, enabledByDefault: false, approverPermission: "platform.billing.refund" }],
     menu: [],
-    events: { publishes: [], consumes: [] },
+    events: {
+      publishes: [{ name: "platform.invoice.issued", v: 1, label: "A tax invoice was issued (a subscription paid)", payload: { invoiceId: "id", tenantId: "id", number: "string", totalPaisa: "paisa" } }],
+      consumes: [],
+    },
     ai: [],
     dependencies: { requires: [], optional: [], reads: [] },
     models: [
