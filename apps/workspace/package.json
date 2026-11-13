@@ -10,7 +10,8 @@
   "exports": {
     "./backend": "./backend/index.ts",
     "./backend/*": "./backend/*.ts",
-    "./manifest": "./app.manifest.ts"
+    "./manifest": "./app.manifest.ts",
+    "./frontend": "./frontend/index.js"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
