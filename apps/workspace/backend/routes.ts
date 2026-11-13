@@ -1,6 +1,6 @@
 // Workspace: a business's branches and its own settings (Settings → Branches and the Settings tabs, the branch picker, listing check-ups), on the kernel
 // since P2-W5/W6, and its team (the person's businesses, profile, branding, Pro cover, members, invitations, roles) the business Overview,
-// Import / Export and online forms since P2-W6 part 2. Mail and growth are not moved yet (they are still in business/backend/src/modules).
+// Import / Export, online forms and business email since P2-W6 part 2. Growth is not moved yet (it is still in business/backend/src/modules).
 // Where it fits: business/backend/src/app.ts registers workspaceRoutes with { prefix: "/v1", contextOf: businessContextOf }; the old branch and settings
 // route files are shims. How it works: the vault seals secret settings; the catalog is the listing setup staff keep in Admin (cached a minute).
 
@@ -16,6 +16,9 @@ import { requireUser } from "@sheetal/platform/auth/sessions";
 import { WorkspaceController } from "./workspace.controller.js";
 import { WorkspaceService } from "./workspace.service.js";
 import { DataController } from "./data.controller.js";
+import { MailController } from "./mail.controller.js";
+import { MailService } from "./mail.service.js";
+import { systemResolver, type Resolver } from "./mail-dns.js";
 import { DataService } from "./data.service.js";
 import { FormController } from "./form.controller.js";
 import { FormService } from "./form.service.js";
@@ -24,10 +27,10 @@ import { OverviewService } from "./overview.service.js";
 import { TeamController } from "./team.controller.js";
 import { TeamService, type TeamUser } from "./team.service.js";
 
-export interface WorkspaceRoutesOptions { contextOf: (req: FastifyRequest) => Promise<BusinessContext> }
+export interface WorkspaceRoutesOptions { contextOf: (req: FastifyRequest) => Promise<BusinessContext>; /** DNS lookups for email domains (tests swap it). */ resolver?: Resolver }
 
 export async function workspaceRoutes(app: FastifyInstance, opts: WorkspaceRoutesOptions) {
-  const host = app as FastifyInstance & { db?: unknown; cache?: unknown; config: { SECRETS_KEY: string; NODE_ENV: string; MEDIA_DIR: string; SITE_URL: string }; mailer: { send(m: { to: string; subject: string; text: string }): Promise<unknown> } };
+  const host = app as FastifyInstance & { db?: unknown; cache?: unknown; config: { SECRETS_KEY: string; NODE_ENV: string; MEDIA_DIR: string; SITE_URL: string; MAIL_HOST: string; MAIL_INBOUND_SECRET?: string }; mailer: { send(m: { to: string; subject: string; text: string }): Promise<unknown> } };
   const service = new WorkspaceService({
     bus: busOf(app, "workspace"),
     vault: new Vault(host.config.SECRETS_KEY, host.config.NODE_ENV === "production"),
@@ -37,6 +40,10 @@ export async function workspaceRoutes(app: FastifyInstance, opts: WorkspaceRoute
   new WorkspaceController(service, opts.contextOf).register(app);
   new OverviewController(new OverviewService(), opts.contextOf).register(app);
   new DataController(new DataService({ bus: busOf(app, "workspace"), catalogKinds: () => catalogKindsNow(host.db as never) }), opts.contextOf).register(app);
+  new MailController(new MailService({
+    bus: busOf(app, "workspace"), db: host.db, vault: new Vault(host.config.SECRETS_KEY, host.config.NODE_ENV === "production"),
+    resolver: opts.resolver ?? systemResolver, mailHost: host.config.MAIL_HOST, inboundSecret: host.config.MAIL_INBOUND_SECRET,
+  }), opts.contextOf).register(app);
   new FormController(new FormService({ bus: busOf(app, "workspace"), siteUrl: host.config.SITE_URL, readFile: (name) => readPrivateFile(host.config.MEDIA_DIR, "forms", name) as never }), opts.contextOf).register(app);
   const team = new TeamService({
     bus: busOf(app, "workspace"), db: host.db, siteUrl: host.config.SITE_URL, mediaDir: host.config.MEDIA_DIR, mediaBase: mediaBase(host.config as never),

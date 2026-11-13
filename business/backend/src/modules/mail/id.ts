@@ -1,6 +1,2 @@
-// New ids for email messages (also used inside the Message-ID header).
-
-import { randomUUID } from "node:crypto";
-
-/** A new id for a message (also used inside its Message-ID header). */
-export const createId = () => randomUUID().replace(/-/g, "");
+// New ids for email messages: moved to the Workspace app (apps/workspace/backend/mail.service.ts, createId) in P2-W6. Re-exported for old imports.
+export { createId } from "@sheetal/app-workspace/backend/mail.service";

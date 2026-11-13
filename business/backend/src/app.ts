@@ -11,7 +11,6 @@
 import type { FastifyInstance } from "fastify";
 import type { Config } from "@sheetal/platform/core/config";
 import { buildBaseApp, type AppDeps } from "@sheetal/backend-core/app";
-import { mailRoutes } from "./modules/mail/routes.js";
 import { billingRoutes } from "./modules/billing/routes.js";
 import { addonRoutes } from "./modules/billing/addons.js";
 import { growthRoutes } from "./modules/growth/routes.js";
@@ -66,7 +65,7 @@ export async function buildApp(config: Config, deps: AppDeps & { resolver?: Reso
   app.decorate("approvals", approvals);
   await app.register(approvalRoutes, { prefix: "/v1", contextOf: businessContextOf, service: approvals });
   await app.register(supportSessionRoutes, { prefix: "/v1" });
-  await app.register(workspaceRoutes, { prefix: "/v1", contextOf: businessContextOf });   // branches, business settings, check-ups, the team, the overview, import/export, forms
+  await app.register(workspaceRoutes, { prefix: "/v1", contextOf: businessContextOf, resolver: deps.resolver });   // branches, settings, check-ups, team, overview, import/export, forms, email
   await app.register(reviewRoutes, { prefix: "/v1", contextOf: businessContextOf });
   await app.register(verificationRoutes, { prefix: "/v1" });
   await app.register(invoicingRoutes, { prefix: "/v1", contextOf: businessContextOf });   // customer invoices and payouts
@@ -84,7 +83,6 @@ export async function buildApp(config: Config, deps: AppDeps & { resolver?: Reso
   await app.register(aiAccountRoutes, { prefix: "/v1", ai: deps.ai });
   // The bell: the person's notifications about the open business.
   await app.register(async (a) => notificationRoutes(a, "/notifications", (request) => { const ws = workspaceOf(request); return { userId: ws.user.id, tenantId: ws.tenantId }; }), { prefix: "/v1" });
-  await app.register(mailRoutes, { prefix: "/v1", resolver: deps.resolver });
   await app.register(listingRoutes, { prefix: "/v1", contextOf: businessContextOf });
   await app.register(leadRoutes, { prefix: "/v1", contextOf: businessContextOf, fetch: deps.fetch });
   await app.register(billingRoutes, { prefix: "/v1", fetch: deps.fetch });

@@ -48,6 +48,7 @@ users of each model with its `@app` tag. **No tag is changed in Phase 1**; movin
 | `Invoice` (Sheetal's own billing) | platform | also `apps/workspace/backend/team.repository.ts` (P2-W6) | Agreed exception, as before the move: when a business joins its owner's Pro plan, its open Sheetal invoices are voided in the same transaction (Phase 3 replaces this with per-app billing). |
 | `Listing`, `Lead` (Import) | listings, crm | also `apps/workspace/backend/data.repository.ts` (P2-W6) | Agreed exception, as before the move: Import adds listings as drafts or leads into the Inbox, all rows in one transaction with the audit line and event. Exports only read. |
 | `Lead` (form payments) | crm | also `apps/workspace/backend/form.repository.ts` (P2-W6) | Agreed exception, as before the move: confirming a form payment sets the value of the lead that response made, in the same transaction. |
+| `MailMessage` (another business's inbox) | workspace | `apps/workspace/backend/mail.repository.ts` (P2-W6) | Agreed, as before the move: mail between Sheetal mailboxes is put straight into the recipient's mailbox, which may be another business, after checking its storage; the mail server's inbound mail does the same. |
 | `DocCounter`, `MailboxAccess` | workspace | no direct `db.<model>` call (used through relations or raw SQL) | No change. |
 
 Everything else is used by its own app's code, by platform/core, or by the screens' shared admin and website modules that read many apps.
