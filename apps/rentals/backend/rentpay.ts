@@ -72,7 +72,7 @@ export async function findLease(db: Db, o: { code: string; phone?: string | null
 export async function leaseView(db: Db, leaseId: string) {
   const l = await db.rentLease.findUniqueOrThrow({ where: { id: leaseId }, include: { unit: { select: { property: true, name: true } } } });
   const tenant = await db.tenant.findUniqueOrThrow({ where: { id: l.tenantId }, select: { name: true, phone: true, settings: true } });
-  const bills = await db.rentBill.findMany({ where: { leaseId: l.id }, orderBy: { month: "asc" }, include: { payments: { where: { status: "pending" }, select: { amount: true } } } });
+  const bills = await db.rentBill.findMany({ where: { leaseId: l.id }, orderBy: { month: "asc" }, include: { payments: { where: { status: "pending", deletedAt: null }, select: { amount: true } } } });
   return {
     leaseId: l.id, lease: leaseNo(l.seq), renter: l.renter, unit: `${l.unit.property} · ${l.unit.name}`, rent: l.rent, business: tenant.name, businessPhone: tenant.phone ?? "",
     payTo: payTargetOf(tenant.settings), methods: payMethodsOf(tenant.settings),
@@ -101,12 +101,12 @@ export async function takeOnlinePayment(db: Db, o: { leaseId: string; billId: st
 /** Confirms a waiting payment: it is added to its bill (only if that doesn't pay more than is owed), and money Sheetal
  *  collected is recorded for the business's payout. */
 export async function confirmRentPayment(db: Db, o: { paymentId: string; by: string }) {
-  const p = await db.rentPayment.findUnique({ where: { id: o.paymentId }, include: { bill: { include: { lease: { include: { unit: { select: { property: true, name: true } } } } } } } });
+  const p = await db.rentPayment.findFirst({ where: { id: o.paymentId, deletedAt: null }, include: { bill: { include: { lease: { include: { unit: { select: { property: true, name: true } } } } } } } });
   if (!p) throw notFound("Payment not found.");
   if (p.status !== "pending") throw badRequest(p.status === "confirmed" ? "This payment is already confirmed." : "This payment was rejected.");
   const b = p.bill;
   await db.$transaction(async (tx) => {
-    const took = await tx.rentPayment.updateMany({ where: { id: p.id, status: "pending" }, data: { status: "confirmed", reviewedBy: o.by, reviewedAt: new Date(), updatedBy: o.by, version: { increment: 1 } } });
+    const took = await tx.rentPayment.updateMany({ where: { id: p.id, status: "pending", deletedAt: null }, data: { status: "confirmed", reviewedBy: o.by, reviewedAt: new Date(), updatedBy: o.by, version: { increment: 1 } } });
     if (!took.count) throw badRequest("Someone already decided on this payment.");
     const added = await tx.rentBill.updateMany({ where: { id: b.id, paid: { lte: b.amount + b.lateFee - p.amount } }, data: { paid: { increment: p.amount }, updatedBy: o.by, version: { increment: 1 } } });
     if (!added.count) throw badRequest("This would pay more than is owed on the bill. Reject it, or ask the tenant.");
@@ -118,6 +118,6 @@ export async function confirmRentPayment(db: Db, o: { paymentId: string; by: str
 }
 
 export async function rejectRentPayment(db: Db, o: { paymentId: string; by: string; note: string }) {
-  const done = await db.rentPayment.updateMany({ where: { id: o.paymentId, status: "pending" }, data: { status: "rejected", reviewedBy: o.by, reviewedAt: new Date(), reviewNote: o.note, updatedBy: o.by, version: { increment: 1 } } });
+  const done = await db.rentPayment.updateMany({ where: { id: o.paymentId, status: "pending", deletedAt: null }, data: { status: "rejected", reviewedBy: o.by, reviewedAt: new Date(), reviewNote: o.note, updatedBy: o.by, version: { increment: 1 } } });
   if (!done.count) throw badRequest("Only a waiting payment can be rejected.");
 }

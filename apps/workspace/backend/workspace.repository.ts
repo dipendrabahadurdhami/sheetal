@@ -47,7 +47,7 @@ export class BranchRepository {
       x.listing.count({ where: { ...w, status: { not: "removed" } } }), x.room.count({ where: w }), x.lead.count({ where: w }),
       x.booking.count({ where: w }), x.shift.count({ where: w }), x.posBill.count({ where: w }), x.bizInvoice.count({ where: w }),
       x.expense.count({ where: w }), x.recurringExpense.count({ where: w }),
-      x.rentOwner.count({ where: w }), x.rentUnit.count({ where: w }), x.form.count({ where: w }), x.agreement.count({ where: w }),
+      x.rentOwner.count({ where: { ...w, deletedAt: null } }), x.rentUnit.count({ where: { ...w, deletedAt: null } }), x.form.count({ where: w }), x.agreement.count({ where: w }),
       x.stockItem.count({ where: w }), x.attendance.count({ where: w }), x.leaveRequest.count({ where: w }),
       x.otaRequest.count({ where: { ...w, status: { in: [...OPEN_STATUSES, "live"] } } }), // paused and rejected ones don't block
     ]);

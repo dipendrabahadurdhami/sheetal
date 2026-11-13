@@ -28,6 +28,9 @@ import { FormService } from "./form.service.js";
 import { OverviewController } from "./overview.controller.js";
 import { OverviewService } from "./overview.service.js";
 import { TeamController } from "./team.controller.js";
+import { AppSettingsController } from "./app-settings.controller.js";
+import { AppSettingsService } from "./app-settings.service.js";
+import { SettingsService } from "@sheetal/platform/settings/service";
 import { TeamService, type TeamUser } from "./team.service.js";
 
 export interface WorkspaceRoutesOptions { contextOf: (req: FastifyRequest) => Promise<BusinessContext>; /** DNS lookups for email domains (tests swap it). */ resolver?: Resolver;
@@ -55,4 +58,7 @@ export async function workspaceRoutes(app: FastifyInstance, opts: WorkspaceRoute
     mail: (m) => host.mailer.send(m),
   });
   new TeamController(team, opts.contextOf, (req) => requireUser(req) as unknown as TeamUser).register(app);
+  // One Settings tab per app: the business-scope settings of the app manifests, through the typed settings store (P2-W6).
+  let store: SettingsService | null = null;
+  new AppSettingsController(new AppSettingsService(() => (store ??= new SettingsService(host.db as never, app.log))), opts.contextOf).register(app);
 }

@@ -1,4 +1,18 @@
-# Project state (13 Nov 2026, 17:15 Nepal time)
+# Project state (13 Nov 2026, night, Nepal time)
+
+**Phase 2 is closed** (`handovers/CLOSE-OUT-phase-2.md`, PRs #57-#64 on 13 Nov night). Main = the merge of the Phase 2 close-out PR, CI green.
+Phase 3 is next: the owner accepted all five recommendations (MARKETPLACE-AND-BILLING.md section 0, PR #56). Build PHASE-3-TASKS.md in order.
+
+## Lessons from 13 Nov night (keep doing)
+- Stacked branches: after `git merge origin/main`, grep for `<<<<<<<` before committing, or merge with `-X ours` (the branch already holds main's earlier squash).
+- A live-only screen move: put the page in `apps/<app>/frontend/pages`, load its own data with the SDK (`useApiGet`), send `version`, take what the shell knows
+  (Business pages, panel reloads) as props; the old Business file becomes a shim. A page may read UI state and static config from the store, never business data.
+- The business panel's store saves only `session` and `drafts` (`sheetal_business_ui`); the shell's read copy is filled by `live.js` each load.
+- Website/no-context writes use the small system context and `new OutboxEventBus({ mayPublish, strict })`; the business API's dispatcher delivers.
+- Paisa twins: a BEFORE INSERT OR UPDATE trigger keeps `*_paisa` = rupees × 100 (Prisma's migrate diff ignores triggers).
+
+---
+
 
 **Main = the merge of PR #55 (13 Nov, about 20:15), about 1205 tests, CI green.** One builder (you), no other chats. Phase 1 is closed; Phase 2 is about 87% done:
 every business backend route is on the kernel (PRs #50-#55 on 13 Nov evening); Wave 6 (screens) and the leftovers remain.

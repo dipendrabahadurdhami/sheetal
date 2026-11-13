@@ -2,9 +2,8 @@
 // Where it fits: StatementService calls it. Profit (apps/expenses) reads saved statements for the management fee.
 // How it works: a RentalRepository on model "ownerStatement". `numbersFor` works out a month for some owners: rent collected (confirmed payments made that month for their
 // units), the management fee, repairs done that month, and what is owed to the owner. `saveFor` saves those numbers (one statement per owner and month; saving again updates it).
-// Rules: statement = collected - fee - repairs. Pending and rejected payments never count. `remove` is a REAL delete, not a soft one: a saved statement is only numbers that can
-// be worked out again, the unique key (owner + month) must be free to save it again, and profit reads this table without a deletedAt filter, so a "removed" statement must
-// really stop counting. The statementsFor() function keeps its old name and shape for the old import path.
+// Rules: statement = collected - fee - repairs. Pending and rejected payments never count. `remove` is a soft delete (P2-W6): saving the same owner and month
+// again brings the row back with new numbers (the upsert clears deletedAt), and profit skips deleted statements, so a removed statement stops counting. The statementsFor() function keeps its old name and shape for the old import path.
 
 import { actorIdOf, type BusinessContext, type DataScope, type Tx } from "@sheetal/platform/core/context";
 import type { Db } from "@sheetal/platform/db/client";
@@ -67,5 +66,5 @@ export class StatementRepository extends RentalRepository<StatementRow, Statemen
   }
 
   /** Real delete (see the header). */
-  remove(ctx: BusinessContext, id: string, scope: DataScope): Promise<void> { return this.deleteRow(ctx, id, scope); }
+  remove(ctx: BusinessContext, id: string, scope: DataScope): Promise<void> { return this.softDeleteRow(ctx, id, scope); }
 }

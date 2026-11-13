@@ -2,8 +2,8 @@
 // Where it fits: UnitService, LeaseService, RepairService and OverviewService call it.
 // How it works: a RentalRepository on model "rentUnit". Named methods: `takeIfFree` (the compare-and-set that stops two leases starting on one unit),
 // `countOfOwner`, and two read-only queries on the listings table (`ownListing`, `listingsOf`), which belongs to the Listings app (listed in this app's manifest under reads).
-// Rules: `remove` is a REAL delete, not a soft one, for the same reason as owners: the branch-closing check counts units without looking at deletedAt, and a unit with
-// any lease or repair is never deleted anyway. A unit is let to one lease at a time.
+// Rules: `remove` is a REAL delete, not a soft one, for the same reason as owners (rent_units.branch_id is ON DELETE RESTRICT, so a hidden unit would block
+// removing its branch); a unit with any lease or repair is never deleted anyway. The audit line keeps the record (P2-W6 decision).
 
 import type { BusinessContext, DataScope } from "@sheetal/platform/core/context";
 import { RentalRepository } from "./rental.repository.js";

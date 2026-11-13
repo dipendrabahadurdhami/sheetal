@@ -40,6 +40,7 @@ import { AddBusiness } from "./AddBusiness";
 import { LiveBookings, LiveFrontDesk, LiveInvestors, LivePOS, LiveProjects, LiveCalendar } from "./LiveOps";
 import { LiveAnalytics, LiveChannels } from "./LiveGrowth";
 import { ReviewsPage } from "@sheetal/app-reviews/frontend";
+import { AppSettingsPage } from "@sheetal/app-workspace/frontend";
 import { Verification } from "./Verification";
 import { Inbox } from "./Inbox";
 import { Approvals } from "./Approvals";
@@ -304,6 +305,7 @@ function Workspace() {
         { path: "/business/agreements/:id", render: ({ id }) => (paid(can(role, "agreements.agreement.read+agreements.agreement.create+agreements.agreement.update+agreements.agreement.delete"), <LiveAgreements key={tenant.id + id} tenant={tenant} id={id} />)) },
         { path: "/business/settings", render: () => guard(can(role, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"), <SettingsShell role={role}><BusinessSettings key={tenant.id} tenant={tenant} tab="profile" /></SettingsShell>) },
         { path: "/business/settings/verification", render: () => guard(can(role, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"), <SettingsShell role={role}>{<Verification key={tenant.id} tenant={tenant} />}</SettingsShell>) },
+        { path: "/business/settings/apps", render: () => guard(can(role, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"), <SettingsShell role={role}><AppSettingsPage key={tenant.id} /></SettingsShell>) },
         { path: "/business/settings/roles", render: () => guard(can(role, "workspace.role.read+workspace.role.create+workspace.role.update+workspace.role.delete"), <SettingsShell role={role}><BusinessRoles key={tenant.id} tenant={tenant} role={role} /></SettingsShell>) },
         { path: "/business/settings/:tab", render: ({ tab }) => guard(can(role, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"), <SettingsShell role={role}><BusinessSettings key={tenant.id} tenant={tenant} tab={tab} /></SettingsShell>) },
         { path: "/business/billing/return/:provider/:id", render: ({ provider, id }) => <BillingReturn provider={provider} id={id} /> },
