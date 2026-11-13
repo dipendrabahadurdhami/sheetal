@@ -15,7 +15,7 @@ import { buildApp } from "../src/app.js";
 let app: FastifyInstance;
 const tok: Record<string, string> = {};
 const ids: Record<string, string> = {};
-const call = (who: string, method: "GET" | "POST" | "PUT" | "DELETE", url: string, body?: object, tenant?: string) =>
+const call = (who: string, method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE", url: string, body?: object, tenant?: string) =>
   app.inject({ method, url: `/v1${url}`, payload: body, headers: { authorization: `Bearer ${tok[who]}`, "x-tenant-id": tenant ?? ids.agency! } });
 const LEASE = { start: "2025-01-01", end: "2025-12-31", renter: "Sita Sharma", phone: "9800000000", rent: 20_000, deposit: 40_000, dueDay: 7, lateFeePct: 2, lateAfterDays: 5 };
 
