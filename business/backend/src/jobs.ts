@@ -17,7 +17,7 @@ import { buildSystemContext } from "@sheetal/platform/tenancy/system-context";
 import { OutboxEventBus } from "@sheetal/platform/core/events";
 import { expenseJob } from "@sheetal/app-expenses/backend";
 import { rentJob } from "./modules/rentals/routes.js";
-import { reviewCheckupJob } from "./modules/reviews/checkups.js";
+import { checkupJob } from "@sheetal/app-listings/backend";
 import { stockJob } from "@sheetal/app-pos/backend";
 import { approvalExpiryJob } from "@sheetal/platform/approvals/jobs";
 import { demoCleanupJob } from "./modules/demo/routes.js";
@@ -46,7 +46,7 @@ declare module "fastify" {
 
 /** Every background job of the business API, in start order. `events` is what eventsOf(app) returned (the same bus the apps subscribed to). */
 export function businessJobs(app: FastifyInstance, events: ReturnType<typeof eventsOf>): JobSpec[] {
-  return [expenseJob(app), rentJob(app), stockJob(app), reviewCheckupJob(app), events.dispatcher.job()];
+  return [expenseJob(app), rentJob(app), stockJob(app), checkupJob(app), events.dispatcher.job()];
 }
 
 /**

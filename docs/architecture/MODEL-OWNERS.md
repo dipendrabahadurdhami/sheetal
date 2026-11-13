@@ -37,7 +37,7 @@ users of each model with its `@app` tag. **No tag is changed in Phase 1**; movin
 
 | Model | Tag | Used by | Decision |
 |---|---|---|---|
-| `ListingReview` (listing check-ups) | listings | only `business/backend/src/modules/reviews/checkups.ts` | Tag stays (it is listing data). The code is in the wrong folder: `checkups.ts` moves to `apps/listings` with the Listings app. |
+| `ListingReview` (listing check-ups) | listings | only `business/backend/src/modules/reviews/checkups.ts` | Tag stays (it is listing data). **Done (P2-W6):** the code is in `apps/listings/backend/checkup.*`. |
 | `ChannelAccount` (WhatsApp / Facebook for the Inbox) | workspace | `business` growth and leads modules, `apps/crm` | **Decided (P2-W6, 13 Nov): stays `workspace`.** It is a business's connected account, shared by several apps (CRM Inbox replies, Growth posts) and set up like the other connections; each app uses it through its own code and never changes another app's records with it. |
 | `Collection`, `Commitment`, `InvestmentUpdate`, `Unit` | collections, investments, projects | `apps/projects/backend`, `apps/investments/backend` (P2-W3) | Split. One agreed exception: a payment on a reservation (`Collection`) is written by the Projects app in the same transaction that marks the reservation and unit sold, so "fully paid = sold" stays one atomic step. The Collections app reads them. |
 | `FolioLine` (a hotel room bill) | hotel | also `apps/pos/backend` (P2-W4) | Agreed exception: a POS bill put on a guest's room, and its void, adds the room-bill line in the same transaction as the bill. |
