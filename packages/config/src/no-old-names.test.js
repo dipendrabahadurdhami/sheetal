@@ -24,7 +24,6 @@ const LOOK_ALIKES = {
   "business/backend/src/modules/billing/routes.ts": 1,   // a comment
   "business/backend/src/modules/branches/routes.ts": 1,  // a comment
   "business/backend/src/modules/mail/routes.ts": 2,      // comments
-  "business/backend/src/modules/pos/routes.ts": 1,       // audit action "pos.void"
   "backend-core/src/domain/permissions.ts": 1,           // a comment saying the old names ended
   "business/backend/src/modules/team/routes.ts": 3,      // comments
   "business/backend/src/modules/verification/routes.ts": 1, // a comment

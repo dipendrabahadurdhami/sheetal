@@ -18,7 +18,7 @@ import { OutboxEventBus } from "@sheetal/platform/core/events";
 import { expenseJob } from "@sheetal/app-expenses/backend";
 import { rentJob } from "./modules/rentals/routes.js";
 import { reviewCheckupJob } from "./modules/reviews/checkups.js";
-import { stockJob } from "./modules/stock/routes.js";
+import { stockJob } from "@sheetal/app-pos/backend";
 import { approvalExpiryJob } from "@sheetal/platform/approvals/jobs";
 import { demoCleanupJob } from "./modules/demo/routes.js";
 import type { ApprovalService } from "@sheetal/platform/approvals/service";

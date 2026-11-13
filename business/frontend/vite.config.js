@@ -21,6 +21,8 @@ const projectsFrontend = fileURLToPath(new URL("../../apps/projects/frontend/ind
 const investmentsFrontend = fileURLToPath(new URL("../../apps/investments/frontend/index.js", import.meta.url));
 // The Invoicing screens live in apps/invoicing/frontend (Phase 2), found the same way.
 const invoicingFrontend = fileURLToPath(new URL("../../apps/invoicing/frontend/index.js", import.meta.url));
+// The Pos screens live in apps/pos/frontend (Phase 2), found the same way.
+const posFrontend = fileURLToPath(new URL("../../apps/pos/frontend/index.js", import.meta.url));
 const resolve = { alias: { "@sheetal/shared": shared, "@sheetal/app-expenses/frontend": expensesFrontend, "@sheetal/app-reviews/frontend": reviewsFrontend, "@sheetal/app-people/frontend": peopleFrontend }, dedupe: ["react", "react-dom"] };
 
 // Served under /business/. Open it through the website at http://localhost:5173/business/ (not this port directly),
