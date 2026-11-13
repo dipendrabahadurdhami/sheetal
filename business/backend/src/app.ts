@@ -33,7 +33,6 @@ import { promoteRoutes } from "./modules/promote/routes.js";
 import { bannerRoutes } from "./modules/promote/banners.js";
 import { devKeyRoutes } from "./modules/devkeys/routes.js";
 import { aiAccountRoutes } from "./modules/aiaccount/routes.js";
-import { reviewRoutes as checkupRoutes } from "./modules/reviews/checkups.js";
 import { notificationRoutes } from "@sheetal/backend-core/modules/notifications";
 import { businessContextOf, workspaceOf } from "./modules/access.js";
 import { CONSUMERS, businessJobs, eventsOf, platformJobs } from "./jobs.js";
@@ -72,7 +71,6 @@ export async function buildApp(config: Config, deps: AppDeps & { resolver?: Reso
   // Rentals is on the kernel too (P2-W1-S1): its code lives in apps/rentals/backend; same way as Expenses.
   await app.register(rentalRoutes, { prefix: "/v1", contextOf: businessContextOf });
   await app.register(listingCodeRoutes, { prefix: "/v1" });
-  await app.register(checkupRoutes, { prefix: "/v1" });
   await app.register(agreementRoutes, { prefix: "/v1", contextOf: businessContextOf });
   await app.register(promoteRoutes, { prefix: "/v1" });
   await app.register(bannerRoutes, { prefix: "/v1" });
