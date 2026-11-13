@@ -338,7 +338,7 @@ export const APPS = [
       { id: "pos.bill.void", label: { en: "Void items and refund", ne: "सामान रद्द र फिर्ता" }, scopes: ["branch", "all"], default: "branch", group: "Point of sale" },
       { id: "pos.shift.close", label: { en: "Open and close shifts", ne: "सिफ्ट खोल्ने र बन्द गर्ने" }, scopes: ["branch", "all"], default: "branch", group: "Point of sale" },
     ],
-    dependencies: { requires: [], optional: [] },
+    dependencies: { requires: [], optional: ["hotel"] },
     branchOwned: [
       { model: "MenuItem", label: { en: "menu item" } },
       { model: "Shift", label: { en: "shift" } },
