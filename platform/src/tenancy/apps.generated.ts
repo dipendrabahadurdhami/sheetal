@@ -58,7 +58,16 @@ export const APPS: readonly AppManifest[] = [
     ],
     approvals: [],
     menu: [],
-    events: { publishes: [], consumes: [] },
+    events: {
+      publishes: [
+        { name: "workspace.branch.added", v: 1, label: "A branch was added", payload: { id: "id" } },
+        { name: "workspace.branch.updated", v: 1, label: "A branch was changed, renamed, closed or reopened", payload: { id: "id", status: "string" } },
+        { name: "workspace.branch.removed", v: 1, label: "A branch was removed", payload: { id: "id" } },
+        { name: "workspace.settings.saved", v: 1, label: "A settings section was saved", payload: { section: "string" } },
+        { name: "workspace.checkup.done", v: 1, label: "A listing check-up was recorded", payload: { code: "string", action: "string" } },
+      ],
+      consumes: [],
+    },
     ai: [],
     dependencies: { requires: [], optional: [], reads: [] },
     models: [
