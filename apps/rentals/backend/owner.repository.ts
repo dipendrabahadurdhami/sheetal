@@ -1,7 +1,8 @@
 // The only code that reads and writes the rent_owners table (a property owner / landlord).
 // Where it fits: OwnerService, StatementService and OverviewService call it; nothing else in the app touches the rentOwner delegate.
 // How it works: a RentalRepository on model "rentOwner", limited to the business and the branches in view, hidden when deletedAt is set.
-// Rules: `remove` is a soft delete (P2-W6): an owner can only be removed when it owns no unit; the branch-closing check in Workspace → Branches skips deleted owners.
+// Rules: `remove` is a REAL delete, not a soft one: an owner can only be removed when it owns no unit, and rent_owners.branch_id points at its branch with
+// ON DELETE RESTRICT, so a soft-deleted owner would make removing that branch fail for ever. The audit line keeps the record (P2-W6 decision).
 
 import type { BusinessContext, DataScope } from "@sheetal/platform/core/context";
 import { RentalRepository } from "./rental.repository.js";
@@ -22,5 +23,5 @@ export class OwnerRepository extends RentalRepository<OwnerRow, OwnerCreate, Own
   }
 
   /** Real delete (see the header). The service has already checked that the owner owns no unit. */
-  remove(ctx: BusinessContext, id: string, scope: DataScope): Promise<void> { return this.softDeleteRow(ctx, id, scope); }
+  remove(ctx: BusinessContext, id: string, scope: DataScope): Promise<void> { return this.deleteRow(ctx, id, scope); }
 }

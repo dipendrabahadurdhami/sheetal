@@ -3,9 +3,9 @@
 // How it works: it is a BaseRepository (every query limited to the business, hides deleted rows, follows the branch scope) plus three helpers for the few writes
 // the base class cannot express: `guardedUpdate` (change a row only if it still looks a certain way, by any Prisma filter, e.g. "paid is still 0"), `deleteRow`
 // (a real delete, see the rule below) and `raw` (the table's Prisma delegate, for the named queries of the subclasses).
-// Rules: a missing or out-of-scope row answers with the old text ("Owner not found."), never telling which. Owners, units, payments and statements are removed
-// with a soft delete (`softDeleteRow`) since P2-W6, when every other reader (the branch-closing check, profit, the website and admin rent pages) learned to skip
-// deleted rows; `deleteRow` (a real delete) stays for a subclass with a reason to use it.
+// Rules: a missing or out-of-scope row answers with the old text ("Owner not found."), never telling which. Payments and statements are removed with a soft delete
+// (`softDeleteRow`) since P2-W6, when every other reader (profit, the website and admin rent pages, online-payment decisions) learned to skip deleted rows.
+// Owners and units keep a real delete (`deleteRow`): their branch link is ON DELETE RESTRICT, so a hidden row would block removing the branch.
 
 import type { BusinessContext, DataScope, Tx } from "@sheetal/platform/core/context";
 import { actorIdOf } from "@sheetal/platform/core/context";

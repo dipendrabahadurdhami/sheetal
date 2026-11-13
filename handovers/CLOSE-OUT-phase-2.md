@@ -11,7 +11,7 @@ sample workspace, the website's writes into business data go through the apps, a
 | W6 sample removal | #61 | the business panel works on real data only: sign-in page with "Try the demo", "Add your business", error and loading pages; 35 live/sample picks gone; sample screens deleted |
 | W6 last screens | #62 | Listings (+ wizard, check-ups, other sites), Settings, the invoice and payout screens into their apps; the business panel keeps only UI state (`session`, `drafts`) in the browser |
 | W6 website writes | #63 | website enquiries, online-form answers and the public API create leads through the CRM app (lead + audit + event in one transaction); website signatures leave the Agreements audit trail and events |
-| Leftovers + close-out | this PR | feed bookings hold the room type; a Settings tab per app; Rentals paisa columns (+ backfill, kept by a trigger) and soft delete; 19 unused shims deleted; this note |
+| Leftovers + close-out | this PR | feed bookings hold the room type; a Settings tab per app; Rentals paisa columns (+ backfill, kept by a trigger) and soft delete of payments and statements; 19 unused shims deleted; this note |
 
 ## The leftovers in detail
 - **Feed bookings** (`backend-core/src/domain/ota.ts`): each booking a calendar feed writes runs in a transaction that holds the rooms of that type at
@@ -21,9 +21,10 @@ sample workspace, the website's writes into business data go through the apps, a
   screen `apps/workspace/frontend/pages/AppSettingsPage.jsx`. Test: `business/backend/test/app-settings.test.ts`.
 - **Rentals paisa**: migration `20261113190000_rentals_paisa` adds `*_paisa BIGINT` next to every Rentals money column, fills them (rupees × 100) and keeps
   them equal with a BEFORE INSERT OR UPDATE trigger, so no writer can forget. Readers still use rupees; Phase 3 (billing in paisa) moves them.
-- **Rentals soft delete**: owners, units, payments and statements are removed with a soft delete. Every other reader learned to skip deleted rows first:
-  the branch-closing check, profit, the website's "my rent", the admin rent-payment list, online-payment decisions. Saving a removed statement's month again
-  brings it back. Test: `business/backend/test/rentals-paisa.test.ts`.
+- **Rentals soft delete**: payments and statements are removed with a soft delete; every other reader learned to skip deleted rows first (profit, the
+  website's "my rent", the admin rent-payment list, online-payment decisions). Saving a removed statement's month again brings it back. **Owners and units
+  stay real deletes on purpose**: their branch link is ON DELETE RESTRICT, so a hidden owner or unit would make removing the branch fail (the test found it);
+  the audit line keeps the record. Test: `business/backend/test/rentals-paisa.test.ts`.
 - **Shims**: deleted every forwarding file nothing imports (19 old route files under `business/backend/src/modules`). Kept on purpose: files old tests
   import (`modules/{expenses,hotel,stock,rentals}/routes.ts`, `mail/dns.ts`), the Business-page shims that pass panel parts into app pages, and the shared
   re-exports (`shared/src/core/ui.jsx`, `theme.js`, `contrast.js`, `components/Crud.jsx`, `business/frontend/src/api.js`).
