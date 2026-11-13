@@ -15,13 +15,17 @@ dependency + Vite alias, a source test next to the page. Root `npm test`/`typech
 | W1 | Agreements backend (website signing unchanged) + screens | #31 |
 | W2 | People screens | #30 |
 | W2 | Rentals screens | #32 |
+| W3 | Projects (units, holds, reservations + their payments) and Investments (pledges, updates): backend + screens | #34 |
 
 ## Not done yet
 - W1 Rentals follow-ups: paisa columns + backfill; soft delete for owner/unit/payment/statement.
 - W2: Business -> Settings tab per app.
-- W3 Invoicing (`business/backend/src/modules/invoicing`, 323 lines, money), Collections, Projects (`modules/projects`, 215 lines), Investments.
+- W3 Invoicing (`business/backend/src/modules/invoicing`, 323 lines: tax numbers per fiscal year, VAT, receipts, credit notes; it imports `bookingCode` from the hotel
+  module, which must become a read through Hotel or an event) and payouts (`modules/payouts`). Collections has no server code of its own: its payments on
+  reservations are written by Projects in the same transaction (see MODEL-OWNERS.md); its own read API and screen come with Invoicing.
 - W4 Hotel, POS, Stock. W5 CRM (own scope MUST include unassigned leads, with a test), Listings (+ move `checkups.ts`), Workspace; decide `ChannelAccount` owner.
 - W6 Website API on the kernel where it writes business data; remove the browser-storage sample workspace; delete the last shims.
 
 ## Owner steps after these merges
-`RUN-UPDATE` (applies migrations `20261113090000_people_kernel_columns` and `20261113100000_agreements_kernel_columns`; additive, it backs up first).
+`RUN-UPDATE` (applies migrations `20261113090000_people_kernel_columns`, `20261113100000_agreements_kernel_columns`, `20261113110000_projects_kernel_columns`,
+`20261113110100_investments_kernel_columns`; all additive, it backs up first).
