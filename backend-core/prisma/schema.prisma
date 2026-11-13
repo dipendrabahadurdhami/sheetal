@@ -2085,6 +2085,8 @@ model RentUnit {
   name      String
   kind      String       @default("Flat")
   rent      Int
+  /// rent in paisa: kept equal to rent × 100 by a database trigger (P2-W6); readers move to it in Phase 3.
+  rentPaisa BigInt? @map("rent_paisa")
   /// vacant, let or repair
   status    String       @default("vacant")
   /// The listing on the website: its property code finds the lease for paying rent online.
@@ -2121,7 +2123,11 @@ model RentLease {
   startOn         DateTime   @db.Date @map("start_on")
   endOn           DateTime   @db.Date @map("end_on")
   rent            Int
+  /// rent in paisa: kept equal to rent × 100 by a database trigger (P2-W6); readers move to it in Phase 3.
+  rentPaisa BigInt? @map("rent_paisa")
   deposit         Int        @default(0)
+  /// deposit in paisa: kept equal to deposit × 100 by a database trigger (P2-W6); readers move to it in Phase 3.
+  depositPaisa BigInt? @map("deposit_paisa")
   /// The day of the month rent is due (1 to 28).
   dueDay          Int        @default(7) @map("due_day")
   /// Late fee in hundredths of a percent of the unpaid rent (200 = 2%), added once, lateAfterDays after the due day.
@@ -2133,6 +2139,8 @@ model RentLease {
   /// held or returned
   depositStatus   String     @default("held") @map("deposit_status")
   depositReturned Int?       @map("deposit_returned")
+  /// depositReturned in paisa: kept equal to depositReturned × 100 by a database trigger (P2-W6); readers move to it in Phase 3.
+  depositReturnedPaisa BigInt? @map("deposit_returned_paisa")
   depositNote     String?    @map("deposit_note")
   /// The renter's website account, linked when they find their rent while signed in.
   userId          String?    @map("user_id")
@@ -2165,9 +2173,15 @@ model RentBill {
   month      String
   dueOn      DateTime      @db.Date @map("due_on")
   amount     Int
+  /// amount in paisa: kept equal to amount × 100 by a database trigger (P2-W6); readers move to it in Phase 3.
+  amountPaisa BigInt? @map("amount_paisa")
   lateFee    Int           @default(0) @map("late_fee")
+  /// lateFee in paisa: kept equal to lateFee × 100 by a database trigger (P2-W6); readers move to it in Phase 3.
+  lateFeePaisa BigInt? @map("late_fee_paisa")
   lateWaived Boolean       @default(false) @map("late_waived")
   paid       Int           @default(0)
+  /// paid in paisa: kept equal to paid × 100 by a database trigger (P2-W6); readers move to it in Phase 3.
+  paidPaisa BigInt? @map("paid_paisa")
   createdAt  DateTime      @default(now()) @map("created_at")
   updatedAt  DateTime      @updatedAt @map("updated_at")
   payments   RentPayment[]
@@ -2193,6 +2207,8 @@ model RentPayment {
   billId    String   @map("bill_id")
   bill      RentBill @relation(fields: [billId], references: [id], onDelete: Cascade)
   amount    Int
+  /// amount in paisa: kept equal to amount × 100 by a database trigger (P2-W6); readers move to it in Phase 3.
+  amountPaisa BigInt? @map("amount_paisa")
   /// cash, bank, esewa, khalti, fonepay, cheque, other
   method    String
   paidOn    DateTime @db.Date @map("paid_on")
@@ -2239,6 +2255,8 @@ model RentRepair {
   priority  String    @default("normal")
   vendor    String?
   cost      Int       @default(0)
+  /// cost in paisa: kept equal to cost × 100 by a database trigger (P2-W6); readers move to it in Phase 3.
+  costPaisa BigInt? @map("cost_paisa")
   /// open, assigned or done
   status    String    @default("open")
   doneOn    DateTime? @db.Date @map("done_on")
@@ -2267,9 +2285,17 @@ model OwnerStatement {
   /// 2026-11
   month     String
   collected Int
+  /// collected in paisa: kept equal to collected × 100 by a database trigger (P2-W6); readers move to it in Phase 3.
+  collectedPaisa BigInt? @map("collected_paisa")
   fee       Int
+  /// fee in paisa: kept equal to fee × 100 by a database trigger (P2-W6); readers move to it in Phase 3.
+  feePaisa BigInt? @map("fee_paisa")
   repairs   Int
+  /// repairs in paisa: kept equal to repairs × 100 by a database trigger (P2-W6); readers move to it in Phase 3.
+  repairsPaisa BigInt? @map("repairs_paisa")
   payable   Int
+  /// payable in paisa: kept equal to payable × 100 by a database trigger (P2-W6); readers move to it in Phase 3.
+  payablePaisa BigInt? @map("payable_paisa")
   createdBy String?   @map("created_by")
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")

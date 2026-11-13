@@ -2,8 +2,8 @@
 // Where it fits: PaymentService and OverviewService call it. The website writes the online payments (domain code in rentpay.ts); this repository only reads and decides them.
 // How it works: a RentalRepository on model "rentPayment". A payment is "confirmed" (counts on the bill), "pending" (sent online, waiting to be checked) or "rejected".
 // Named methods: `ofBill` (a bill's payments, oldest first) and `decide` (the compare-and-set that confirms or rejects a waiting payment once).
-// Rules: `remove` is a REAL delete, not a soft one: the website's "my rent" page, the admin's rent-payment list and the owner statement read this table without a
-// deletedAt filter, and the old route deleted the row after taking its amount off the bill. The audit line keeps the record. Switch to soft delete when those readers filter deletedAt.
+// Rules: `remove` is a soft delete (P2-W6), after the service takes its amount off the bill; the website's "my rent" page, the admin's rent-payment list, online-payment
+// decisions and the owner statement all skip deleted payments. The audit line keeps the record.
 // A pending payment never counts until it is confirmed.
 
 import type { BusinessContext, DataScope } from "@sheetal/platform/core/context";
@@ -36,5 +36,5 @@ export class PaymentRepository extends RentalRepository<PaymentRow, PaymentCreat
   }
 
   /** Real delete (see the header). */
-  remove(ctx: BusinessContext, id: string, scope: DataScope): Promise<void> { return this.deleteRow(ctx, id, scope); }
+  remove(ctx: BusinessContext, id: string, scope: DataScope): Promise<void> { return this.softDeleteRow(ctx, id, scope); }
 }

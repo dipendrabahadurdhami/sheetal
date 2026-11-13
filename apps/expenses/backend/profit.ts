@@ -50,7 +50,7 @@ export async function profitRows(db: Db, o: { tenantId: string; branchIds: strin
     // A deleted expense (deletedAt set) never counts. The amount is read from paisa (rupees for a row the backfill has not reached).
     db.expense.findMany({ where: { tenantId: o.tenantId, status: "confirmed", deletedAt: null, spentOn: { gte: first, lte: last }, ...(inBranch ? { branchId: inBranch } : {}) }, select: { branchId: true, spentOn: true, amount: true, amountPaisa: true }, take: 100_000 }),
     // Rentals: rent belongs to the owner; only the agency's management fee, from saved owner statements, is income.
-    db.ownerStatement.findMany({ where: { tenantId: o.tenantId, month: { gte: o.from, lte: o.to }, ...(inBranch ? { branchId: inBranch } : {}) }, select: { branchId: true, month: true, fee: true }, take: 100_000 }),
+    db.ownerStatement.findMany({ where: { tenantId: o.tenantId, deletedAt: null, month: { gte: o.from, lte: o.to }, ...(inBranch ? { branchId: inBranch } : {}) }, select: { branchId: true, month: true, fee: true }, take: 100_000 }),
   ]);
   const rows = new Map<string, ProfitRow>();
   const at = (date: Date, branchId: string) => {

@@ -3,8 +3,9 @@
 // How it works: it is a BaseRepository (every query limited to the business, hides deleted rows, follows the branch scope) plus three helpers for the few writes
 // the base class cannot express: `guardedUpdate` (change a row only if it still looks a certain way, by any Prisma filter, e.g. "paid is still 0"), `deleteRow`
 // (a real delete, see the rule below) and `raw` (the table's Prisma delegate, for the named queries of the subclasses).
-// Rules: a missing or out-of-scope row answers with the old text ("Owner not found."), never telling which. A real delete is only for rows that other code still
-// reads without a `deletedAt` filter (the branch-closing check, profit, the website and admin rent pages): see each repository's header.
+// Rules: a missing or out-of-scope row answers with the old text ("Owner not found."), never telling which. Payments and statements are removed with a soft delete
+// (`softDeleteRow`) since P2-W6, when every other reader (profit, the website and admin rent pages, online-payment decisions) learned to skip deleted rows.
+// Owners and units keep a real delete (`deleteRow`): their branch link is ON DELETE RESTRICT, so a hidden row would block removing the branch.
 
 import type { BusinessContext, DataScope, Tx } from "@sheetal/platform/core/context";
 import { actorIdOf } from "@sheetal/platform/core/context";
@@ -41,6 +42,14 @@ export abstract class RentalRepository<T extends BranchEntity, C extends object,
     const where = { AND: [await this.scopeWhere(ctx, scope), { id }, guard] };
     const { count } = await this.raw(ctx).updateMany({ where, data: { ...data, version: { increment: 1 }, updatedBy: actorIdOf(ctx) } });
     return count > 0;
+  }
+
+  /** A soft delete of one row in scope (deletedAt and deletedBy set, version bumped); a missing, deleted or out-of-scope row is "not found" with this table's text. */
+  protected async softDeleteRow(ctx: BusinessContext, id: string, scope: DataScope): Promise<void> {
+    const where = { AND: [await this.scopeWhere(ctx, scope), { id }] };
+    const me = actorIdOf(ctx);
+    const { count } = await this.raw(ctx).updateMany({ where, data: { deletedAt: ctx.now, deletedBy: me, updatedBy: me, version: { increment: 1 } } });
+    if (!count) throw notFound(this.missing);
   }
 
   /** A real delete of one row in scope. Only subclasses with a reason call it (the reason is in their header). */
