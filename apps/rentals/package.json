@@ -24,6 +24,7 @@
   "exports": {
     "./backend": "./backend/index.ts",
     "./backend/*": "./backend/*.ts",
+    "./frontend": "./frontend/index.js",
     "./manifest": "./app.manifest.ts"
   }
 }
