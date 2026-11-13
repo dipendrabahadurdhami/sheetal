@@ -136,6 +136,8 @@ export const workspacesReload = () => wsReload?.();
 export const canAddBusiness = () => bizApiReady() && signedIn();
 
 let branchReload = null;
+/** Reloads the open business's branches and team (the branch picker and everyone's access) after a branch change. */
+export const branchesRefresh = () => { branchReload?.(); reload?.(); };
 /** Branch actions for the open business; the branch list (and everyone's access) reloads after each. */
 export const liveBranches = (toast) => {
   const run = (p) => p.then((r) => { if (r?.message) toast(r.message); branchReload?.(); reload?.(); return r; }).catch((e) => { toast(e.message); throw e; });
