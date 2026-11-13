@@ -12,7 +12,6 @@ import type { FastifyInstance } from "fastify";
 import type { Config } from "@sheetal/platform/core/config";
 import { buildBaseApp, type AppDeps } from "@sheetal/backend-core/app";
 import { mailRoutes } from "./modules/mail/routes.js";
-import { teamRoutes } from "./modules/team/routes.js";
 import { billingRoutes } from "./modules/billing/routes.js";
 import { addonRoutes } from "./modules/billing/addons.js";
 import { growthRoutes } from "./modules/growth/routes.js";
@@ -70,8 +69,7 @@ export async function buildApp(config: Config, deps: AppDeps & { resolver?: Reso
   app.decorate("approvals", approvals);
   await app.register(approvalRoutes, { prefix: "/v1", contextOf: businessContextOf, service: approvals });
   await app.register(supportSessionRoutes, { prefix: "/v1" });
-  await app.register(teamRoutes, { prefix: "/v1" });
-  await app.register(workspaceRoutes, { prefix: "/v1", contextOf: businessContextOf });   // branches, business settings, check-ups
+  await app.register(workspaceRoutes, { prefix: "/v1", contextOf: businessContextOf });   // branches, business settings, check-ups, the team
   await app.register(reviewRoutes, { prefix: "/v1", contextOf: businessContextOf });
   await app.register(verificationRoutes, { prefix: "/v1" });
   await app.register(dataRoutes, { prefix: "/v1" });
