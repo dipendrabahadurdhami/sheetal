@@ -21,6 +21,7 @@ import type { Fetch } from "@sheetal/backend-core/lib/payments";
 import { headOffice } from "@sheetal/backend-core/domain/branches";
 import { DEST_LABEL, FieldsSchema, answersText, checkAnswers, contactOf, formLimits, matchListings, monthStart, type Match } from "@sheetal/backend-core/domain/forms";
 import { notify, teamWith } from "@sheetal/platform/notify/index";
+import { infoOf, leadIntake } from "../intake.js";
 
 const rs = (n: number) => `Rs. ${n.toLocaleString("en-IN")}`;
 
@@ -82,13 +83,12 @@ export async function formRoutes(app: FastifyInstance, opts: { fetch?: Fetch } =
       const response = await tx.formResponse.create({
         data: { formId: f.id, tenantId: f.tenantId, answers: answers as unknown as Prisma.InputJsonValue, name: who.name, phone: who.phone, email: who.email, payAmount: payF?.amount ?? null, payStatus: payF ? "to_confirm" : null, ip: request.ip },
       });
-      const lead = await tx.lead.create({
-        data: {
+      // The CRM app writes the lead, its audit line and its event inside this transaction (P2-W6).
+      const lead = await leadIntake(app).receiveIn(tx, infoOf(request), {
           tenantId: f.tenantId, branchId, userId: request.user?.id, kind: "form", name: who.name, email: who.email, phone: who.phone, message, ip: request.ip,
           assigneeId: f.assigneeId, tags: [f.title.slice(0, 30), ...(f.dest !== "leads" ? [DEST_LABEL[f.dest]!] : [])],
           details: { formId: f.id, formTitle: f.title, dest: f.dest, responseId: response.id, ...(payF ? { payment: payF.amount } : {}), ...(f.dest === "requirements" ? { matches } : {}) } as unknown as Prisma.InputJsonValue,
-        },
-      });
+      }, "form");
       await tx.formResponse.update({ where: { id: response.id }, data: { leadId: lead.id } });
       return { lead, response };
     });

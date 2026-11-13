@@ -37,7 +37,7 @@ const manifest = {
   events: {
     publishes: [
       { name: "crm.lead.found", v: 1, label: "The AI lead finder added leads", payload: { count: "number" } },
-      { name: "crm.lead.received", v: 1, label: "A chat message came in (WhatsApp, Messenger, Instagram)", payload: { id: "id", channel: "string" } },
+      { name: "crm.lead.received", v: 1, label: "A lead came in (website enquiry, online form, public API, WhatsApp, Messenger, Instagram)", payload: { id: "id", channel: "string" } },
       { name: "crm.lead.updated", v: 1, label: "A lead was changed (owner, follow-up, tags, value, read)", payload: { id: "id", stage: "string", assigneeId: "id" } },
       { name: "crm.lead.stage_changed", v: 1, label: "A lead moved to another stage", payload: { id: "id", stage: "string", assigneeId: "id" } },
       { name: "crm.lead.replied", v: 1, label: "Someone replied to a lead", payload: { id: "id", channel: "string" } },
