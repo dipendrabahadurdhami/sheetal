@@ -60,7 +60,7 @@ export const APPS = [
       { id: "agreements.agreement.update", label: { en: "Change agreements" }, scopes: ["branch", "all"], default: "branch", group: "Agreements" },
       { id: "agreements.agreement.delete", label: { en: "Delete agreements" }, scopes: ["branch", "all"], default: "branch", group: "Agreements" },
     ],
-    dependencies: { requires: [], optional: [] },
+    dependencies: { requires: [], optional: ["rentals", "crm", "listings"] },
     branchOwned: [{ model: "Agreement", label: { en: "agreement" } }],
   },
   {

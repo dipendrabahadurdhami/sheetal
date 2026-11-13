@@ -1,6 +1,6 @@
 // Agreements: making, sending and cancelling agreements.
 // Where it fits: read as data by scripts/gen-permissions.mjs (permission lists, role templates) and scripts/check-manifests.mjs.
-// How it works: a plain object, declaration only (id, name, icon, business types, permissions, roles, models): the routes stay in their old modules until the app moves onto the kernel.
+// How it works: a plain object, declaration only (id, name, icon, business types, permissions, roles, models, events). The server code is in backend/ (P2-W1 stage 3).
 // Rules: no functions or logic, only "import type" lines; every permission starts with "agreements."; models match the "/// @app agreements" tags in schema.prisma.
 
 import type { AppManifest } from "@sheetal/platform/core/manifest";
@@ -37,9 +37,19 @@ const manifest = {
   ],
   approvals: [],
   menu: [],
-  events: { publishes: [], consumes: [] },
+  events: {
+    publishes: [
+      { name: "agreements.agreement.created", v: 1, label: "An agreement draft was made", payload: { id: "id", ref: "string" } },
+      { name: "agreements.agreement.updated", v: 1, label: "A draft was changed", payload: { id: "id", ref: "string" } },
+      { name: "agreements.agreement.sent", v: 1, label: "An agreement was sent for signing", payload: { id: "id", ref: "string" } },
+      { name: "agreements.agreement.reminded", v: 1, label: "A signing link was sent again", payload: { id: "id", ref: "string" } },
+      { name: "agreements.agreement.cancelled", v: 1, label: "An agreement was cancelled", payload: { id: "id", ref: "string" } },
+      { name: "agreements.agreement.removed", v: 1, label: "A draft was removed", payload: { id: "id", ref: "string" } },
+    ],
+    consumes: [],
+  },
   ai: [],
-  dependencies: { requires: [], optional: [], reads: [] },
+  dependencies: { requires: [], optional: ["rentals", "crm", "listings"], reads: ["RentLease", "Lead", "Listing"] },
   models: ["Agreement", "AgreementSigner"],
   branchOwned: [{ model: "Agreement", label: { en: "agreement" } }],
   settings: [],
