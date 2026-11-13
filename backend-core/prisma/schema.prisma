@@ -2333,6 +2333,9 @@ model Form {
   /// Payment details shown on Payment fields: QR picture, eSewa ID, bank details.
   pay         Json           @default("{}")
   createdBy   String?        @map("created_by")
+  /// Kernel columns (P2-W6): who changed it last, and the version for 409 conflicts (a save may send it).
+  updatedBy   String?        @map("updated_by")
+  version     Int            @default(1)
   publishedAt DateTime?      @map("published_at")
   createdAt   DateTime       @default(now()) @map("created_at")
   updatedAt   DateTime       @updatedAt @map("updated_at")
