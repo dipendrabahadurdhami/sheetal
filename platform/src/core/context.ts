@@ -90,6 +90,15 @@ export interface Entitlements {
   feature(key: string): boolean;                      // e.g. "custom_roles", "branding.custom", "all_kinds"
   seats(): { used: number; limit: number | null };
   ai(appId: string): "locked" | "own_key" | "sheetal";
+  // ── Phase 3 (MARKETPLACE-AND-BILLING.md section 6.1), additive: optional so older test fakes still fit ──
+  /** Which builder answered: "plans" (v1, today's plans), "shadow" (v1 answers, v3 compared and logged) or "apps" (v3). */
+  mode?: "plans" | "shadow" | "apps";
+  /** full | limited | read_only | locked | none (section 7.2). */
+  access?(appId: string): "full" | "limited" | "read_only" | "locked" | "none";
+  /** Throws 402 subscription_read_only (or 403 app_not_available) when the app can't be changed now. */
+  requireWrite?(appId: string): void;
+  /** Throws 402 limit_reached on a hard stop; says whether to warn (80%) or whether it is over (a soft limit). */
+  requireLimit?(appId: string, key: string, o: { used: number; adding?: number }): { warn: boolean; over: boolean };
 }
 
 const RANK: Record<DataScope, number> = { own: 0, branch: 1, all: 2 };
