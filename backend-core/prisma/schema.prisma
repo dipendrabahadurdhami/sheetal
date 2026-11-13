@@ -1259,6 +1259,13 @@ model Room {
   status    String    @default("vacant")
   active    Boolean   @default(true)
   createdAt DateTime  @default(now()) @map("created_at")
+  /// Kernel columns (P2-W4): who changed it last, the version for 409 conflicts, and the soft-delete marks.
+  createdBy   String?   @map("created_by")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+  updatedBy   String?   @map("updated_by")
+  version     Int       @default(1)
+  deletedAt   DateTime? @map("deleted_at")
+  deletedBy   String?   @map("deleted_by")
   bookings  Booking[]
 
   @@unique([tenantId, no])
@@ -1298,6 +1305,12 @@ model Booking {
   externalUid String?        @map("external_uid")
   createdBy   String?        @map("created_by")
   createdAt   DateTime       @default(now()) @map("created_at")
+  /// Kernel columns (P2-W4): who changed it last, the version for 409 conflicts, and the soft-delete marks.
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+  updatedBy   String?   @map("updated_by")
+  version     Int       @default(1)
+  deletedAt   DateTime? @map("deleted_at")
+  deletedBy   String?   @map("deleted_by")
   checkedIn   DateTime?      @map("checked_in_at")
   checkedOut  DateTime?      @map("checked_out_at")
   room        Room?          @relation(fields: [roomId], references: [id], onDelete: SetNull)
