@@ -2546,6 +2546,13 @@ model Attendance {
   source    String    @default("app")
   editedBy  String?   @map("edited_by")
   createdAt DateTime  @default(now()) @map("created_at")
+  /// Kernel columns (P2-W1 stage 2): who changed it last, the version for 409 conflicts, and the soft-delete marks.
+  createdBy String?   @map("created_by")
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at")
+  updatedBy String?   @map("updated_by")
+  version   Int       @default(1)
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 
   @@index([tenantId, branchId, day])
   @@index([tenantId, userId, day])
@@ -2562,6 +2569,13 @@ model LeaveType {
   paid        Boolean  @default(true)
   active      Boolean  @default(true)
   createdAt   DateTime @default(now()) @map("created_at")
+  /// Kernel columns (P2-W1 stage 2): who changed it last, the version for 409 conflicts, and the soft-delete marks.
+  createdBy String?   @map("created_by")
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at")
+  updatedBy String?   @map("updated_by")
+  version   Int       @default(1)
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 
   @@unique([tenantId, name])
   @@map("leave_types")
@@ -2587,6 +2601,13 @@ model LeaveRequest {
   decidedAt DateTime? @map("decided_at")
   note      String?
   createdAt DateTime  @default(now()) @map("created_at")
+  /// Kernel columns (P2-W1 stage 2): who changed it last, the version for 409 conflicts, and the soft-delete marks.
+  createdBy String?   @map("created_by")
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at")
+  updatedBy String?   @map("updated_by")
+  version   Int       @default(1)
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 
   @@index([tenantId, status])
   @@index([tenantId, userId, fromDay])
