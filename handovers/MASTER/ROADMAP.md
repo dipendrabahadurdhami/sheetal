@@ -1,6 +1,6 @@
 # Roadmap: every phase still to do (one "next" = one phase)
 
-Progress on 13 Nov 2026, 19:30 Nepal time: Phase 0 100% · **Phase 1 100% (closed, see `handovers/CLOSE-OUT-phase-1.md`)** · **Phase 2 about 80%** · Phase 3 plan done, build 0% · whole project about 53% (rough).
+Progress on 13 Nov 2026, 20:15 Nepal time: Phase 0 100% · **Phase 1 100% (closed, see `handovers/CLOSE-OUT-phase-1.md`)** · **Phase 2 about 87%** · Phase 3 plan done, build 0% · whole project about 53% (rough).
 Work strictly in this order. Details of each stage are in the architecture docs named. Each stage = one branch, one PR, CI green, merged.
 
 ---
@@ -13,15 +13,14 @@ Work strictly in this order. Details of each stage are in the architecture docs 
 Already merged (see `handovers/CONTINUE-phase-2.md` for the table): Rentals backend #18; People #29 (+ screens #30); Agreements #31 (+ screens);
 Rentals screens #32; Projects + Investments #34 (+ screens); Invoicing #36 + Payouts #37 (live page in the app); POS + Stock #39 (+ screens);
 Hotel #41 (+ screens; no double booking at the same moment); CRM #43; Listings #45; Workspace part 1 (branches, settings, check-ups) #47;
-Workspace part 2a the team #50; part 2b the Overview + `ChannelAccount` owner (workspace) #51.
+Workspace part 2a the team #50; part 2b the Overview + `ChannelAccount` owner (workspace) #51; 2c Import/Export + forms #52; 2d email #53;
+2e growth split (Workspace / CRM lead finder + Meta webhook / Hotel other sites) #54; listing check-ups into apps/listings #55. **Every business backend route is now on the kernel.**
 
 **Still to do in Phase 2, in this order:**
-1. **Workspace part 2 (rest)** (`business/backend/src/modules/`): `data` (import/export), `forms` (has public endpoints), `mail`, `growth`; then move
-   `modules/reviews/checkups.ts` into apps/listings. Details in `handovers/CONTINUE-phase-2.md`.
-2. **Wave 6** (W6): screens that still read the panel store `business/frontend/src/live.js` (Inbox, Listings, Team, Branches, Settings) move onto the
+1. **Wave 6** (W6, about 3,400 lines of screens in `business/frontend/src/pages`): screens that still read the panel store `business/frontend/src/live.js` (Inbox, Listings, Team, Branches, Settings) move onto the
    kit/SDK, page by page; `InvoicesView` moves into apps/invoicing/frontend; then remove the browser-storage sample workspace (keep "Try the demo",
    which is a real demo business); then website API writes of business data on the kernel (enquiries create leads, the sign module, bookings).
-3. **Leftovers:** online travel sites (`modules/ota`, `domain/ota.ts`) into apps/hotel with the room-type hold; Business → Settings tab per app;
+2. **Leftovers:** a feed sync's booking writes (backend-core `domain/ota.ts`) take the room-type hold; Business → Settings tab per app;
    Rentals paisa columns + backfill and soft delete; delete every shim nothing imports; Phase 2 close-out note (like Phase 1's).
 
 

@@ -27,6 +27,7 @@ dependency + Vite alias, a source test next to the page. Root `npm test`/`typech
 | W6 | Workspace part 2b: the business Overview (read only); `ChannelAccount` owner decided (workspace) | #51 |
 | W6 | Workspace part 2c: Import / Export (all rows or none) and online forms (kernel columns on forms) | #52 |
 | W6 | Workspace part 2d: business email (setup audited, support sessions read only) | #53 |
+| W6 | Listing check-ups into apps/listings (with the 15-minute job; first tests for them) | #55 |
 | W6 | Workspace part 2e: growth split by owner (Workspace analytics/channels, CRM lead finder + Meta webhook, Hotel feeds/iCal/other-site requests) | #54 |
 
 ## Not done yet
@@ -35,7 +36,6 @@ dependency + Vite alias, a source test next to the page. Root `npm test`/`typech
 - W3 follow-up: the invoice screen (`InvoicesView` in Money.jsx) moves into apps/invoicing/frontend when the sample workspace goes (W6).
 - W4 follow-up: the online travel sites are in apps/hotel (#54); a feed sync's booking writes (backend-core `domain/ota.ts`) should still take the
   room-type hold (`RoomRepository.lockType`).
-- Listings: move `modules/reviews/checkups.ts` (253 lines + a daily job) into apps/listings.
 - W6 Website API on the kernel where it writes business data; remove the browser-storage sample workspace; delete the last shims.
 
 ## Owner steps after these merges

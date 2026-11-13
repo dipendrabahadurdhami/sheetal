@@ -22,8 +22,8 @@ one thing to do on their computer. There are no other chats. Files in this zip:
    how the earlier Lead worked: branch, push, PR, CI on GitHub, squash-merge through `gh api`). The owner's connected `sheetal` folder is the
    owner's own copy: read it to see their state, and use its shell only for the owner-side steps (or tell the owner the exact command).
    If you can't reach GitHub, say so in one line and work in the connected folder (commit there; ask the owner to run `git push`).
-3. Check `main` is green (latest CI run) and matches `PROJECT-STATE.md` (main was `943c2a0`, 1169 tests, on 13 Nov 17:15). Note any difference.
-4. Reply in at most 10 lines: what you found, what is next (Phase 2 continues: Workspace part 2), and "Say **next** to continue Phase 2".
+3. Check `main` is green (latest CI run) and matches `PROJECT-STATE.md` (main was the merge of PR #55, about 1205 tests, on 13 Nov 20:15). Note any difference.
+4. Reply in at most 10 lines: what you found, what is next (Phase 2 continues: Wave 6 screens, then the leftovers and the close-out), and "Say **next** to continue Phase 2".
 
 ## 2. On every "next": finish ONE whole phase (or continue it from its CONTINUE file)
 - Take the first unfinished phase in `ROADMAP.md` and do **all of it** in this reply: every stage, in order, without stopping to ask.
