@@ -25,6 +25,9 @@ export interface AppManifest {
   icon: string;
   category: "money" | "sales" | "property" | "hospitality" | "people" | "growth" | "settings";
 
+  /** Phase 3: "coming_soon" shows a card ("Tell me when it is ready") that cannot be installed. Default "live". A DEFAULT: the catalog owns it. */
+  availability?: "live" | "coming_soon";
+
   /** Business types that are offered the app. A plan with the `all_kinds` feature is offered all of them. */
   businessTypes: readonly BusinessType[] | "all";
 

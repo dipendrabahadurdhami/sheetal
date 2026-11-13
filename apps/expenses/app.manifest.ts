@@ -1,6 +1,6 @@
 // Expenses: what a business spent, recurring expenses, and profit by month and branch.
 // Where it fits: loaded by the generator (permissions, menu, roles) and by the API at start (events, limits).
-// How it works: plain data. Prices and limits are only defaults; the admin panel owns them after the first start. Phase 1: every limit is null (unlimited) and price is null, so nothing changes.
+// How it works: plain data. Limits and trial days are only first values; the admin panel owns them (platform.catalog, Phase 3). Prices are in the catalog seed.
 // Rules: no functions or logic; every permission and event starts with "expenses."; the code lives in apps/expenses/backend (moved in by P1-BE-5).
 
 import type { AppManifest } from "@sheetal/platform/core/manifest";
@@ -14,19 +14,19 @@ const manifest = {
   icon: "receipt",
   category: "money",
   businessTypes: "all",
-  trialDays: null,
+  trialDays: 14,
   limits: [
     { key: "expenses_per_month", label: { en: "Expenses per month" }, unit: "per_month" },
     { key: "recurring_templates", label: { en: "Recurring expenses" }, unit: "count" },
     { key: "receipt_storage_mb", label: { en: "Receipt storage" }, unit: "mb" },
   ],
   editions: [
-    { id: "free", name: { en: "Free" }, free: true, limits: { expenses_per_month: null, recurring_templates: null, receipt_storage_mb: null }, features: [], price: null },
+    { id: "free", name: { en: "Free" }, free: true, limits: { expenses_per_month: 50, recurring_templates: 0, receipt_storage_mb: 50 }, features: [], price: null },
     {
       id: "full",
       name: { en: "Full" },
       free: false,
-      limits: { expenses_per_month: null, recurring_templates: null, receipt_storage_mb: null },
+      limits: { expenses_per_month: null, recurring_templates: null, receipt_storage_mb: 500 },
       features: ["expenses.receipts", "expenses.profit"],
       price: null,
     },

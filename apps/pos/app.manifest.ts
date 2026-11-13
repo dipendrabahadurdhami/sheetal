@@ -14,9 +14,17 @@ const manifest = {
   icon: "shopping-cart",
   category: "hospitality",
   businessTypes: ["hotel", "host"],
-  trialDays: null,
-  limits: [],
-  editions: [{ id: "free", name: { en: "Free" }, free: true, limits: {}, features: [], price: null }],
+  // Phase 3 (P3-BE-1): first values only. The live values (prices, limits, trial) are the platform.catalog setting, edited in Admin -> Pricing;
+  // prices are in platform/src/billing/catalog.seed.ts, not here.
+  trialDays: 14,
+  limits: [
+    { key: "outlets", label: { en: "Outlets" }, unit: "count" },
+    { key: "bills_per_month", label: { en: "Bills a month" }, unit: "per_month" },
+  ],
+  editions: [
+    { id: "free", name: { en: "Free" }, free: true, limits: { outlets: 1, bills_per_month: 100 }, features: [], price: null },
+    { id: "full", name: { en: "Full" }, free: false, limits: { outlets: 3, bills_per_month: null }, features: ["pos.stock"], price: null },
+  ],
   permissions: [
     {
       id: "pos.frontdesk.use",
