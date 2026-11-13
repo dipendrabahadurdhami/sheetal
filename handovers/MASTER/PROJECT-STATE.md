@@ -1,6 +1,7 @@
 # Project state (13 Nov 2026, 17:15 Nepal time)
 
-**Main = `943c2a0`, 1169 tests, CI green.** One builder (you), no other chats. Phase 1 is closed; Phase 2 is about 75% done.
+**Main = the merge of PR #55 (13 Nov, about 20:15), about 1205 tests, CI green.** One builder (you), no other chats. Phase 1 is closed; Phase 2 is about 87% done:
+every business backend route is on the kernel (PRs #50-#55 on 13 Nov evening); Wave 6 (screens) and the leftovers remain.
 Read `handovers/CONTINUE-phase-2.md` first: it has the done table, the not-done list, the exact pattern for moving an app, and the owner steps.
 
 ## What happened on 12-13 Nov (PRs #20-#48)
@@ -17,9 +18,14 @@ Read `handovers/CONTINUE-phase-2.md` first: it has the done table, the not-done 
 
 ## Owner's PC
 `C:\Users\USER\Desktop\sheetal`. Last RUN-UPDATE seen: on `8d54f3e` (13 Nov 14:41), all OK. Migrations since then: CRM, Listings, Workspace
-(branches): the next RUN-UPDATE applies them (it backs up first). `update.ps1` still lists squash-merged branches as "kept (not merged yet)": harmless.
+(branches), forms kernel columns (`20261113180000`): the next RUN-UPDATE applies them (it backs up first). `update.ps1` still lists squash-merged branches as "kept (not merged yet)": harmless.
 
 ## Lessons from Phase 2 (keep doing)
+- Stacked branches + squash merges: after a PR is squash-merged, merging main into the next branch conflicts on the same lines; the branch already holds
+  that work, so take the branch's side (`git checkout --ours`) and rerun `npm run gen:permissions`. Check `git diff origin/main --name-only` after.
+- Kernel services: a route with no business context (public link, webhook, invite accept, jobs) publishes events with a small context
+  `{ requestId, ip, now, log, db, tx, actor, business: { id } }` inside a `$transaction` (see team.service.ts userWrite, checkup.job.ts).
+- The GitHub proxy sometimes answers 502/503 for a minute: wait and retry; never re-run a merge blindly (check the PR state first).
 - zod v4: a `superRefine` schema stays a ZodObject (`.shape`). Event payload field types are only string/number/boolean/id/date/paisa (no arrays).
 - `BaseService` already has `list`, `create`, `update`, `remove`: name your own methods differently (overview, makeDraft, removeDraft, browse...).
 - No Prisma engine in the sandbox: CI is the first real DB run. Local: `npx vitest run`, `npm run lint`, `gen:permissions`, `check:manifests`,
