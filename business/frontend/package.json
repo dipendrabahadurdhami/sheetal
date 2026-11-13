@@ -21,6 +21,7 @@
     "@sheetal/app-people": "*",
     "@sheetal/app-reviews": "*",
     "@sheetal/app-crm": "*",
+    "@sheetal/app-workspace": "*",
     "@sheetal/shared": "*",
     "leaflet": "^1.9.4",
     "react": "^18.3.1",
