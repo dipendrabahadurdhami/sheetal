@@ -2314,6 +2314,11 @@ model Agreement {
   cancelNote  String?           @map("cancel_note")
   createdAt   DateTime          @default(now()) @map("created_at")
   updatedAt   DateTime          @updatedAt @map("updated_at")
+  /// Kernel columns (P2-W1 stage 3): who changed it last, the version for 409 conflicts, and the soft-delete marks (drafts are still really deleted).
+  updatedBy   String?           @map("updated_by")
+  version     Int               @default(1)
+  deletedAt   DateTime?         @map("deleted_at")
+  deletedBy   String?           @map("deleted_by")
   signers     AgreementSigner[]
 
   @@index([tenantId, status, createdAt])
