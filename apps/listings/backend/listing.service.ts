@@ -62,7 +62,7 @@ export class ListingService extends BaseService<L, never, never> {
     });
   }
   private async room(ctx: BusinessContext, tenantId: string, plan: { price: number; limits: unknown }, adding = 1) {
-    const cap = listingCap(await effectiveLimits(db(ctx) as never, tenantId, plan));
+    const cap = listingCap((await effectiveLimits(db(ctx) as never, tenantId, plan as never)) as never);
     if (cap === -1) return;
     if ((await this.listings.used(ctx, tenantId)) + adding > cap) {
       throw new AppError(402, "listing_limit", cap === 1 ? "The free Starter plan has room for one listing. Archive one or upgrade to add more." : `Your plan has room for ${cap} listings. Archive some or upgrade to add more.`);
@@ -90,7 +90,7 @@ export class ListingService extends BaseService<L, never, never> {
     const [byStatus, byKind, used] = await Promise.all([this.listings.byStatus(ctx), this.listings.byKind(ctx), this.listings.used(ctx)]);
     const counts: Record<string, number> = Object.fromEntries(byStatus.map((g) => [g.status === "pending" ? "in_review" : g.status, g._count]));
     counts.all = byStatus.filter((g) => g.status !== "archived").reduce((a, g) => a + g._count, 0);
-    const meta = { cap: listingCap(await effectiveLimits(db(ctx) as never, ctx.business.id, t.plan)), used, kinds: this.kinds(t.type, t.plan), listedKinds: byKind.map((g) => g.kind), counts };
+    const meta = { cap: listingCap((await effectiveLimits(db(ctx) as never, ctx.business.id, t.plan as never)) as never), used, kinds: this.kinds(t.type, t.plan), listedKinds: byKind.map((g) => g.kind), counts };
     if (!q.page) {
       const rows = await this.listings.summary(ctx);
       return { data: rows.map((l) => ({ id: l.code, tenantId: l.tenantId, kind: l.kind, title: l.title, status: l.status === "pending" ? "in_review" : l.status, price: l.price == null ? 0 : Number(l.price), updated: day(l.updatedAt), checkDue: day(l.checkDueAt), lastChecked: day(l.lastCheckedAt), branchId: l.branchId, branch: l.branch?.name ?? null })), meta };
@@ -204,7 +204,7 @@ export class ListingService extends BaseService<L, never, never> {
     const changed = plan.map((p) => p.code);
     if (plan.length) {
       await this.write(ctx, async (tx) => { for (const p of plan) await this.listings.setStatus(tx, p.id, p.next, p.next === "pending"); return plan; },
-        () => ({ audit: [{ action: `listing.${b.status}`, target: changed.join(", ") }], event: { name: "listings.listing.status_changed", payload: { codes: changed, status: b.status } } }));
+        () => ({ audit: [{ action: `listing.${b.status}`, target: changed.join(", ") }], event: { name: "listings.listing.status_changed", payload: { codes: changed.join(", "), status: b.status } } }));
     }
     if (reviewing.length) await this.review(ctx, `${reviewing.length} listing${reviewing.length > 1 ? "s" : ""} to review`, ctx.business.name);
     const word = { published: "Published", paused: "Paused. Hidden from the website until you publish again.", archived: "Archived", sold: "Marked sold", available: "Available again" }[b.status];
@@ -229,7 +229,7 @@ export class ListingService extends BaseService<L, never, never> {
     const { ids } = z.object({ ids: z.array(z.string().max(20)).min(1).max(500) }).parse(raw);
     // Kept as "removed" so leads and history still point somewhere; it no longer shows anywhere.
     const count = await this.write(ctx, async (tx) => { const c = await this.listings.remove(tx, ids); if (!c) throw notFound("Listing not found."); return c; },
-      () => ({ audit: [{ action: "listing.removed", target: ids.join(", ") }], event: { name: "listings.listing.removed", payload: { codes: ids } } }));
+      () => ({ audit: [{ action: "listing.removed", target: ids.join(", ") }], event: { name: "listings.listing.removed", payload: { codes: ids.join(", ") } } }));
     return { message: count > 1 ? `${count} listings deleted.` : "Listing deleted." };
   }
 
