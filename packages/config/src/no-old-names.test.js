@@ -25,7 +25,6 @@ const LOOK_ALIKES = {
   "business/backend/src/modules/billing/routes.ts": 1,   // a comment
   "backend-core/src/domain/permissions.ts": 1,           // a comment saying the old names ended
   "business/backend/src/modules/verification/routes.ts": 1, // a comment
-  "business/frontend/src/pages/POS.jsx": 5,              // translation keys t("pos.…")
   "shared/src/core/rbac.js": 1,                          // a comment saying the old names ended
   "shared/src/i18n/en-admin.js": 1,                      // translation text
   "shared/src/i18n/en-ops.js": 3,                        // translation text
