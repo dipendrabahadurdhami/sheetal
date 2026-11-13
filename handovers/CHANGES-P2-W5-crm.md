@@ -11,3 +11,7 @@
 - Not moved: the Inbox screen reads the panel store (`business/frontend/src/live.js`, shared with the sample workspace) and moves in wave 6; leads made by
   the website, chat channels and the lead finder are still written where they are.
 - Tests: old lead tests unchanged; new `business/backend/test/crm-kernel.test.ts`.
+
+## Test changed (team rule: listed with the reason)
+- `platform/test/support-and-catalog.test.ts`, "scope cap": it used CRM as the example of an app with no cap. CRM is now capped on purpose, so the
+  example is Listings (not moved yet), and the test lists every app capped so far.
