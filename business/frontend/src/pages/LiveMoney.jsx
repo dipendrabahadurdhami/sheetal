@@ -1,6 +1,6 @@
-// Customer invoices and payouts on the business API (instead of the sample screens).
-// Where it fits: Business → Customer invoices and Payouts when signed in; the screens themselves are InvoicesView and
-// PayoutsView in Money.jsx.
+// Customer invoices and payouts on the business API.
+// Where it fits: Business → Customer invoices and Payouts; the screens themselves are InvoicesView and PayoutsView in apps/invoicing/frontend (P2-W6),
+// given the business's settings (receipt texts, payment set-up) from the panel's settings copy.
 // How it works: Customer invoices are the Invoicing app's page (apps/invoicing/frontend, P2-W3) given InvoicesView; every change is a call to the server,
 // which numbers the documents, works out VAT and totals, and checks the branch and role. Payouts load here, read only.
 // Rules: nothing is kept in the browser; a failed change shows the server's reason and leaves the form open.
@@ -9,10 +9,18 @@ import React, { useEffect, useState } from "react";
 import { useBranch } from "@sheetal/shared/core/branch";
 import { useToast } from "@sheetal/shared/core/ui";
 import { bizApi } from "../api";
-import { InvoicesView, PayoutsView } from "./Money";
+import { InvoicesView as InvoicesScreen, PayoutsView as PayoutsScreen } from "@sheetal/app-invoicing/frontend";
+import { useStore } from "@sheetal/shared/core/store";
+import { defaultTenantSettings, mergeSettings } from "./BusinessSettings";
 import { InvoicesPage } from "@sheetal/app-invoicing/frontend";
 
-/** Customer invoices on the business API: the live part moved to apps/invoicing/frontend (P2-W3); the screen (InvoicesView) is still shared with the sample workspace. */
+/** The business's settings as the panel loaded them (liveSettings.js), over the defaults. */
+const useSettings = (tenant) => { const { db } = useStore(); return mergeSettings(defaultTenantSettings(tenant), db.tenantSettings?.[tenant.id]); };
+/** The invoice screen given the business's settings. */
+const InvoicesView = (props) => <InvoicesScreen {...props} settings={useSettings(props.tenant)} />;
+const PayoutsView = (props) => <PayoutsScreen {...props} settings={useSettings(props.tenant)} />;
+
+/** Customer invoices on the business API: the Invoicing app's page (P2-W3) given its screen (P2-W6). */
 export function LiveInvoices(props) { return <InvoicesPage {...props} View={InvoicesView} />; }
 
 // The statement lists every payment Sheetal collected (not the fixed payouts template of the import/export buttons).

@@ -1,103 +1,21 @@
-// Plan and billing in the sample workspace, the read-only screen for suspended businesses, and backup export.
-// Where it fits: signed-in businesses see LiveBilling instead.
+// Plan and billing (LiveBilling and LiveAddons on the business API), the read-only screen for suspended businesses, and backup export.
+// Where it fits: Settings → Plan and billing, and Settings → Data.
 
 import React, { useState } from "react";
 import { ImportDrawer, TEMPLATES, downloadTemplate } from "@sheetal/shared/components/DataIO";
 import { useT } from "@sheetal/shared/core/i18n";
-import { useStore } from "@sheetal/shared/core/store";
-import { fdate, rs, limitText } from "@sheetal/shared/core/format";
-import { Badge, Button, Confirm, Empty, PageHead, Panel, Seg, StatusBadge, Table, useToast } from "@sheetal/shared/core/ui";
+import { fdate } from "@sheetal/shared/core/format";
+import { Badge, Button, Empty, PageHead, Panel, Table, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
-import { PERIODS, planFeatureList, priceFor, savingFor } from "@sheetal/shared/core/plans";
-import { BusinessAddons } from "@sheetal/shared/components/Addons";
-import { isLive } from "../live";
 import { LiveBilling } from "./LiveBilling";
 import { LiveAddons } from "./LiveAddons";
 
 export function BusinessBilling({ tenant, canManage }) {
   // Buying an add-on makes an invoice: the billing panel loads again to show it.
   const [tick, setTick] = useState(0);
-  return isLive(tenant.id) ? <><LiveBilling key={tick} tenant={tenant} canManage={canManage} /><LiveAddons tenant={tenant} onChange={() => setTick((n) => n + 1)} /></> : <SampleBilling tenant={tenant} canManage={canManage} />;
+  return <><LiveBilling key={tick} tenant={tenant} canManage={canManage} /><LiveAddons tenant={tenant} onChange={() => setTick((n) => n + 1)} /></>;
 }
 
-function SampleBilling({ tenant, canManage }) {
-  const t = useT();
-  const { db, update } = useStore();
-  const toast = useToast();
-  const [months, setMonths] = useState(12);
-  const [pick, setPick] = useState(null);
-  const [cancel, setCancel] = useState(false);
-  const plans = db.plans.filter((p) => p.type === tenant.type && p.active);
-  const cur = db.plans.find((p) => p.id === tenant.planId);
-  const invoices = []; // real invoices come from the billing API
-  const change = (p) => { update((d) => { d.tenants.find((x) => x.id === tenant.id).planId = p.id; }); toast(t("billing.toastChanged", { plan: p.name })); };
-
-  return (
-    <>
-      <PageHead title={t("billing.title")} sub={t("billing.sub")} />
-      {tenant.status === "past_due" && (
-        <div className="pf-alert action"><Icon name="circle-alert" size={18} /><div><b>{t("billing.pastDue")}</b><span>{t("billing.pastDueText", { days: db.platformSettings.graceDays })}</span></div><Button size="sm" icon="credit-card">{t("bdash.payNow")}</Button></div>
-      )}
-      <div className="pf-split">
-        <Panel title={t("billing.current")} className="grow" pad>
-          <div className="pf-cur-plan">
-            <div><span className="small muted">{t(`type.${tenant.type}`)}</span><h3>{cur.name}</h3><span className="tnum">{cur.price ? `${rs(priceFor(cur, tenant.period || 1))} ${(tenant.period || 1) === 1 ? t("plans.perMonth") : `for ${(tenant.period || 1) === 12 ? "1 year" : tenant.period + " months"}`}` : "Free · renews every month"}</span></div>
-            <dl className="pf-kv">
-              <dt>{t("common.status")}</dt><dd><StatusBadge status={tenant.status} /></dd>
-              <dt>{t("tenants.renews")}</dt><dd className="tnum">{fdate(tenant.renews)}</dd>
-              <dt>Auto-renew</dt><dd>{cur.price ? (tenant.autoRenew ? "On" : <span className="muted">Off · ask Sheetal support to turn it on</span>) : "Starter renews by itself"}</dd>
-            </dl>
-          </div>
-        </Panel>
-        <Panel title={t("billing.usage")} className="side" pad>
-          <div className="pf-stack">{Object.entries(cur.limits).map(([k, lim]) => (
-            <div key={k} className="pf-meter-top"><span>{t(`limit.${k}`)}</span><b className="tnum">{tenant.usage[k] || 0} / {limitText(lim)}</b></div>
-          ))}</div>
-        </Panel>
-      </div>
-
-      <section className="card pf-panel">
-        <div className="pf-panel-head"><div className="pf-panel-title"><h2>{t("billing.compare")}</h2><span>{t("billing.compareSub")}</span></div>
-          <div className="pf-panel-actions"><Seg value={months} onChange={setMonths} label="Billing period" options={PERIODS.map((x) => ({ id: x.months, label: x.months === 1 ? "1 month" : x.months === 12 ? "1 year" : `${x.months} months` + (x.save ? ` · save ${x.save}%` : "") }))} /></div></div>
-        <div className="pf-plan-grid pf-pad">
-          {plans.map((p) => {
-            const isCur = p.id === cur.id;
-            const up = p.price > cur.price;
-            return (
-              <div key={p.id} className={`card pf-plan ${isCur ? "cur" : ""}`}>
-                <div className="pf-plan-top"><h3>{p.name}</h3>{isCur && <Badge tone="done">{t("billing.yourPlan")}</Badge>}</div>
-                <div className="pf-price-line"><b className="tnum">{p.price ? rs(priceFor(p, months)) : "Free"}</b><span>{p.price ? (months === 1 ? t("plans.perMonth") : `for ${months === 12 ? "1 year" : months + " months"}`) : "renews every month"}</span></div>
-                {p.price > 0 && savingFor(p, months) > 0 && <span className="small pf-tone-done tnum">{t("billing.save", { v: rs(savingFor(p, months)) })}</span>}
-                {/* Same full list as the website's plan cards, row for row (shared/src/core/plans.js). */}
-                <ul className="pf-plan-feats">
-                  {planFeatureList(p, tenant.type, db.aiConfig?.credits).map(([on, text]) => <li key={text} className={on ? "" : "off"}><Icon name={on ? "check" : "minus"} size={15} />{text}</li>)}
-                </ul>
-                <div className="pf-plan-foot">{!isCur && canManage && <Button variant={up ? "primary" : "outline"} block onClick={() => setPick(p)}>{up ? t("billing.upgrade") : t("billing.downgrade")}</Button>}</div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      <BusinessAddons tenant={tenant} canManage={canManage} />
-      <Panel title={t("billing.invoices")} actions={<Button variant="outline" size="sm" icon="download">{t("common.exportCsv")}</Button>}>
-        <Table rows={invoices} minWidth={560} columns={[
-          { key: "id", label: t("billing.invoice"), num: true, render: (r) => <b className="pf-strong">{r.id}</b> },
-          { key: "date", label: t("billing.date"), num: true, render: (r) => fdate(r.date) },
-          { key: "amount", label: t("billing.amount"), num: true, align: "right", render: (r) => rs(r.amount) },
-          { key: "status", label: t("common.status"), render: (r) => <StatusBadge status={r.status} /> },
-          { key: "dl", label: "", align: "right", render: (r) => <div className="pf-row-actions">{r.status === "overdue" && <Button size="sm">{t("bdash.payNow")}</Button>}<Button variant="ghost" size="sm" icon="download">PDF</Button></div> },
-        ]} />
-      </Panel>
-      {canManage && <div className="pf-danger-zone"><div><b>{t("billing.cancelTitle")}</b><span className="small muted">{t("billing.cancelText", { d: fdate(tenant.renews) })}</span></div><Button variant="outline" className="pf-danger" onClick={() => setCancel(true)}>{t("billing.cancel")}</Button></div>}
-
-      <Confirm open={!!pick} onClose={() => setPick(null)} onConfirm={() => change(pick)} title={pick ? t("billing.confirmTitle", { plan: pick.name }) : ""} confirmLabel={t("common.confirm")}>
-        {pick && (pick.price > cur.price ? t("billing.upText", { v: rs(Math.round(((pick.price - cur.price) * 10) / 30)) }) : t("billing.downText", { d: fdate(tenant.renews) }))}
-      </Confirm>
-      <Confirm open={cancel} onClose={() => setCancel(false)} danger onConfirm={() => toast(t("billing.toastCancel"))} title={t("billing.cancelTitle")} confirmLabel={t("billing.cancel")}>{t("billing.cancelConfirm", { d: fdate(tenant.renews) })}</Confirm>
-    </>
-  );
-}
 
 // Import and export: CSV/Excel templates per data type, column mapping, full backup.
 const TPL_COLS = {

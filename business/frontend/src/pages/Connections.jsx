@@ -8,11 +8,8 @@ import { Link } from "@sheetal/shared/core/router";
 import { inDays } from "@sheetal/shared/core/format";
 import { Badge, Button, Checkbox, Drawer, Empty, Field, Input, PageHead, Panel, Seg, Select, Table, Tabs, Textarea, ToggleRow, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
-import { integrationsOf, STATUS_LABEL, STATUS_TONE } from "@sheetal/shared/data/integrations";
+import { STATUS_LABEL, STATUS_TONE } from "@sheetal/shared/data/integrations";
 
-const later = (fn, ms = 900) => setTimeout(fn, ms);
-const Ok = ({ st }) => <Badge tone={STATUS_TONE[st]}>{STATUS_LABEL[st]}</Badge>;
-const stOf = (done, started) => (done ? "done" : started ? "review" : "off");
 
 function useBiz(tenant, key, seed) {
   const { db, update } = useStore();
@@ -21,11 +18,10 @@ function useBiz(tenant, key, seed) {
   return [v, set, db];
 }
 
-// ───────────────────────── Channels and alerts ─────────────────────────
-const ALERT_EVENTS = [
-  ["lead", "New lead or enquiry"], ["match", "A buyer requirement matches your listing"], ["visit", "Site visit or tour booked"],
-  ["payment", "Payment received"], ["listing", "Your listing goes live (share it to the group)"], ["daily", "Daily summary at 8 pm"],
-];
+
+
+// ───────────────────────── Social sharing ─────────────────────────
+const PLATFORMS = [["facebook", "Facebook page", "facebook"], ["instagram", "Instagram", "instagram"], ["wagroup", "WhatsApp group", "message-circle"]];
 const seedChannels = (tenant) => ({
   wa: { mode: "sheetal", state: "idle", phone: "", sendTo: "self", group: "", groups: [], events: { lead: true, match: true, visit: true, payment: true, listing: true, daily: false } },
   meta: { pageName: "", instagram: "" },
@@ -33,73 +29,6 @@ const seedChannels = (tenant) => ({
   email: tenant.email,
 });
 
-export function Channels({ tenant }) {
-  const toast = useToast();
-  const [c, set, db] = useBiz(tenant, "bizChannels", seedChannels);
-  const platformWa = integrationsOf(db).whatsapp;
-  const ownAllowed = platformWa.businessesOwnNumber || platformWa.mode === "qr";
-  const dom = db.domains?.[tenant.id];
-  const waSt = c.wa.mode === "sheetal" ? "done" : stOf(c.wa.state === "linked", c.wa.state === "waiting");
-  const embed = `<script src="https://sheetalproperty.com/chat.js" data-business="${tenant.id}" async></script>`;
-  return (
-    <>
-      <PageHead title="Channels and alerts" sub="Where customers reach you, and where you get told about new leads." />
-      <Panel title="WhatsApp" sub="Customer messages come into Inbox. Alerts go to your own chat or a WhatsApp group." pad actions={<Ok st={waSt} />}>
-        <div className="pf-stack">
-          <Field label="Number used"><Seg value={c.wa.mode} onChange={(v) => set((x) => { x.wa.mode = v; })} options={[{ id: "sheetal", label: "Sheetal's number (ready now)" }, { id: "own", label: "My own WhatsApp" }]} /></Field>
-          {c.wa.mode === "own" && (!ownAllowed
-            ? <div className="pf-note"><Icon name="info" size={16} /><span>Sheetal hasn't turned on own numbers yet. You can use Sheetal's number until then.</span></div>
-            : c.wa.state === "linked"
-              ? <div className="pf-note"><Icon name="smartphone" size={16} /><span>Linked to <b>{c.wa.phone}</b>. Keep this phone online. <button type="button" className="link" onClick={() => set((x) => { x.wa.state = "idle"; x.wa.phone = ""; x.wa.groups = []; })}>Unlink</button></span></div>
-              : <div className="pf-stack tight">
-                  {c.wa.state === "waiting" && <div className="pf-qr-box"><Icon name="qr-code" size={110} strokeWidth={1} /><span className="small muted">On your phone: WhatsApp → Linked devices → Link a device, then scan.</span></div>}
-                  <div><Button icon="qr-code" disabled={c.wa.state === "waiting"} onClick={() => { set((x) => { x.wa.state = "waiting"; }); later(() => { set((x) => { x.wa.state = "linked"; x.wa.phone = tenant.phone; x.wa.groups = [{ id: "g1", name: `${tenant.name} team` }, { id: "g2", name: "Kathmandu property buyers" }]; }); toast("WhatsApp linked"); }, 2500); }}>{c.wa.state === "waiting" ? "Waiting for scan…" : "Link with QR code"}</Button></div>
-                </div>)}
-          <h4 className="pf-subhead">Send alerts to</h4>
-          <Seg value={c.wa.sendTo} onChange={(v) => set((x) => { x.wa.sendTo = v; })} options={[{ id: "self", label: "My WhatsApp chat" }, { id: "group", label: "A WhatsApp group" }]} />
-          {c.wa.sendTo === "group" && (c.wa.mode === "own" && c.wa.state === "linked"
-            ? <div className="pf-row-actions" style={{ justifyContent: "flex-start" }}>
-                <Select value={c.wa.group} onChange={(v) => set((x) => { x.wa.group = v; })} options={[{ id: "", label: "Choose a group…" }, ...c.wa.groups.map((g) => ({ id: g.id, label: g.name }))]} />
-                <Button variant="outline" icon="plus" onClick={() => { const id = `g${Date.now()}`; set((x) => { x.wa.groups.push({ id, name: `${tenant.name} alerts` }); x.wa.group = id; }); toast("Group created with you as admin"); }}>Create a new group</Button>
-              </div>
-            : <div className="pf-note"><Icon name="info" size={16} /><span>Group alerts need your own WhatsApp linked by QR (WhatsApp's official API can't post to groups).</span></div>)}
-          <div className="pf-check-grid">{ALERT_EVENTS.map(([k, l]) => <Checkbox key={k} label={l} checked={!!c.wa.events[k]} onChange={(v) => set((x) => { x.wa.events[k] = v; })} />)}</div>
-          <div><Button variant="outline" icon="send" onClick={() => toast(c.wa.sendTo === "group" && c.wa.group ? "Test alert sent to the group" : "Test alert sent to your WhatsApp")}>Send a test alert</Button></div>
-        </div>
-      </Panel>
-
-      <Panel title="Email" sub="Addresses on your own domain (like info@ and sales@) arrive in Inbox; you reply from the dashboard." pad actions={<Ok st={stOf(dom?.step === "done", !!dom)} />}>
-        <div className="pf-row-actions" style={{ justifyContent: "space-between" }}>
-          <span className="small">{dom?.step === "done" ? <>Domain <b>{dom.name}</b> · {(dom.addresses || dom.mailboxes || []).length} addresses</> : <>Until then, customer email goes to <b>{c.email}</b>.</>}</span>
-          <Link to="/business/domains" className="btn btn-outline"><Icon name="globe" size={16} />{dom ? "Manage domain and addresses" : "Connect your domain"}</Link>
-        </div>
-      </Panel>
-
-      <Panel title="Facebook and Instagram" sub="Messenger and Instagram messages in Inbox, and sharing your listings to your page." pad actions={<Ok st={stOf(!!c.meta.pageName, false)} />}>
-        <div className="pf-row-actions" style={{ justifyContent: "space-between" }}>
-          <span className="small">{c.meta.pageName ? <>Page <b>{c.meta.pageName}</b>{c.meta.instagram && <> · Instagram <b>{c.meta.instagram}</b></>}</> : "Not connected."}</span>
-          {c.meta.pageName
-            ? <Button variant="outline" onClick={() => set((x) => { x.meta = { pageName: "", instagram: "" }; })}>Disconnect</Button>
-            : <Button icon="facebook" onClick={() => { set((x) => { x.meta = { pageName: tenant.name, instagram: "@" + tenant.name.toLowerCase().replace(/[^a-z]/g, "") }; }); toast("Page connected"); }}>Connect with Facebook</Button>}
-        </div>
-      </Panel>
-
-      <Panel title="Web chat" sub="A chat button on your listings and your own website." pad actions={<Ok st={c.web.on ? "done" : "off"} />}>
-        <div className="pf-stack">
-          <ToggleRow title="Show the chat button" sub="On your Sheetal pages" checked={c.web.on} onChange={(v) => set((x) => { x.web.on = v; })} />
-          <Field label="Add to your own website" hint="Paste before </body>."><code className="pf-break">{embed}</code></Field>
-        </div>
-      </Panel>
-
-      <Panel title="SMS" pad actions={<Badge tone="neutral">Not available</Badge>}>
-        <p className="small muted">Sheetal sends messages on WhatsApp instead of SMS for now.</p>
-      </Panel>
-    </>
-  );
-}
-
-// ───────────────────────── Social sharing ─────────────────────────
-const PLATFORMS = [["facebook", "Facebook page", "facebook"], ["instagram", "Instagram", "instagram"], ["wagroup", "WhatsApp group", "message-circle"]];
 const seedSocial = () => {
   return {
     auto: { facebook: true, instagram: true, wagroup: true },
@@ -169,65 +98,11 @@ const seedVoice = (tenant) => ({
 });
 const OUTCOME = { visit: ["Visit booked", "done"], lead: ["Lead saved", "progress"], handoff: ["Handed to agent", "action"], info: ["Info only", "neutral"] };
 
-// ───────────────────────── AI accounts (connect once, used by every AI feature) ─────────────────────────
-const TEXT_PROVIDERS = [["gemini", "Google Gemini", "Free tier with daily limits"], ["openai", "OpenAI (ChatGPT models)", "Pay as you go; ChatGPT Plus does not include API use"], ["anthropic", "Anthropic Claude", "Pay as you go"]];
 const seedAi = () => ({ mode: "sheetal", text: { provider: "gemini", key: "", ok: false }, voice: { key: "", ok: false, voiceId: "", voices: [] } });
 export const useBizAi = (tenant) => useBiz(tenant, "bizAi", seedAi);
 
-function KeyInput({ saved, placeholder, onSave }) {
-  const [key, setKey] = useState("");
-  return (
-    <div className="pf-row-actions" style={{ flexWrap: "nowrap" }}>
-      <Input type="password" autoComplete="off" value={key} placeholder={saved ? "••••••••••••" : placeholder} style={{ flex: 1 }} onChange={(e) => setKey(e.target.value)} />
-      <Button variant="outline" disabled={!key.trim()} onClick={() => { onSave(); setKey(""); }}>Connect</Button>
-    </div>
-  );
-}
 
-export function AiAccounts({ tenant }) {
-  const toast = useToast();
-  const [a, set, db] = useBizAi(tenant);
-  const allowed = integrationsOf(db).ai.allowOwnKeys;
-  return (
-    <>
-      <PageHead title="AI accounts" sub="Connect once. Every AI feature (voice assistant, listing writer, lead finder, blog, Ask AI) then uses it." />
-      <Panel title="Where your AI comes from" pad>
-        <div className="pf-stack">
-          <div className="pf-mode-pick">
-            <button type="button" className={a.mode === "sheetal" ? "on" : ""} onClick={() => set((x) => { x.mode = "sheetal"; })}><Icon name="sparkles" size={22} /><b>Sheetal AI (included)</b><span>Ready now. Uses your plan's AI credits.</span></button>
-            <button type="button" className={a.mode === "own" ? "on" : ""} disabled={!allowed} onClick={() => set((x) => { x.mode = "own"; })}><Icon name="key-round" size={22} /><b>My own accounts</b><span>{allowed ? "Free with your own free tiers. No AI credits used." : "Not turned on by Sheetal yet."}</span></button>
-          </div>
-        </div>
-      </Panel>
-      {a.mode === "own" && <>
-        <Panel title="Writing and understanding" sub="Listing text, lead finding, blog, Ask AI and the voice assistant's thinking." pad actions={<Badge tone={a.text.ok ? "done" : a.text.key ? "progress" : "neutral"}>{a.text.ok ? "Connected" : a.text.key ? "Checking…" : "Not connected"}</Badge>}>
-          <div className="pf-stack">
-            <Field label="Provider"><div className="pf-stack tight">{TEXT_PROVIDERS.map(([id, n, d]) => <label key={id} className="check"><input type="radio" name="aiprov" checked={a.text.provider === id} onChange={() => set((x) => { x.text = { provider: id, key: "", ok: false }; })} /> <b>{n}</b> <span className="small muted">· {d}</span></label>)}</div></Field>
-            <Field label="API key" hint={a.text.key ? "Saved. Paste a new key to replace it." : "Gemini: aistudio.google.com → Get API key. OpenAI: platform.openai.com → API keys. Claude: console.anthropic.com."}>
-              <KeyInput saved={!!a.text.key} placeholder="Paste your API key" onSave={() => { set((x) => { x.text.key = "saved"; x.text.ok = false; }); later(() => { set((x) => { x.text.ok = true; }); toast("AI account connected"); }); }} />
-            </Field>
-          </div>
-        </Panel>
-        <ElevenLabs a={a} set={set} toast={toast} />
-      </>}
-    </>
-  );
-}
 
-// ElevenLabs voice: free plan works (about 10 minutes of speech a month); paid plans for more.
-function ElevenLabs({ a, set, toast }) {
-  return (
-    <Panel title="Voice (ElevenLabs)" sub="The voice your AI voice assistant speaks with." pad actions={<Badge tone={a.voice.ok ? "done" : a.voice.key ? "progress" : "neutral"}>{a.voice.ok ? "Connected" : a.voice.key ? "Checking…" : "Not connected"}</Badge>}>
-      <div className="pf-stack">
-        <div className="pf-note"><Icon name="info" size={16} /><span>Make a free account at elevenlabs.io → Profile → API keys. The free plan gives about 10 minutes of speech a month; calls use your own ElevenLabs minutes.</span></div>
-        <Field label="ElevenLabs API key" hint={a.voice.key ? "Saved. Paste a new key to replace it." : ""}>
-          <KeyInput saved={!!a.voice.key} placeholder="sk_…" onSave={() => { set((x) => { x.voice = { key: "saved", ok: false, voiceId: "", voices: [] }; }); later(() => { set((x) => { x.voice.ok = true; x.voice.voices = [{ id: "el1", name: "Rachel · calm" }, { id: "el2", name: "Adam · deep" }, { id: "el3", name: "My cloned voice" }]; x.voice.voiceId = "el1"; }); toast("ElevenLabs connected"); }); }} />
-        </Field>
-        {a.voice.ok && <Field label="Voice from your account"><Select value={a.voice.voiceId} onChange={(val) => set((x) => { x.voice.voiceId = val; })} options={a.voice.voices.map((o) => ({ id: o.id, label: o.name }))} /></Field>}
-      </div>
-    </Panel>
-  );
-}
 
 // Demo replies: the live assistant uses the AI model; this shows how it reads needs from what people say.
 function demoReply(text) {

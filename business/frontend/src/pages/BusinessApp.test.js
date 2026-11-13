@@ -27,3 +27,13 @@ describe("the panel works on real data only", () => {
     for (const f of ["./Agreements.jsx", "./Promote.jsx", "./Rentals.jsx", "./POS.jsx", "./Workspace.jsx"]) expect(here(f)).toBe(false);
   });
 });
+
+describe("the browser keeps only UI state", () => {
+  const appJsx = readFileSync(new URL("../App.jsx", import.meta.url), "utf8");
+  const store = readFileSync(new URL("../../../../shared/src/core/store.jsx", import.meta.url), "utf8");
+  it("the business panel saves only session and drafts, under its own key", () => {
+    expect(appJsx).toContain('const UI_KEYS = ["session", "drafts"];');
+    expect(appJsx).toContain('<StoreProvider storageKey="sheetal_business_ui" keep={UI_KEYS}>');
+    expect(store).toContain('const saved = keep ? Object.fromEntries([["version", db.version], ...keep.map((k) => [k, db[k]])]) : db;');
+  });
+});

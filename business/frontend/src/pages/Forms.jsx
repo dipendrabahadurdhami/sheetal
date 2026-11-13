@@ -1,28 +1,23 @@
-// Online forms: templates, a drag-and-drop builder, publishing, responses, and the sample public form page
-// (/business/f/:slug).
-// Where it fits: the sample workspace. Signed in, LiveForms.jsx uses the same builder (BuilderCore) and form page
-// (shared/src/components/FormView.jsx) on the business API.
+// The online-form builder (BuilderCore) and its field preview, used by LiveForms.jsx on the business API; the public form page is the website's /f/:slug.
+// Where it fits: Business → Forms. The sample forms list, responses and public page that were here went with the sample workspace (P2-W6).
 
 import React, { useEffect, useRef, useState } from "react";
 import { useStore } from "@sheetal/shared/core/store";
 import { useRouter, Link } from "@sheetal/shared/core/router";
-import { fdatetime, initials, rs } from "@sheetal/shared/core/format";
-import { Badge, Button, Checkbox, Drawer, Empty, Field, IconButton, Input, Modal, PageHead, Panel, Seg, Table, Tabs, Textarea, ToggleRow, useToast } from "@sheetal/shared/core/ui";
+import { initials, rs } from "@sheetal/shared/core/format";
+import { Button, Checkbox, Field, IconButton, Input, Seg, Textarea, ToggleRow, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import {
-  CHOICE, DESTS, DEST_LABEL, FIELD_TYPES, FONTS, PALETTE, PLACES, SWATCHES, formFromTemplate, formLimits, formLink, formsOf, makeField, monthResponses,
-  placeLabels, responsesOf, slugify, templatesFor,
+  CHOICE, DESTS, DEST_LABEL, FIELD_TYPES, FONTS, PALETTE, PLACES, SWATCHES, formFromTemplate, formLimits, formsOf, makeField,
+  responsesOf, slugify, templatesFor,
 } from "@sheetal/shared/core/forms";
 import { FormView } from "@sheetal/shared/components/FormView";
 import { defaultTenantSettings } from "./BusinessSettings";
-import { emptyOps } from "@sheetal/shared/demo/ops";
 
-const TYPE_WORD = { hotel: "hotels", host: "hosts", developer: "developers", agency: "agencies", sponsor: "investment sponsors" };
 const uniqueSlug = (list, slug, selfId) => { const b = slug || "form"; let s = b, i = 2; while (list.some((x) => x.id !== selfId && x.slug === s)) s = `${b}-${i++}`; return s; };
 const RANGE = ["number", "money"];
 const CHARS = ["short", "long"];
 const INPUTS = { short: "text", phone: "tel", email: "email", number: "number", money: "text", date: "date", time: "time" };
-const nowIso = () => new Date().toISOString().slice(0, 16);
 export { FormView };
 
 function ensure(d, tenant) {
@@ -57,104 +52,10 @@ export function CreateFormButton({ tenant, tpl, variant = "outline" }) {
   return <Button variant={variant} icon="file-plus" onClick={() => create(tpl)}>Create online form</Button>;
 }
 
-export function Forms({ tenant, view = "list", id, dest }) {
-  if (view === "build") return <Builder key={id} tenant={tenant} id={id} />;
-  if (view === "responses") return <Responses tenant={tenant} dest={dest || "all"} />;
-  return <FormsList tenant={tenant} />;
-}
 
-function LimitNote({ lim, forms, responses }) {
-  if (lim.forms === -1 && lim.responses === -1) return null;
-  return <span className="small muted tnum">{lim.free ? "Free plan · " : ""}{forms.length} of {lim.forms} forms · {monthResponses(responses)} of {lim.responses} responses this month</span>;
-}
 
-function FormsList({ tenant }) {
-  const { db, forms, responses, lim } = useFormsData(tenant);
-  const { navigate } = useRouter();
-  const create = useCreateForm(tenant);
-  const [share, setShare] = useState(null);
-  const tpls = templatesFor(tenant.type);
-  const count = (f) => responses.filter((r) => r.formId === f.id).length;
-  return (
-    <>
-      <PageHead title="Forms" sub={`Start from a template made for ${TYPE_WORD[tenant.type] || "your business"}, or build your own by dragging fields in.`}
-        actions={<><LimitNote lim={lim} forms={forms} responses={responses} /><Button variant="outline" icon="inbox" onClick={() => navigate("/business/forms/responses")}>Responses</Button><Button icon="plus" onClick={() => create(null)}>Blank form</Button></>} />
-      <div className="pf-stack">
-        <section className="pf-stack tight">
-          <h2 className="fb-h2">Start from a template</h2>
-          <div className="fb-tpls">{tpls.map(([k, icon, name, desc, d, , mk]) => (
-            <button key={k} type="button" className="card fb-tpl" onClick={() => create(k)}>
-              <span className="fb-tpl-ico"><Icon name={icon} size={22} /></span><b>{name}</b><span className="small muted">{desc}</span>
-              <span className="fb-tpl-foot small"><span className="muted tnum">{mk(tenant.type).filter((x) => !FIELD_TYPES[x.type].noAnswer).length} fields</span><span className="fb-accent">Goes to {DEST_LABEL[d]}</span></span>
-            </button>
-          ))}</div>
-        </section>
-        <Panel title="Your forms">
-          <Table rows={forms} minWidth={760} onRowClick={(f) => navigate(`/business/forms/${f.id}`)}
-            empty={<div className="pf-pad"><Empty icon="file-text" title="No forms yet">Pick a template above or start with a blank form.</Empty></div>}
-            columns={[
-              { key: "title", label: "Form", render: (f) => { const tp = tpls.find((x) => x[0] === f.tpl); return <span className="pf-person"><span className="fb-row-ico"><Icon name={tp?.[1] || "file-text"} size={17} /></span><span className="pf-two"><b>{f.title}</b><small className="pf-ellipsis">{formLink(db, tenant, f).url.replace("https://", "")}</small></span></span>; } },
-              { key: "n", label: "Responses", num: true, render: (f) => count(f) },
-              { key: "where", label: "Shows on", render: (f) => <span className="small muted">{placeLabels(f) || "Nowhere yet"}</span> },
-              { key: "status", label: "Status", render: (f) => f.status === "live" ? <Badge tone="done">Live</Badge> : <Badge tone="neutral">Draft</Badge> },
-              { key: "act", label: "", align: "right", render: (f) => <div className="pf-row-actions" onClick={(e) => e.stopPropagation()}><Button size="sm" variant="outline" onClick={() => navigate(`/business/forms/${f.id}`)}>Edit</Button><Button size="sm" variant="light" icon="send" onClick={() => setShare(f.id)}>Share</Button></div> },
-            ]} />
-        </Panel>
-      </div>
-      {share && <PublishModal tenant={tenant} id={share} onClose={() => setShare(null)} />}
-    </>
-  );
-}
 
-function PublishModal({ tenant, id, onClose }) {
-  const { db, forms, setForms } = useFormsData(tenant);
-  const toast = useToast();
-  const form = forms.find((x) => x.id === id);
-  const [copied, setCopied] = useState("");
-  useEffect(() => { if (form && form.status !== "live") setForms((list) => { const f = list.find((x) => x.id === id); if (f) f.status = "live"; }); }, [id]);
-  if (!form) return null;
-  const link = formLink(db, tenant, form);
-  const qr = `https://api.qrserver.com/v1/create-qr-code/?size=480x480&margin=12&data=${encodeURIComponent(link.url)}`;
-  const embed = `<iframe src="${link.url}" width="100%" height="900" style="border:0" title="${form.title.replace(/"/g, "")}"></iframe>`;
-  const copy = (text, what) => { try { navigator.clipboard.writeText(text); } catch (e) { /* clipboard off */ } setCopied(what); toast(what === "embed" ? "Embed code copied" : "Link copied"); };
-  return (
-    <Modal open onClose={onClose} title="Your form is live">
-      <div className="pf-stack">
-        <Field label="Link" hint={link.host === (db.platformSettings?.businessDomain || "business.sheetalproperty.com") ? "Connect your own domain in Settings → Domain to use it here." : `On your own domain, ${link.host}`}>
-          <div className="fb-copy"><Input readOnly value={link.url} onFocus={(e) => e.target.select()} /><Button onClick={() => copy(link.url, "link")}>{copied === "link" ? "Copied" : "Copy"}</Button></div>
-        </Field>
-        <div className="fb-qr">
-          <img src={qr} alt={`QR code for ${form.title}`} width="132" height="132" />
-          <div className="pf-stack tight"><span className="small muted">Print it on a flyer or show it at the front desk.</span>
-            <a className="btn btn-outline btn-sm" href={qr} target="_blank" rel="noreferrer" download={`${form.slug}-qr.png`}><Icon name="download" size={15} />Download QR</a>
-            <a href={link.local} className="btn btn-ghost btn-sm" target="_blank" rel="noreferrer"><Icon name="external-link" size={15} />Open form</a></div>
-        </div>
-        <div className="fb-share">
-          <a className="btn fb-fb" href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(link.url)}`} target="_blank" rel="noreferrer"><Icon name="facebook" size={16} />Facebook</a>
-          <a className="btn fb-wa" href={`https://wa.me/?text=${encodeURIComponent(`${form.title}: ${link.url}`)}`} target="_blank" rel="noreferrer"><Icon name="message-circle" size={16} />WhatsApp</a>
-          <Button variant="outline" icon="code" onClick={() => copy(embed, "embed")}>{copied === "embed" ? "Copied" : "Embed"}</Button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
 
-// ---------- Builder ----------
-function Builder({ tenant, id }) {
-  const { db, forms, setForms, ts } = useFormsData(tenant);
-  const { navigate } = useRouter();
-  const [share, setShare] = useState(false);
-  const form = forms.find((x) => x.id === id);
-  if (!form) return <section className="card pf-empty-card"><Empty icon="file-text" title="This form was deleted" action={<Button onClick={() => navigate("/business/forms")}>All forms</Button>} /></section>;
-  const save = (v) => setForms((list) => { const i = list.findIndex((x) => x.id === v.id); if (i >= 0) list[i] = { ...v, slug: uniqueSlug(list, slugify(v.slug), v.id) }; });
-  return (
-    <>
-      <BuilderCore tenant={tenant} initial={form} ts={ts} districts={db.catalog?.districts || []} linkOf={(f) => formLink(db, tenant, f)} onSave={save}
-        onPublish={(v) => { save({ ...v, status: "live" }); setShare(true); }} />
-      {share && <PublishModal tenant={tenant} id={id} onClose={() => setShare(false)} />}
-    </>
-  );
-}
 
 /** The drag-and-drop builder. It keeps its own copy of the form and calls onSave(form) a moment after each change
  *  (onSave may return a promise with the saved { slug }); onPublish(form) publishes (return false if it didn't). */
@@ -378,83 +279,4 @@ function PreviewFrame({ form, tenant, host, onClose, districts }) {
   );
 }
 
-// /business/f/:slug?b=tenantId — no Shell, no Sheetal branding.
-export function PublicForm({ slug }) {
-  const { db, update } = useStore();
-  const b = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("b") : null;
-  const tenants = b ? db.tenants.filter((t) => t.id === b) : db.tenants;
-  let tenant = null, form = null;
-  for (const t of tenants) { const f = formsOf(db, t).find((x) => x.slug === slug); if (f) { tenant = t; form = f; break; } }
-  useEffect(() => { if (form) document.title = form.title; }, [form?.title]);
-  const closed = (title, text) => <div className="pform-page"><div className="pform"><div className="pform-card pform-done"><span className="pform-done-ico muted"><Icon name="info" size={36} /></span><h2>{title}</h2><p>{text}</p></div></div></div>;
-  if (!form) return closed("Form not found", "This link may be wrong or the form was removed.");
-  if (form.status !== "live") return closed("This form isn't open yet", "The business hasn't published it. Please check back later.");
-  const lim = formLimits(db, tenant);
-  if (lim.responses !== -1 && monthResponses(responsesOf(db, tenant)) >= lim.responses) return closed("This form is closed for now", `${tenant.name} isn't taking new answers this month. Please contact them directly.`);
-  const districts = db.catalog?.districts || [];
-  const submit = (ans) => {
-    const nameA = ans.find((a) => a.x.type === "short" && /name/i.test(a.x.label) && a.text);
-    const phoneA = ans.find((a) => a.x.type === "phone" && a.text);
-    const payA = ans.find((a) => a.x.type === "payment" && a.v?.name);
-    const rest = ans.filter((a) => a.text && a !== nameA && a !== phoneA && a !== payA);
-    const at = nowIso();
-    const r = { id: `fr-${Math.random().toString(36).slice(2, 9)}`, formId: form.id, formTitle: form.title, dest: form.dest, at, name: nameA?.text || "Form visitor", phone: phoneA?.text || "",
-      answers: ans.filter((a) => a.text).map((a) => [a.x.label, a.text]), summary: rest.slice(0, 3).map((a) => a.text).join(" · ") || form.title,
-      pay: payA ? { amount: payA.x.amount, shot: payA.v.name, status: "to_confirm" } : null };
-    update((d) => {
-      ensure(d, tenant);
-      d.formResponses[tenant.id].unshift(r);
-      if (form.dest === "leads") {
-        if (!d.ops[tenant.id]) d.ops[tenant.id] = emptyOps();
-        d.ops[tenant.id].conversations.unshift({ id: `c-${r.id}`, channel: "web", name: r.name, phone: r.phone, unread: 1, last: `${form.title}: ${r.summary}`, at, stage: "new", value: r.pay?.amount || 0, listing: null, assignee: null,
-          tags: ["Lead", form.title], formResponse: r.id, msgs: [["in", `${form.title}: ${r.answers.map(([q, a]) => `${q}: ${a}`).join(" · ")}`, at.slice(11, 16)]] });
-      }
-    });
-  };
-  return <div className="pform-page" style={{ "--fa": form.style?.accent || SWATCHES[0] }}><FormView form={form} tenant={tenant} districts={districts} onSubmit={submit} /></div>;
-}
 
-// ---------- Responses ----------
-const PAY_TONE = { to_confirm: ["action", "To confirm"], confirmed: ["done", "Confirmed"], rejected: ["problem", "Rejected"] };
-function Responses({ tenant, dest }) {
-  const { forms, responses, setResponses, lim } = useFormsData(tenant);
-  const { navigate } = useRouter();
-  const toast = useToast();
-  const [open, setOpen] = useState(null);
-  const tab = ["leads", "jobs", "requirements"].includes(dest) ? dest : "all";
-  const rows = responses.filter((r) => tab === "all" || r.dest === tab);
-  const setPay = (rid, status) => { setResponses((list) => { const r = list.find((x) => x.id === rid); if (r?.pay) r.pay.status = status; }); toast(status === "confirmed" ? "Payment confirmed" : "Payment rejected"); };
-  const cur = responses.find((r) => r.id === open);
-  const tone = { leads: "progress", jobs: "neutral", requirements: "action" };
-  return (
-    <>
-      <PageHead title="Responses" sub="Each form sends answers to one place. Leads also show in Inbox, applications under Job applicants, requirements under Requirements."
-        back={<Link to="/business/forms" className="fb-back"><Icon name="arrow-left" size={16} />Forms</Link>}
-        actions={<><LimitNote lim={lim} forms={forms} responses={responses} />{(tab === "jobs" || tab === "requirements") && <CreateFormButton tenant={tenant} tpl={tab === "jobs" ? "job" : "req"} />}</>} />
-      <Tabs value={tab} onChange={(v) => navigate(v === "all" ? "/business/forms/responses" : `/business/forms/responses/${v}`)}
-        tabs={[{ id: "all", label: "All" }, ...DESTS.map(([id]) => ({ id, label: DEST_LABEL[id] }))].map((x) => ({ ...x, count: responses.filter((r) => x.id === "all" || r.dest === x.id).length }))} />
-      <Panel>
-        <Table rows={rows} minWidth={820} onRowClick={(r) => setOpen(r.id)}
-          empty={<div className="pf-pad"><Empty icon="inbox" title="No responses yet" action={tab === "jobs" || tab === "requirements" ? <CreateFormButton tenant={tenant} tpl={tab === "jobs" ? "job" : "req"} variant="primary" /> : null}>Share a form to start getting answers here.</Empty></div>}
-          columns={[
-            { key: "who", label: "From", render: (r) => <span className="pf-two"><b>{r.name}</b><small className="tnum">{[r.phone, fdatetime(r.at)].filter(Boolean).join(" · ")}</small></span> },
-            { key: "sum", label: "Answers", render: (r) => <span className="pf-two"><span className="small">{r.summary}</span><small className="muted">{r.formTitle}</small></span> },
-            { key: "dest", label: "Goes to", render: (r) => <Badge tone={tone[r.dest]} icon={r.dest === "jobs" ? "briefcase" : r.dest === "requirements" ? "house" : "messages-square"}>{r.dest === "leads" ? "Lead" : r.dest === "jobs" ? "Job application" : "Requirement"}</Badge> },
-            { key: "pay", label: "Payment", render: (r) => r.pay ? <span className="pf-two"><Badge tone={PAY_TONE[r.pay.status][0]}>{PAY_TONE[r.pay.status][1]}</Badge><small className="tnum">{rs(r.pay.amount)}</small></span> : <span className="small muted">No payment</span> },
-            { key: "act", label: "", align: "right", render: (r) => <div className="pf-row-actions" onClick={(e) => e.stopPropagation()}>
-              {r.pay?.status === "to_confirm" ? <><Button size="sm" icon="check" onClick={() => setPay(r.id, "confirmed")}>Confirm</Button><Button size="sm" variant="outline" onClick={() => setPay(r.id, "rejected")}>Reject</Button></>
-                : <Button size="sm" variant="outline" onClick={() => setOpen(r.id)}>Open</Button>}</div> },
-          ]} />
-      </Panel>
-      <Drawer open={!!cur} onClose={() => setOpen(null)} title={cur?.name || ""} sub={cur ? `${cur.formTitle} · ${fdatetime(cur.at)}` : ""}
-        footer={cur && <>{cur.dest === "leads" && <Button variant="outline" icon="messages-square" onClick={() => navigate("/business/inbox")}>Open in Inbox</Button>}
-          {cur.phone && <a className="btn btn-outline" href={`tel:${cur.phone}`}><Icon name="phone" size={16} />Call</a>}
-          {cur.pay?.status === "to_confirm" && <><Button variant="outline" onClick={() => setPay(cur.id, "rejected")}>Reject</Button><Button icon="check" onClick={() => setPay(cur.id, "confirmed")}>Confirm payment</Button></>}</>}>
-        {cur && <div className="pf-stack">
-          <dl className="pf-kv fb-answers">{cur.answers.map(([q, a], i) => <React.Fragment key={i}><dt>{q}</dt><dd>{a}</dd></React.Fragment>)}</dl>
-          {cur.pay && <div className="pf-note"><Icon name="qr-code" size={16} /><span>{rs(cur.pay.amount)} paid by QR or bank. Screenshot: <b>{cur.pay.shot}</b>. Status: {PAY_TONE[cur.pay.status][1]}.</span></div>}
-        </div>}
-      </Drawer>
-    </>
-  );
-}
