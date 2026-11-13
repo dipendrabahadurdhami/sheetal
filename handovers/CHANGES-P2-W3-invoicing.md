@@ -17,3 +17,9 @@ Same routes, answers, messages, tax numbers, VAT and audit strings. No money rul
 - Payouts (`modules/payouts`, models Payout/PayoutItem) are NOT moved yet.
 - Collections: no server code of its own (payments on reservations are written by Projects in the same transaction as "sold"); its manifest header says so.
 - Tests: `invoices.test.ts` unchanged; new `business/backend/test/invoices-kernel.test.ts` and `apps/invoicing/frontend/pages/InvoicesPage.test.js`.
+
+## Payouts (follow-up PR)
+- The business side of payouts (read only) moved to `apps/invoicing/backend/payouts.ts`; `invoicingRoutes` registers GET `/payouts`, `/payouts/statement`,
+  `/payouts/:id`. `app.ts` no longer registers the old `payoutRoutes`; the old file is an empty shim (so the routes are never registered twice).
+- The payout tables are written by Sheetal staff on the admin API, so they get no kernel columns; the reader carries this business and the branches in view
+  on every read, as before. Same answers and messages.
