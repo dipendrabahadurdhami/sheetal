@@ -305,7 +305,7 @@ export const APPS = [
     trialDays: null,
     limits: [],
     menu: [],
-    approvals: [],
+    approvals: [{ action: "people.person.update", label: { en: "Approve leave (a second manager checks)" }, money: false, enabledByDefault: false, approverPermission: "people.person.update" }],
     ai: [],
     permissions: [
       { id: "people.person.read", label: { en: "See people, attendance and leave" }, scopes: ["branch", "all"], default: "branch", group: "People" },
