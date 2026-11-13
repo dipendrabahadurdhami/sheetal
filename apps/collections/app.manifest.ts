@@ -1,6 +1,8 @@
 // Collections: collecting payments from buyers and tenants, and refunds.
 // Where it fits: read as data by scripts/gen-permissions.mjs (permission lists, role templates) and scripts/check-manifests.mjs.
-// How it works: a plain object, declaration only (id, name, icon, business types, permissions, roles, models): the routes stay in their old modules until the app moves onto the kernel.
+// How it works: a plain object, declaration only (id, name, icon, business types, permissions, roles, models). Collections has no server code of its own: a
+// payment on a reservation is written by the Projects app (apps/projects/backend) in the same transaction that marks a fully paid unit sold, and is shown on the
+// Projects page; the permissions below decide who may collect and refund (P2-W3, docs/architecture/MODEL-OWNERS.md).
 // Rules: no functions or logic, only "import type" lines; every permission starts with "collections."; models match the "/// @app collections" tags in schema.prisma.
 
 import type { AppManifest } from "@sheetal/platform/core/manifest";

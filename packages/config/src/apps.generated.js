@@ -262,7 +262,7 @@ export const APPS = [
       { id: "invoicing.invoice.create", label: { en: "Create invoices" }, scopes: ["branch", "all"], default: "branch", group: "Invoices" },
       { id: "invoicing.payout.read", label: { en: "See payouts and statements", ne: "भुक्तानी विवरण हेर्ने" }, scopes: ["branch", "all"], default: "branch", group: "Payouts" },
     ],
-    dependencies: { requires: [], optional: [] },
+    dependencies: { requires: [], optional: ["hotel"] },
     branchOwned: [{ model: "BizInvoice", label: { en: "invoice" } }, { model: "Payout", label: { en: "payout" } }, { model: "PayoutItem", label: { en: "payout line" } }],
   },
   {
