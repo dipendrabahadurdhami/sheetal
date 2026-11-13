@@ -1,6 +1,6 @@
 // Workspace: the always-on part of every business: overview, team, roles, branches, settings and billing.
 // Where it fits: read as data by scripts/gen-permissions.mjs (permission lists, role templates) and scripts/check-manifests.mjs.
-// How it works: a plain object, declaration only (id, name, icon, business types, permissions, roles, models): branches, business settings and check-ups (P2-W5/W6), the team, the overview, import/export, forms and email (P2-W6 part 2) are in backend/; growth moves next.
+// How it works: a plain object, declaration only (id, name, icon, business types, permissions, roles, models): branches, business settings and check-ups (P2-W5/W6), the team, the overview, import/export, forms, email and the growth tools (P2-W6 part 2) are in backend/.
 // Rules: no functions or logic, only "import type" lines; every permission starts with "workspace."; models match the "/// @app workspace" tags in schema.prisma.
 
 import type { AppManifest } from "@sheetal/platform/core/manifest";
@@ -101,6 +101,8 @@ const manifest = {
       { name: "workspace.mailbox.updated", v: 1, label: "A mailbox was renamed, switched on or off, or shared", payload: { id: "id" } },
       { name: "workspace.mailbox.removed", v: 1, label: "A mailbox and its mail were deleted", payload: { id: "id" } },
       { name: "workspace.mail.sent", v: 1, label: "An email was sent", payload: { id: "string", recipients: "number" } },
+      { name: "workspace.channel.connected", v: 1, label: "A WhatsApp, Messenger or Instagram account was connected", payload: { id: "id", kind: "string" } },
+      { name: "workspace.channel.disconnected", v: 1, label: "A chat channel was disconnected", payload: { id: "id" } },
     ],
     consumes: [],
   },

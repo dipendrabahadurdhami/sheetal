@@ -13,8 +13,6 @@ import type { Config } from "@sheetal/platform/core/config";
 import { buildBaseApp, type AppDeps } from "@sheetal/backend-core/app";
 import { billingRoutes } from "./modules/billing/routes.js";
 import { addonRoutes } from "./modules/billing/addons.js";
-import { growthRoutes } from "./modules/growth/routes.js";
-import { otaRoutes } from "./modules/ota/routes.js";
 import { supportRoutes } from "./modules/support/routes.js";
 import { reviewRoutes } from "@sheetal/app-reviews/backend";
 import { verificationRoutes } from "./modules/verification/routes.js";
@@ -65,7 +63,7 @@ export async function buildApp(config: Config, deps: AppDeps & { resolver?: Reso
   app.decorate("approvals", approvals);
   await app.register(approvalRoutes, { prefix: "/v1", contextOf: businessContextOf, service: approvals });
   await app.register(supportSessionRoutes, { prefix: "/v1" });
-  await app.register(workspaceRoutes, { prefix: "/v1", contextOf: businessContextOf, resolver: deps.resolver });   // branches, settings, check-ups, team, overview, import/export, forms, email
+  await app.register(workspaceRoutes, { prefix: "/v1", contextOf: businessContextOf, resolver: deps.resolver, ai: deps.ai });   // branches, settings, check-ups, team, overview, import/export, forms, email, growth
   await app.register(reviewRoutes, { prefix: "/v1", contextOf: businessContextOf });
   await app.register(verificationRoutes, { prefix: "/v1" });
   await app.register(invoicingRoutes, { prefix: "/v1", contextOf: businessContextOf });   // customer invoices and payouts
@@ -84,15 +82,13 @@ export async function buildApp(config: Config, deps: AppDeps & { resolver?: Reso
   // The bell: the person's notifications about the open business.
   await app.register(async (a) => notificationRoutes(a, "/notifications", (request) => { const ws = workspaceOf(request); return { userId: ws.user.id, tenantId: ws.tenantId }; }), { prefix: "/v1" });
   await app.register(listingRoutes, { prefix: "/v1", contextOf: businessContextOf });
-  await app.register(leadRoutes, { prefix: "/v1", contextOf: businessContextOf, fetch: deps.fetch });
+  await app.register(leadRoutes, { prefix: "/v1", contextOf: businessContextOf, fetch: deps.fetch, ai: deps.ai });   // the Inbox, the lead finder, Meta's webhook
   await app.register(billingRoutes, { prefix: "/v1", fetch: deps.fetch });
   await app.register(addonRoutes, { prefix: "/v1" });
-  await app.register(hotelRoutes, { prefix: "/v1", contextOf: businessContextOf });
+  await app.register(hotelRoutes, { prefix: "/v1", contextOf: businessContextOf, fetch: deps.fetch });   // rooms, bookings, front desk, other sites
   await app.register(posRoutes, { prefix: "/v1", contextOf: businessContextOf });   // point of sale and stock
   await app.register(projectRoutes, { prefix: "/v1", contextOf: businessContextOf });
   await app.register(investmentRoutes, { prefix: "/v1", contextOf: businessContextOf });
-  await app.register(growthRoutes, { prefix: "/v1", ai: deps.ai, fetch: deps.fetch });
-  await app.register(otaRoutes, { prefix: "/v1" });
   await app.register(supportRoutes, { prefix: "/v1" });
   // Background jobs of this process (recurring expenses, rent bills, low-stock alerts, listing check-ups, the event dispatcher) are
   // started by one registry (src/jobs.ts). JOBS=off turns them all off. The event bus is where apps will subscribe their handlers.
