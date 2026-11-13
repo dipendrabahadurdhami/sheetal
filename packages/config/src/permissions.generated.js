@@ -369,7 +369,7 @@ export const PERMISSION_CATALOG = [
     scopes: ["branch", "all"],
     default: "branch",
     group: "People",
-    approvable: false,
+    approvable: true,
     sensitive: false,
     types: "all",
   },

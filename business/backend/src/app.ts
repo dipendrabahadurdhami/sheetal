@@ -32,6 +32,7 @@ import { invoicingRoutes } from "./modules/invoicing/routes.js";
 import { payoutRoutes } from "./modules/payouts/routes.js";
 import { expenseRoutes } from "@sheetal/app-expenses/backend";
 import { rentalRoutes } from "@sheetal/app-rentals/backend";
+import { peopleRoutes } from "@sheetal/app-people/backend";
 import { listingCodeRoutes } from "./modules/listings/codes.js";
 import { formRoutes } from "./modules/forms/routes.js";
 import { agreementRoutes } from "./modules/agreements/routes.js";
@@ -39,7 +40,6 @@ import { promoteRoutes } from "./modules/promote/routes.js";
 import { bannerRoutes } from "./modules/promote/banners.js";
 import { overviewRoutes } from "./modules/overview/routes.js";
 import { stockRoutes } from "./modules/stock/routes.js";
-import { peopleRoutes } from "./modules/people/routes.js";
 import { devKeyRoutes } from "./modules/devkeys/routes.js";
 import { aiAccountRoutes } from "./modules/aiaccount/routes.js";
 import { reviewRoutes as checkupRoutes } from "./modules/reviews/checkups.js";
@@ -92,7 +92,7 @@ export async function buildApp(config: Config, deps: AppDeps & { resolver?: Reso
   await app.register(bannerRoutes, { prefix: "/v1" });
   await app.register(overviewRoutes, { prefix: "/v1" });
   await app.register(stockRoutes, { prefix: "/v1" });
-  await app.register(peopleRoutes, { prefix: "/v1" });
+  await app.register(peopleRoutes, { prefix: "/v1", contextOf: businessContextOf });
   await app.register(devKeyRoutes, { prefix: "/v1" });
   await app.register(aiAccountRoutes, { prefix: "/v1", ai: deps.ai });
   // The bell: the person's notifications about the open business.
