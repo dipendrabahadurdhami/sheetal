@@ -1692,6 +1692,11 @@ model BizInvoice {
   cancelledAt  DateTime?    @map("cancelled_at")
   createdBy    String?      @map("created_by")
   createdAt    DateTime     @default(now()) @map("created_at")
+  /// Kernel columns (P2-W3): who changed it last, the version for 409 conflicts, and the soft-delete marks.
+  updatedBy   String?   @map("updated_by")
+  version     Int       @default(1)
+  deletedAt   DateTime? @map("deleted_at")
+  deletedBy   String?   @map("deleted_by")
   updatedAt    DateTime     @updatedAt @map("updated_at")
   receipts     BizReceipt[]
 
@@ -1719,6 +1724,12 @@ model BizReceipt {
   note      String?
   createdBy String?    @map("created_by")
   createdAt DateTime   @default(now()) @map("created_at")
+  /// Kernel columns (P2-W3): who changed it last, the version for 409 conflicts, and the soft-delete marks.
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+  updatedBy   String?   @map("updated_by")
+  version     Int       @default(1)
+  deletedAt   DateTime? @map("deleted_at")
+  deletedBy   String?   @map("deleted_by")
   invoice   BizInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, no])
