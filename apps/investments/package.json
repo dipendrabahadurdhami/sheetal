@@ -2,12 +2,29 @@
   "name": "@sheetal/app-investments",
   "private": true,
   "version": "0.1.0",
-  "description": "Investments app: manifest only for now (declaration-only; its routes stay in business/backend until the app moves onto the kernel)",
+  "description": "Investments app: manifest and backend on the kernel (P2-W3)",
   "type": "module",
   "engines": {
     "node": ">=22"
   },
   "exports": {
+    "./backend": "./backend/index.ts",
+    "./backend/*": "./backend/*.ts",
+    "./frontend": "./frontend/index.js",
     "./manifest": "./app.manifest.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --passWithNoTests backend"
+  },
+  "dependencies": {
+    "@sheetal/backend-core": "*",
+    "@sheetal/platform": "*",
+    "fastify": "^5.12.7",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "typescript": "^5.9.3"
   }
 }

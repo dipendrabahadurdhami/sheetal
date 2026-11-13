@@ -1438,6 +1438,13 @@ model Unit {
   status       String        @default("available")
   holdUntil    DateTime?     @map("hold_until")
   createdAt    DateTime      @default(now()) @map("created_at")
+  /// Kernel columns (P2-W3): who changed it last, the version for 409 conflicts, and the soft-delete marks.
+  createdBy   String?   @map("created_by")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+  updatedBy   String?   @map("updated_by")
+  version     Int       @default(1)
+  deletedAt   DateTime? @map("deleted_at")
+  deletedBy   String?   @map("deleted_by")
   reservations Reservation[]
 
   @@unique([listingId, block, no])
@@ -1463,6 +1470,12 @@ model Reservation {
   notes       String?
   createdBy   String?      @map("created_by")
   createdAt   DateTime     @default(now()) @map("created_at")
+  /// Kernel columns (P2-W3): who changed it last, the version for 409 conflicts, and the soft-delete marks.
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+  updatedBy   String?   @map("updated_by")
+  version     Int       @default(1)
+  deletedAt   DateTime? @map("deleted_at")
+  deletedBy   String?   @map("deleted_by")
   unit        Unit         @relation(fields: [unitId], references: [id], onDelete: Restrict)
   collections Collection[]
 
@@ -1482,6 +1495,13 @@ model Collection {
   note          String?
   byUserId      String?     @map("by_user_id")
   createdAt     DateTime    @default(now()) @map("created_at")
+  /// Kernel columns (P2-W3): who changed it last, the version for 409 conflicts, and the soft-delete marks.
+  createdBy   String?   @map("created_by")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+  updatedBy   String?   @map("updated_by")
+  version     Int       @default(1)
+  deletedAt   DateTime? @map("deleted_at")
+  deletedBy   String?   @map("deleted_by")
   reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, createdAt])
@@ -1505,6 +1525,13 @@ model Commitment {
   paidAt    DateTime? @map("paid_at")
   ref       String?
   createdAt DateTime  @default(now()) @map("created_at")
+  /// Kernel columns (P2-W3): who changed it last, the version for 409 conflicts, and the soft-delete marks.
+  createdBy   String?   @map("created_by")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+  updatedBy   String?   @map("updated_by")
+  version     Int       @default(1)
+  deletedAt   DateTime? @map("deleted_at")
+  deletedBy   String?   @map("deleted_by")
 
   @@index([tenantId, listingId])
   @@map("commitments")
@@ -1520,6 +1547,13 @@ model InvestmentUpdate {
   body      String
   byUserId  String?  @map("by_user_id")
   createdAt DateTime @default(now()) @map("created_at")
+  /// Kernel columns (P2-W3): who changed it last, the version for 409 conflicts, and the soft-delete marks.
+  createdBy   String?   @map("created_by")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+  updatedBy   String?   @map("updated_by")
+  version     Int       @default(1)
+  deletedAt   DateTime? @map("deleted_at")
+  deletedBy   String?   @map("deleted_by")
 
   @@index([listingId, createdAt])
   @@map("investment_updates")
