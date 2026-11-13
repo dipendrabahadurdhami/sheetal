@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@sheetal/app-expenses": "*",
+    "@sheetal/app-rentals": "*",
     "@sheetal/app-agreements": "*",
     "@sheetal/app-people": "*",
     "@sheetal/app-reviews": "*",
