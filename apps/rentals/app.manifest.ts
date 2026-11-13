@@ -14,9 +14,16 @@ const manifest = {
   icon: "key-round",
   category: "property",
   businessTypes: ["agency"],
-  trialDays: null,
-  limits: [],
-  editions: [{ id: "free", name: { en: "Free" }, free: true, limits: {}, features: [], price: null }],
+  // Phase 3 (P3-BE-1): first values only. The live values (prices, limits, trial) are the platform.catalog setting, edited in Admin -> Pricing;
+  // prices are in platform/src/billing/catalog.seed.ts, not here.
+  trialDays: 14,
+  limits: [
+    { key: "leases", label: { en: "Leases" }, unit: "count" },
+  ],
+  editions: [
+    { id: "free", name: { en: "Free" }, free: true, limits: { leases: 5 }, features: [], price: null },
+    { id: "full", name: { en: "Full" }, free: false, limits: { leases: null }, features: ["rentals.owner_statements", "rentals.online_rent"], price: null },
+  ],
   permissions: [
     {
       id: "rentals.rental.read",

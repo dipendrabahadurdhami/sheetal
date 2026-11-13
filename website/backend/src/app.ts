@@ -11,6 +11,7 @@ import { authRoutes } from "./modules/auth/routes.js";
 import { registerDemoGuard } from "@sheetal/platform/demo/guard";
 import { catalogRoutes, mediaRoutes } from "./modules/catalog/routes.js";
 import { catalogOptionRoutes } from "./modules/catalog/options.js";
+import { appCatalogRoutes } from "./modules/catalog/apps.js";
 import { engageRoutes } from "./modules/engage/routes.js";
 import { postingRoutes } from "./modules/posting/routes.js";
 import { contentRoutes } from "./modules/content/routes.js";
@@ -34,6 +35,8 @@ export async function buildApp(config: Config, deps: AppDeps & { ai?: { client: 
   await app.register(authRoutes, { prefix: "/v1" });
   await app.register(catalogRoutes, { prefix: "/v1" });
   await app.register(catalogOptionRoutes, { prefix: "/v1" });
+  // Phase 3 (P3-BE-1): the marketplace catalog, public.
+  await app.register(appCatalogRoutes, { prefix: "/v1" });
   await app.register(engageRoutes, { prefix: "/v1" });
   await app.register(postingRoutes, { prefix: "/v1" });
   await app.register(boardRoutes, { prefix: "/v1" });

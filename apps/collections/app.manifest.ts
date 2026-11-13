@@ -16,9 +16,16 @@ const manifest = {
   icon: "wallet",
   category: "money",
   businessTypes: ["developer", "agency"],
-  trialDays: null,
-  limits: [],
-  editions: [{ id: "free", name: { en: "Free" }, free: true, limits: {}, features: [], price: null }],
+  // Phase 3 (P3-BE-1): first values only. The live values (prices, limits, trial) are the platform.catalog setting, edited in Admin -> Pricing;
+  // prices are in platform/src/billing/catalog.seed.ts, not here.
+  trialDays: 14,
+  limits: [
+    { key: "bookings", label: { en: "Bookings" }, unit: "count" },
+  ],
+  editions: [
+    { id: "free", name: { en: "Free" }, free: true, limits: { bookings: 10 }, features: [], price: null },
+    { id: "full", name: { en: "Full" }, free: false, limits: { bookings: null }, features: ["collections.instalments"], price: null },
+  ],
   permissions: [
     { id: "collections.payment.read", label: { en: "See collected payments" }, scopes: ["branch", "all"], default: "branch", group: "Collections" },
     { id: "collections.payment.create", label: { en: "Collect token, instalments and fees" }, scopes: ["branch", "all"], default: "branch", group: "Collections" },

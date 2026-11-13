@@ -14,9 +14,17 @@ const manifest = {
   icon: "building-2",
   category: "property",
   businessTypes: ["developer"],
-  trialDays: null,
-  limits: [],
-  editions: [{ id: "free", name: { en: "Free" }, free: true, limits: {}, features: [], price: null }],
+  // Phase 3 (P3-BE-1): first values only. The live values (prices, limits, trial) are the platform.catalog setting, edited in Admin -> Pricing;
+  // prices are in platform/src/billing/catalog.seed.ts, not here.
+  trialDays: 14,
+  limits: [
+    { key: "projects", label: { en: "Projects" }, unit: "count" },
+    { key: "units", label: { en: "Units" }, unit: "count" },
+  ],
+  editions: [
+    { id: "free", name: { en: "Free" }, free: true, limits: { projects: 1, units: 50 }, features: [], price: null },
+    { id: "full", name: { en: "Full" }, free: false, limits: { projects: 10, units: 1000 }, features: [], price: null },
+  ],
   permissions: [
     { id: "projects.project.read", label: { en: "See projects and units" }, scopes: ["branch", "all"], default: "branch", group: "Projects and units" },
     { id: "projects.project.create", label: { en: "Add projects and units" }, scopes: ["branch", "all"], default: "branch", group: "Projects and units" },

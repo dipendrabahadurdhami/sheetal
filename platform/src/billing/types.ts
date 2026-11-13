@@ -54,6 +54,18 @@ export interface AddonDef {
   active: boolean;
 }
 
+/** Sheetal AI (MB section 10.2): business-level plans and top-ups, priced like apps. */
+export interface AiPlanCatalog { key: string; name: Text; priceMonthPaisa: number; priceYearPaisa: number; creditsPerMonth: number; features: string[]; sort: number }
+export interface AiCatalog {
+  plans: AiPlanCatalog[];
+  topup: { priceGrossPaisa: number; credits: number; validDays: number };
+  /** New free businesses: one-time credits during a trial (the owner's answer to Q4). */
+  trialCredits: number;
+  trialDays: number;
+  /** Credits per feature use, by capability. */
+  creditRates: { text: number; vision: number; voicePerMinute: number };
+}
+
 export interface Catalog {
   version: number;
   /** Months offered for new purchases. */
@@ -67,6 +79,7 @@ export interface Catalog {
   };
   apps: Record<string, AppCatalog>;
   addons: AddonDef[];
+  ai?: AiCatalog;
 }
 
 /** The platform.billing setting (MB section 16). Every day count and amount is editable in Admin; these are the defaults. */
