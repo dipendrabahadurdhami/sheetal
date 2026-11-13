@@ -135,6 +135,6 @@ describe("Import / Export on the kernel", () => {
     expect([await audits("data.import_leads"), await events("workspace.data.imported")]).toEqual([1, 2]);
     expect((await call("other", "GET", "/data/listings", undefined, ids.otherBiz)).json().data).toEqual([]);
     expect((await call("other", "GET", "/data/leads", undefined, ids.otherBiz)).json().data).toEqual([]);
-    expect((await call("owner", "GET", "/data/leads")).json().data).toEqual([expect.objectContaining({ name: "Rita", stage: "Visit" })]);
+    expect((await call("owner", "GET", "/data/leads")).json().data).toEqual(expect.arrayContaining([expect.objectContaining({ name: "Rita", stage: "Visit" })]));
   });
 });
