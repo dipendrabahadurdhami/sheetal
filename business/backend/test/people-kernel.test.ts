@@ -58,9 +58,10 @@ describe("People on the kernel", () => {
 
   it("refuses a fix made on an old version (409) and accepts the current one", async () => {
     const rec = (await app.db!.attendance.findFirstOrThrow({ where: { tenantId: ids.agency, userId: ids.agent } }));
-    const stale = await call("owner", "PATCH", `/people/attendance/${rec.id}`, { inTime: "09:00", reason: "Came early", version: rec.version - 1 });
+    // The check-out time is sent too, so the fix is valid at any hour the suite runs (a run between 00:00 and 09:00 Nepal time had a check-out before 09:00).
+    const stale = await call("owner", "PATCH", `/people/attendance/${rec.id}`, { inTime: "09:00", outTime: "23:59", reason: "Came early", version: rec.version - 1 });
     expect(stale.statusCode).toBe(409);
-    const ok = await call("owner", "PATCH", `/people/attendance/${rec.id}`, { inTime: "09:00", reason: "Came early", version: rec.version });
+    const ok = await call("owner", "PATCH", `/people/attendance/${rec.id}`, { inTime: "09:00", outTime: "23:59", reason: "Came early", version: rec.version });
     expect(ok.statusCode).toBe(200);
     expect(await events("people.attendance.corrected")).toHaveLength(1);
   });
