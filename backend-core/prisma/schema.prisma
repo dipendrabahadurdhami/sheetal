@@ -173,6 +173,9 @@ model Tenant {
   demo             Boolean      @default(false)
   /// When the daily demo cleanup job may delete this demo business. Empty for real businesses.
   demoExpiresAt    DateTime?    @map("demo_expires_at")
+  /// Phase 3 cutover flag (MARKETPLACE-AND-BILLING.md section 8.6): plans (today's Starter / Business / Pro, the default), shadow (both
+  /// worked out, differences logged, the old answer used) or apps (per-app subscriptions). A CHECK keeps these three words.
+  billingMode      String       @default("plans") @map("billing_mode")
   createdAt        DateTime     @default(now()) @map("created_at")
   updatedAt        DateTime     @updatedAt @map("updated_at")
 
@@ -187,6 +190,11 @@ model Tenant {
   forms            Form[]
   agreements       Agreement[]
   supportTickets   SupportTicket[]
+  subscriptions    Subscription[]
+  entitlementGrants EntitlementGrant[]
+  addonSubscriptions AddonSubscription[]
+  billingLock      BillingLock?
+  aiCreditGrants   AiCreditGrant[]
 
   @@index([type])
   @@index([coveredById])
@@ -1166,7 +1174,8 @@ model Invoice {
   /// INV-2026-0001
   seq         Int       @unique @default(autoincrement())
   tenantId    String    @map("tenant_id")
-  planId      String    @map("plan_id")
+  /// The plan of an old (Starter / Business / Pro) invoice. Empty on Phase 3 invoices (kinds subscription and credit), which have lines instead.
+  planId      String?   @map("plan_id")
   months      Int
   /// Rs., whole rupees: subtotal + vat = total.
   subtotal    Int
@@ -1187,8 +1196,28 @@ model Invoice {
   paidAt      DateTime? @map("paid_at")
   createdBy   String?   @map("created_by")
   createdAt   DateTime  @default(now()) @map("created_at")
+  // ── Phase 3 (MARKETPLACE-AND-BILLING.md sections 4, 9 and 15) ──
+  /// The tax invoice number within its fiscal year (INV-2083-84-0001 has fy "2083-84", no 1). Given at payment, never before.
+  no             Int?      @map("no")
+  /// Nepal fiscal year of the number, "2083-84".
+  fy             String?
+  /// When the tax invoice was issued (the payment moment). After this the money columns can't change (a database trigger).
+  issuedAt       DateTime? @map("issued_at")
+  /// Money in paisa, VAT included in total. Old invoices: filled from the rupee columns (× 100) by the migration and a trigger.
+  subtotalPaisa  BigInt?   @map("subtotal_paisa")
+  vatPaisa       BigInt?   @map("vat_paisa")
+  totalPaisa     BigInt?   @map("total_paisa")
+  /// Sheetal's own details as printed on the invoice (from the platform.company setting at issue time). Private: never on a public page.
+  sellerSnapshot Json?     @map("seller_snapshot")
+  /// A credit note (kind "credit") points at the invoice it reverses.
+  creditForId    String?   @map("credit_for_id")
+  couponId       String?   @map("coupon_id")
+  /// The catalog version the prices came from.
+  catalogVersion Int?      @map("catalog_version")
   payments    Payment[]
+  lines       InvoiceLine[]
 
+  @@unique([fy, no])
   @@index([tenantId, createdAt])
   @@index([status, dueAt])
   @@map("invoices")
@@ -1217,11 +1246,327 @@ model Payment {
   reviewedBy  String?   @map("reviewed_by")
   paidAt      DateTime? @map("paid_at")
   createdAt   DateTime  @default(now()) @map("created_at")
+  // ── Phase 3 ──
+  /// The amount in paisa (old rows: amount × 100, filled by the migration and a trigger).
+  amountPaisa   BigInt?   @map("amount_paisa")
+  /// live, or test (a gateway's test merchant). Test payments never count as revenue.
+  mode          String    @default("live")
+  /// How much of it was refunded, in paisa (never more than the amount: a CHECK).
+  refundedPaisa BigInt    @default(0) @map("refunded_paisa")
+  refundRef     String?   @map("refund_ref")
+  refundSentAt  DateTime? @map("refund_sent_at")
   invoice     Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, createdAt])
   @@index([status, createdAt])
   @@map("payments")
+}
+
+// ───────────── Phase 3: per-app subscriptions, invoices in paisa, revenue (MARKETPLACE-AND-BILLING.md section 15) ─────────────
+// Words that are fixed are text columns with a CHECK (like approval_requests.status), not enums: a new word is one CHECK change.
+// Money is BigInt paisa, VAT included where the name says "gross". Nothing here deletes data; RevenueEntry rows can't be changed at all.
+
+/// One business's subscription to one app (MB section 5). A free app installed is a row too (editionId "free", status active).
+/// status: active, trialing, past_due, read_only, cancelled, expired. source: install, purchase, trial, migration, staff, gift, covered.
+/// @app platform
+model Subscription {
+  id                  String    @id @default(cuid())
+  tenantId            String    @map("tenant_id")
+  appId               String    @map("app_id")
+  editionId           String    @map("edition_id")
+  status              String
+  /// 1 or 12 for new sales (3 and 6 kept for migrated ones); empty for a free edition.
+  periodMonths        Int?      @map("period_months")
+  /// The price sold at (copied when sold, VAT included) and the catalog list price at that time.
+  priceGrossPaisa     BigInt    @default(0) @map("price_gross_paisa")
+  listPriceGrossPaisa BigInt    @default(0) @map("list_price_gross_paisa")
+  currentPeriodStart  DateTime? @map("current_period_start")
+  currentPeriodEnd    DateTime? @map("current_period_end")
+  trialEndsAt         DateTime? @map("trial_ends_at")
+  /// Set when a trial starts and never cleared: one trial per business per app.
+  trialUsedAt         DateTime? @map("trial_used_at")
+  graceUntil          DateTime? @map("grace_until")
+  readOnlyFrom        DateTime? @map("read_only_from")
+  cancelAtPeriodEnd   Boolean   @default(false) @map("cancel_at_period_end")
+  cancelledAt         DateTime? @map("cancelled_at")
+  /// A downgrade or a year-to-month switch waiting for the period end.
+  pendingEditionId    String?   @map("pending_edition_id")
+  pendingPeriodMonths Int?      @map("pending_period_months")
+  couponId            String?   @map("coupon_id")
+  couponPeriodsLeft   Int?      @map("coupon_periods_left")
+  source              String    @default("install")
+  installedAt         DateTime  @default(now()) @map("installed_at")
+  uninstalledAt       DateTime? @map("uninstalled_at")
+  /// The migration run that made this row (scripts --restore removes only its own rows).
+  migrationRunId      String?   @map("migration_run_id")
+  version             Int       @default(1)
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+  tenant              Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  events              SubscriptionEvent[]
+
+  @@unique([tenantId, appId])
+  // The renewal job: subscriptions by status whose period is ending.
+  @@index([status, currentPeriodEnd])
+  @@map("subscriptions")
+}
+
+/// The history of a subscription: one row per change (append-only). actorKind: user, staff, system, migration.
+/// @app platform
+model SubscriptionEvent {
+  id             String       @id @default(cuid())
+  subscriptionId String       @map("subscription_id")
+  tenantId       String       @map("tenant_id")
+  appId          String       @map("app_id")
+  /// installed, trial_started, purchased, renewed, upgraded, downgrade_scheduled, cancelled, resumed, past_due, read_only, expired, ...
+  type           String
+  fromStatus     String?      @map("from_status")
+  toStatus       String?      @map("to_status")
+  fromEdition    String?      @map("from_edition")
+  toEdition      String?      @map("to_edition")
+  amountPaisa    BigInt?      @map("amount_paisa")
+  invoiceId      String?      @map("invoice_id")
+  actorKind      String       @map("actor_kind")
+  actorId        String?      @map("actor_id")
+  reason         String?
+  at             DateTime     @default(now())
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, at])
+  @@index([type, at])
+  @@index([subscriptionId])
+  @@map("subscription_events")
+}
+
+/// A gift of access by staff or the migration, always with a reason (MB section 1). kind: app, limit, feature, seats, ai_credits_monthly.
+/// source: migration, covered, gift, staff, partner. value empty = unlimited.
+/// @app platform
+model EntitlementGrant {
+  id             String    @id @default(cuid())
+  tenantId       String    @map("tenant_id")
+  kind           String
+  appId          String?   @map("app_id")
+  key            String?
+  value          Int?
+  source         String
+  reason         String
+  startsAt       DateTime  @default(now()) @map("starts_at")
+  endsAt         DateTime? @map("ends_at")
+  revokedAt      DateTime? @map("revoked_at")
+  createdBy      String    @map("created_by")
+  migrationRunId String?   @map("migration_run_id")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, endsAt])
+  @@map("entitlement_grants")
+}
+
+/// Add-ons bought (seats, storage, AI credits, limit packs). appId empty = a business-level add-on (seats, storage).
+/// TenantAddon (the old table) is read once by the migration and then unused.
+/// @app platform
+model AddonSubscription {
+  id                  String   @id @default(cuid())
+  tenantId            String   @map("tenant_id")
+  appId               String   @default("") @map("app_id")
+  addonKey            String   @map("addon_key")
+  qty                 Int
+  /// The quantity at the next renewal (lowering takes effect then).
+  renewQty            Int      @map("renew_qty")
+  unitPriceGrossPaisa BigInt   @map("unit_price_gross_paisa")
+  periodMonths        Int      @map("period_months")
+  currentPeriodEnd    DateTime @map("current_period_end")
+  source              String   @default("purchase")
+  migrationRunId      String?  @map("migration_run_id")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+  tenant              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, appId, addonKey])
+  @@map("addon_subscriptions")
+}
+
+/// Price protection of a migrated business (MB section 8.3): until lockEnd its renewals cost no more than the old plan.
+/// @app platform
+model BillingLock {
+  tenantId                String   @id @map("tenant_id")
+  legacyMonthlyGrossPaisa BigInt   @map("legacy_monthly_gross_paisa")
+  legacyPeriodMonths      Int      @map("legacy_period_months")
+  coversApps              String[] @default([]) @map("covers_apps")
+  lockEnd                 DateTime @map("lock_end")
+  migrationRunId          String   @map("migration_run_id")
+  createdAt               DateTime @default(now()) @map("created_at")
+  tenant                  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("billing_locks")
+}
+
+/// One run of the plans-to-apps migration script (the key for --restore). mode: dry_run, apply, restore.
+/// @app platform
+model BillingMigrationRun {
+  id         String    @id @default(cuid())
+  mode       String
+  startedAt  DateTime  @default(now()) @map("started_at")
+  finishedAt DateTime? @map("finished_at")
+  report     Json      @default("{}")
+  createdBy  String    @map("created_by")
+
+  @@map("billing_migration_runs")
+}
+
+/// AI credits a business can spend, oldest expiry first (MB section 10). remaining never goes below 0 or above credits (a CHECK).
+/// source: plan, topup, trial, migration, gift, refund.
+/// @app platform
+model AiCreditGrant {
+  id        String   @id @default(cuid())
+  tenantId  String   @map("tenant_id")
+  credits   Int
+  remaining Int
+  source    String
+  expiresAt DateTime @map("expires_at")
+  ref       String?
+  createdAt DateTime @default(now()) @map("created_at")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, expiresAt])
+  @@map("ai_credit_grants")
+}
+
+/// One line of a Phase 3 invoice: an app period, an add-on, a proration credit, price protection, a coupon. Lines add up to the invoice.
+/// kind: subscription, addon, proration_credit, price_protection, ai, carry.
+/// @app platform
+model InvoiceLine {
+  id             String    @id @default(cuid())
+  invoiceId      String    @map("invoice_id")
+  kind           String
+  appId          String?   @map("app_id")
+  editionId      String?   @map("edition_id")
+  subscriptionId String?   @map("subscription_id")
+  /// The words on the invoice, { en, ne }.
+  description    Json      @default("{}")
+  periodStart    DateTime? @map("period_start")
+  periodEnd      DateTime? @map("period_end")
+  qty            Int       @default(1)
+  unitGrossPaisa BigInt    @map("unit_gross_paisa")
+  discountPaisa  BigInt    @default(0) @map("discount_paisa")
+  grossPaisa     BigInt    @map("gross_paisa")
+  netPaisa       BigInt    @map("net_paisa")
+  vatPaisa       BigInt    @map("vat_paisa")
+  sort           Int       @default(0)
+  invoice        Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@map("invoice_lines")
+}
+
+/// Sheetal's revenue, one row per paid line (MB section 13). Written once in the payment transaction; never updated or deleted
+/// (a database trigger refuses both). Refunds are new rows of kind "refund" with negative amounts and the original percentages.
+/// kind: sale, refund. saleType: new, renewal, upgrade, addon, ai. mode: live only (test payments make no rows).
+/// @app platform
+model RevenueEntry {
+  id              String   @id @default(cuid())
+  paymentId       String   @map("payment_id")
+  invoiceId       String   @map("invoice_id")
+  invoiceLineId   String?  @map("invoice_line_id")
+  tenantId        String   @map("tenant_id")
+  appId           String?  @map("app_id")
+  editionId       String?  @map("edition_id")
+  kind            String
+  saleType        String   @map("sale_type")
+  grossPaisa      BigInt   @map("gross_paisa")
+  vatPaisa        BigInt   @map("vat_paisa")
+  netPaisa        BigInt   @map("net_paisa")
+  /// Basis points (1 % = 100 bp) used at the time of the sale.
+  commissionBp    Int      @map("commission_bp")
+  commissionPaisa BigInt   @map("commission_paisa")
+  partnerBp       Int      @map("partner_bp")
+  partnerPaisa    BigInt   @map("partner_paisa")
+  sheetalNetPaisa BigInt   @map("sheetal_net_paisa")
+  publisherPaisa  BigInt   @map("publisher_paisa")
+  method          String
+  mode            String   @default("live")
+  catalogVersion  Int?     @map("catalog_version")
+  paidAt          DateTime @map("paid_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@unique([paymentId, invoiceLineId, kind])
+  @@index([paidAt])
+  @@index([appId, paidAt])
+  @@index([tenantId, paidAt])
+  @@map("revenue_entries")
+}
+
+/// A discount code for one purchase (MB section 15). kind: percent, fixed_paisa, trial_days. appliesTo: all, apps, editions.
+/// code is kept in upper case (a CHECK).
+/// @app platform
+model Coupon {
+  id                String    @id @default(cuid())
+  code              String    @unique
+  kind              String
+  /// Percent (1 to 100), paisa, or days, by kind.
+  value             Int
+  appliesTo         String    @default("all") @map("applies_to")
+  appIds            String[]  @default([]) @map("app_ids")
+  editionIds        String[]  @default([]) @map("edition_ids")
+  firstPurchaseOnly Boolean   @default(false) @map("first_purchase_only")
+  minSpendPaisa     BigInt?   @map("min_spend_paisa")
+  validFrom         DateTime? @map("valid_from")
+  validTo           DateTime? @map("valid_to")
+  maxRedemptions    Int?      @map("max_redemptions")
+  perBusinessLimit  Int       @default(1) @map("per_business_limit")
+  /// How many billing periods the discount lasts (1 to 12).
+  periods           Int       @default(1)
+  active            Boolean   @default(true)
+  createdBy         String    @map("created_by")
+  version           Int       @default(1)
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  redemptions       CouponRedemption[]
+
+  @@map("coupons")
+}
+
+/// A coupon used on one invoice by one business.
+/// @app platform
+model CouponRedemption {
+  id            String   @id @default(cuid())
+  couponId      String   @map("coupon_id")
+  tenantId      String   @map("tenant_id")
+  userId        String   @map("user_id")
+  invoiceId     String   @map("invoice_id")
+  discountPaisa BigInt   @map("discount_paisa")
+  at            DateTime @default(now())
+  coupon        Coupon   @relation(fields: [couponId], references: [id], onDelete: Restrict)
+
+  @@unique([couponId, tenantId, invoiceId])
+  @@index([tenantId])
+  @@map("coupon_redemptions")
+}
+
+/// Maker-checker for staff actions (refunds, price rises with paying customers): like ApprovalRequest, without a business.
+/// status: pending, approved, executed, failed, rejected, cancelled, expired (a CHECK, the same seven words).
+/// @app platform
+model PlatformApproval {
+  id          String    @id @default(cuid())
+  action      String
+  resource    String
+  resourceId  String?   @map("resource_id")
+  payload     Json
+  amountPaisa BigInt?   @map("amount_paisa")
+  status      String    @default("pending")
+  makerId     String    @map("maker_id")
+  makerNote   String    @default("") @map("maker_note")
+  checkerId   String?   @map("checker_id")
+  checkerNote String?   @map("checker_note")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  decidedAt   DateTime? @map("decided_at")
+  expiresAt   DateTime  @map("expires_at")
+  executedAt  DateTime? @map("executed_at")
+  result      Json?
+
+  @@index([status, createdAt])
+  @@index([status, expiresAt])
+  @@map("platform_approvals")
 }
 
 // ───────────── Hotels and stays ─────────────
@@ -1622,6 +1967,12 @@ model AiUsage {
   credits   Int
   /// Made with the business's own AI key (not counted against the plan's credits).
   own       Boolean  @default(false)
+  /// Phase 3 (MB section 10.3): the app that asked, the provider used, who paid (sheetal = Sheetal credits, own = the business's key,
+  /// preview = locked preview, no model call) and the request id, for one row per request.
+  appId     String?  @map("app_id")
+  provider  String?
+  source    String   @default("sheetal")
+  requestId String?  @map("request_id")
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([tenantId, createdAt])
