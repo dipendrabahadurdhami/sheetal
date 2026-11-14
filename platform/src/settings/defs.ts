@@ -39,6 +39,18 @@ export const BUSINESS_PROFILE: SettingDef<z.infer<typeof Answers>> = {
   label: { en: "Business profile answers" }, read: "workspace.settings.update", write: "workspace.settings.update",
 };
 
+/** The business's own ways to be paid without a gateway (MB section 12, P3-BE-9): a free static QR picture (eSewa, Fonepay or bank QR) shown
+ *  at its checkouts, and the words under it. Never used for Sheetal's own payments.
+ *  Not in SETTING_DEFS yet: it joins the list (and the pinned business list in settings-pure.test.ts) with its screen (P3-FE-2). */
+const BusinessPayments = z.object({
+  staticQr: z.object({ fileId: z.string().max(100).nullable(), label: z.string().trim().max(120) }).strict(),
+}).strict();
+export const BUSINESS_PAYMENTS: SettingDef<z.infer<typeof BusinessPayments>> = {
+  key: "business.payments", scope: "business", schema: BusinessPayments, default: { staticQr: { fileId: null, label: "" } }, group: "payments",
+  label: { en: "Ways to be paid" }, help: { en: "A QR picture your customers can scan to pay you directly. Payments to you never pass through Sheetal." },
+  read: "workspace.settings.update", write: "workspace.settings.update",
+};
+
 /** One setting per form of the field builder. The guard is the field builder's own rules (archive, never delete; keys and types never change). */
 export const formDefSetting = (seed: FormDef): SettingDef<FormDef> => ({
   key: `platform.fieldDefs.${seed.id}`, scope: "platform", schema: FormDef, default: seed, group: "fields",
