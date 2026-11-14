@@ -243,7 +243,8 @@ export async function runBillingCycle(db: Db, mailer: Mailer, o: { siteUrl: stri
   const s = await billingSettings(db);
   const site = o.siteUrl.replace(/\/$/, "");
   const out = { reminded: 0, pastDue: 0, downgraded: 0, trialsEnded: 0 };
-  const tenants = await db.tenant.findMany({ where: { renewsAt: { not: null }, status: { in: ["active", "trial", "past_due"] }, plan: { price: { gt: 0 } } }, include: { plan: true } });
+  // Businesses on per-app subscriptions (Phase 3, billingMode "apps") renew through platform/src/billing/lifecycle.ts instead.
+  const tenants = await db.tenant.findMany({ where: { renewsAt: { not: null }, status: { in: ["active", "trial", "past_due"] }, plan: { price: { gt: 0 } }, billingMode: { not: "apps" } }, include: { plan: true } });
 
   for (const t of tenants) {
     const renews = t.renewsAt!;

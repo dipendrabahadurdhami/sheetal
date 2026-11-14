@@ -140,6 +140,8 @@ export async function applySubscriptionPayment(tx: Tx, o: {
         editionId: l.editionId, status: "active", periodMonths: d.periodMonths ?? 1, priceGrossPaisa: l.unitGrossPaisa, listPriceGrossPaisa: l.unitGrossPaisa,
         currentPeriodStart: d.saleType === "renewal" ? l.periodStart : before?.currentPeriodStart && d.saleType === "upgrade" && (d.periodMonths ?? 1) === before.periodMonths ? before.currentPeriodStart : l.periodStart,
         currentPeriodEnd: l.periodEnd, trialEndsAt: null, graceUntil: null, readOnlyFrom: null, cancelAtPeriodEnd: false, cancelledAt: null, uninstalledAt: null, source: "purchase",
+        // A waiting downgrade or period switch took effect with this payment.
+        pendingEditionId: null, pendingPeriodMonths: null,
       };
       const sub = before
         ? await tx.subscription.update({ where: { id: before.id }, data: { ...data, version: { increment: 1 } } })
