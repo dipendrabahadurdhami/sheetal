@@ -1,7 +1,28 @@
-# Project state (13 Nov 2026, night, Nepal time)
+# Project state (14 Nov 2026, noon, Nepal time)
 
-**Phase 2 is closed** (`handovers/CLOSE-OUT-phase-2.md`, PRs #57-#64 on 13 Nov night). Main = the merge of the Phase 2 close-out PR, CI green.
-Phase 3 is next: the owner accepted all five recommendations (MARKETPLACE-AND-BILLING.md section 0, PR #56). Build PHASE-3-TASKS.md in order.
+**Phase 3 is in progress: 8 stages merged (PRs #65-#73, 14 Nov), about 45% of PHASE-3-TASKS.** Main = the merge of PR #73, CI green, about 1450 tests.
+Phase 2 is closed (`handovers/CLOSE-OUT-phase-2.md`). **Read `handovers/CONTINUE-phase-3.md` first**: done table, next tasks in order, decisions, owner steps.
+Every business is still on `billingMode = plans` and `platform.billing.salesEnabled` is false: no customer has seen any Phase 3 change.
+
+## Phase 3 so far (14 Nov)
+| PR | Task | What |
+|---|---|---|
+| #65 | DB-1 + DB-2 | 12 billing tables (subscriptions, events, grants, add-ons, locks, migration runs, AI credits, invoice lines, revenue, coupons, redemptions, platform approvals); invoices/payments in paisa; CHECKs + triggers (issued invoice frozen, revenue append-only, refund ≤ payment) |
+| #66 | BE-2 + QA-1 | pure core `platform/src/billing/` (Nepal days, effectiveStatus, limits hard/soft, proration, coupons, price lock, `quote()`); PHASE-3-TEST-PLAN.md; proration table |
+| #67 | BE-1 | `platform.catalog` + `platform.billing` settings (seed prices MB 3.4), manifests with free/full editions, `GET /v1/public/catalog` |
+| #68 | BE-3 + QA-1 | entitlements v3, shadow mode, `requireWrite`/`requireLimit`, `GET /v1/entitlements`; `mapping.ts` (R1-R4, R6); parity test v3 ≥ v1 on 19 fixtures |
+| #69 | BE-4 | tax invoice numbers at payment (`INV-2083-84-0001`, Nepal fiscal year, no gaps), `applySubscriptionPayment`, revenue ledger (100% commission until the split is set), credit notes |
+| #70 | BE-9 | payment router (Sheetal's vs a business's system, no fall-back), paisa amount check |
+| #71 | BE-5 | hourly lifecycle job (statuses, one renewal invoice per business, reminders); old plan cycle skips `apps` |
+| #73 | BE-6 | business marketplace API (install, trial, cart quote = invoice, checkout, change/cancel/resume/remove, coupons, overview) |
+
+## Lessons from 14 Nov (keep doing)
+- Old tests pin lists (the admin job list, the business settings list): add new things beside them (`adminPlatformJobs`), never edit the pinned test.
+- PostgreSQL unique-violation messages name the columns (`Key (tenant_id, app_id)`), not the constraint; CHECK and FK messages name the constraint.
+- A test that depends on the hour of day breaks CI at night (Nepal 00:00-09:00): send every time explicitly.
+- Squash-merged stacked branches: `git merge -X ours origin/main`, then `npm run gen:permissions -- --check`, then push and wait for CI again.
+- Local sandbox has no Prisma engine: run pure tests with a temporary vitest config; CI (`prisma migrate diff`) prints the exact SQL if a migration is off.
+- No `await` inside a `$transaction((tx) => ...)` arrow that isn't async: load values before the transaction.
 
 ## Lessons from 13 Nov night (keep doing)
 - Stacked branches: after `git merge origin/main`, grep for `<<<<<<<` before committing, or merge with `-X ours` (the branch already holds main's earlier squash).
