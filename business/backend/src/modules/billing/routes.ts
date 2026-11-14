@@ -21,6 +21,9 @@ import { PERIODS, priceFor } from "@sheetal/backend-core/domain/plans";
 import { requireUser } from "@sheetal/backend-core/modules/auth/sessions";
 import { workspaceOf, type Workspace } from "../access.js";
 
+/** Phase 3 app invoices are checked to the paisa; old invoices keep the whole-rupee check. */
+const paisaOf = (p: { amountPaisa: bigint | null; invoice: { kind: string } }) => (p.invoice.kind === "subscription" && p.amountPaisa != null ? p.amountPaisa : undefined);
+
 const months = z.coerce.number().int().refine((m) => PERIODS.some((p) => p.months === m), "Choose 1, 3, 6 or 12 months.");
 
 export async function billingRoutes(app: FastifyInstance, opts: { fetch?: Fetch }) {
@@ -81,11 +84,14 @@ export async function billingRoutes(app: FastifyInstance, opts: { fetch?: Fetch 
     const b = z.object({ provider: z.enum(["esewa", "khalti", "fonepay", "manual"]), invoiceId: z.string().max(40).optional(), planId: z.string().max(40).optional(), months: months.optional() }).parse(request.body);
     const t = await db().tenant.findUniqueOrThrow({ where: { id: ws.tenantId } });
     if (t.status === "suspended" || t.status === "cancelled") throw badRequest("This business isn't active. Please contact Sheetal.");
+    // Phase 3: a business on per-app subscriptions buys apps in Billing -> Apps (POST /subscriptions/checkout), not plans.
+    if (t.billingMode === "apps" && !b.invoiceId) throw new AppError(409, "billing_mode", "Your business now pays per app. Choose apps in Billing → Apps.");
     let invoice;
     if (b.invoiceId) {
       invoice = await db().invoice.findFirst({ where: { id: b.invoiceId, tenantId: t.id } });
       if (!invoice) throw notFound("Invoice not found.");
       if (invoice.status !== "open") throw badRequest(invoice.status === "paid" ? "This invoice is already paid." : "This invoice was cancelled.");
+      if (invoice.kind === "subscription") throw new AppError(409, "billing_mode", "Pay app invoices in Billing → Apps.");
     } else {
       if (!b.planId || !b.months) throw badRequest("Choose a plan and how many months.");
       const plan = await db().plan.findFirst({ where: { id: b.planId, type: t.type, active: true } });
@@ -138,19 +144,19 @@ export async function billingRoutes(app: FastifyInstance, opts: { fetch?: Fetch 
     }
     const g = await gw();
     let v: Verified;
-    if (p.provider === "esewa" && g.esewa && b.data) v = await esewaVerify({ ...g.esewa, data: b.data, ref: p.ref, amount: p.amount, fetch: opts.fetch });
+    if (p.provider === "esewa" && g.esewa && b.data) v = await esewaVerify({ ...g.esewa, data: b.data, ref: p.ref, amount: p.amount, amountPaisa: paisaOf(p), fetch: opts.fetch });
     else if (p.provider === "khalti" && g.khalti) {
       const pidx = p.providerRef ?? b.pidx;
       if (!pidx || (b.pidx && b.pidx !== p.providerRef)) throw badRequest("This Khalti answer is for another payment.");
-      v = await khaltiVerify({ ...g.khalti, pidx, amount: p.amount, fetch: opts.fetch });
-    } else if (p.provider === "fonepay" && g.fonepay && b.query) v = await fonepayVerify({ ...g.fonepay, q: b.query, ref: p.ref, amount: p.amount, fetch: opts.fetch });
+      v = await khaltiVerify({ ...g.khalti, pidx, amount: p.amount, amountPaisa: paisaOf(p), fetch: opts.fetch });
+    } else if (p.provider === "fonepay" && g.fonepay && b.query) v = await fonepayVerify({ ...g.fonepay, q: b.query, ref: p.ref, amount: p.amount, amountPaisa: paisaOf(p), fetch: opts.fetch });
     else throw badRequest("Nothing to check for this payment.");
     if (!v.ok) {
       await db().payment.update({ where: { id: p.id }, data: { status: "failed", note: v.reason, raw: (v.raw ?? undefined) as object | undefined } });
       return { message: `${v.reason} You haven't been charged twice; try again or use another method.`, data: { status: "failed", kind: p.invoice.kind } };
     }
     await applyPayment(db(), app.mailer, { paymentId: p.id, providerRef: v.providerRef, raw: v.raw, siteUrl: site });
-    return { message: p.invoice.kind === "banner" ? "Paid. Thank you! Sheetal checks your banner picture next; it then shows on its dates." : p.invoice.kind === "boost" ? "Paid. Thank you! Your boost runs on its dates." : p.invoice.kind === "addon" ? "Paid. Thank you! Your add-ons count now." : "Paid. Thank you! Your plan is active.", data: { status: "paid", tenantId: p.tenantId, kind: p.invoice.kind } };
+    return { message: p.invoice.kind === "subscription" ? "Paid. Thank you! Your apps are ready." : p.invoice.kind === "banner" ? "Paid. Thank you! Sheetal checks your banner picture next; it then shows on its dates." : p.invoice.kind === "boost" ? "Paid. Thank you! Your boost runs on its dates." : p.invoice.kind === "addon" ? "Paid. Thank you! Your add-ons count now." : "Paid. Thank you! Your plan is active.", data: { status: "paid", tenantId: p.tenantId, kind: p.invoice.kind } };
   });
 
   /** Bank transfer: the proof goes to Sheetal, who confirms it in the admin panel. */
