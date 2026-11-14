@@ -9,7 +9,7 @@
 
 import type { FastifyInstance } from "fastify";
 import type { JobSpec } from "@sheetal/platform/jobs/registry";
-import { billingJob } from "./modules/billing.js";
+import { billingJob, subscriptionJob } from "./modules/billing.js";
 import { otaJob } from "./modules/insight.js";
 import { reminderJob } from "./modules/reminders.js";
 import { dbOf } from "@sheetal/platform/db/client";
@@ -34,7 +34,7 @@ export function integrationsOf(app: FastifyInstance, fetchFn?: Fetch): Integrati
 }
 
 /** Jobs of the platform itself that run in this API, listed apart from adminJobs() so that list (and the test that pins it) stays as it was. */
-export const adminPlatformJobs = (app: FastifyInstance, integrations: IntegrationService): JobSpec[] => [integrationHealthJob(dbOf(app), integrations, app.log)];
+export const adminPlatformJobs = (app: FastifyInstance, integrations: IntegrationService): JobSpec[] => [integrationHealthJob(dbOf(app), integrations, app.log), subscriptionJob(app)];
 
 declare module "fastify" {
   interface FastifyInstance { integrations?: IntegrationService }
