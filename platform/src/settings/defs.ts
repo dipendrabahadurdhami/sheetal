@@ -40,7 +40,8 @@ export const BUSINESS_PROFILE: SettingDef<z.infer<typeof Answers>> = {
 };
 
 /** The business's own ways to be paid without a gateway (MB section 12, P3-BE-9): a free static QR picture (eSewa, Fonepay or bank QR) shown
- *  at its checkouts, and the words under it. Never used for Sheetal's own payments. */
+ *  at its checkouts, and the words under it. Never used for Sheetal's own payments.
+ *  Not in SETTING_DEFS yet: it joins the list (and the pinned business list in settings-pure.test.ts) with its screen (P3-FE-2). */
 const BusinessPayments = z.object({
   staticQr: z.object({ fileId: z.string().max(100).nullable(), label: z.string().trim().max(120) }).strict(),
 }).strict();
@@ -59,7 +60,7 @@ export const formDefSetting = (seed: FormDef): SettingDef<FormDef> => ({
 export const FORM_SETTINGS: readonly SettingDef<FormDef>[] = FORM_SEEDS.map(formDefSetting);
 export const formSetting = (formId: string): SettingDef<FormDef> | null => FORM_SETTINGS.find((d) => d.key === `platform.fieldDefs.${formId}`) ?? null;
 
-export const SETTING_DEFS: readonly SettingDef<never>[] = [REVENUE_SHARE, PLATFORM_THEME, BUSINESS_THEME, BUSINESS_PROFILE, ...FORM_SETTINGS, CATALOG_SETTING, BILLING_SETTING, BUSINESS_PAYMENTS] as unknown as SettingDef<never>[];
+export const SETTING_DEFS: readonly SettingDef<never>[] = [REVENUE_SHARE, PLATFORM_THEME, BUSINESS_THEME, BUSINESS_PROFILE, ...FORM_SETTINGS, CATALOG_SETTING, BILLING_SETTING] as unknown as SettingDef<never>[];
 export const settingOf = (key: string): SettingDef | null => (SETTING_DEFS as unknown as SettingDef[]).find((d) => d.key === key) ?? null;
 
 /** The definitions of one scope, grouped for a screen (no values, no schema). */
