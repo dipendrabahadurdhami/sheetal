@@ -39,6 +39,17 @@ export const BUSINESS_PROFILE: SettingDef<z.infer<typeof Answers>> = {
   label: { en: "Business profile answers" }, read: "workspace.settings.update", write: "workspace.settings.update",
 };
 
+/** The business's own ways to be paid without a gateway (MB section 12, P3-BE-9): a free static QR picture (eSewa, Fonepay or bank QR) shown
+ *  at its checkouts, and the words under it. Never used for Sheetal's own payments. */
+const BusinessPayments = z.object({
+  staticQr: z.object({ fileId: z.string().max(100).nullable(), label: z.string().trim().max(120) }).strict(),
+}).strict();
+export const BUSINESS_PAYMENTS: SettingDef<z.infer<typeof BusinessPayments>> = {
+  key: "business.payments", scope: "business", schema: BusinessPayments, default: { staticQr: { fileId: null, label: "" } }, group: "payments",
+  label: { en: "Ways to be paid" }, help: { en: "A QR picture your customers can scan to pay you directly. Payments to you never pass through Sheetal." },
+  read: "workspace.settings.update", write: "workspace.settings.update",
+};
+
 /** One setting per form of the field builder. The guard is the field builder's own rules (archive, never delete; keys and types never change). */
 export const formDefSetting = (seed: FormDef): SettingDef<FormDef> => ({
   key: `platform.fieldDefs.${seed.id}`, scope: "platform", schema: FormDef, default: seed, group: "fields",
@@ -48,7 +59,7 @@ export const formDefSetting = (seed: FormDef): SettingDef<FormDef> => ({
 export const FORM_SETTINGS: readonly SettingDef<FormDef>[] = FORM_SEEDS.map(formDefSetting);
 export const formSetting = (formId: string): SettingDef<FormDef> | null => FORM_SETTINGS.find((d) => d.key === `platform.fieldDefs.${formId}`) ?? null;
 
-export const SETTING_DEFS: readonly SettingDef<never>[] = [REVENUE_SHARE, PLATFORM_THEME, BUSINESS_THEME, BUSINESS_PROFILE, ...FORM_SETTINGS, CATALOG_SETTING, BILLING_SETTING] as unknown as SettingDef<never>[];
+export const SETTING_DEFS: readonly SettingDef<never>[] = [REVENUE_SHARE, PLATFORM_THEME, BUSINESS_THEME, BUSINESS_PROFILE, ...FORM_SETTINGS, CATALOG_SETTING, BILLING_SETTING, BUSINESS_PAYMENTS] as unknown as SettingDef<never>[];
 export const settingOf = (key: string): SettingDef | null => (SETTING_DEFS as unknown as SettingDef[]).find((d) => d.key === key) ?? null;
 
 /** The definitions of one scope, grouped for a screen (no values, no schema). */
