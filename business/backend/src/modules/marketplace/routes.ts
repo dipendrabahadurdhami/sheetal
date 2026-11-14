@@ -246,7 +246,8 @@ export async function marketplaceRoutes(app: FastifyInstance, opts: { fetch?: Fe
       // Nothing to pay (a 100% coupon or a free switch): applied at once, no tax invoice number (MB 9.1).
       const p = await db().payment.create({ data: { invoiceId: invoice.id, tenantId: t.id, provider: "coupon", amount: 0, amountPaisa: 0n, ref: `SA0${randomBytes(5).toString("hex").toUpperCase()}`, userId: ws.user.id } });
       const share = await store().get(REVENUE_SHARE);
-      await db().$transaction((tx) => applySubscriptionPayment(tx, { paymentId: p.id, now: new Date(), appSales: share.appSales, share, seller: { name: (await platformSettings(db())).siteName } }));
+      const seller = { name: (await platformSettings(db())).siteName };
+      await db().$transaction((tx) => applySubscriptionPayment(tx, { paymentId: p.id, now: new Date(), appSales: share.appSales, share, seller }));
       return { message: "Done. Your apps are ready.", data: { invoiceId: invoice.id, paid: true } };
     }
     return { data: { ...(await startPayment(ws, invoice, b.provider)), totalPaisa: q.totalPaisa } };
