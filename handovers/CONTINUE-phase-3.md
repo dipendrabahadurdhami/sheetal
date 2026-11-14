@@ -1,4 +1,4 @@
-# CONTINUE Phase 3 (updated 14 Nov 2026, about 10:00 Nepal time)
+# CONTINUE Phase 3 (updated 14 Nov 2026, about 12:00 Nepal time)
 
 Phase 3 is being built stage by stage (PHASE-3-TASKS.md order). Read this, then `docs/architecture/PHASE-3-TEST-PLAN.md`, then the CHANGES notes named below.
 
@@ -12,17 +12,18 @@ Phase 3 is being built stage by stage (PHASE-3-TASKS.md order). Read this, then 
 | 5 | #69 | BE-4 | tax invoices at payment, subscription payments, revenue ledger, credit notes, `fiscalYearOf` in Nepal time (`CHANGES-P3-BE-4.md`) |
 | 6 | #70 | BE-9 | payment router (two systems, no fall-back), paisa amount check, `business.payments` definition (`CHANGES-P3-BE-9.md`) |
 | 7 | #71 | BE-5 | hourly lifecycle job: statuses, one renewal invoice per business, reminders; the old plan cycle skips `apps` (`CHANGES-P3-BE-5.md`) |
+| 8 | #73 | BE-6 | business marketplace API: install, trial (once per app and per owner), cart quote = invoice, checkout with Sheetal's own gateways to the paisa, change/cancel/resume/remove, coupons, overview; old plan checkout refuses app invoices (`CHANGES-P3-BE-6.md`) |
 
 Every business is still on `billingMode = plans`: nothing has changed for any customer. `salesEnabled` is false.
 
 ## Next, in order
-1. **BE-6** business routes: `/marketplace`, `/subscriptions` (install, trial, quote, checkout, change, cancel, resume), `/addons/*`, `/coupons/check`,
-   `/billing/overview`, usage counters on `/entitlements`. Checkout: `quote()` -> `createInvoiceFromQuote()` -> `resolvePaymentMethods("sheetal.subscription")`
-   -> gateway with `rupeesText(totalPaisa)` -> verify with `amountMatches()` -> `applyPayment()` (already routes kind `subscription`). Register `business.payments`
-   in SETTING_DEFS with its screen and update the pinned list in `platform/test/settings-pure.test.ts` (say so in CHANGES).
-2. **BE-7** admin routes (refunds call `issueCreditNote`, maker-checker `PlatformApproval`); **BE-8** AI credits; **BE-10** migration script
-   (reuse `platform/src/billing/mapping.ts`); **BE-11** website posting.
-3. FE-1..6, OPS-1, OPS-2 (the customer move needs the owner's yes at each step, backup first).
+1. **BE-7** admin routes: `GET|PUT /admin/pricing` (catalog with reason; refuse hiding an edition with subscribers), `/admin/coupons`, `/admin/subscriptions`
+   (grant/extend with reason: `platform.subscription.grant`, new permission), `/admin/sales`, `/admin/revenue` (from `revenue_entries`, live only), `/admin/refunds`
+   (maker-checker with `PlatformApproval`, executes `issueCreditNote` + `payments.refunded_paisa`), shadow-diff count, the company's legal details for the seller snapshot.
+2. **BE-8** AI credits (grants, spend oldest-expiry first, own key, locked preview); **BE-10** migration script (`--dry-run`, `--apply`, `--restore`; reuse
+   `platform/src/billing/mapping.ts`; add R5 dates/prices, R7 add-ons, R8 AI credits, R9 covered, R10 lock, R11 report); **BE-11** website posting fair use.
+3. FE-1..6 (register `business.payments` in SETTING_DEFS with its screen and update the pinned list in `platform/test/settings-pure.test.ts`, saying so).
+4. OPS-1 (runbook, owner scripts for shadow/pilot), OPS-2 (shadow 7 days → pilot → all): the owner's yes at each step, backup first.
 
 ## Decisions taken so far (all inside the design; see each CHANGES)
 - A cancelled subscription has no grace (MB 5.1 over one row of 5.2). Coupon before price protection. "Carry" below Rs 10.
