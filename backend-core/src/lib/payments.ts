@@ -111,3 +111,31 @@ export async function fonepayVerify(o: { mode: Mode; merchantCode: string; secre
   if (!/<success>\s*true\s*<\/success>/i.test(text)) return { ok: false, reason: "Fonepay hasn't confirmed this payment.", raw: { redirect: q, verify: text.slice(0, 500) } };
   return { ok: true, providerRef: q.UID ?? o.ref, raw: { redirect: q } };
 }
+
+// ───────────── Phase 3 (MARKETPLACE-AND-BILLING.md section 4, P3-BE-9): the amount check in paisa ─────────────
+// Phase 3 invoices can have paisa (Rs 140.53). eSewa and Fonepay answer in rupees with up to two decimals ("140.53"), Khalti in paisa (14053).
+// A payment is marked paid only when the gateway's amount is EXACTLY the invoice's paisa: one paisa off is refused. No floating point.
+
+/** A gateway amount as whole paisa, or null when it is not a clean amount ("12.345", "abc", -1). */
+export function gatewayPaisa(value: unknown, unit: "rupees" | "paisa"): bigint | null {
+  const s = typeof value === "number" ? (Number.isFinite(value) ? String(value) : "") : typeof value === "string" ? value.trim().replace(/,/g, "") : "";
+  if (unit === "paisa") return /^\d{1,15}$/.test(s) ? BigInt(s) : null;
+  const m = /^(\d{1,13})(?:\.(\d{1,2}))?$/.exec(s);
+  if (!m) return null;
+  return BigInt(m[1]!) * 100n + BigInt((m[2] ?? "0").padEnd(2, "0"));
+}
+
+/** Rupees with two decimals for the gateways that take rupees ("140.53"). */
+export const rupeesText = (paisa: bigint | number) => {
+  const p = BigInt(paisa);
+  return `${p / 100n}.${String(p % 100n).padStart(2, "0")}`;
+};
+
+/** The unit each gateway reports amounts in. */
+export const AMOUNT_UNIT: Record<Provider, "rupees" | "paisa"> = { esewa: "rupees", khalti: "paisa", fonepay: "rupees" };
+
+/** true only when the gateway's amount equals the expected paisa exactly. */
+export function amountMatches(provider: Provider, gatewayAmount: unknown, expectedPaisa: bigint | number): boolean {
+  const got = gatewayPaisa(gatewayAmount, AMOUNT_UNIT[provider]);
+  return got !== null && got === BigInt(expectedPaisa);
+}
