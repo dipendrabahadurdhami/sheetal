@@ -97,7 +97,7 @@ export async function adminPricingRoutes(app: FastifyInstance) {
   if (app.db) registerExecutor(db(), {
     action: ACTION, permission: "platform.pricing.manage", label: "Price change with paying customers",
     run: async (row, checker, request, note) => {
-      const p = row.payload as { catalog: Catalog; baseVersion: number; reason: string };
+      const p = row.payload as unknown as { catalog: Catalog; baseVersion: number; reason: string };
       const now = new Date();
       await claimApproval(db(), row.id, { checkerId: checker.user.id, note, now });
       try {
