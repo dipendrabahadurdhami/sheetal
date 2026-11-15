@@ -127,8 +127,9 @@ export async function adminPricingRoutes(app: FastifyInstance) {
 
   const preview = async (request: FastifyRequest, s: Staff, value: unknown) => {
     const prev = await current();
+    // Someone saved first: answered before any other check, so the screen offers "Reload".
+    if ((value as { version?: unknown } | null)?.version !== prev.version) throw versionConflict("The prices");
     const next = checked(value, prev);
-    if (next.version !== prev.version) throw versionConflict("The prices");
     const toSave = { ...next, version: prev.version + 1 };
     const impact = pricingImpact(prev, toSave, await impactCounts(db()));
     const otherApprovers = impact.needsApproval ? (await approversFor(db(), "platform.pricing.manage", s.user.id)).length : 0;
