@@ -91,7 +91,7 @@ export async function adminSalesRoutes(app: FastifyInstance) {
     const [total, sums, rows] = await Promise.all([
       db().revenueEntry.count({ where }),
       db().revenueEntry.aggregate({ where, _sum: { grossPaisa: true, vatPaisa: true, netPaisa: true, commissionPaisa: true, sheetalNetPaisa: true } }),
-      db().revenueEntry.findMany({ where, orderBy: [{ paidAt: "desc" }, { id: "asc" }], ...(csv ? { take: 20_000 } : { skip: (q.page - 1) * per, take: per }) }),
+      db().revenueEntry.findMany({ where, orderBy: [{ paidAt: "desc" }, { id: "asc" }], skip: csv ? 0 : (q.page - 1) * per, take: csv ? 20_000 : per }),
     ]);
     const [tenants, invoices] = await Promise.all([
       db().tenant.findMany({ where: { id: { in: [...new Set(rows.map((x) => x.tenantId))] } }, select: { id: true, name: true } }),
