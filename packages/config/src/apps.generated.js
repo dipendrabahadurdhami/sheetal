@@ -491,6 +491,8 @@ export const APPS = [
       { id: "platform.pricing.manage", label: { en: "Set app prices, editions and free limits" }, scopes: [], default: null, group: "Plans and billing" },
       { id: "platform.revenue.read", label: { en: "See sales and revenue reports" }, scopes: [], default: null, group: "Plans and billing" },
       { id: "platform.revenue_share.manage", label: { en: "Set the technology partner's revenue share" }, scopes: [], default: null, group: "Plans and billing" },
+      { id: "platform.subscription.grant", label: { en: "Give, extend or take back a business's apps" }, scopes: [], default: null, group: "Plans and billing" },
+      { id: "platform.billing.export", label: { en: "Download sales and tax records" }, scopes: [], default: null, group: "Plans and billing" },
       { id: "platform.content.update", label: { en: "Edit site content and listing setup" }, scopes: [], default: null, group: "Site content" },
       { id: "platform.content.publish", label: { en: "Publish content" }, scopes: [], default: null, group: "Site content" },
       { id: "platform.listing.moderate", label: { en: "Approve listings" }, scopes: [], default: null, group: "Moderation" },

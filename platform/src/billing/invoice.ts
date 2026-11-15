@@ -1,7 +1,7 @@
 // Phase 3 invoices (MARKETPLACE-AND-BILLING.md sections 9 and 13): the invoice stored from a quote, the tax invoice number given AT PAYMENT,
 // applying a paid subscription invoice, the revenue ledger with commission and the technology partner's share, and credit notes.
 // Where it fits: the checkout (P3-BE-6) calls createInvoiceFromQuote(); backend-core/src/domain/billing.ts applyPayment() sends invoices of
-// kind "subscription" here (old kinds plan, addon, boost and banner keep their old path); refunds (P3-BE-7) call issueCreditNote().
+// kind "subscription" here (old kinds plan, addon, boost and banner keep their old path); refunds (P3-BE-7, admin/backend/src/modules/refunds.ts) call issueCreditNote().
 // How it works:
 //   - numbers come from one DocCounter row per fiscal year (tenant "__platform__", key "INV:2083-84"), raised with one atomic upsert inside the
 //     payment transaction: two payments at once get consecutive numbers, and a failed payment rolls its number back (no gaps). A zero total
@@ -195,30 +195,50 @@ export async function publishPlatformEvent(tx: Tx, name: string, payload: Record
 // ───────────── Credit notes ─────────────
 
 /**
- * A full credit note for a paid subscription invoice (refunds, P3-BE-7): a new invoice of kind "credit" with the lines negated, its own number,
- * and one "refund" revenue row per original row with the ORIGINAL percentages. Refusing a second credit note for the same invoice is the
- * revenue table's unique key (payment, line, kind). Runs inside the caller's transaction.
+ * A credit note for a paid subscription invoice (refunds, P3-BE-7): a new invoice of kind "credit" with the lines negated, its own number,
+ * and one "refund" revenue row per original row with the ORIGINAL percentages. Without `lineIds` it credits the whole invoice (refused when
+ * any credit note exists); with `lineIds` it credits those lines only (MB 11.5: a part of a bundle), each line at most once. Every credit line
+ * keeps the original line's id (description.creditOfLineId). Runs inside the caller's transaction.
  */
-export async function issueCreditNote(tx: Tx, o: { invoiceId: string; now: Date; by: string; reason: string }) {
+export async function issueCreditNote(tx: Tx, o: { invoiceId: string; now: Date; by: string; reason: string; lineIds?: string[] }) {
   const inv = await tx.invoice.findUniqueOrThrow({ where: { id: o.invoiceId }, include: { lines: true } });
   if (inv.kind !== "subscription" || inv.status !== "paid" || inv.totalPaisa == null) throw new Error("Only a paid subscription invoice can be credited.");
-  if (await tx.invoice.findFirst({ where: { kind: "credit", creditForId: inv.id }, select: { id: true } })) throw new Error("This invoice already has a credit note.");
+  const earlier = await tx.invoice.findMany({ where: { kind: "credit", creditForId: inv.id }, select: { id: true, lines: { select: { description: true } } } });
+  const partial = !!o.lineIds?.length;
+  if (!partial && earlier.length) throw new Error("This invoice already has a credit note.");
+  let chosen = inv.lines;
+  if (partial) {
+    const ids = new Set(o.lineIds);
+    chosen = inv.lines.filter((l) => ids.has(l.id));
+    if (chosen.length !== ids.size || chosen.some((l) => l.grossPaisa <= 0n)) throw new Error("Choose lines of this invoice that were paid for.");
+    const done = new Set<string>(); let whole = false;
+    for (const c of earlier) for (const l of c.lines) {
+      const of = ((l.description ?? {}) as { creditOfLineId?: string }).creditOfLineId;
+      if (of) done.add(of); else whole = true; // a credit note from before line ids were kept covers the whole invoice
+    }
+    if (whole || chosen.some((l) => done.has(l.id))) throw new Error("A line you chose was already credited.");
+  }
+  const sum = (f: (l: (typeof chosen)[number]) => bigint) => chosen.reduce((a, l) => a + f(l), 0n);
+  const money = partial
+    ? { net: sum((l) => l.netPaisa), vat: sum((l) => l.vatPaisa), gross: sum((l) => l.grossPaisa) }
+    : { net: inv.subtotalPaisa ?? 0n, vat: inv.vatPaisa ?? 0n, gross: inv.totalPaisa };
   const fy = fiscalYear(o.now);
   const no = await nextTaxNumber(tx, fy);
-  const neg = (b: bigint | null) => -(b ?? 0n);
   const credit = await tx.invoice.create({
     data: {
       tenantId: inv.tenantId, planId: null, months: inv.months, kind: "credit", creditForId: inv.id, status: "paid", paidAt: o.now,
-      subtotal: -inv.subtotal, vat: -inv.vat, total: -inv.total, subtotalPaisa: neg(inv.subtotalPaisa), vatPaisa: neg(inv.vatPaisa), totalPaisa: neg(inv.totalPaisa),
+      subtotal: partial ? -rupees(Number(money.net)) : -inv.subtotal, vat: partial ? -rupees(Number(money.vat)) : -inv.vat, total: partial ? -rupees(Number(money.gross)) : -inv.total,
+      subtotalPaisa: -money.net, vatPaisa: -money.vat, totalPaisa: -money.gross,
       billedTo: inv.billedTo as Prisma.InputJsonValue, sellerSnapshot: (inv.sellerSnapshot ?? {}) as Prisma.InputJsonValue, dueAt: o.now, createdBy: o.by,
       no, fy, issuedAt: o.now, catalogVersion: inv.catalogVersion,
-      lines: { create: inv.lines.map((l) => ({
-        kind: l.kind, appId: l.appId, editionId: l.editionId, subscriptionId: l.subscriptionId, description: l.description as Prisma.InputJsonValue, sort: l.sort, qty: l.qty,
+      lines: { create: chosen.map((l) => ({
+        kind: l.kind, appId: l.appId, editionId: l.editionId, subscriptionId: l.subscriptionId, sort: l.sort, qty: l.qty,
+        description: { ...((l.description ?? {}) as object), creditOfLineId: l.id } as Prisma.InputJsonValue,
         periodStart: l.periodStart, periodEnd: l.periodEnd, unitGrossPaisa: -l.unitGrossPaisa, discountPaisa: -l.discountPaisa, grossPaisa: -l.grossPaisa, netPaisa: -l.netPaisa, vatPaisa: -l.vatPaisa,
       })) },
     },
   });
-  const sales = await tx.revenueEntry.findMany({ where: { invoiceId: inv.id, kind: "sale" } });
+  const sales = await tx.revenueEntry.findMany({ where: { invoiceId: inv.id, kind: "sale", ...(partial ? { invoiceLineId: { in: chosen.map((l) => l.id) } } : {}) } });
   if (sales.length) await tx.revenueEntry.createMany({ data: sales.map((r) => ({
     id: randomUUID(), paymentId: r.paymentId, invoiceId: inv.id, invoiceLineId: r.invoiceLineId, tenantId: r.tenantId, appId: r.appId, editionId: r.editionId,
     kind: "refund", saleType: r.saleType, grossPaisa: -r.grossPaisa, vatPaisa: -r.vatPaisa, netPaisa: -r.netPaisa, commissionBp: r.commissionBp, commissionPaisa: -r.commissionPaisa,
@@ -226,5 +246,5 @@ export async function issueCreditNote(tx: Tx, o: { invoiceId: string; now: Date;
     catalogVersion: r.catalogVersion, paidAt: o.now,
   })) });
   await tx.auditLog.create({ data: { actorId: o.by, tenantId: inv.tenantId, action: "billing.credit_note", target: `${taxNumber(fy, no, "credit")} for ${inv.no && inv.fy ? taxNumber(inv.fy, inv.no) : inv.id}`, meta: { reason: o.reason } } });
-  return { creditId: credit.id, number: taxNumber(fy, no, "credit") };
+  return { creditId: credit.id, number: taxNumber(fy, no, "credit"), totalPaisa: Number(money.gross), lineIds: chosen.map((l) => l.id), whole: !partial };
 }

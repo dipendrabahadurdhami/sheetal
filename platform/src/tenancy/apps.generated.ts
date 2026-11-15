@@ -959,6 +959,8 @@ export const APPS: readonly AppManifest[] = [
       { id: "platform.pricing.manage", label: { en: "Set app prices, editions and free limits" }, scopes: [], default: null, group: "Plans and billing" },
       { id: "platform.revenue.read", label: { en: "See sales and revenue reports" }, scopes: [], default: null, group: "Plans and billing" },
       { id: "platform.revenue_share.manage", label: { en: "Set the technology partner's revenue share" }, scopes: [], default: null, group: "Plans and billing" },
+      { id: "platform.subscription.grant", label: { en: "Give, extend or take back a business's apps" }, scopes: [], default: null, group: "Plans and billing" },
+      { id: "platform.billing.export", label: { en: "Download sales and tax records" }, scopes: [], default: null, group: "Plans and billing" },
       { id: "platform.content.update", label: { en: "Edit site content and listing setup" }, scopes: [], default: null, group: "Site content" },
       { id: "platform.content.publish", label: { en: "Publish content" }, scopes: [], default: null, group: "Site content" },
       { id: "platform.listing.moderate", label: { en: "Approve listings" }, scopes: [], default: null, group: "Moderation" },
@@ -1017,7 +1019,11 @@ export const APPS: readonly AppManifest[] = [
     approvals: [{ action: "platform.billing.refund", label: { en: "Issue a refund above a limit" }, money: true, enabledByDefault: false, approverPermission: "platform.billing.refund" }],
     menu: [],
     events: {
-      publishes: [{ name: "platform.invoice.issued", v: 1, label: "A tax invoice was issued (a subscription paid)", payload: { invoiceId: "id", tenantId: "id", number: "string", totalPaisa: "paisa" } }],
+      publishes: [
+        { name: "platform.invoice.issued", v: 1, label: "A tax invoice was issued (a subscription paid)", payload: { invoiceId: "id", tenantId: "id", number: "string", totalPaisa: "paisa" } },
+        { name: "platform.refund.executed", v: 1, label: "A refund was approved and its credit note issued", payload: { invoiceId: "id", tenantId: "id", number: "string", amountPaisa: "paisa" } },
+        { name: "platform.catalog.changed", v: 1, label: "App prices, editions or limits were changed", payload: { version: "number", priceRises: "number" } },
+      ],
       consumes: [],
     },
     ai: [],
