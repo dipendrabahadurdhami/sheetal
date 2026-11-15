@@ -15,8 +15,7 @@ import type { Prisma, PlatformApproval } from "@prisma/client";
 import { z } from "zod";
 import { dbOf, type Db } from "@sheetal/platform/db/client";
 import { AppError, badRequest, conflict, forbidden, notFound } from "@sheetal/platform/core/errors";
-import { hasPerm } from "@sheetal/platform/tenancy/perms";
-import { STAFF_GRANTS } from "@sheetal/platform/tenancy/staff-roles";
+import { PLATFORM_ROLES, hasPerm } from "@sheetal/backend-core/domain/permissions";
 import { notify } from "@sheetal/platform/notify/index";
 import { staffOf, type Staff } from "./routes.js";
 
@@ -40,7 +39,7 @@ export const registerExecutor = (db: Db, e: Executor) => { executorsOf(db).set(e
 
 /** Staff (other than `except`) whose role holds `perm`: the people who could approve. */
 export async function approversFor(db: Db, perm: string, except?: string): Promise<{ id: string }[]> {
-  const roles = [...STAFF_GRANTS].filter(([, perms]) => hasPerm(perms, perm)).map(([r]) => r);
+  const roles = Object.keys(PLATFORM_ROLES).filter((r) => hasPerm(PLATFORM_ROLES[r]!, perm));
   return db.user.findMany({ where: { platformRole: { in: roles }, status: "active", ...(except ? { id: { not: except } } : {}) }, select: { id: true } });
 }
 
