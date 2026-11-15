@@ -20,6 +20,7 @@ import { BILLING_SETTING, CATALOG_SETTING, publicCatalog, withNewApps } from "@s
 import { addNepalDays, anchorOf } from "@sheetal/platform/billing/days";
 import { effectiveStatus } from "@sheetal/platform/billing/effective-status";
 import { applySubscriptionPayment, createInvoiceFromQuote, taxNumber } from "@sheetal/platform/billing/invoice";
+import { COMPANY_SETTING, sellerSnapshot } from "@sheetal/platform/billing/company";
 import { quote } from "@sheetal/platform/billing/quote";
 import type { BillingState, CartItem, CouponInput, SubscriptionState, SubscriptionStatus } from "@sheetal/platform/billing/types";
 import { loadPaymentConnections, resolvePaymentMethods } from "@sheetal/platform/payments/router";
@@ -246,7 +247,7 @@ export async function marketplaceRoutes(app: FastifyInstance, opts: { fetch?: Fe
       // Nothing to pay (a 100% coupon or a free switch): applied at once, no tax invoice number (MB 9.1).
       const p = await db().payment.create({ data: { invoiceId: invoice.id, tenantId: t.id, provider: "coupon", amount: 0, amountPaisa: 0n, ref: `SA0${randomBytes(5).toString("hex").toUpperCase()}`, userId: ws.user.id } });
       const share = await store().get(REVENUE_SHARE);
-      const seller = { name: (await platformSettings(db())).siteName };
+      const seller = sellerSnapshot(await store().get(COMPANY_SETTING), (await platformSettings(db())).siteName);
       await db().$transaction((tx) => applySubscriptionPayment(tx, { paymentId: p.id, now: new Date(), appSales: share.appSales, share, seller }));
       return { message: "Done. Your apps are ready.", data: { invoiceId: invoice.id, paid: true } };
     }
