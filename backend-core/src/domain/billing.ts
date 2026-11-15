@@ -23,6 +23,7 @@ import { payBanners } from "./banners.js";
 import { SettingsService } from "@sheetal/platform/settings/service";
 import { REVENUE_SHARE } from "@sheetal/platform/settings/defs";
 import { applySubscriptionPayment } from "@sheetal/platform/billing/invoice";
+import { COMPANY_SETTING, sellerSnapshot } from "@sheetal/platform/billing/company";
 
 /** The settings store only logs a stored value that no longer fits its definition (it then uses the default). */
 const QUIET = { warn: () => undefined };
@@ -160,7 +161,8 @@ export async function applyPayment(db: Db, mailer: Mailer, o: { paymentId: strin
     if (p.invoice.kind === "subscription") {
       // Phase 3: per-app subscriptions (platform/src/billing/invoice.ts): tax invoice number at payment, subscriptions, revenue rows.
       const share = await new SettingsService(db, QUIET).get(REVENUE_SHARE);
-      const seller = { name: (await platformSettings(db)).siteName };
+      // Sheetal's own details as they are now (platform.company): copied into the invoice, so a later edit never changes it.
+      const seller = sellerSnapshot(await new SettingsService(db, QUIET).get(COMPANY_SETTING), (await platformSettings(db)).siteName);
       const r = await applySubscriptionPayment(tx, { paymentId: p.id, now, providerRef: o.providerRef ?? null, raw: o.raw, reviewedBy: o.reviewedBy ?? null, appSales: share.appSales, share, seller });
       return r.applied ? { p, tenant, end: now, v3: true as const } : null;
     }
