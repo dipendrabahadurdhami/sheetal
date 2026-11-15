@@ -41,6 +41,12 @@ import { adminCatalogRoutes } from "./modules/catalog.js";
 import { adminSupportRoutes } from "./modules/support.js";
 import { adminImpersonationRoutes } from "./modules/impersonation.js";
 import { staffOf } from "./modules/routes.js";
+import { adminApprovalRoutes } from "./modules/platform-approvals.js";
+import { adminPricingRoutes } from "./modules/pricing.js";
+import { adminCouponRoutes } from "./modules/coupons.js";
+import { adminSubscriptionRoutes } from "./modules/subscriptions.js";
+import { adminSalesRoutes } from "./modules/sales.js";
+import { adminRefundRoutes } from "./modules/refunds.js";
 
 export async function buildApp(config: Config, deps: AppDeps & { fetch?: Fetch } = {}): Promise<FastifyInstance> {
   const app = await buildBaseApp(config, deps);
@@ -66,6 +72,13 @@ export async function buildApp(config: Config, deps: AppDeps & { fetch?: Fetch }
   await app.register(adminCatalogRoutes, { prefix: "/v1" });
   await app.register(adminSupportRoutes, { prefix: "/v1" });
   await app.register(adminImpersonationRoutes, { prefix: "/v1" });
+  // Phase 3 (P3-BE-7): pricing with approval of rises, coupons, subscriptions and gifts, sales and revenue, VAT, refunds with maker-checker.
+  await app.register(adminPricingRoutes, { prefix: "/v1" });
+  await app.register(adminCouponRoutes, { prefix: "/v1" });
+  await app.register(adminSubscriptionRoutes, { prefix: "/v1" });
+  await app.register(adminSalesRoutes, { prefix: "/v1" });
+  await app.register(adminRefundRoutes, { prefix: "/v1" });
+  await app.register(adminApprovalRoutes, { prefix: "/v1" });
   // The Integration Center (stage 1.3): every outside service in one place, details -> test -> live -> paused. The old Admin -> Settings connection
   // routes above stay as aliases; platform/src/integrations/legacy.ts keeps their settings rows and the connections in step.
   // The typed settings store, the field builder, the theme and the revenue report (stage 1.4).

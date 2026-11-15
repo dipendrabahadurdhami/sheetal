@@ -64,6 +64,8 @@ export async function settingsAdminRoutes(app: FastifyInstance, o: SettingsRoute
     const def = platformDef(req, staff);
     staff.permissions.require(def.write, "Your staff role can't change this setting.");
     if (def.key.startsWith("platform.fieldDefs.")) throw badRequest("Change a form on the Field builder screen.");
+    // App prices go through Admin -> Pricing, which counts who is affected and asks for approval of a rise (P3-BE-7).
+    if (def.key === "platform.catalog") throw badRequest("Change app prices on the Pricing screen.");
     const b = PutBody.parse(req.body);
     const value = await settings.set(def, b.value, who(req, staff, b.reason), PLATFORM_OWNER);
     return { message: "Saved.", data: { key: def.key, value, isDefault: false } };
