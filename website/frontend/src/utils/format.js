@@ -85,7 +85,6 @@ export function planFeatures(pl = {}) {
   if (L != null && L !== "") out.push([true, `${lim(L)} listings / month`]);
   if (pl.max_featured != null && pl.max_featured !== "") out.push([Number(pl.max_featured) !== 0, Number(pl.max_featured) === 0 ? "No featured listings" : `${lim(pl.max_featured)} featured listings`]);
   if (pl.homepage_banner != null) out.push([!!Number(pl.homepage_banner) || pl.homepage_banner === true, "Homepage banner"]);
-  if (pl.verified_badge != null) out.push([!!Number(pl.verified_badge) || pl.verified_badge === true, "Verified badge"]);
   if (pl.priority_support != null) out.push([!!Number(pl.priority_support) || pl.priority_support === true, "Priority support"]);
   (Array.isArray(pl.features) ? pl.features : []).forEach((x) => { if (!out.some(([, t]) => t.toLowerCase() === String(x).toLowerCase())) out.push([true, String(x)]); });
   if (!out.length) out.push([true, "Buyer requests and enquiries"]);

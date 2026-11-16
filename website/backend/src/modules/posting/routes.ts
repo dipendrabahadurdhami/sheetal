@@ -1,8 +1,11 @@
 // Posting a listing from the website, the person's own listings, plans and upgrade requests.
 // Where it fits: the website's Post property, My properties and Plans pages.
 // How it works: a listing always belongs to a business (the person's own; anyone without one gets a free Starter
-// business), lands in its head office, and waits for Sheetal's review (staff are notified).
-// Rules: plan limits apply; photos are checked to be real images; upgrade requests go to Sheetal's team.
+// business) and lands in its head office. Posting is free (P3-BE-11): the platform.posting setting caps posts per person per Nepal day
+// (higher for a business Sheetal has checked), and a checked business's post goes live at once; every other post waits for Sheetal's
+// review (staff are notified). A business still on billingMode "plans" also keeps its plan's listing limit (MB 8.6: old answers until it
+// moves); on "shadow" or "apps" the plan limit no longer applies here.
+// Rules: photos are checked to be real images; upgrade requests go to Sheetal's team; no answer says whether a business was checked.
 
 import { platformSettings } from "@sheetal/backend-core/domain/platform";
 import type { FastifyInstance } from "fastify";
@@ -16,7 +19,11 @@ import { requireUser, type SessionUser } from "@sheetal/backend-core/modules/aut
 import { createWorkspace } from "@sheetal/backend-core/modules/accounts/workspace";
 import { PERIODS, priceFor } from "@sheetal/backend-core/domain/plans";
 import { hasPerm } from "@sheetal/backend-core/domain/permissions";
-import { COUNTED, listingCap } from "@sheetal/backend-core/domain/listings";
+import { COUNTED, FIRST_CHECKUP_DAYS, listingCap } from "@sheetal/backend-core/domain/listings";
+import { SettingsService } from "@sheetal/platform/settings/service";
+import { POSTING_SETTING } from "@sheetal/platform/settings/posting";
+import { CATALOG_SETTING, withNewApps } from "@sheetal/platform/billing/catalog";
+import { startOfNepalDay } from "@sheetal/platform/billing/days";
 import { listingCard, mediaBase } from "../catalog/present.js";
 import { savePhoto } from "@sheetal/backend-core/lib/photos";
 
@@ -29,6 +36,7 @@ const slugify = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[^a-z0
 
 export async function postingRoutes(app: FastifyInstance) {
   const base = mediaBase(app.config);
+  let store: SettingsService | null = null;
 
   /** The workspace a person posts into; old-site accounts without one get a free Starter workspace. */
   async function workspaceFor(user: SessionUser) {
@@ -75,10 +83,21 @@ export async function postingRoutes(app: FastifyInstance) {
 
     const db = dbOf(app);
     const ws = await workspaceFor(user);
-    const cap = listingCap(ws.plan);
-    if (cap !== -1 && (await db.listing.count({ where: { tenantId: ws.tenantId, ...OPEN } })) >= cap) {
-      throw new AppError(402, "listing_limit", cap === 1 ? "The free Starter plan has room for one listing. Mark it sold or upgrade to post more." : `Your plan has room for ${cap} listings. Upgrade to post more.`);
+    const tenant = await db.tenant.findUniqueOrThrow({ where: { id: ws.tenantId }, select: { billingMode: true, verification: true } });
+    store ??= new SettingsService(db as never, app.log);
+    const rules = await store.get(POSTING_SETTING);
+    const checked = tenant.verification === "verified";
+    // Fair use: posts by this person since the start of today (Nepal time), removed ones included.
+    const perDay = checked ? rules.fairUse.perDayChecked : rules.fairUse.perDay;
+    const today = await db.listing.count({ where: { userId: user.id, submittedAt: { gte: startOfNepalDay(new Date()) } } });
+    if (today >= perDay) throw new AppError(429, "posting_fair_use", `You can post ${perDay} properties a day. Try again tomorrow, or ask Sheetal's team if you need more.`, undefined, { perDay });
+    if (tenant.billingMode === "plans") {
+      const cap = listingCap(ws.plan);
+      if (cap !== -1 && (await db.listing.count({ where: { tenantId: ws.tenantId, ...OPEN } })) >= cap) {
+        throw new AppError(402, "listing_limit", cap === 1 ? "The free Starter plan has room for one listing. Mark it sold or upgrade to post more." : `Your plan has room for ${cap} listings. Upgrade to post more.`);
+      }
     }
+    const goLive = checked && rules.checkedGoLive;
 
     const opts = await optionNames();
     const rent = b.purpose_id === 2;
@@ -94,7 +113,8 @@ export async function postingRoutes(app: FastifyInstance) {
         code: `TMP-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, slug: `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         tenantId: ws.tenantId, branchId: await headOffice(db, ws.tenantId), userId: user.id, kind: rent ? "rentout" : "sell", purpose: rent ? "rent" : "sale",
         category: b.propertycategory ?? "House", propertyType: b.property_type ?? (b.propertytype_id ? opts.types[b.propertytype_id - 1] : undefined),
-        title: b.name, description: strip(b.property_description), highlights: strip(b.property_highlights), status: "pending", submittedAt: new Date(),
+        title: b.name, description: strip(b.property_description), highlights: strip(b.property_highlights), submittedAt: new Date(),
+        ...(goLive ? { status: "published" as const, publishedAt: new Date(), reviewedAt: new Date(), checkDueAt: new Date(Date.now() + FIRST_CHECKUP_DAYS * 864e5) } : { status: "pending" as const }),
         price: price ? BigInt(Math.round(price)) : null, pricePer: rent ? "month" : null,
         district: b.district, city: b.town, area: b.tol ?? b.property_location, ward: b.ward_no, ...ll,
         bedrooms: b.bedrooms, bathrooms: b.bathrooms, kitchens: b.kitchens, livingRooms: b.living_room, floors: b.floors, parking: b.parking,
@@ -106,6 +126,10 @@ export async function postingRoutes(app: FastifyInstance) {
       } });
       return tx.listing.update({ where: { id: l.id }, data: { code: `SP-${String(l.id).padStart(4, "0")}`, slug: `${slugify(b.name)}-${l.id}` }, include: { photos: true } });
     });
+    if (goLive) {
+      await db.auditLog.create({ data: { action: "listing.published", actorId: user.id, tenantId: ws.tenantId, target: created.code, ip: request.ip, meta: { via: "website", review: "skipped (checked business)" } } });
+      return { status: 200, message: "Posted. It's live on the website.", data: { ...listingCard(created, base), listing_status: created.status } };
+    }
     await notifyStaff(db, STAFF_FOR.listingReview, { type: "review", title: "Listing to review", message: `${created.title} · posted on the website`, link: "/admin/moderation" });
     return { status: 200, message: "Posted. Sheetal checks every listing before it goes live, usually within a day.", data: { ...listingCard(created, base), listing_status: created.status } };
   });
@@ -144,12 +168,35 @@ export async function postingRoutes(app: FastifyInstance) {
     return { status: 200, message: b.sold ? (status === "rented" ? "Marked as rented out." : "Marked as sold.") : "Available again." };
   });
 
-  // ───── Plans and upgrades ─────
+  // ───── "Start free" (P3-BE-11): the hand-off from the website's Apps and Pricing pages to the business panel ─────
+  // The person's business (one where they manage billing), or a new free one; the answer is where to open the marketplace. Nothing is sold here.
+  app.post("/start-free", { config: { rateLimit: { max: 10, timeWindow: "1 minute" } } }, async (request) => {
+    const user = requireUser(request);
+    const b = z.object({ app: z.string().trim().max(40).optional(), type: z.enum(["agency", "hotel", "host", "developer", "sponsor"]).default("agency") }).strict().parse(request.body ?? {});
+    const db = dbOf(app);
+    store ??= new SettingsService(db as never, app.log);
+    if (b.app) {
+      const cat = withNewApps(await store.get(CATALOG_SETTING));
+      const a = cat.apps[b.app];
+      if (!a || !a.visible || a.availability !== "live") throw badRequest("That app isn't in the marketplace.");
+    }
+    const own = user.memberships.find((m) => m.status === "active" && hasPerm(m.role.perms, "workspace.billing.manage"));
+    let tenantId = own?.tenantId;
+    if (!tenantId) {
+      const { trialDays } = await platformSettings(db);
+      tenantId = (await db.$transaction((tx) => createWorkspace(tx, { ownerId: user.id, name: user.userName, type: b.type, email: user.email, phone: user.phone ?? undefined, trialDays }))).id;
+    }
+    return { status: 200, data: { business_id: tenantId, created: !own, link: `/business/marketplace${b.app ? `?app=${encodeURIComponent(b.app)}` : ""}` } };
+  });
+
+  // ───── Plans and upgrades (kept while businesses are on Starter / Business / Pro; the public catalog replaces them, MB 8.6) ─────
   app.get("/subscription-plans", async (request) => {
     const { type } = z.object({ type: z.enum(["agency", "hotel", "host", "developer", "sponsor"]).default("agency") }).parse(request.query);
     const plans = await dbOf(app).plan.findMany({ where: { type, active: true }, orderBy: { sort: "asc" } });
     return {
       status: 200,
+      // The apps and their prices: GET /v1/public/catalog (P3-BE-1); the website's Pricing page moves to it (P3-FE-5).
+      moved_to: "/v1/public/catalog",
       data: plans.map((p) => ({
         id: p.id, type: p.type, name: p.name, slug: p.name.toLowerCase(), price: p.price, limits: p.limits, features: p.features,
         periods: PERIODS.map((x) => ({ months: x.months, save: x.save, price: priceFor(p.price, x.months), saving: p.price * x.months - priceFor(p.price, x.months) })),

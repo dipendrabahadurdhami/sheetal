@@ -109,8 +109,7 @@ export function agencyJson(a: AgencyRow) {
     company_name: a.name,
     address: a.address || (a.city ? `${a.city}, Nepal` : "Nepal"),
     website_url: a.website ?? null,
-    // Documents checked by Sheetal.
-    is_verified: !!a.verifiedAt,
+    // Whether Sheetal checked the business's documents is never public (TEAM-RULES; P3-BE-11): no field for it here.
     phone: a.phone,
     whatsapp: a.phone,
     email: a.email,
