@@ -38,6 +38,7 @@ import { businessContextOf, workspaceOf } from "./modules/access.js";
 import { entitlementRoutes } from "./modules/entitlements/routes.js";
 import { marketplaceRoutes } from "./modules/marketplace/routes.js";
 import { aiCreditRoutes } from "./modules/aicredits/routes.js";
+import { ownAiKeyRoutes } from "./modules/aicredits/own-keys.js";
 import { CONSUMERS, businessJobs, eventsOf, platformJobs } from "./jobs.js";
 import { effectiveLimits } from "@sheetal/backend-core/domain/addons";
 import { ApprovalService } from "@sheetal/platform/approvals/service";
@@ -91,6 +92,7 @@ export async function buildApp(config: Config, deps: AppDeps & { resolver?: Reso
   // Phase 3 (P3-BE-6): the marketplace: apps, trials, the cart and checkout, subscriptions, add-ons, coupons, the billing overview.
   await app.register(marketplaceRoutes, { prefix: "/v1", fetch: deps.fetch });
   await app.register(aiCreditRoutes, { prefix: "/v1" });   // Sheetal AI credits and the AI state (P3-BE-8)
+  await app.register(ownAiKeyRoutes, { prefix: "/v1", fetch: deps.fetch });   // the business's own AI accounts and business.ai (P3-FE-6)
   await app.register(hotelRoutes, { prefix: "/v1", contextOf: businessContextOf, fetch: deps.fetch });   // rooms, bookings, front desk, other sites
   await app.register(posRoutes, { prefix: "/v1", contextOf: businessContextOf });   // point of sale and stock
   await app.register(projectRoutes, { prefix: "/v1", contextOf: businessContextOf });

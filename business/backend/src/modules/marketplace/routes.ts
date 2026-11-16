@@ -15,7 +15,7 @@ import { AppError, badRequest, forbidden, notFound } from "@sheetal/platform/cor
 import { dbOf, type Db } from "@sheetal/platform/db/client";
 import { SettingsService } from "@sheetal/platform/settings/service";
 import { Vault } from "@sheetal/platform/auth/vault";
-import { BILLING_SETTING, CATALOG_SETTING, publicCatalog, withNewApps } from "@sheetal/platform/billing/catalog";
+import { BILLING_SETTING, CATALOG_SETTING, publicCatalog, withAiApp, withNewApps } from "@sheetal/platform/billing/catalog";
 import { addNepalDays, anchorOf } from "@sheetal/platform/billing/days";
 import { effectiveStatus } from "@sheetal/platform/billing/effective-status";
 import { applySubscriptionPayment, createInvoiceFromQuote, taxNumber } from "@sheetal/platform/billing/invoice";
@@ -51,7 +51,8 @@ export async function marketplaceRoutes(app: FastifyInstance, opts: { fetch?: Fe
   }
   const settings = async () => {
     const s = store();
-    return { catalog: withNewApps(await s.get(CATALOG_SETTING)), billing: await s.get(BILLING_SETTING) };
+    // Sheetal AI plans are sold as a hidden app (P3-FE-6); publicCatalog() leaves hidden apps out, so the cards don't change.
+    return { catalog: withAiApp(withNewApps(await s.get(CATALOG_SETTING))), billing: await s.get(BILLING_SETTING) };
   };
   const toState = (s: Awaited<ReturnType<Db["subscription"]["findMany"]>>[number]): SubscriptionState => ({
     appId: s.appId, editionId: s.editionId, status: s.status as SubscriptionStatus, periodMonths: s.periodMonths, priceGrossPaisa: n(s.priceGrossPaisa),

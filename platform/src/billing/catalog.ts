@@ -105,6 +105,26 @@ export function withNewApps(saved: Catalog, seed: Catalog = seedCatalog()): Cata
   return out;
 }
 
+/** The app id a Sheetal AI plan is sold and renewed under (aiAllowance() reads a subscription of this app, editionId = plan key). */
+export const SHEETAL_AI_APP = "sheetal_ai";
+
+/**
+ * The catalog with the Sheetal AI plans as one hidden app (P3-FE-6): each plan becomes a paid edition, so the cart's quote(), the invoice and the
+ * lifecycle job sell and renew a plan exactly like an app. Hidden (visible: false) so it never shows as a marketplace card; the AI page sells it.
+ * Without AI plans in the catalog it returns the catalog unchanged.
+ */
+export function withAiApp(cat: Catalog): Catalog {
+  if (!cat.ai?.plans?.length || cat.apps[SHEETAL_AI_APP]) return cat;
+  const out = structuredClone(cat);
+  out.apps[SHEETAL_AI_APP] = {
+    name: { en: "Sheetal AI" }, availability: "live", visible: false, freeEditionEnabled: false, trialDays: null,
+    editions: Object.fromEntries(cat.ai.plans.map((p) => [p.key, {
+      name: p.name, free: false, priceMonthPaisa: p.priceMonthPaisa, priceYearPaisa: p.priceYearPaisa, limits: {}, features: [...p.features], sort: p.sort,
+    }])),
+  };
+  return out;
+}
+
 // ───────────── Guards (MB 3.3) ─────────────
 
 /** Problems that make a catalog unsafe to save, as plain sentences (the first is shown). prev = the value it replaces. */
