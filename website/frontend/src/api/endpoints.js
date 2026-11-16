@@ -93,6 +93,9 @@ export const api = {
   notifications: () => get("agent-notifications"),
   readAllNotifications: () => post("agent-notifications/read-all"),
   plans: (type) => get("subscription-plans", type ? { type } : undefined),
+  // Phase 3 (P3-FE-5): the public app catalog (prices VAT included, free limits) and the "Start free" hand-off to the business panel.
+  catalog: () => get("public/catalog"),
+  startFree: (app, type) => post("start-free", { ...(app ? { app } : {}), ...(type ? { type } : {}) }),
   requestUpgrade: (plan, months = 1) => post("request-upgrade", { requested_plan: plan, months }),
 
   // blog

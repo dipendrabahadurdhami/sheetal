@@ -21,6 +21,8 @@ import ListingDetail from "./pages/ListingDetail";
 import Partners from "./pages/Partners";
 import AgencyProfile from "./pages/AgencyProfile";
 import Plans from "./pages/Plans";
+import PricingPage from "./pages/Pricing";
+import { AppDetailPage, AppsPage } from "./pages/Apps";
 import Profile from "./pages/Profile";
 import PostProperty from "./pages/PostProperty";
 import { Blog, BlogPost } from "./pages/Blog";
@@ -92,6 +94,10 @@ export default function App() {
           <Route path="/gallery" element={<Gallery />} />
           <Route path="/agencies" element={<Navigate to="/partners?type=agency" replace />} />
           <Route path="/agents" element={<Navigate to="/partners?type=agency" replace />} />
+          {/* Phase 3 (P3-FE-5): the app catalog. /plans stays until the move to apps is signed off. */}
+          <Route path="/apps" element={<AppsPage />} />
+          <Route path="/apps/:id" element={<AppDetailPage />} />
+          <Route path="/pricing" element={<PricingPage />} />
           <Route path="/plans" element={<Plans />} />
           <Route path="/become-agency" element={<Plans />} />
           <Route path="/become-agent" element={<Navigate to="/become-agency" replace />} />

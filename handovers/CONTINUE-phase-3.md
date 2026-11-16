@@ -1,4 +1,4 @@
-# CONTINUE Phase 3 (updated 16 Nov 2026, about 08:00 Nepal time) · Phase 3 about 80% done (by task size: 44 of 55, S=1 M=2 L=3)
+# CONTINUE Phase 3 (updated 16 Nov 2026, about 08:00 Nepal time) · Phase 3 about 84% done (by task size: 46 of 55, S=1 M=2 L=3)
 
 Phase 3 is being built stage by stage (PHASE-3-TASKS.md order). Read this, then `docs/architecture/PHASE-3-TEST-PLAN.md`, then the CHANGES notes named below.
 
@@ -21,18 +21,19 @@ Phase 3 is being built stage by stage (PHASE-3-TASKS.md order). Read this, then 
 | 14 | main | FE-2 | prompt kit `@sheetal/ui/billing` (one error mapper, UpgradePanel replaces the toast, LimitBanner, EditionBadge, AiLocked, ReadOnlyBanner), `useEntitlements()`, menu by app on `apps` (`CHANGES-P3-FE-2.md`) |
 | 15 | main | FE-3 | admin Pricing (editions, limits, features, trials, add-ons, AI plans; who is affected; reason; approval), Coupons, Approvals, a business's App subscriptions (gifts, trial extension, AI credits); bodies in `billing-bodies.ts` (`CHANGES-P3-FE-3.md`) |
 | 16 | main | FE-4 | admin App sales, App revenue (ranges in Nepal time, % change, CSV), App billing (VAT, tax invoices, IRD, refunds, shadow), Legal and required info (company details) (`CHANGES-P3-FE-4.md`) |
+| 17 | main | FE-5 | website `/apps`, `/apps/:id`, `/pricing` from the public catalog, Start free; `/plans` kept until the cutover (`CHANGES-P3-FE-5.md`) |
 
 Every business is still on `billingMode = plans`: nothing has changed for any customer. `salesEnabled` is false.
 
 ## Next, in order
 0. Done: stages 11 and 12 merged (squashed onto main as two commits, tests run on the owner's PC; no PR, `gh` isn't installed and Actions is off).
    While Actions is off: branch, build, run the tests on the owner's PC workspace by workspace, squash onto main, `git push origin main`.
-1. FE-5..6 (FE-1 to FE-4 are done) (register `business.payments` in SETTING_DEFS with its screen and update the pinned list in `platform/test/settings-pure.test.ts`, saying so).
+1. FE-6 (FE-1 to FE-5 are done) (register `business.payments` in SETTING_DEFS with its screen and update the pinned list in `platform/test/settings-pure.test.ts`, saying so).
    FE-6 also needs: buying a Sheetal AI plan / top-up in the cart (quote items; see `CHANGES-P3-BE-8.md` "Not in this stage").
    FE-3/FE-4 use the BE-7 routes (`CHANGES-P3-BE-7.md` lists them); the approvals screen is `GET /admin/approvals` + `POST /admin/approvals/:id/decide`.
    Left from FE-1/FE-2: usage per limit is missing from `GET /entitlements` (Subscriptions shows limits only; `LimitBanner` needs the page's `used`).
    FE-6 places `AiLocked` on the apps' AI buttons.
-   FE-5: replace the website Plans page with `GET /v1/public/catalog`; then `/subscription-plans` and `/request-upgrade` can go.
+   At the cutover: point the website's "Agency plans" links to `/pricing`, then retire `/plans`, `/subscription-plans`, `/request-upgrade`.
 2. OPS-1 (runbook, owner scripts for shadow/pilot; **the switch to `apps` voids the open plan invoices the migration dry run lists**, R10),
    OPS-2 (shadow 7 days → pilot → all): the owner's yes at each step, backup first. Run `npm run billing:migrate` (dry run) before `--apply`.
 
