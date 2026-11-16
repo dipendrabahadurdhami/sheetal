@@ -29,7 +29,7 @@ const titleOfDemand = (d) => (typeof d.requirement === "string" && d.requirement
 const cap = (s) => String(s || "").replace(/^\w/, (c) => c.toUpperCase());
 const typeIcon = (d) => { const w = String(titleOfDemand(d)).toLowerCase(); return w.includes("land") ? Trees : /apartment|flat/.test(w) ? Building2 : /commercial|office|shop|space/.test(w) ? Store : HomeIcon; };
 const demandCode = (d) => `REQ-${String(d.id).padStart(4, "0")}`;
-const posterOf = (d) => cap(d.name || d.full_name || d.user?.name || [d.first_name, d.last_name].filter(Boolean).join(" ") || "Verified buyer");
+const posterOf = (d) => cap(d.name || d.full_name || d.user?.name || [d.first_name, d.last_name].filter(Boolean).join(" ") || "Buyer");
 const initialsOf = (d) => posterOf(d).split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 const shortLoc = (d) => { const l = String(locOf(d) || ""); return l.length > 32 ? l.slice(0, 32).trim() + "…" : l; };
 const budgetText = (d) => { const lo = Number(String(d.minimum_budget ?? "").replace(/[^0-9.]/g, "")) || 0; const hi = budgetOf(d); if (lo && hi && lo !== hi) return `${fmtPrice(lo)} – ${fmtPrice(hi)}`; return hi ? `Up to ${fmtPrice(hi)}` : lo ? `From ${fmtPrice(lo)}` : ""; };

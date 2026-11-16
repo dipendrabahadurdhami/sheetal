@@ -152,10 +152,10 @@ describe("filters, suggestions and agencies", () => {
   it("shows the agency's own address and website from its business profile", async () => {
     await app.db!.tenant.update({ where: { id: agencyId }, data: { address: "Jhamsikhel, Lalitpur", website: "https://sheetal.test" } });
     expect((await get(`/v1/agent-detail/${agencyId}`)).json().data).toMatchObject({ address: "Jhamsikhel, Lalitpur", website_url: "https://sheetal.test" });
-    expect((await get(`/v1/agent-detail/${agencyId}`)).json().data.is_verified).toBe(false);
+    // P3-BE-11 (the owner's rule: public pages never say "verified" or "not verified"): the check by Sheetal is never in a public answer.
+    expect((await get(`/v1/agent-detail/${agencyId}`)).json().data).not.toHaveProperty("is_verified");
     await app.db!.tenant.update({ where: { id: agencyId }, data: { verifiedAt: new Date(), verification: "verified" } });
-    // The agency page shows it at once (the list is cached for up to a minute).
-    expect((await get(`/v1/agent-detail/${agencyId}`)).json().data.is_verified).toBe(true);
+    expect((await get(`/v1/agent-detail/${agencyId}`)).json().data).not.toHaveProperty("is_verified");
   });
 });
 
