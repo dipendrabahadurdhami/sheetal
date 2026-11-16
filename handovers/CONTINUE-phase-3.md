@@ -31,7 +31,11 @@ Every business is still on `billingMode = plans`: nothing has changed for any cu
 ## Cutover log (real data)
 - **Step 1 done, 16 Nov 2026 about 16:55** (the owner's yes in chat): backup `2026-11-16_1655`, then `billing:migrate --apply`: 15 written,
   2 skipped (a plan payment in flight), 0 failed. After it: 17 on `plans`, 15 with app rows, 0 "less". Nobody sees a change. Sales off.
-  Undo: `npm run billing:migrate -- --restore`. **Next real step: `RUN-P3-CUTOVER-2.cmd` (shadow), with the owner's yes.**
+  Undo: `npm run billing:migrate -- --restore`. 
+- **Step 2 done, 16 Nov 2026 about 16:56** (the owner's yes in chat): backup `2026-11-16_1656`, then `billing:mode --to=shadow --all --apply`:
+  15 moved, 0 refused. After it: 2 on `plans` (payment in flight), 15 on `shadow`, 0 "less". The plan still answers; nobody sees a change.
+  Undo: `RUN-P3-GO-BACK.cmd`, type `ALL`. **Shadow runs until 23 Nov 2026. Next real step: `RUN-P3-CUTOVER-3.cmd` (the pilot) or, from
+  23 Nov, `-4` (everyone), each with the owner's yes. Check `RUN-P3-CUTOVER-STATUS.cmd` on the days between.**
 
 ## Next, in order
 While Actions is off: branch, build, run the tests on the owner's PC workspace by workspace, fast-forward main, `git push origin main`.
