@@ -76,4 +76,9 @@ export default {
   "nav.pricing": "Pricing",
   "nav.coupons": "Coupons",
   "nav.approvals": "Approvals",
+  // Admin menu (P3-FE-4).
+  "nav.appSales": "App sales",
+  "nav.appRevenue": "App revenue",
+  "nav.appBilling": "App billing",
+  "nav.legal": "Legal and required info",
 };

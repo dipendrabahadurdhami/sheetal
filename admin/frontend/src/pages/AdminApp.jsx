@@ -22,6 +22,8 @@ import { Pricing } from "./Pricing";
 import { Coupons } from "./Coupons";
 import { PlatformApprovals } from "./PlatformApprovals";
 import { BusinessSubscriptions } from "./BusinessSubscriptions";
+import { BillingV3, Revenue, Sales } from "./SalesRevenue";
+import { LegalInfo } from "./LegalInfo";
 import { LiveAdminPromote } from "./LivePromote";
 import { LiveLeads } from "./LiveLeads";
 import { LiveEarnings } from "./LiveEarnings";
@@ -70,6 +72,11 @@ export default function AdminApp() {
         { to: "/admin/pricing", icon: "tag", key: "nav.pricing", perm: "platform.billing.read" },
         { to: "/admin/coupons", icon: "ticket", key: "nav.coupons", perm: "platform.billing.read" },
         { to: "/admin/approvals", icon: "shield-check", key: "nav.approvals", permAny: ["platform.pricing.manage", "platform.billing.refund"] },
+        // P3-FE-4: app sales, revenue, app billing lists, and the seller's legal details.
+        { to: "/admin/sales", icon: "receipt", key: "nav.appSales", perm: "platform.revenue.read" },
+        { to: "/admin/revenue", icon: "chart-column", key: "nav.appRevenue", perm: "platform.revenue.read" },
+        { to: "/admin/billing-apps", icon: "landmark", key: "nav.appBilling", perm: "platform.billing.read" },
+        { to: "/admin/legal", icon: "file-text", key: "nav.legal", perm: "platform.settings.read" },
       ] : []),
     ] },
     { group: "group.marketplace", items: [
@@ -150,6 +157,10 @@ export default function AdminApp() {
         { path: "/admin/tenants/:id", render: ({ id }) => guard("platform.business.read", <TenantDetail id={id} role={role} />) },
         { path: "/admin/tenants/:id/subscriptions", render: ({ id }) => guard("platform.business.read", <BusinessSubscriptions key={id} id={id} />) },
         { path: "/admin/pricing", render: () => guard("platform.billing.read", <Pricing />) },
+        { path: "/admin/sales", render: () => guard("platform.revenue.read", <Sales />) },
+        { path: "/admin/revenue", render: () => guard("platform.revenue.read", <Revenue />) },
+        { path: "/admin/billing-apps", render: () => guard("platform.billing.read", <BillingV3 />) },
+        { path: "/admin/legal", render: () => guard("platform.settings.read", <LegalInfo />) },
         { path: "/admin/coupons", render: () => guard("platform.billing.read", <Coupons />) },
         { path: "/admin/approvals", render: () => guard(["platform.pricing.manage", "platform.billing.refund"], <PlatformApprovals />) },
         { path: "/admin/plans", render: () => guard("platform.plan.read+platform.plan.create+platform.plan.update+platform.plan.delete", <AdminPlans />) },

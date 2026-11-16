@@ -76,4 +76,9 @@ export default {
   "nav.pricing": "मूल्य निर्धारण",
   "nav.coupons": "कुपन",
   "nav.approvals": "स्वीकृति",
+  // Admin menu (P3-FE-4).
+  "nav.appSales": "एप बिक्री",
+  "nav.appRevenue": "एप आम्दानी",
+  "nav.appBilling": "एप बिलिङ",
+  "nav.legal": "कानुनी र आवश्यक विवरण",
 };

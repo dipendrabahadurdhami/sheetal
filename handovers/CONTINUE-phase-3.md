@@ -1,4 +1,4 @@
-# CONTINUE Phase 3 (updated 16 Nov 2026, about 08:00 Nepal time) · Phase 3 about 76% done (by task size: 42 of 55, S=1 M=2 L=3)
+# CONTINUE Phase 3 (updated 16 Nov 2026, about 08:00 Nepal time) · Phase 3 about 80% done (by task size: 44 of 55, S=1 M=2 L=3)
 
 Phase 3 is being built stage by stage (PHASE-3-TASKS.md order). Read this, then `docs/architecture/PHASE-3-TEST-PLAN.md`, then the CHANGES notes named below.
 
@@ -20,13 +20,14 @@ Phase 3 is being built stage by stage (PHASE-3-TASKS.md order). Read this, then 
 | 13 | main (branch `phase-3/P3-FE-1-marketplace`) | FE-1 | business Marketplace, edition drawer, Cart (one payment), Subscriptions page, price-protection card; only on `apps`; overview answers `lock`; bodies in `marketplace/bodies.ts` (`CHANGES-P3-FE-1.md`) |
 | 14 | main | FE-2 | prompt kit `@sheetal/ui/billing` (one error mapper, UpgradePanel replaces the toast, LimitBanner, EditionBadge, AiLocked, ReadOnlyBanner), `useEntitlements()`, menu by app on `apps` (`CHANGES-P3-FE-2.md`) |
 | 15 | main | FE-3 | admin Pricing (editions, limits, features, trials, add-ons, AI plans; who is affected; reason; approval), Coupons, Approvals, a business's App subscriptions (gifts, trial extension, AI credits); bodies in `billing-bodies.ts` (`CHANGES-P3-FE-3.md`) |
+| 16 | main | FE-4 | admin App sales, App revenue (ranges in Nepal time, % change, CSV), App billing (VAT, tax invoices, IRD, refunds, shadow), Legal and required info (company details) (`CHANGES-P3-FE-4.md`) |
 
 Every business is still on `billingMode = plans`: nothing has changed for any customer. `salesEnabled` is false.
 
 ## Next, in order
 0. Done: stages 11 and 12 merged (squashed onto main as two commits, tests run on the owner's PC; no PR, `gh` isn't installed and Actions is off).
    While Actions is off: branch, build, run the tests on the owner's PC workspace by workspace, squash onto main, `git push origin main`.
-1. FE-4..6 (FE-1 to FE-3 are done) (register `business.payments` in SETTING_DEFS with its screen and update the pinned list in `platform/test/settings-pure.test.ts`, saying so).
+1. FE-5..6 (FE-1 to FE-4 are done) (register `business.payments` in SETTING_DEFS with its screen and update the pinned list in `platform/test/settings-pure.test.ts`, saying so).
    FE-6 also needs: buying a Sheetal AI plan / top-up in the cart (quote items; see `CHANGES-P3-BE-8.md` "Not in this stage").
    FE-3/FE-4 use the BE-7 routes (`CHANGES-P3-BE-7.md` lists them); the approvals screen is `GET /admin/approvals` + `POST /admin/approvals/:id/decide`.
    Left from FE-1/FE-2: usage per limit is missing from `GET /entitlements` (Subscriptions shows limits only; `LimitBanner` needs the page's `used`).
