@@ -29,6 +29,8 @@ export interface EntitlementsV3Input {
   seatsUsed: number;
   /** Apps that are always on (kind "core": the workspace). */
   coreApps?: readonly string[];
+  /** The business's AI state (own key, Sheetal AI or locked), worked out by the loader (platform/src/ai/router.ts aiStateQuick). */
+  ai?: "locked" | "own_key" | "sheetal";
 }
 
 export type EntitlementsV3 = Required<Pick<Entitlements, "access" | "requireWrite" | "requireLimit">> & Entitlements & {
@@ -99,7 +101,8 @@ export function buildEntitlementsV3(o: EntitlementsV3Input): EntitlementsV3 {
     limit,
     feature,
     seats,
-    ai: () => "locked",
+    // The same state for every app's AI features: AI is a business-level product (MB 10.2). Absent = locked.
+    ai: () => o.ai ?? "locked",
     access,
     statuses: () => Object.fromEntries(status),
     requireWrite(appId) {

@@ -116,7 +116,7 @@ describe("fields and safe words", () => {
 describe("registry", () => {
   it("is consistent and offers the right things to each scope", () => {
     expect(registryProblems()).toEqual([]);
-    expect(INTEGRATIONS.filter((i) => i.describe().built).map((i) => i.id).sort()).toEqual(["cloudflare", "esewa", "fonepay", "google", "khalti", "whatsapp"]);
+    expect(INTEGRATIONS.filter((i) => i.describe().built).map((i) => i.id).sort()).toEqual(["ai.anthropic", "ai.gemini", "ai.openai", "cloudflare", "esewa", "fonepay", "google", "khalti", "voice.elevenlabs", "whatsapp"]); // AI built in P3-BE-8
     const biz = specsFor("business").map((s) => s.id);
     expect(biz).toContain("esewa"); expect(biz).toContain("delivery.pathao"); expect(biz).toContain("tax.cbms");
     expect(biz).not.toContain("cloudflare"); expect(biz).not.toContain("google");
@@ -186,5 +186,36 @@ describe("adapters (fake fetch)", () => {
     const down = await integrationOf("cloudflare")!.test(ctxOf({ secrets: { apiToken: "t" }, mode: "live", fetch: dead }));
     expect(down).toEqual({ ok: false, checks: [{ name: "Connection", ok: false, message: "Couldn't reach the service. Check the internet and try again." }] });
     expect((await integrationOf("cloudflare")!.health(ctxOf({ secrets: { apiToken: "t" }, mode: "live", fetch: dead }))).status).toBe("down");
+  });
+});
+
+describe("AI providers (P3-BE-8)", () => {
+  const KEY = "sk-test-ABCDEFGHIJKLMNOPQRSTUVWX-123";
+  it("test() is a one-token completion with the key only in a header", async () => {
+    const f = fake(() => json(200, { model: "claude-x", content: [{ type: "text", text: "ok" }], usage: { input_tokens: 5, output_tokens: 1 } }));
+    const r = await integrationOf("ai.anthropic")!.test(ctxOf({ secrets: { apiKey: KEY }, mode: "live", fetch: f.fetchFn }));
+    expect(r.ok).toBe(true);
+    expect(f.calls[0]!.url).toBe("https://api.anthropic.com/v1/messages");
+    expect(f.calls[0]!.url).not.toContain(KEY);
+    expect((f.calls[0]!.init?.headers as Record<string, string>)["x-api-key"]).toBe(KEY);
+  });
+  it("a refused key fails the test with the key hidden, for every text provider", async () => {
+    for (const id of ["ai.anthropic", "ai.openai", "ai.gemini"]) {
+      const f = fake((url) => json(401, { error: { message: `Incorrect API key provided: ${KEY}` } , url }));
+      const r = await integrationOf(id)!.test(ctxOf({ secrets: { apiKey: KEY }, mode: "live", fetch: f.fetchFn }));
+      expect(r.ok, id).toBe(false);
+      expect(JSON.stringify(r), id).not.toContain(KEY);
+      for (const c of f.calls) expect(c.url, id).not.toContain(KEY);
+    }
+  });
+  it("ElevenLabs tests the key with the voices list and checks the voice id", async () => {
+    const f = fake(() => json(200, { voices: [{ voice_id: "abcdEFGH1234" }] }));
+    const r = await integrationOf("voice.elevenlabs")!.test(ctxOf({ secrets: { apiKey: KEY }, config: { voiceId: "nope1234" }, mode: "live", fetch: f.fetchFn }));
+    expect(r.checks.map((c) => [c.name, c.ok])).toEqual([["API key", true], ["Voice", false]]);
+  });
+  it("no key, no call", async () => {
+    const f = fake(() => json(200, {}));
+    expect((await integrationOf("ai.openai")!.test(ctxOf({ mode: "live", fetch: f.fetchFn }))).ok).toBe(false);
+    expect(f.calls).toHaveLength(0);
   });
 });

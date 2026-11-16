@@ -155,6 +155,16 @@ describe("subscriptions and gifts", () => {
     expect(await db().auditLog.count({ where: { tenantId: t, action: { in: ["billing.grant_given", "billing.grant_revoked"] } } })).toBe(2);
   });
 
+  it("gives Sheetal AI credits with a reason (P3-BE-8)", async () => {
+    const t = await business();
+    expect((await call("fin", "POST", `/admin/subscriptions/${t}/ai-credits`, { credits: 500, days: 30, reason: "Pilot AI credits" })).statusCode).toBe(403);
+    const r = await call("boss", "POST", `/admin/subscriptions/${t}/ai-credits`, { credits: 500, days: 30, reason: "Pilot AI credits" });
+    expect(r.statusCode).toBe(200);
+    expect(r.json().data.balance).toBe(500);
+    expect(await db().aiCreditGrant.findFirstOrThrow({ where: { tenantId: t } })).toMatchObject({ source: "gift", credits: 500, remaining: 500 });
+    expect(await db().auditLog.count({ where: { tenantId: t, action: "billing.ai_credits_given" } })).toBe(1);
+  });
+
   it("extends a running trial with the version, up to 90 days in all", async () => {
     const t = await business();
     const now = Date.now();

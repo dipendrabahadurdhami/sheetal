@@ -378,6 +378,15 @@ export class IntegrationService {
     return { mode: row.mode as Mode, config: asRecord(row.config), secrets: this.reader(row, sets, row.mode as Mode, false) };
   }
 
+  /** The same check as resolve(), as the full context a provider's own calls take (the AI router calls complete() with it). null = not usable. */
+  async contextFor(owner: Owner, id: string): Promise<IntegrationContext | null> {
+    const i = integrationOf(id);
+    if (!i || !i.describe().built || !i.describe().scopes.includes(owner.scope)) return null;
+    const { row, sets } = await this.load(id, owner);
+    if (!row || !usable({ state: row.state as ConnectionState, mode: row.mode as Mode, health: row.healthStatus as HealthStatus }, this.d.env)) return null;
+    return this.ctx(i.describe(), owner, row, sets, { mode: row.mode as Mode, config: asRecord(row.config) });
+  }
+
   /** One round of the health job: every live connection is probed once; three failures in a row = down (told once), the first success clears it. */
   async runHealth(notify?: (o: { row: { id: string; integrationId: string; scope: string; tenantId: string | null }; alert: "down" | "back"; name: string; message: string }) => Promise<void>): Promise<{ checked: number; down: number }> {
     const rows = await this.d.db.integrationConnection.findMany({ where: { state: "live" }, include: { secrets: { where: { status: "active" } } }, take: 500 });

@@ -142,7 +142,7 @@ describe("the list of settings", () => {
     expect(settingProblems()).toEqual([]);
     const groups = describeSettings("platform").map((g) => g.group);
     expect(groups).toEqual(expect.arrayContaining(["revenue", "theme", "fields"]));
-    expect(describeSettings("business").flatMap((g) => g.settings.map((s) => s.key)).sort()).toEqual(["business.profile", "business.theme"]);
+    expect(describeSettings("business").flatMap((g) => g.settings.map((s) => s.key)).sort()).toEqual(["business.ai", "business.profile", "business.theme"]); // business.ai added in P3-BE-8
   });
   it("names the fields that changed, not their values", () => {
     expect(changedFields({ a: 1, b: { x: 1 } }, { a: 1, b: { x: 2 }, c: 3 })).toEqual(["b", "c"]);
