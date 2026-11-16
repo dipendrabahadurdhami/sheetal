@@ -28,6 +28,11 @@ Phase 3 is being built stage by stage (PHASE-3-TASKS.md order). Read this, then 
 
 Every business is still on `billingMode = plans`: nothing has changed for any customer. `salesEnabled` is false.
 
+## Cutover log (real data)
+- **Step 1 done, 16 Nov 2026 about 16:55** (the owner's yes in chat): backup `2026-11-16_1655`, then `billing:migrate --apply`: 15 written,
+  2 skipped (a plan payment in flight), 0 failed. After it: 17 on `plans`, 15 with app rows, 0 "less". Nobody sees a change. Sales off.
+  Undo: `npm run billing:migrate -- --restore`. **Next real step: `RUN-P3-CUTOVER-2.cmd` (shadow), with the owner's yes.**
+
 ## Next, in order
 While Actions is off: branch, build, run the tests on the owner's PC workspace by workspace, fast-forward main, `git push origin main`.
 1. **The cutover on the real data, by the owner, one step at a time** (`docs/p3-cutover-runbook.md`). Ask for the owner's yes before each:
