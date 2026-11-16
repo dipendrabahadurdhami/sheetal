@@ -9,9 +9,11 @@
 //      is made through quote() for every app due (same co-termed date), with price protection for a migrated business and a waiting
 //      downgrade applied. Cancelled ones get none.
 //   3. reminders: at each reminder day count before the end, one note to the owner per period.
+//   4. Sheetal AI plan (appId "sheetal_ai"): the month's credits (aiAllowance in ai-credits.ts), nothing else.
 // Rules: safe to run twice (each step checks it has not been done for this period); one business's failure never stops the others; nothing
 // here charges anyone (Nepal wallets keep no cards); a business on "plans" or "shadow" is never touched.
 
+import { AI_PLAN_APP, aiAllowance } from "./ai-credits.js";
 import type { FastifyBaseLogger } from "fastify";
 import type { Db } from "../db/client.js";
 import { SettingsService } from "../settings/service.js";
@@ -22,7 +24,7 @@ import { createInvoiceFromQuote } from "./invoice.js";
 import { quote } from "./quote.js";
 import type { BillingSettings, Catalog, SubscriptionState, SubscriptionStatus } from "./types.js";
 
-export interface LifecycleSummary { businesses: number; statusChanges: number; renewalInvoices: number; reminders: number; failures: number }
+export interface LifecycleSummary { businesses: number; statusChanges: number; renewalInvoices: number; reminders: number; failures: number; aiAllowances: number }
 
 const MESSAGES: Partial<Record<SubscriptionStatus, (app: string) => { title: string; message: string }>> = {
   past_due: (a) => ({ title: `${a}: payment due`, message: `Your ${a} period has ended. Pay the renewal within the grace days to keep everything as it is.` }),
@@ -50,7 +52,7 @@ export async function runSubscriptionLifecycle(db: Db, o: { log: FastifyBaseLogg
   const store = new SettingsService(db as never, o.log);
   const catalog = o.catalog ?? withNewApps(await store.get(CATALOG_SETTING));
   const settings = o.settings ?? (await store.get(BILLING_SETTING));
-  const out: LifecycleSummary = { businesses: 0, statusChanges: 0, renewalInvoices: 0, reminders: 0, failures: 0 };
+  const out: LifecycleSummary = { businesses: 0, statusChanges: 0, renewalInvoices: 0, reminders: 0, failures: 0, aiAllowances: 0 };
   const tenants = await db.tenant.findMany({ where: { billingMode: "apps" }, select: { id: true, name: true, billingLock: true } });
   const nameOf = (appId: string) => catalog.apps[appId]?.name?.en ?? appId;
 
@@ -60,6 +62,15 @@ export async function runSubscriptionLifecycle(db: Db, o: { log: FastifyBaseLogg
       const subs = await db.subscription.findMany({ where: { tenantId: t.id, uninstalledAt: null }, orderBy: { createdAt: "asc" } });
       const due: string[] = [];
       for (const s of subs) {
+        // A Sheetal AI plan (MB 10.2, P3-BE-8) is business-level, not an app of the catalog: this job only adds its monthly credits
+        // (once per month of a paid period). Its renewal comes with its purchase in the cart.
+        if (s.appId === AI_PLAN_APP) {
+          if (s.periodMonths && s.currentPeriodStart && s.currentPeriodEnd && s.status !== "expired" && now < s.currentPeriodEnd) {
+            const r = await aiAllowance(db, { tenantId: t.id, planKey: s.editionId, periodStart: s.currentPeriodStart, periodEnd: s.currentPeriodEnd, catalog: catalog.ai, now });
+            if (r.created) out.aiAllowances++;
+          }
+          continue;
+        }
         const st = toState(s);
         const app = catalog.apps[s.appId];
         const es = effectiveStatus(st, now, { freeEditionEnabled: app?.freeEditionEnabled ?? false, settings });

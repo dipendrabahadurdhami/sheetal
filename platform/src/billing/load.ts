@@ -14,6 +14,7 @@ import { BILLING_SETTING, CATALOG_SETTING, withNewApps } from "./catalog.js";
 import { buildEntitlementsV3, type EntitlementsV3 } from "./entitlements.js";
 import { compareEntitlements, recordShadow } from "./shadow.js";
 import type { SubscriptionStatus } from "./types.js";
+import { aiStateQuick } from "../ai/router.js";
 
 export type BillingMode = "plans" | "shadow" | "apps";
 export const modeOf = (v: unknown): BillingMode => (v === "apps" || v === "shadow" ? v : "plans");
@@ -30,15 +31,17 @@ const n = (v: bigint | number | null | undefined) => (v == null ? 0 : Number(v))
 /** v3 for one business, from the database. */
 export async function loadEntitlementsV3(db: Db, log: FastifyBaseLogger, tenantId: string, now: Date, seatsUsed: number): Promise<EntitlementsV3> {
   const store = storeFor(db, log);
-  const [subs, grants, addons, catalog, settings] = await Promise.all([
+  const [subs, grants, addons, catalog, settings, ai] = await Promise.all([
     db.subscription.findMany({ where: { tenantId } }),
     db.entitlementGrant.findMany({ where: { tenantId, revokedAt: null, OR: [{ endsAt: null }, { endsAt: { gt: now } }] } }),
     db.addonSubscription.findMany({ where: { tenantId, qty: { gt: 0 } } }),
     store.get(CATALOG_SETTING),
     store.get(BILLING_SETTING),
+    // AI is a business-level product (MB 10): its state is the same for every app. A failure here must not break the request.
+    aiStateQuick(db, tenantId, now).catch(() => "locked" as const),
   ]);
   return buildEntitlementsV3({
-    now, catalog: withNewApps(catalog), settings, seatsUsed,
+    now, catalog: withNewApps(catalog), settings, seatsUsed, ai,
     coreApps: APPS.filter((a) => a.kind === "core").map((a) => a.id),
     subscriptions: subs.map((s) => ({
       appId: s.appId, editionId: s.editionId, status: s.status as SubscriptionStatus, periodMonths: s.periodMonths, priceGrossPaisa: n(s.priceGrossPaisa),
