@@ -1,4 +1,34 @@
-# Project state (16 Nov 2026, 08:00, Nepal time)
+# Project state (16 Nov 2026, evening, Nepal time)
+
+**Phase 3 about 87% (48 of 55 by task size). All screens are done. Main = stage 18, FE-6 (`08e77cc`), pushed.**
+Stages 11-18 went straight onto main (no PRs: `gh` isn't installed on the owner's PC and GitHub Actions is off). Each was built on its own branch,
+tested on the owner's PC workspace by workspace, then fast-forwarded onto main and pushed:
+| Stage | Commit on main | Task | Note |
+|---|---|---|---|
+| 11 | d9d6dc8 | BE-10 | migration script plans → apps (`CHANGES-P3-BE-10.md`) |
+| 12 | b870950 | BE-11 | free posting, Start free (`CHANGES-P3-BE-11.md`) |
+| 13 | 547433f | FE-1 | business Marketplace, Cart, Subscriptions page (`CHANGES-P3-FE-1.md`) |
+| 14 | df6ab6c | FE-2 | upgrade prompt kit, one error mapper, useEntitlements (`CHANGES-P3-FE-2.md`) |
+| 15 | c79d376 | FE-3 | admin Pricing, Coupons, Approvals, a business's App subscriptions (`CHANGES-P3-FE-3.md`) |
+| 16 | c4cb1c1 | FE-4 | admin App sales, App revenue, App billing, Legal info (`CHANGES-P3-FE-4.md`) |
+| 17 | 0bebea5 | FE-5 | website /apps, /apps/:id, /pricing (`CHANGES-P3-FE-5.md`) |
+| 18 | 08e77cc | FE-6 | business AI page; AI plans in the cart; own AI keys (`CHANGES-P3-FE-6.md`) |
+
+Last test run (owner's PC, 16 Nov): business API 432/432, admin API 134/134, platform 321/321, backend-core migration 52/52, website API catalog +
+posting 27/27; root front-end all green except the 2 known Windows-only `no-old-names.test.js` failures; lint, typecheck, boundaries, manifests,
+permissions, business/admin/website builds green.
+
+**History rewritten on 16 Nov (owner's yes):** every "Co-Authored-By: Claude", "Claude-Session" and "Generated with Claude Code" line was removed
+from all 65 GitHub branches (code identical, authors and dates kept). Backup: `~\Sheetal-Backups\git-before-credit-removal-2026-11-16.bundle`.
+Commit hashes before that date changed. Never add such lines again (owner's rule).
+
+**Next: OPS-1** (scripts: restore a backup into a scratch database, dry run of `npm run billing:migrate`, price report, proofs; `check-money-columns`;
+`RUN-P3-STEP-n.cmd`), then **OPS-2** (cutover: backup, apply in `plans` mode, shadow 7 days, pilot, all; the owner's yes at each step), then QA-2.
+Every business is still on `billingMode = plans` and `salesEnabled` is false: no customer has seen any Phase 3 change.
+
+---
+
+## Earlier (16 Nov morning, kept for the record)
 
 **Phase 3 about 62%.** Main = the merge of PR #76 (BE-8). Two more stages are built, tested and pushed, **not merged**:
 | Branch | Task | What | Tests |
