@@ -28,7 +28,14 @@ Every business is still on `billingMode = plans`: nothing has changed for any cu
 ## Next, in order
 0. Done: stages 11 and 12 merged (squashed onto main as two commits, tests run on the owner's PC; no PR, `gh` isn't installed and Actions is off).
    While Actions is off: branch, build, run the tests on the owner's PC workspace by workspace, squash onto main, `git push origin main`.
-1. FE-6 (FE-1 to FE-5 are done) (register `business.payments` in SETTING_DEFS with its screen and update the pinned list in `platform/test/settings-pure.test.ts`, saying so).
+1. FE-6 (FE-1 to FE-5 are done). Found on 16 Nov before starting it:
+   - Buying a Sheetal AI plan: the quote only knows apps. Smallest fix: a `withAiApp(catalog)` helper in `platform/src/billing/catalog.ts`
+     adding a hidden app `sheetal_ai` (visible false; editions = `catalog.ai.plans` by key) used only by the business marketplace quote/checkout;
+     `aiAllowance()` already reads a `sheetal_ai` subscription with editionId = plan key. Top-up (one-time credits) needs its own quote item.
+   - Own keys for Claude/OpenAI/Gemini/ElevenLabs: the providers are built (BE-8) but the business API has no Integration Center routes for a
+     business's own connections, and `business.ai` (preferred, fallbackToSheetal) has no business route to read/save it. Both are small BE additions.
+   - Then the screens: `business/frontend/src/pages/AiPlan.jsx` (plans from `GET /marketplace` catalog.ai, meter from `GET /v1/ai/credits`,
+     Add to cart), own-key cards (write-only key), preferred provider, the fallback switch; `AiLocked` (FE-2) on the apps' AI buttons. (register `business.payments` in SETTING_DEFS with its screen and update the pinned list in `platform/test/settings-pure.test.ts`, saying so).
    FE-6 also needs: buying a Sheetal AI plan / top-up in the cart (quote items; see `CHANGES-P3-BE-8.md` "Not in this stage").
    FE-3/FE-4 use the BE-7 routes (`CHANGES-P3-BE-7.md` lists them); the approvals screen is `GET /admin/approvals` + `POST /admin/approvals/:id/decide`.
    Left from FE-1/FE-2: usage per limit is missing from `GET /entitlements` (Subscriptions shows limits only; `LimitBanner` needs the page's `used`).
