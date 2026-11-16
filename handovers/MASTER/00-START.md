@@ -19,12 +19,12 @@ one thing to do on their computer. There are no other chats. Files in this zip:
    the `handovers/CHANGES-P3-*.md` notes, `docs/architecture/PHASE-3-TEST-PLAN.md`, then `handovers/CLOSE-OUT-phase-2.md` (what Phase 2 left and the known limits),
    `handovers/CLOSE-OUT-phase-1.md`, then `docs/architecture/` (KERNEL, ACCESS, APP-MANIFEST, FRONTEND-KIT, MODEL-OWNERS, and for Phase 3:
    MARKETPLACE-AND-BILLING (section 0 has the owner's answers), PHASE-3-TASKS, PHASE-3-RISKS).
-2. Get the code. Preferred: attach the GitHub repo `dipendrabahadurdhami/sheetal` with push access and clone it into your workspace (that is
+2. Get the code (PRs and merges go through `gh api` REST calls: see PROJECT-STATE.md, lessons from 16 Nov). Preferred: attach the GitHub repo `dipendrabahadurdhami/sheetal` with push access and clone it into your workspace (that is
    how the earlier Lead worked: branch, push, PR, CI on GitHub, squash-merge through `gh api`). The owner's connected `sheetal` folder is the
    owner's own copy: read it to see their state, and use its shell only for the owner-side steps (or tell the owner the exact command).
    If you can't reach GitHub, say so in one line and work in the connected folder (commit there; ask the owner to run `git push`).
-3. Check `main` is green (latest CI run) and matches `PROJECT-STATE.md` (main = the merge of PR #73 or later, 14 Nov). Note any difference.
-4. Reply in at most 10 lines: what you found, what is next (Phase 3 continues at BE-7, see CONTINUE-phase-3.md), and "Say **next** to continue Phase 3".
+3. Check `main` is green (latest CI run) and matches `PROJECT-STATE.md` (main = the merge of PR #76 or later, 16 Nov). Note any difference.
+4. Reply in at most 10 lines: what you found, what is next (Phase 3 continues at BE-10, see CONTINUE-phase-3.md), and "Say **next** to continue Phase 3".
 
 ## 2. On every "next": finish ONE whole phase (or continue it from its CONTINUE file)
 - Take the first unfinished phase in `ROADMAP.md` and do **all of it** in this reply: every stage, in order, without stopping to ask.
