@@ -19,6 +19,7 @@ export async function entitlementRoutes(app: FastifyInstance, opts: { contextOf:
         limits: Object.fromEntries(m.limits.map((l) => [l.key, e.limit(m.id, l.key)])),
       };
     });
-    return { data: { mode: e.mode ?? "plans", apps, seats: e.seats() } };
+    // ai: the business-level AI state (locked, own_key, sheetal) the AI screens show (P3-BE-8).
+    return { data: { mode: e.mode ?? "plans", apps, seats: e.seats(), ai: e.ai("workspace") } };
   });
 }

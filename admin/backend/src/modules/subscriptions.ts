@@ -7,6 +7,7 @@
 //   POST /admin/subscriptions/:tenantId/grants                  { kind, appId?, key?, value?, endsAt, reason }   a gift or an extension
 //   POST /admin/subscriptions/:tenantId/grants/:grantId/revoke  { reason }
 //   POST /admin/subscriptions/:tenantId/:appId/extend-trial     { days, reason, version }
+//   POST /admin/subscriptions/:tenantId/ai-credits              { credits, days, reason }   Sheetal AI credits as a gift (P3-BE-8)
 // How it works: a gift is an EntitlementGrant (kind app = a whole app at an edition; limit = more of one limit; feature; seats) with an end
 // date and a reason; it only ever raises what the business has and ends by itself. Taking one back sets revokedAt (the row stays).
 // Extending a trial moves trialEndsAt (at most 90 days after the trial started), with the subscription's version (409 if stale).
@@ -22,6 +23,7 @@ import { SettingsService } from "@sheetal/platform/settings/service";
 import { BILLING_SETTING, CATALOG_SETTING, withNewApps } from "@sheetal/platform/billing/catalog";
 import { effectiveStatus } from "@sheetal/platform/billing/effective-status";
 import { taxNumber } from "@sheetal/platform/billing/invoice";
+import { addGrant, creditBalance } from "@sheetal/platform/billing/ai-credits";
 import type { SubscriptionStatus } from "@sheetal/platform/billing/types";
 import { staffOf } from "./routes.js";
 
@@ -135,6 +137,17 @@ export async function adminSubscriptionRoutes(app: FastifyInstance) {
     if (u.count !== 1) throw badRequest("This gift was already taken back.");
     await db().auditLog.create({ data: { actorId: s.user.id, tenantId: g.tenantId, action: "billing.grant_revoked", target: `${g.kind} ${[g.appId, g.key].filter(Boolean).join(" ")}`, ip: request.ip, meta: { grantId: g.id, reason } } });
     return { message: "Taken back." };
+  });
+
+  app.post<{ Params: { tenantId: string } }>("/admin/subscriptions/:tenantId/ai-credits", async (request) => {
+    const s = staffOf(request, "platform.subscription.grant");
+    const b = z.object({ credits: z.number().int().min(1).max(100_000), days: z.number().int().min(1).max(366), reason: Reason }).strict().parse(request.body);
+    const t = await db().tenant.findUnique({ where: { id: request.params.tenantId }, select: { id: true, name: true } });
+    if (!t) throw notFound("Business not found.");
+    const expiresAt = new Date(Date.now() + b.days * DAY);
+    const g = await addGrant(db(), { tenantId: t.id, credits: b.credits, source: "gift", expiresAt });
+    await db().auditLog.create({ data: { actorId: s.user.id, tenantId: t.id, action: "billing.ai_credits_given", target: `${b.credits} AI credits until ${expiresAt.toISOString().slice(0, 10)}`, ip: request.ip, meta: { grantId: g.id, reason: b.reason } } });
+    return { message: `${b.credits} AI credits given to ${t.name}.`, data: { id: g.id, balance: await creditBalance(db(), t.id) } };
   });
 
   app.post<{ Params: { tenantId: string; appId: string } }>("/admin/subscriptions/:tenantId/:appId/extend-trial", async (request) => {

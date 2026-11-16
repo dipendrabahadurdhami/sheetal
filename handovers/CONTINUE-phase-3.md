@@ -1,4 +1,4 @@
-# CONTINUE Phase 3 (updated 16 Nov 2026, about 05:15 Nepal time)
+# CONTINUE Phase 3 (updated 16 Nov 2026, about 06:00 Nepal time) · Phase 3 about 52% done (by task size)
 
 Phase 3 is being built stage by stage (PHASE-3-TASKS.md order). Read this, then `docs/architecture/PHASE-3-TEST-PLAN.md`, then the CHANGES notes named below.
 
@@ -17,13 +17,12 @@ Phase 3 is being built stage by stage (PHASE-3-TASKS.md order). Read this, then 
 Every business is still on `billingMode = plans`: nothing has changed for any customer. `salesEnabled` is false.
 
 ## Next, in order
-1. **BE-8** AI credits (MB 10: `AiCreditGrant` spending oldest-expiry first with row locks, `ai(appId)` in entitlements, own key, locked preview with no
-   model call, failed-call refund, monthly allowance by the lifecycle job; the old `aiFor()` stays for `plans`).
-2. **BE-10** migration script (`--dry-run`, `--apply`, `--restore`; reuse `platform/src/billing/mapping.ts`; add R5 dates/prices, R7 add-ons, R8 AI credits,
+1. **BE-10** migration script (`--dry-run`, `--apply`, `--restore`; reuse `platform/src/billing/mapping.ts`; add R5 dates/prices, R7 add-ons, R8 AI credits,
    R9 covered, R10 lock, R11 report); **BE-11** website posting fair use.
-3. FE-1..6 (register `business.payments` in SETTING_DEFS with its screen and update the pinned list in `platform/test/settings-pure.test.ts`, saying so).
+2. FE-1..6 (register `business.payments` in SETTING_DEFS with its screen and update the pinned list in `platform/test/settings-pure.test.ts`, saying so).
+   FE-6 also needs: buying a Sheetal AI plan / top-up in the cart (quote items; see `CHANGES-P3-BE-8.md` "Not in this stage").
    FE-3/FE-4 use the BE-7 routes (`CHANGES-P3-BE-7.md` lists them); the approvals screen is `GET /admin/approvals` + `POST /admin/approvals/:id/decide`.
-4. OPS-1 (runbook, owner scripts for shadow/pilot), OPS-2 (shadow 7 days → pilot → all): the owner's yes at each step, backup first.
+3. OPS-1 (runbook, owner scripts for shadow/pilot), OPS-2 (shadow 7 days → pilot → all): the owner's yes at each step, backup first.
 
 ## Decisions taken so far (all inside the design; see each CHANGES)
 - A cancelled subscription has no grace (MB 5.1 over one row of 5.2). Coupon before price protection. "Carry" below Rs 10.
