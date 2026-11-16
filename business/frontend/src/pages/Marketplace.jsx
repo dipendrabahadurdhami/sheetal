@@ -81,7 +81,8 @@ export function Marketplace({ tenant, openApp }) {
       {data.mode !== "apps" && <div className="pf-alert progress"><Icon name="info" size={18} /><div><b>{t("mkt.notYetTitle")}</b><span>{t("mkt.err_mode")}</span></div></div>}
       {data.mode === "apps" && !data.salesEnabled && <div className="pf-alert progress"><Icon name="clock" size={18} /><div><b>{t("mkt.salesOffTitle")}</b><span>{t("mkt.salesOffText")}</span></div></div>}
       <div className="pf-stack" style={{ marginBottom: 16 }}>
-        <SearchInput value={q} onChange={setQ} placeholder={t("mkt.search")} />
+        {/* In a row of its own: the search box's width (300px) would be read as a height inside the column above. */}
+        <div style={{ display: "flex" }}><SearchInput value={q} onChange={setQ} placeholder={t("mkt.search")} /></div>
         <div className="pf-chips" role="group" aria-label={t("mkt.categories")}>
           {["all", ...cats].map((c) => <button key={c} type="button" className={`chip ${category === c ? "active" : ""}`} aria-pressed={category === c} onClick={() => setCategory(c)}>{t(`mkt.cat_${c}`)}</button>)}
         </div>
@@ -104,9 +105,10 @@ function AppCard({ app, mine, opts, busy, onInstall, onTrial, onOpen }) {
   const actions = cardActions(app, mine, opts);
   return (
     <article className="card pf-plan" aria-labelledby={`app-${app.id}`}>
-      <div className="pf-plan-top">
+      {/* The chip moves under the name when both don't fit on one line (a narrow card, "Accounting" + "Coming soon"). */}
+      <div className="pf-plan-top" style={{ flexWrap: "wrap", gap: 6 }}>
         <span className="pf-two" style={{ flexDirection: "row", gap: 10, alignItems: "center" }}><Icon name={app.icon || "puzzle"} size={22} /><h3 id={`app-${app.id}`}>{textOf(app.name, lang)}</h3></span>
-        <Badge tone={st.tone}>{t(st.key, { n: st.days })}</Badge>
+        <span style={{ flexShrink: 0, whiteSpace: "nowrap" }}><Badge tone={st.tone}>{t(st.key, { n: st.days })}</Badge></span>
       </div>
       {app.tagline && <p className="small muted" style={{ margin: 0 }}>{textOf(app.tagline, lang)}</p>}
       <div className="pf-price-line">
