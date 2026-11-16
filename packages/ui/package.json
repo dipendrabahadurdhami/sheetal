@@ -14,6 +14,8 @@
     "./crud": "./src/crud/index.js",
     "./theme": "./src/theme/index.js",
     "./theme/mode": "./src/theme/mode.js",
-    "./stars": "./src/Stars.jsx"
+    "./stars": "./src/Stars.jsx",
+    "./billing": "./src/billing/index.js",
+    "./billing/errors": "./src/billing/errors.js"
   }
 }

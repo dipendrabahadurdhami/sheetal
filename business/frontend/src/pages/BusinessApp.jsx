@@ -32,7 +32,9 @@ import { BillingReturn } from "./LiveBilling";
 import { Marketplace } from "./Marketplace";
 import { CartPage } from "./Cart";
 import { Subscriptions } from "./Subscriptions";
-import { useBillingMode } from "../billingMode";
+import { useBillingMode, useBusinessEntitlements } from "../billingMode";
+import { appOfPath, BillingPrompts, ReadOnlyBanner } from "@sheetal/ui/billing";
+import { APPS as APP_MANIFESTS } from "@sheetal/config/apps";
 import { Help, Tour } from "./Help";
 import { MyProfile, NotificationsPage, useServerNotifs } from "@sheetal/shared/components/Me";
 import { Domains } from "./Domains";
@@ -170,10 +172,15 @@ function Workspace() {
   // Pro sees every type's modules; Starter (free) sees only the basics.
   const plan = planOf(db, tenant);
   const types = typesFor(tenant, plan);
-  const free = isFree(plan);
   // Per-app billing (Phase 3): the Marketplace and the Subscriptions page; today's plan pages for every other business.
   const billingMode = useBillingMode(tenant.id);
   const onApps = billingMode === "apps";
+  // On apps, what a business may use comes from its app subscriptions (GET /entitlements), not from the old plan's Free/paid split (P3-FE-2).
+  const ent = useBusinessEntitlements(tenant.id);
+  const free = onApps ? false : isFree(plan);
+  const { path: here } = useRouter();
+  const hereApp = appOfPath(here);
+  const appName = (id) => APP_MANIFESTS.find((a) => a.id === id)?.name?.en || id;
   const stays = types.includes("hotel") || types.includes("host");
   const any = (...p) => role.perms.includes("*") || canAny(role, p);
   const drafts = db.drafts[tenant.id] ? 1 : 0;
@@ -185,7 +192,7 @@ function Workspace() {
   const toCheck = todaysList(db.listings.filter((l) => l.tenantId === tenant.id), ck.settings, ck.log, TODAY.slice(0, 10)).length;
 
   // The apps on the kernel (Expenses, Reviews, Rentals) get their entry from their manifest (@sheetal/config/menu); the rest stay written here until Phase 2.
-  const nav = withoutPaid(free, filterNav(fromManifests([
+  const nav = byApps(onApps, ent, withoutPaid(free, filterNav(fromManifests([
     { items: [{ to: "/business", exact: true, icon: "layout-grid", key: "nav.overview", perm: "workspace.overview.read" }, { to: "/business/analytics", icon: "chart-column", key: "nav.analytics", perm: "workspace.overview.read" }] },
     // Listings first (what every business does), then the people who answer them, then day-to-day operations.
     { group: "group.listings", items: [
@@ -224,7 +231,7 @@ function Workspace() {
       { to: can(role, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete") ? "/business/settings" : "/business/billing", icon: "settings", key: "nav.settings", permAny: ["workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete", "workspace.billing.manage"], match: ["/business/settings", "/business/billing", "/business/domains", "/business/developers", "/business/data", "/business/branches", "/business/channels", "/business/ai-accounts"] },
       { to: "/business/help", icon: "life-buoy", key: "nav.help" },
     ] },
-  ]), role, types));
+  ]), role, types)));
 
   const guard = (ok, el) => (ok ? el : <NoAccess />);
   const paid = (ok, el) => (free ? <UpgradeNeeded /> : guard(ok, el));
@@ -300,6 +307,8 @@ function Workspace() {
       <AddBusiness open={adding} onClose={() => setAdding(false)} onAdded={() => navigate("/business")} />
       {/* A new key on switching branch reloads every page's data for that branch. */}
       <BranchProvider key={branchId} value={{ branch, branchId, allowed, canAll, first: openBranches[0] }}>
+      {(billingMode === "apps" || billingMode === "shadow") && <BillingPrompts names={(app, edition) => ({ app: appName(app), edition })} />}
+      {onApps && hereApp && <ReadOnlyBanner appName={appName(hereApp)} access={ent.accessOf(hereApp)} />}
       {ended ? <BackupOnly tenant={tenant} /> : <Routes fallback={<Pending part={2} />} routes={[
         { path: "/business", render: () => (<LiveOverview key={tenant.id} tenant={tenant} role={role} />) },
         { path: "/business/approvals", render: () => <Approvals key={tenant.id} tenant={tenant} live tab="pending" /> },
@@ -367,6 +376,12 @@ function Workspace() {
 /** Drops the entries no manifest declared (manifestNavItem() answered null), so a missing manifest never breaks the menu. */
 function fromManifests(nav) {
   return nav.map((g) => ({ ...g, items: g.items.filter(Boolean) }));
+}
+
+/** On per-app billing, the menu shows only the apps the business has (installed, trial, paid, or read-only to look at). */
+function byApps(onApps, ent, nav) {
+  if (!onApps) return nav;
+  return nav.map((g) => ({ ...g, items: g.items.filter((it) => !it || !appOfPath(it.to) || ent.hasApp(appOfPath(it.to))) })).filter((g) => g.items.length);
 }
 
 function withoutPaid(free, nav) {

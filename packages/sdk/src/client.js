@@ -6,17 +6,20 @@
 // Rules: set VITE_BUSINESS_API_URL in business/frontend/.env.local (e.g. http://localhost:4001/v1); without it the panel shows the
 // sample workspace only. The address is read here from import.meta.env, which Vite fills in for the app being built (see CHANGES).
 
+import { reportBillingError } from "@sheetal/ui/billing/errors";
 import { supportToken } from "./support.js";
 
 export class ApiError extends Error {
   /** `code` and `requestId` are new: the server may send { code: "version_conflict" } in the body and an x-request-id header. */
-  constructor(status, message, errors, code, requestId) {
+  constructor(status, message, errors, code, requestId, details) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.errors = errors;
     this.code = code;
     this.requestId = requestId;
+    // P3-FE-2: the safe facts of a billing error (a limit and its use, the next edition): see @sheetal/ui/billing.
+    this.details = details;
   }
 }
 
@@ -53,7 +56,12 @@ export function createApi({ baseUrl, tokenKey = "sheetal_token", tenantHeader = 
     const requestId = res.headers.get("x-request-id") || undefined;
     if ((res.headers.get("content-type") || "").includes("application/json")) {
       const json = await res.json().catch(() => null);
-      if (!res.ok) throw new ApiError(res.status, json?.message || "Something went wrong.", json?.errors, json?.code, requestId);
+      if (!res.ok) {
+        const err = new ApiError(res.status, json?.message || "Something went wrong.", json?.errors, json?.code, requestId, json?.details);
+        // A limit, a paused app or a paid feature: the shared upgrade panel shows it (P3-FE-2), wherever the call came from.
+        reportBillingError(err);
+        throw err;
+      }
       return json;
     }
     if (!res.ok) throw new ApiError(res.status, "Something went wrong.", undefined, undefined, requestId);

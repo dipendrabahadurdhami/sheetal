@@ -1,4 +1,4 @@
-// English screen text for the business marketplace, cart and Subscriptions pages (P3-FE-1). Merged into the English dictionary in
+// English screen text for the business marketplace, cart and Subscriptions pages (P3-FE-1) and the upgrade prompts (P3-FE-2). Merged into the English dictionary in
 // shared/src/core/i18n.jsx; the Nepali text is in ne-market.js (every key here has one there: marketplace-i18n.test.js checks it).
 // Rules: plain words; the wording never says "verified"; prices and numbers are filled in from the API ({v}, {n}, {d}).
 
@@ -48,4 +48,28 @@ export default {
   "mkt.billedTo": "Billed to", "mkt.item": "Item", "mkt.print": "Print or save as PDF", "mkt.popups": "Allow pop-ups to view the invoice.",
   "mkt.ppTitle": "Your price is protected", "mkt.ppEnded": "Your price protection has ended", "mkt.ppText": "You pay {v} a month, your old plan's price, until {d}.",
   "mkt.ppCovers": "It covers: {apps}.", "mkt.ppChooseText": "{n} days left. Choose the apps you keep before then.", "mkt.ppChoose": "Choose the apps you keep",
+  // The upgrade prompts every app shares (P3-FE-2, packages/ui/src/billing).
+  "bp.limitNear": "You have used most of your {what}",
+  "bp.limitFull": "You have used all of your {what}",
+  "bp.used": "{used} of {limit} used",
+  "bp.upgrade": "Upgrade",
+  "bp.dismiss": "Hide for 7 days",
+  "bp.notNow": "Not now",
+  "bp.renew": "Renew",
+  "bp.limitTitle": "You have reached a limit",
+  "bp.featureTitle": "This needs the full edition",
+  "bp.appTitle": "Your business doesn't have this app yet",
+  "bp.readOnlyTitle": "This app can't take changes now",
+  "bp.tryWith": "{app} {edition} lifts this limit: {v} a month.",
+  "bp.tryWithNoPrice": "{app} {edition} lifts this limit.",
+  "bp.full": "Full",
+  "bp.badgeTip": "Part of the full edition. Click to see the editions.",
+  "bp.aiTitle": "AI can do this for you",
+  "bp.aiSample": "Example of what AI writes",
+  "bp.aiText": "Turn on Sheetal AI, or connect your own AI key, to use this.",
+  "bp.aiOn": "Turn on AI",
+  "bp.readOnlyBanner": "Your {app} subscription has ended. Everything is safe.",
+  "bp.lockedTitle": "Your {app} subscription is paused. Everything is safe.",
+  "bp.readOnlyText": "You can still see, print and export everything. Renew to add or change records.",
+  "bp.export": "Export my data",
 };

@@ -84,3 +84,30 @@ export function useApiMutation(method, pathOrFn, opts = {}) {
   }, [method, typeof pathOrFn === "function" ? "fn" : pathOrFn, api, toast, opts.successToast, (opts.invalidate || []).join("|")]);
   return { run, busy, error };
 }
+
+/**
+ * What the open business may use now, app by app (GET /entitlements, P3-FE-2). Returns { mode, loading, refresh, accessOf(appId),
+ * editionOf(appId), limitOf(appId, key), hasApp(appId), seats, ai }. While it loads, or for a business on today's plans, every app counts as
+ * available ("full"), so nothing is hidden or locked by mistake: the server still refuses what isn't allowed.
+ */
+export function useEntitlements(opts = {}) {
+  const { data, loading, error, refresh } = useApiGet("/entitlements", opts);
+  return entitlementsView(data, { loading, error, refresh });
+}
+
+/** The plain part of useEntitlements (tested without React). */
+export function entitlementsView(data, extra = {}) {
+  const apps = new Map((data?.apps || []).map((a) => [a.appId, a]));
+  const mode = data?.mode || null;
+  const exact = mode === "apps";
+  const accessOf = (appId) => (exact ? apps.get(appId)?.access ?? "none" : "full");
+  return {
+    ...extra, mode,
+    accessOf,
+    hasApp: (appId) => accessOf(appId) !== "none",
+    editionOf: (appId) => apps.get(appId)?.edition ?? null,
+    limitOf: (appId, key) => { const v = apps.get(appId)?.limits?.[key]; return v === undefined || v === -1 ? null : v; },
+    seats: data?.seats || null,
+    ai: data?.ai || "locked",
+  };
+}

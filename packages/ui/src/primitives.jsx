@@ -9,6 +9,7 @@ import { Icon } from "@sheetal/shared/core/icons";
 import { useT } from "@sheetal/shared/core/i18n";
 import { initials, limitText } from "@sheetal/shared/core/format";
 import { useRouter } from "@sheetal/shared/core/router";
+import { shownAsPrompt } from "./billing/errors.js";
 
 const cx = (...a) => a.filter(Boolean).join(" ");
 
@@ -280,6 +281,8 @@ const ToastCtx = createContext(() => {});
 export function ToastProvider({ children }) {
   const [items, setItems] = useState([]);
   const push = useCallback((text, ms = 3200) => {
+    // The shared upgrade panel already shows this billing error (P3-FE-2: it replaces the failed action's toast).
+    if (shownAsPrompt(text)) return;
     const id = Math.random();
     setItems((x) => [...x, { id, text }]);
     setTimeout(() => setItems((x) => x.filter((i) => i.id !== id)), ms);

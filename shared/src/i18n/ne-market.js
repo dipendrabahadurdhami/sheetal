@@ -1,4 +1,4 @@
-// Nepali screen text for the business marketplace, cart and Subscriptions pages (P3-FE-1). Merged into the Nepali dictionary in
+// Nepali screen text for the business marketplace, cart and Subscriptions pages (P3-FE-1) and the upgrade prompts (P3-FE-2). Merged into the Nepali dictionary in
 // shared/src/core/i18n.jsx. Every key of en-market.js has one here (marketplace-i18n.test.js); a missing one would fall back to English.
 // Rules: the same {placeholders} as the English text; the wording never says "verified".
 
@@ -48,4 +48,28 @@ export default {
   "mkt.billedTo": "बिल प्राप्तकर्ता", "mkt.item": "विवरण", "mkt.print": "प्रिन्ट वा PDF मा सेभ", "mkt.popups": "बिल हेर्न पप-अप खोल्न दिनुहोस्।",
   "mkt.ppTitle": "तपाईंको मूल्य सुरक्षित छ", "mkt.ppEnded": "तपाईंको मूल्य सुरक्षा सकियो", "mkt.ppText": "{d} सम्म तपाईंले पुरानो योजनाकै मूल्य, महिनाको {v}, तिर्नुहुन्छ।",
   "mkt.ppCovers": "यसले समेट्छ: {apps}।", "mkt.ppChooseText": "{n} दिन बाँकी। त्यो अघि राख्ने एपहरू छान्नुहोस्।", "mkt.ppChoose": "राख्ने एपहरू छान्नुहोस्",
+  // The upgrade prompts every app shares (P3-FE-2, packages/ui/src/billing).
+  "bp.limitNear": "तपाईंले आफ्नो {what} को धेरैजसो प्रयोग गरिसक्नुभयो",
+  "bp.limitFull": "तपाईंले आफ्नो {what} पूरै प्रयोग गरिसक्नुभयो",
+  "bp.used": "{limit} मध्ये {used} प्रयोग भयो",
+  "bp.upgrade": "अपग्रेड",
+  "bp.dismiss": "७ दिन लुकाउनुहोस्",
+  "bp.notNow": "अहिले होइन",
+  "bp.renew": "नवीकरण",
+  "bp.limitTitle": "तपाईं सीमामा पुग्नुभयो",
+  "bp.featureTitle": "यसका लागि पूरा संस्करण चाहिन्छ",
+  "bp.appTitle": "तपाईंको व्यवसायमा यो एप अझै छैन",
+  "bp.readOnlyTitle": "यो एपमा अहिले परिवर्तन गर्न मिल्दैन",
+  "bp.tryWith": "{app} {edition} ले यो सीमा हटाउँछ: महिनाको {v}।",
+  "bp.tryWithNoPrice": "{app} {edition} ले यो सीमा हटाउँछ।",
+  "bp.full": "पूरा",
+  "bp.badgeTip": "पूरा संस्करणको भाग। संस्करणहरू हेर्न क्लिक गर्नुहोस्।",
+  "bp.aiTitle": "AI ले यो तपाईंका लागि गर्न सक्छ",
+  "bp.aiSample": "AI ले लेख्ने नमुना",
+  "bp.aiText": "यो प्रयोग गर्न Sheetal AI खोल्नुहोस्, वा आफ्नै AI की जोड्नुहोस्।",
+  "bp.aiOn": "AI खोल्नुहोस्",
+  "bp.readOnlyBanner": "तपाईंको {app} सदस्यता सकियो। सबै सुरक्षित छ।",
+  "bp.lockedTitle": "तपाईंको {app} सदस्यता रोकिएको छ। सबै सुरक्षित छ।",
+  "bp.readOnlyText": "तपाईं अझै सबै हेर्न, प्रिन्ट र निर्यात गर्न सक्नुहुन्छ। रेकर्ड थप्न वा बदल्न नवीकरण गर्नुहोस्।",
+  "bp.export": "मेरो डाटा निर्यात",
 };
