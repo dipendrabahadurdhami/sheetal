@@ -210,7 +210,9 @@ export function planMigration(input: PlanInput): MigrationPlan {
   // Compared over the real registry (the one v1 reads), never over the manifests the mapping was given.
   const appIds = APPS.filter((m) => m.kind === "app").map((m) => m.id);
   const at = [now];
-  if (periodEnd && periodEnd > now) at.push(minusMs(periodEnd));
+  // The end of the period matters only where a period was paid for or is a trial. A free plan can carry a leftover renewsAt (from an
+  // earlier paid period): under plans that date decides nothing, so its promise is the lock end below (Q2: today's limits for 90 days).
+  if (periodEnd && periodEnd > now && (paid || trial)) at.push(minusMs(periodEnd));
   if (b.status === "past_due" && b.graceUntil && b.graceUntil > now) at.push(minusMs(b.graceUntil));
   // A free or covered business keeps today's answer until its lock ends (a paid or trial one: v1 itself changes after its period).
   if (lockEnd > now && !paid) at.push(minusMs(lockEnd));

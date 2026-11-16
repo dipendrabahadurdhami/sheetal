@@ -69,7 +69,8 @@ async function main(): Promise<number> {
   console.log(flag("apply") ? `APPLY (run ${res!.runId})` : "DRY RUN (nothing is written; add --apply to write)");
   print(results);
   const csv = value("csv");
-  if (csv) { writeFileSync(csv, priceReportCsv(results)); console.log(`Price report: ${csv}`); }
+  // The first character (a byte-order mark) tells Excel the file is UTF-8, so the "…" in the masked names reads right.
+  if (csv) { writeFileSync(csv, `﻿${priceReportCsv(results)}`); console.log(`Price report: ${csv}`); }
   const s = summary(results);
   const ok = res ? res.ok : s.failed.length === 0;
   console.log(`${s.planned} planned, ${s.passed} passed every proof, ${s.written} written, ${s.skipped.length} skipped, ${s.failed.length} failed. ${ok ? "PASS" : "FAIL"}`);

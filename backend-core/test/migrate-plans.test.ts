@@ -58,6 +58,22 @@ describe("the planner: the rules", () => {
     expect(free.lockEnd).toEqual(addNepalDays(NOW, 90)); // the free businesses' 90 days
   });
 
+  it("a free business with a leftover renewal date (found in the dry run on real data): the promise is the 90 days, not that date", () => {
+    // A Starter business can carry a renewsAt from an earlier paid period. Under plans that date decides nothing for a free plan, so P1 is
+    // checked today and just before the 90 days end, never at that date (long after the old limits have gone back to the free edition's).
+    const starter = ALL.find((b) => b.name === "hotel Starter")!;
+    const p = planOf({ ...starter, id: "hotel-starter-old-date", period: 12, renewsAt: new Date("2027-11-04T22:15:00Z") });
+    expect(p.kind).toBe("write");
+    if (p.kind !== "write") return;
+    expect(p.proofs.filter((x) => !x.ok)).toEqual([]);
+    expect(p.lockEnd).toEqual(addNepalDays(NOW, 90));
+    expect(p.lock).toBeNull();
+    expect(p.subscriptions.every((s) => s.editionId === "free" && s.currentPeriodEnd === null)).toBe(true);
+    // A PAID business is still checked just before its period ends: breaking its last day must fail P1.
+    const paid = planOf(ALL.find((b) => b.name === "hotel Business")!);
+    expect(paid.kind === "write" && paid.proofs.find((x) => x.id === "P1")?.ok).toBe(true);
+  });
+
   it("R2: POS and Agreements are full only where the old plan had their switch", () => {
     for (const name of ["hotel Business", "hotel Pro", "agency Business"]) {
       const p = get(name);

@@ -12,7 +12,7 @@ $desk = Join-Path $HOME "Desktop"
 $report = Join-Path $desk "p1-step1-report.txt"
 $opsBranch = "phase-1/P1-OPS-1-workspaces"
 $dbBranch = "phase-1/P1-DB-1-kernel-base"
-$trailer = @("-m", "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>", "-m", "Claude-Session: https://claude.ai/code/session_01VaYig1RW2H1HEkMCaLayKD")
+$trailer = @()
 function Stop-Here($msg) { Write-Host "`nSTOP: $msg" -ForegroundColor Red; "`nSTOPPED: $msg" | Out-File -Append -Encoding utf8 $report; exit 1 }
 function Ok($msg) { Write-Host "OK   $msg" -ForegroundColor Green; "OK   $msg" | Out-File -Append -Encoding utf8 $report }
 function Section($msg) { Write-Host "`n$msg" -ForegroundColor Cyan; "`n==================== $msg ====================" | Out-File -Append -Encoding utf8 $report }

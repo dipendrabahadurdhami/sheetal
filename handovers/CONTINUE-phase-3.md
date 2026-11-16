@@ -1,4 +1,4 @@
-# CONTINUE Phase 3 (updated 16 Nov 2026, about 08:00 Nepal time) · Phase 3 about 87% done (by task size: 48 of 55, S=1 M=2 L=3)
+# CONTINUE Phase 3 (updated 16 Nov 2026, about 11:00 Nepal time) · Phase 3 about 91% done (by task size: 50 of 55, S=1 M=2 L=3)
 
 Phase 3 is being built stage by stage (PHASE-3-TASKS.md order). Read this, then `docs/architecture/PHASE-3-TEST-PLAN.md`, then the CHANGES notes named below.
 
@@ -23,6 +23,7 @@ Phase 3 is being built stage by stage (PHASE-3-TASKS.md order). Read this, then 
 | 16 | main | FE-4 | admin App sales, App revenue (ranges in Nepal time, % change, CSV), App billing (VAT, tax invoices, IRD, refunds, shadow), Legal and required info (company details) (`CHANGES-P3-FE-4.md`) |
 | 17 | main | FE-5 | website `/apps`, `/apps/:id`, `/pricing` from the public catalog, Start free; `/plans` kept until the cutover (`CHANGES-P3-FE-5.md`) |
 | 18 | main | FE-6 | business AI page (state, credits meter, Sheetal AI plans into the cart, own keys for 4 providers, preferred provider, fallback switch); `withAiApp`; `/v1/ai/connections`, `/v1/ai/settings` (`CHANGES-P3-FE-6.md`) |
+| 19 | main | OPS-1 | `npm run scratch` (a scratch copy of the database), `npm run billing:mode` (**the switch plans → shadow → apps, which did not exist**; R10 voiding), `check:money`, `check:catalog`, `RUN-P3-STEP-1.cmd`; dry run on a copy of the real data: 15 PASS, 2 skipped (payment in flight); a P1 false FAIL fixed (free plan with a leftover renewal date) (`CHANGES-P3-OPS-1.md`) |
 
 Every business is still on `billingMode = plans`: nothing has changed for any customer. `salesEnabled` is false.
 
