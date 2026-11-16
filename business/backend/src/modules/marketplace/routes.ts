@@ -11,7 +11,6 @@
 
 import type { FastifyInstance } from "fastify";
 import { randomBytes } from "node:crypto";
-import { z } from "zod";
 import { AppError, badRequest, forbidden, notFound } from "@sheetal/platform/core/errors";
 import { dbOf, type Db } from "@sheetal/platform/db/client";
 import { SettingsService } from "@sheetal/platform/settings/service";
@@ -29,17 +28,7 @@ import { esewaCheckout, fonepayCheckout, khaltiCheckout, rupeesText, type Fetch 
 import { billingSettings, gateways } from "@sheetal/backend-core/domain/billing";
 import { platformSettings } from "@sheetal/backend-core/domain/platform";
 import { workspaceOf, type Workspace } from "../access.js";
-
-const AppId = z.string().regex(/^[a-z][a-z0-9_]{0,40}$/);
-const Item = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("subscribe"), appId: AppId, editionId: AppId, periodMonths: z.union([z.literal(1), z.literal(12)]) }).strict(),
-  z.object({ kind: z.literal("change"), appId: AppId, editionId: AppId, periodMonths: z.union([z.literal(1), z.literal(12)]) }).strict(),
-  z.object({ kind: z.literal("renew"), appId: AppId }).strict(),
-  z.object({ kind: z.literal("addon"), addonKey: AppId, qty: z.number().int().min(1).max(1000) }).strict(),
-]);
-const Cart = z.object({ items: z.array(Item).min(1).max(20), couponCode: z.string().trim().toUpperCase().max(32).optional() }).strict();
-const Checkout = Cart.extend({ provider: z.enum(["esewa", "khalti", "fonepay", "manual"]) }).strict();
-const PayInvoice = z.object({ invoiceId: z.string().max(40), provider: z.enum(["esewa", "khalti", "fonepay", "manual"]) }).strict();
+import { AppId, Cancel, Cart, Change, Checkout, CouponCheck, PayInvoice, Trial } from "./bodies.js";
 
 const n = (v: bigint | number | null | undefined) => (v == null ? 0 : Number(v));
 const QUIET = { warn: () => undefined };
@@ -161,7 +150,10 @@ export async function marketplaceRoutes(app: FastifyInstance, opts: { fetch?: Fe
     const { t } = await payer(request);
     const invoices = await db().invoice.findMany({ where: { tenantId: t.id, kind: { in: ["subscription", "credit"] } }, orderBy: { createdAt: "desc" }, take: 50, include: { lines: { orderBy: { sort: "asc" } } } });
     const { subs } = await stateOf(t);
+    // The price protection of a business moved from today's plans (BE-10), for the Subscriptions page's card (P3-FE-1).
+    const l = t.billingLock;
     return { data: {
+      lock: l ? { monthlyGrossPaisa: n(l.legacyMonthlyGrossPaisa), periodMonths: l.legacyPeriodMonths, coversApps: l.coversApps, lockEnd: l.lockEnd } : null,
       subscriptions: subs.map((s) => ({ appId: s.appId, editionId: s.editionId, status: s.status, periodMonths: s.periodMonths, priceGrossPaisa: n(s.priceGrossPaisa), currentPeriodEnd: s.currentPeriodEnd, trialEndsAt: s.trialEndsAt, cancelAtPeriodEnd: s.cancelAtPeriodEnd, installed: !s.uninstalledAt })),
       invoices: invoices.map((i) => ({
         id: i.id, kind: i.kind, status: i.status, number: i.no && i.fy ? taxNumber(i.fy, i.no, i.kind) : null, issuedAt: i.issuedAt, dueAt: i.dueAt, paidAt: i.paidAt,
@@ -193,7 +185,7 @@ export async function marketplaceRoutes(app: FastifyInstance, opts: { fetch?: Fe
   app.post<{ Params: { appId: string } }>("/subscriptions/:appId/trial", { config: { rateLimit: { max: 10, timeWindow: "1 hour" } } }, async (request) => {
     const { ws, t } = await payer(request);
     const appId = AppId.parse(request.params.appId);
-    const b = z.object({ editionId: AppId.optional() }).strict().parse(request.body ?? {});
+    const b = Trial.parse(request.body ?? {});
     const { catalog } = await settings();
     const a = catalog.apps[appId];
     if (!a || !a.visible || a.availability !== "live") throw notFound("That app isn't in the marketplace.");
@@ -229,7 +221,7 @@ export async function marketplaceRoutes(app: FastifyInstance, opts: { fetch?: Fe
 
   app.post("/coupons/check", { config: { rateLimit: { max: 30, timeWindow: "10 minutes" } } }, async (request) => {
     const { t } = await payer(request);
-    const b = Cart.extend({ couponCode: z.string().trim().toUpperCase().min(3).max(32) }).strict().parse(request.body);
+    const b = CouponCheck.parse(request.body);
     const { q } = await quoteFor(t, b.items, b.couponCode);
     const err = q.errors.find((e) => /code/i.test(e.en));
     return err ? { data: { ok: false, reason: err.en } } : { data: { ok: true, discountPaisa: q.discountPaisa, totalPaisa: q.totalPaisa } };
@@ -277,7 +269,7 @@ export async function marketplaceRoutes(app: FastifyInstance, opts: { fetch?: Fe
   app.post<{ Params: { appId: string } }>("/subscriptions/:appId/change", async (request) => {
     const { ws, t } = await payer(request);
     const appId = AppId.parse(request.params.appId);
-    const b = z.object({ editionId: AppId, periodMonths: z.union([z.literal(1), z.literal(12)]) }).strict().parse(request.body);
+    const b = Change.parse(request.body);
     const s = await subOf(t, appId);
     const { q } = await quoteFor(t, [{ kind: "change", appId, editionId: b.editionId, periodMonths: b.periodMonths }]);
     if (q.errors.length) throw badRequest(q.errors[0]!.en);
@@ -291,7 +283,7 @@ export async function marketplaceRoutes(app: FastifyInstance, opts: { fetch?: Fe
   app.post<{ Params: { appId: string } }>("/subscriptions/:appId/cancel", async (request) => {
     const { ws, t } = await payer(request);
     const appId = AppId.parse(request.params.appId);
-    const b = z.object({ reason: z.string().trim().max(500).optional() }).strict().parse(request.body ?? {});
+    const b = Cancel.parse(request.body ?? {});
     const s = await subOf(t, appId);
     if (s.status === "trialing") {
       await db().subscription.update({ where: { id: s.id }, data: { trialEndsAt: new Date(), version: { increment: 1 } } });

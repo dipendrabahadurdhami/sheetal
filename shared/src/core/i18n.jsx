@@ -9,9 +9,11 @@ import enOps from "../i18n/en-ops";
 import enAdmin from "../i18n/en-admin";
 import enMore from "../i18n/en-more";
 import enGrowth from "../i18n/en-growth";
+import enMarket from "../i18n/en-market";
+import neMarket from "../i18n/ne-market";
 
-const EN = { ...en, ...enOps, ...enAdmin, ...enMore, ...enGrowth };
-const DICTS = { en: EN, ne };
+const EN = { ...en, ...enOps, ...enAdmin, ...enMore, ...enGrowth, ...enMarket };
+const DICTS = { en: EN, ne: { ...ne, ...neMarket } };
 export const LANGS = [
   { id: "en", label: "English", short: "EN" },
   { id: "ne", label: "नेपाली", short: "ने" },

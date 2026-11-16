@@ -122,6 +122,9 @@ export function LiveBilling({ tenant, canManage }) {
   );
 }
 
+// An app invoice's bank transfer comes with the exact amount as text with paisa ("1234.50", P3-FE-1); a plan's is whole rupees (a number).
+const moneyOf = (a) => (typeof a === "string" ? `Rs. ${Number(a.split(".")[0]).toLocaleString("en-IN")}${a.includes(".") && !/\.0+$/.test(a) ? `.${a.split(".")[1]}` : ""}` : rs(a));
+
 export function ManualProof({ manual, bank, onClose, onSent }) {
   const toast = useToast();
   const [file, setFile] = useState(null);
@@ -133,10 +136,10 @@ export function ManualProof({ manual, bank, onClose, onSent }) {
     catch (e) { toast(e.message); } finally { setBusy(false); }
   };
   return (
-    <Drawer open={!!manual} onClose={onClose} title="Pay by bank transfer" sub={manual ? `${manual.label} · ${rs(manual.amount)}` : ""}
+    <Drawer open={!!manual} onClose={onClose} title="Pay by bank transfer" sub={manual ? `${manual.label} · ${moneyOf(manual.amount)}` : ""}
       footer={manual && <><Button variant="ghost" onClick={onClose}>Later</Button><Button icon="upload" disabled={!file || busy} onClick={send}>{busy ? "Sending…" : "Send receipt"}</Button></>}>
       {manual && <div className="pf-stack">
-        {bank?.account ? <dl className="pf-kv"><dt>Bank</dt><dd>{bank.name}</dd><dt>Account name</dt><dd>{bank.accountName}</dd><dt>Account no.</dt><dd className="tnum">{bank.account}</dd><dt>Amount</dt><dd className="tnum"><b>{rs(manual.amount)}</b></dd><dt>Write in remarks</dt><dd className="tnum"><b>{manual.reference}</b></dd></dl>
+        {bank?.account ? <dl className="pf-kv"><dt>Bank</dt><dd>{bank.name}</dd><dt>Account name</dt><dd>{bank.accountName}</dd><dt>Account no.</dt><dd className="tnum">{bank.account}</dd><dt>Amount</dt><dd className="tnum"><b>{moneyOf(manual.amount)}</b></dd><dt>Write in remarks</dt><dd className="tnum"><b>{manual.reference}</b></dd></dl>
           : <p className="muted">Sheetal's bank details aren't set up yet. Please contact support.</p>}
         {bank?.note && <p className="small muted">{bank.note}</p>}
         <Field label="Receipt or screenshot"><input type="file" accept="image/*" onChange={(e) => setFile(e.target.files[0] || null)} /></Field>

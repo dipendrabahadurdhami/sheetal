@@ -29,6 +29,10 @@ import { SettingsShell, settingsSections } from "./SettingsHub";
 import { config } from "@sheetal/shared/core/config";
 import { BusinessBilling, BusinessData } from "./BusinessBilling";
 import { BillingReturn } from "./LiveBilling";
+import { Marketplace } from "./Marketplace";
+import { CartPage } from "./Cart";
+import { Subscriptions } from "./Subscriptions";
+import { useBillingMode } from "../billingMode";
 import { Help, Tour } from "./Help";
 import { MyProfile, NotificationsPage, useServerNotifs } from "@sheetal/shared/components/Me";
 import { Domains } from "./Domains";
@@ -167,6 +171,9 @@ function Workspace() {
   const plan = planOf(db, tenant);
   const types = typesFor(tenant, plan);
   const free = isFree(plan);
+  // Per-app billing (Phase 3): the Marketplace and the Subscriptions page; today's plan pages for every other business.
+  const billingMode = useBillingMode(tenant.id);
+  const onApps = billingMode === "apps";
   const stays = types.includes("hotel") || types.includes("host");
   const any = (...p) => role.perms.includes("*") || canAny(role, p);
   const drafts = db.drafts[tenant.id] ? 1 : 0;
@@ -212,6 +219,7 @@ function Workspace() {
       manifestNavItem("/business/expenses", { paid: true }),
     ] },
     { group: "group.admin", items: [
+      ...(onApps ? [{ to: "/business/marketplace", icon: "shopping-bag", key: "nav.marketplace", perm: "workspace.billing.manage", match: ["/business/marketplace"] }] : []),
       { to: "/business/team", icon: "users", key: "nav.team" },
       { to: can(role, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete") ? "/business/settings" : "/business/billing", icon: "settings", key: "nav.settings", permAny: ["workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete", "workspace.billing.manage"], match: ["/business/settings", "/business/billing", "/business/domains", "/business/developers", "/business/data", "/business/branches", "/business/channels", "/business/ai-accounts"] },
       { to: "/business/help", icon: "life-buoy", key: "nav.help" },
@@ -274,7 +282,7 @@ function Workspace() {
       topExtra={<BranchPicker branch={branch} allowed={allowed} canAll={canAll} allLabel={t("br.all")} label={t("br.filter")}
         footer={can(role, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete") ? <MenuLink to="/business/branches" icon={openBranches.length > 1 ? "settings" : "plus"}>{openBranches.length > 1 ? "Manage branches" : "Add a branch"}</MenuLink> : null}
         onPick={(v) => update((d) => { d.session.branchOf = { ...(d.session.branchOf || {}), [tenant.id]: v }; })} />}
-      sideFooter={<><SetupChip tenant={tenant} /><Link to="/business/billing" className="pf-plan-chip"><Icon name="layers" size={15} /><span>{(db.plans.find((p) => p.id === tenant.planId) || {}).name} plan</span><Icon name="chevron-right" size={14} /></Link>{(config.demo || role !== owner) && <div className="pf-side-foot"><span className="small muted">{t("preview.viewAs")}</span>
+      sideFooter={<><SetupChip tenant={tenant} /><Link to="/business/billing" className="pf-plan-chip"><Icon name="layers" size={15} /><span>{onApps ? t("mkt.chip") : `${(db.plans.find((p) => p.id === tenant.planId) || {}).name} plan`}</span><Icon name="chevron-right" size={14} /></Link>{(config.demo || role !== owner) && <div className="pf-side-foot"><span className="small muted">{t("preview.viewAs")}</span>
         <Select value={role.id} onChange={(v) => update((d) => { d.session.previewRoleId = v; })} options={roles.map((r) => ({ id: r.id, label: roleName(r, t) }))} aria-label={t("preview.role")} />
         <span className="tiny muted">{t("preview.viewAsHint")}</span></div>}</>}
       userMenu={<>
@@ -309,7 +317,9 @@ function Workspace() {
         { path: "/business/settings/roles", render: () => guard(can(role, "workspace.role.read+workspace.role.create+workspace.role.update+workspace.role.delete"), <SettingsShell role={role}><BusinessRoles key={tenant.id} tenant={tenant} role={role} /></SettingsShell>) },
         { path: "/business/settings/:tab", render: ({ tab }) => guard(can(role, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"), <SettingsShell role={role}><BusinessSettings key={tenant.id} tenant={tenant} tab={tab} /></SettingsShell>) },
         { path: "/business/billing/return/:provider/:id", render: ({ provider, id }) => <BillingReturn provider={provider} id={id} /> },
-        { path: "/business/billing", render: () => guard(can(role, "workspace.billing.manage"), <SettingsShell role={role}><BusinessBilling tenant={tenant} canManage /></SettingsShell>) },
+        { path: "/business/billing", render: () => guard(can(role, "workspace.billing.manage"), <SettingsShell role={role}>{onApps ? <Subscriptions key={tenant.id} tenant={tenant} /> : <BusinessBilling tenant={tenant} canManage />}</SettingsShell>) },
+        { path: "/business/marketplace", render: () => guard(can(role, "workspace.billing.manage"), <Marketplace key={tenant.id} tenant={tenant} openApp={new URLSearchParams(window.location.search).get("app")} />) },
+        { path: "/business/marketplace/cart", render: () => guard(can(role, "workspace.billing.manage"), <CartPage key={tenant.id} tenant={tenant} />) },
         { path: "/business/data", render: () => guard(can(role, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"), <SettingsShell role={role}><BusinessData tenant={tenant} /></SettingsShell>) },
         { path: "/business/pos", render: () => paid(any("pos.frontdesk.use", "pos.restaurant.use", "pos.extra.create", "pos.shift.close"), (<LivePOSHub key={tenant.id} tenant={tenant} role={role} />)) },
         { path: "/business/bookings", render: () => guard(can(role, "hotel.booking.read"), (<LiveBookings key={tenant.id} tenant={tenant} role={role} />)) },

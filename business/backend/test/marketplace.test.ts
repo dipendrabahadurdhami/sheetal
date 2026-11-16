@@ -149,3 +149,15 @@ describe("changing a subscription", () => {
     expect([r.statusCode, r.json().code]).toEqual([409, "sales_off"]);
   });
 });
+
+describe("the overview's price protection (P3-FE-1)", () => {
+  it("no lock: null; a moved business sees its protected price and lock end", async () => {
+    expect((await call("owner", "GET", "/billing/overview")).json().data.lock).toBeNull();
+    const lockEnd = new Date("2027-12-01T00:00:00Z");
+    await app.db!.billingLock.create({ data: { tenantId: ids.biz!, legacyMonthlyGrossPaisa: 150_000n, legacyPeriodMonths: 12, coversApps: ["hotel", "pos"], lockEnd, migrationRunId: "run-fe1" } });
+    expect((await call("owner", "GET", "/billing/overview")).json().data.lock).toEqual({ monthlyGrossPaisa: 150_000, periodMonths: 12, coversApps: ["hotel", "pos"], lockEnd: lockEnd.toISOString() });
+    // Another business never sees it.
+    expect((await call("owner", "GET", "/billing/overview", undefined, ids.biz2)).json().data.lock).toBeNull();
+    await app.db!.billingLock.delete({ where: { tenantId: ids.biz! } });
+  });
+});

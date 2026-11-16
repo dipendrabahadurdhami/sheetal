@@ -1,10 +1,47 @@
-# Project state (14 Nov 2026, noon, Nepal time)
+# Project state (16 Nov 2026, 08:00, Nepal time)
 
-**Phase 3 is in progress: 8 stages merged (PRs #65-#73, 14 Nov), about 45% of PHASE-3-TASKS.** Main = the merge of PR #73, CI green, about 1450 tests.
-Phase 2 is closed (`handovers/CLOSE-OUT-phase-2.md`). **Read `handovers/CONTINUE-phase-3.md` first**: done table, next tasks in order, decisions, owner steps.
+**Phase 3 about 62%.** Main = the merge of PR #76 (BE-8). Two more stages are built, tested and pushed, **not merged**:
+| Branch | Task | What | Tests |
+|---|---|---|---|
+| `phase-3/P3-BE-10-migration` (33d8af1) | BE-10 | `npm run billing:migrate`: dry run / `--apply` / `--restore`, proofs P1-P8, price report CSV; lifecycle job gives moved businesses their monthly AI credits; v3 fix: a whole-app grant lifts a free-edition app (`CHANGES-P3-BE-10.md`) | `backend-core/test/migrate-plans.test.ts` 52 (database included) |
+| `phase-3/P3-BE-11-posting` (6cfc27e, includes BE-10) | BE-11 | `platform.posting` fair use (5/day, 20 for checked businesses), checked businesses publish at once, plan listing limit only on `plans`, `is_verified` removed from public answers and the "Verified" badge from the website, `POST /v1/start-free` (`CHANGES-P3-BE-11.md`) | `website/backend/test/posting-free.test.ts` 10; old `write.test.ts` unchanged and green; `catalog.test.ts` 2 lines changed (said in CHANGES) |
+
+Test evidence (owner's PC, 16 Nov): lint and typecheck green on the whole repo; front-end 271/272 (the one failing is Windows-only, see below);
+every server suite ran green except one cross-file leak in `migrate-plans.test.ts` (it left rows that `p3-billing-tables.test.ts` expects empty),
+fixed in 33d8af1 and both files re-run green together (63). **A last full server run on 6cfc27e was interrupted** (the owner ran RUN-UPDATE,
+which switched the folder to main): run it once more before merging.
+
+To merge (no GitHub CI; the owner said to ignore it): on the owner's PC `git checkout phase-3/P3-BE-11-posting`, run every server suite
+(one workspace at a time: `npm run test -w @sheetal/backend-core`, then website-api, business-api, admin-api, platform, mail-server, each app),
+`npm run lint`, `npm run typecheck`; if green, ask the owner, then `git checkout main`, `git merge --squash` (or a merge) of BE-10 then BE-11,
+`git push origin main`. Then the owner runs RUN-UPDATE (no new migrations in these two stages).
+
+## Lessons from 16 Nov morning (keep doing)
+- `gh` is not on the owner's PC and GitHub Actions is stopped (billing). `git push` works (Git Credential Manager).
+- **The database tests DO run on the owner's PC** (Windows, embedded PostgreSQL): `npx vitest run test/<file>` inside a workspace. Use this instead of CI.
+- `npm run test` stops at the first failing workspace: run the workspaces one by one so one failure doesn't hide the others.
+- `packages/config/src/no-old-names.test.js` fails on Windows only (`git ls-files '*.ts'`: cmd keeps the quotes, finds 0 files). Not a real failure; CI on Linux passes.
+- A test that writes to the shared test database must clean up in `afterAll` (later files count rows).
+- Tell the owner NOT to run RUN-UPDATE while you work in their folder: it stops on your unsaved changes, and after a commit it switches the folder to main under your running tests.
+- Python on Windows writes CRLF: open files with `newline="
+"` when rewriting them.
+- New scripts must be described in `scripts/help.mjs` (`help --check` is the first step of `npm run check`).
+
+---
+
+# Project state (16 Nov 2026, 08:00, Nepal time)
+
+**Update 08:00:** BE-10 (`d9d6dc8`), BE-11 (`78f8d7b`) and FE-1 (stage 13) are on main, squashed straight onto main after the tests ran on the
+owner's PC (no PR: `gh` isn't installed and GitHub Actions is off). Phase 3 is about 67% (37 of 55 by task size). Next: FE-2.
+PR #77 (the older handover branch `phase-3/handover`) is replaced by these files on main.
+
+
+**Phase 3 is in progress: 10 stages merged (PRs #65-#76, 14-16 Nov), about 53% of PHASE-3-TASKS (weighted by task size: S=1, M=2, L=3).**
+Main = the merge of PR #76 (16 Nov), CI green. Phase 2 is closed (`handovers/CLOSE-OUT-phase-2.md`).
+**Read `handovers/CONTINUE-phase-3.md` first**: done table, next tasks in order, decisions, owner steps.
 Every business is still on `billingMode = plans` and `platform.billing.salesEnabled` is false: no customer has seen any Phase 3 change.
 
-## Phase 3 so far (14 Nov)
+## Phase 3 so far
 | PR | Task | What |
 |---|---|---|
 | #65 | DB-1 + DB-2 | 12 billing tables (subscriptions, events, grants, add-ons, locks, migration runs, AI credits, invoice lines, revenue, coupons, redemptions, platform approvals); invoices/payments in paisa; CHECKs + triggers (issued invoice frozen, revenue append-only, refund ≤ payment) |
@@ -15,6 +52,23 @@ Every business is still on `billingMode = plans` and `platform.billing.salesEnab
 | #70 | BE-9 | payment router (Sheetal's vs a business's system, no fall-back), paisa amount check |
 | #71 | BE-5 | hourly lifecycle job (statuses, one renewal invoice per business, reminders); old plan cycle skips `apps` |
 | #73 | BE-6 | business marketplace API (install, trial, cart quote = invoice, checkout, change/cancel/resume/remove, coupons, overview) |
+| #75 | BE-7 | admin billing API: pricing (impact count, approval of rises), coupons, subscriptions + gifts, sales/revenue by Nepal day, VAT, tax-invoice/IRD lists, shadow counter, refunds (maker-checker, partial credit notes, one-person rule), `platform.company` seller details |
+| #76 | BE-8 | AI credits (first-expiring first, reserve then settle, failed call free), router own key → Sheetal AI → locked preview, Claude/OpenAI/Gemini/ElevenLabs built in the Integration Center, `business.ai`, `GET /v1/ai/credits`, admin AI credit gift |
+
+**Open: PR #77 (docs only: these handover files).** On 16 Nov GitHub Actions stopped starting jobs: "recent account payments have failed or your spending
+limit needs to be increased" (owner: GitHub → Settings → Billing & plans). When CI runs again: re-run PR #77's check, merge it when green, then go on.
+
+Left in Phase 3: BE-10 (migration script plans → apps), BE-11 (free website posting), FE-1..6 (all screens), OPS-1, OPS-2, QA-2 sign-offs.
+
+## Lessons from 16 Nov (keep doing)
+- `gh pr create` fails here (GraphQL is blocked): open PRs with `gh api repos/dipendrabahadurdhami/sheetal/pulls -f base=main -f head=<branch> -f title=… -f body=…`,
+  merge with `gh api -X PUT repos/…/pulls/<n>/merge -f merge_method=squash`, read CI with `gh api "repos/…/actions/runs?branch=<b>&per_page=1"` and job logs.
+- `backend-core/test/permissions-worlds.test.ts` scans the admin API: every `hasPerm(` must read `PLATFORM_ROLES[...]` (import both from backend-core/domain/permissions).
+- Prisma `Json` payloads: cast with `as unknown as T` (a direct cast fails typecheck in CI). A conditional `{ take }` vs `{ skip, take }` spread fails typecheck: pass both.
+- Locally: `npm ci --ignore-scripts`, then `npm rebuild @embedded-postgres/linux-x64`; the DB tests still can't run as root, so run pure tests with a temp vitest
+  config (`include: [...]`, no globalSetup) and let CI run the DB tests (~12 min per run).
+- An optimistic-lock check (`version`) must run before other validation, or a stale save answers 400 instead of 409.
+- Plugins registered per app instance (executors, caches): key them by `dbOf(app)` (shared by every plugin of one app), never a module-level Map of closures.
 
 ## Lessons from 14 Nov (keep doing)
 - Old tests pin lists (the admin job list, the business settings list): add new things beside them (`adminPlatformJobs`), never edit the pinned test.
@@ -117,7 +171,7 @@ the owner the one thing to do next.
   Merge: `gh api -X PUT repos/…/pulls/<n>/merge -f merge_method=squash -f commit_title="… (#n)"`. Read CI: `actions/runs?head_sha=…&event=pull_request`,
   then `actions/jobs/<id>/logs` (strip colour codes; grep `Tests`, `FAIL`, `error TS`).
 - Force-push and deleting remote branches are refused from the sandbox: merge `main` into a branch instead; the owner deletes old branches.
-- Commit trailer: `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` + `Claude-Session: …`. PR body ends with the Claude Code line.
+- Commit messages and PR texts carry **no** co-author or tool credit lines (the owner's rule since 4 Nov).
 - Typical CI catches: regenerate `npm run gen:permissions` after any manifest edit; `tsc` strict wants `arr[0]!` in tests; a test query must
   filter to its own tables. Local `tsc` shows unrelated errors when the local Prisma client is stale: trust CI.
 - Test counts on main: 894 (after FE-2). FE-3 branch 916; DB-3 branch 916 (894 + 22).
@@ -131,7 +185,7 @@ the owner the one thing to do next.
 - `RUN-P1-RESYNC.cmd`: already run (branch links PASS: 59 members, 10 limited, all linked).
 - Hand tests need the owner signed in with a **test account** (`owner.agency.business@sheetal.test`, business "Test Realty Business");
   otherwise the panel shows the SAMPLE pages (e.g. Reviews with Import/Export and 212 reviews). Practice reviews: `npm run reviews:sample`.
-- Claude in Chrome was not connected; the built-in browser pane cannot reach localhost. Hand tests are done by the owner from screenshots.
+- The built-in browser pane cannot reach localhost. Hand tests are done by the owner from screenshots.
 
 ## 5. Where Phase 1 stands
 
