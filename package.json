@@ -60,6 +60,7 @@
     "roles:new-names": "node backend-core/scripts/rewrite-role-perms.mjs",
     "billing:migrate": "npm run billing:migrate -w @sheetal/backend-core --",
     "billing:mode": "npm run billing:mode -w @sheetal/backend-core --",
+    "billing:free": "npm run billing:free -w @sheetal/backend-core --",
     "scratch": "node scripts/scratch-db.mjs",
     "promote:gift": "npm run promote:gift -w @sheetal/backend-core --",
     "listings:codes": "npm run listings:codes -w @sheetal/backend-core --",

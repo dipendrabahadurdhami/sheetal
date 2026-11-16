@@ -23,6 +23,7 @@ import { payBanners } from "./banners.js";
 import { SettingsService } from "@sheetal/platform/settings/service";
 import { REVENUE_SHARE } from "@sheetal/platform/settings/defs";
 import { applySubscriptionPayment } from "@sheetal/platform/billing/invoice";
+import { listingLimitOf, reconcileInTx } from "./listing-limit.js";
 import { COMPANY_SETTING, sellerSnapshot } from "@sheetal/platform/billing/company";
 
 /** The settings store only logs a stored value that no longer fits its definition (it then uses the default). */
@@ -164,6 +165,8 @@ export async function applyPayment(db: Db, mailer: Mailer, o: { paymentId: strin
       // Sheetal's own details as they are now (platform.company): copied into the invoice, so a later edit never changes it.
       const seller = sellerSnapshot(await new SettingsService(db, QUIET).get(COMPANY_SETTING), (await platformSettings(db)).siteName);
       const r = await applySubscriptionPayment(tx, { paymentId: p.id, now, providerRef: o.providerRef ?? null, raw: o.raw, reviewedBy: o.reviewedBy ?? null, appSales: share.appSales, share, seller });
+      // Paying can raise the Listings limit: the listings that were paused for the limit come back in the same transaction.
+      if (r.applied && tenant.billingMode === "apps") await reconcileInTx(tx, tenant.id, await listingLimitOf(tx as unknown as Db, tenant.id, now), now);
       return r.applied ? { p, tenant, end: now, v3: true as const } : null;
     }
     if (p.invoice.kind === "banner") {

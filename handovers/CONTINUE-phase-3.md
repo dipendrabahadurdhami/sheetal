@@ -52,9 +52,11 @@ phone sign-in. `/plans` and `/become-agency` open `/pricing`, which now says wha
 `website/backend/test/app-catalog.test.ts` expected Payroll as "coming soon" on the public catalog.
 Found: the website's Apps and Pricing pages used sample data here (`public/catalog`, `start-free` missing from `VITE_API_LIVE` in
 `website/frontend/.env.local`, a local file): added locally; production needs `VITE_API_LIVE=*`.
-**Open, the owner's decision:** Sheetal Property (2,680 listings; free Listings = 3, full = 500) is to move to the free tier. Not done: ask how
-(free with its listings kept and no limit as the platform's own business, or the strict free limits). The mechanics are not built: no code path
-ends paid subscriptions at once (cancel works at period end; `billing:migrate --restore` + a plan change + migrate again is the tested route).
+**Decided and done (16 Nov, about 22:16):** the owner chose the strict rule for everyone, Sheetal Property included: a business shows only as
+many listings as its Listings edition allows; the rest are paused and return when it pays; what was hidden before stays hidden.
+Built (`CHANGES-P3-FREE-TIER.md`): `listings.limit_paused_at`, `npm run billing:free`, the hourly job, the Listings app on the edition's limit.
+Applied to Sheetal Property on the real data: free editions, Starter plan, 2,592 of 2,595 listings paused; the public site has 90 listings.
+**Most important code task left:** no other app enforces its free limits on apps (`requireLimit()` is called nowhere): see `docs/LAUNCH-CHECK.md`.
 
 ## Next, in order
 While Actions is off: branch, build, run the tests on the owner's PC workspace by workspace, fast-forward main, `git push origin main`.

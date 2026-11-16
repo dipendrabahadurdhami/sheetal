@@ -61,10 +61,17 @@ export class ListingService extends BaseService<L, never, never> {
       return r;
     });
   }
+  /** How many listings the business may hold (-1 = no limit). On app subscriptions the Listings edition decides (free 3, full 500, grants on
+   *  top); a business still on Starter / Business / Pro, or another business than the one signed in to, keeps its plan's number. */
+  private async cap(ctx: BusinessContext, tenantId: string, plan: { price: number; limits: unknown }): Promise<number> {
+    if (tenantId === ctx.business.id && ctx.entitlements.mode === "apps") return ctx.entitlements.limit("listings", "listings") ?? -1;
+    return listingCap((await effectiveLimits(db(ctx) as never, tenantId, plan as never)) as never);
+  }
   private async room(ctx: BusinessContext, tenantId: string, plan: { price: number; limits: unknown }, adding = 1) {
-    const cap = listingCap((await effectiveLimits(db(ctx) as never, tenantId, plan as never)) as never);
+    const cap = await this.cap(ctx, tenantId, plan);
     if (cap === -1) return;
     if ((await this.listings.used(ctx, tenantId)) + adding > cap) {
+      if (tenantId === ctx.business.id && ctx.entitlements.mode === "apps") throw new AppError(402, "listing_limit", `Your Listings edition has room for ${cap} listing${cap === 1 ? "" : "s"}. Archive some, or upgrade Listings in the Apps marketplace to add more.`);
       throw new AppError(402, "listing_limit", cap === 1 ? "The free Starter plan has room for one listing. Archive one or upgrade to add more." : `Your plan has room for ${cap} listings. Archive some or upgrade to add more.`);
     }
   }
@@ -90,7 +97,7 @@ export class ListingService extends BaseService<L, never, never> {
     const [byStatus, byKind, used] = await Promise.all([this.listings.byStatus(ctx), this.listings.byKind(ctx), this.listings.used(ctx)]);
     const counts: Record<string, number> = Object.fromEntries(byStatus.map((g) => [g.status === "pending" ? "in_review" : g.status, g._count]));
     counts.all = byStatus.filter((g) => g.status !== "archived").reduce((a, g) => a + g._count, 0);
-    const meta = { cap: listingCap((await effectiveLimits(db(ctx) as never, ctx.business.id, t.plan as never)) as never), used, kinds: this.kinds(t.type, t.plan), listedKinds: byKind.map((g) => g.kind), counts };
+    const meta = { cap: await this.cap(ctx, ctx.business.id, t.plan as never), used, kinds: this.kinds(t.type, t.plan), listedKinds: byKind.map((g) => g.kind), counts };
     if (!q.page) {
       const rows = await this.listings.summary(ctx);
       return { data: rows.map((l) => ({ id: l.code, tenantId: l.tenantId, kind: l.kind, title: l.title, status: l.status === "pending" ? "in_review" : l.status, price: l.price == null ? 0 : Number(l.price), updated: day(l.updatedAt), checkDue: day(l.checkDueAt), lastChecked: day(l.lastCheckedAt), branchId: l.branchId, branch: l.branch?.name ?? null })), meta };
@@ -200,6 +207,14 @@ export class ListingService extends BaseService<L, never, never> {
       }
       if (!next || next === l.status) continue;
       plan.push({ id: l.id, code: l.code, next });
+    }
+    // On app subscriptions the website shows at most as many listings as the Listings edition allows (the owner's rule, 16 Nov 2026):
+    // publishing more is refused here; the hourly check (domain/listing-limit.ts) would pause the extra ones anyway.
+    const showing = plan.filter((p) => p.next === "published").length;
+    if (showing && ctx.entitlements.mode === "apps") {
+      const cap = ctx.entitlements.limit("listings", "listings");
+      const live = cap === null ? 0 : await db(ctx).listing.count({ where: { tenantId: ctx.business.id, deletedAt: null, status: "published" } });
+      if (cap !== null && live + showing > cap) throw new AppError(402, "listing_limit", `Your Listings edition shows ${cap} listing${cap === 1 ? "" : "s"} on the website and ${live} ${live === 1 ? "is" : "are"} live. Pause one first, or upgrade Listings in the Apps marketplace.`);
     }
     const changed = plan.map((p) => p.code);
     if (plan.length) {

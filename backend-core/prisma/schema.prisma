@@ -509,6 +509,10 @@ model Listing {
   reviewedAt    DateTime?      @map("reviewed_at")
   reviewedBy    String?        @map("reviewed_by")
   reviewNote    String?        @map("review_note")
+  /// Set when the system took the listing off the website because the business is over its Listings limit (status becomes paused).
+  /// Cleared when it is shown again after the limit rises (the business pays). A listing a person paused has no date here and is never
+  /// shown again by the system (domain/listing-limit.ts).
+  limitPausedAt DateTime?      @map("limit_paused_at")
   legacyId      Int?           @unique @map("legacy_id")
   publishedAt   DateTime?      @map("published_at")
   createdAt     DateTime       @default(now()) @map("created_at")

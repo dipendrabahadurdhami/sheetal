@@ -20,8 +20,9 @@ Setup steps for the super admin are in [SETUP-GUIDE.md](SETUP-GUIDE.md). The cut
 ## State of the real data
 - 17 businesses: 1 on `apps` (Sheetal Property, the pilot), 14 on `shadow`, 2 on `plans` (a plan payment in flight).
 - 15 of the 17 are **test accounts** (`…@sheetal.test`). The two real ones are Sheetal Property and "hotel nepal".
-- Sheetal Property has 2,680 listings. The free Listings edition allows 3, the full one 500. Today it is unlimited until 2028 through the migration.
-  **Open decision (owner):** what Sheetal Property gets when it moves to the free tier.
+- **Sheetal Property is on the free tier since 16 Nov (the owner's decision):** 3 of its 2,595 published listings are on the website, 2,592
+  are paused (not deleted) and return when it pays for Listings (the full edition allows 500). The public website has 90 listings now
+  (it had 2,682). Its business email (the Mail app has no free edition) ended. See `handovers/CHANGES-P3-FREE-TIER.md`.
 
 ## Still open before a public launch (Phase 4: none of this is done)
 | # | What | Why it matters | Who |
@@ -41,6 +42,12 @@ Setup steps for the super admin are in [SETUP-GUIDE.md](SETUP-GUIDE.md). The cut
 | 13 | The pilot payment test (trial, buy, change, cancel, refund) | gate G10 | owner + developer |
 | 14 | Step 4 of the cutover (everyone to `apps`), not before 23 Nov by the 7-day rule | 14 businesses still on `shadow` | owner's yes |
 | 15 | A full hand test of every app on a phone | not done | owner |
+
+## A blocker for earning money (found 16 Nov)
+**The free limits are not enforced in the apps.** The catalog says "5 rooms free", "100 leads free", "20 invoices a month free", and the
+pricing page shows it, but on app subscriptions no app checks those numbers (only Listings does, since 16 Nov). A free business is not
+stopped at its limits, so nothing makes it upgrade. Each app (Hotel, CRM, Invoicing, POS, Expenses, Reviews, People, Agreements, Rentals,
+Projects, Collections, Investments) must call the limit check where it adds a record. This is the most important code task left.
 
 ## Known gaps in what is built (not blockers; say so if one matters to you)
 - Sign in with Google and by phone, SMS, card gateway, Fonepay dynamic QR, Facebook and Instagram posting, AI voice assistant page, delivery partners,

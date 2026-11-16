@@ -19,6 +19,7 @@ import { BILLING_SETTING, CATALOG_SETTING, publicCatalog, withAiApp, withNewApps
 import { addNepalDays, anchorOf } from "@sheetal/platform/billing/days";
 import { effectiveStatus } from "@sheetal/platform/billing/effective-status";
 import { applySubscriptionPayment, createInvoiceFromQuote, taxNumber } from "@sheetal/platform/billing/invoice";
+import { reconcileListingLimit } from "@sheetal/backend-core/domain/listing-limit";
 import { COMPANY_SETTING, sellerSnapshot } from "@sheetal/platform/billing/company";
 import { quote } from "@sheetal/platform/billing/quote";
 import type { BillingState, CartItem, CouponInput, SubscriptionState, SubscriptionStatus } from "@sheetal/platform/billing/types";
@@ -242,6 +243,8 @@ export async function marketplaceRoutes(app: FastifyInstance, opts: { fetch?: Fe
       const share = await store().get(REVENUE_SHARE);
       const seller = sellerSnapshot(await store().get(COMPANY_SETTING), (await platformSettings(db())).siteName);
       await db().$transaction((tx) => applySubscriptionPayment(tx, { paymentId: p.id, now: new Date(), appSales: share.appSales, share, seller }));
+      // The Listings limit may have changed: listings paused for the limit come back (or the extra ones pause) at once. Never fails the checkout.
+      await reconcileListingLimit(db(), t.id).catch((e) => request.log.warn({ err: e, tenantId: t.id }, "listing limit: could not reconcile after checkout"));
       return { message: "Done. Your apps are ready.", data: { invoiceId: invoice.id, paid: true } };
     }
     return { data: { ...(await startPayment(ws, invoice, b.provider)), totalPaisa: q.totalPaisa } };

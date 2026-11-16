@@ -22,6 +22,7 @@
     "integrations:migrate": "tsx scripts/integrations-migrate.ts",
     "billing:migrate": "tsx scripts/migrate-plans-to-apps.ts",
     "billing:mode": "tsx scripts/billing-mode.ts",
+    "billing:free": "tsx scripts/billing-free.ts",
     "check:catalog": "tsx scripts/check-catalog.ts",
     "promote:gift": "tsx scripts/promote-gift.ts",
     "listings:codes": "tsx scripts/listing-codes.ts",

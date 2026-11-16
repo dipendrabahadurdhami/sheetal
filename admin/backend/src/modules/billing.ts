@@ -16,6 +16,7 @@ import { readPrivateFile } from "@sheetal/backend-core/lib/files";
 import { notify } from "@sheetal/platform/notify/index";
 import { applyPayment, billingSettings, createInvoice, invoiceNumber, runBillingCycle, type StoredGateways } from "@sheetal/backend-core/domain/billing";
 import { runSubscriptionLifecycle } from "@sheetal/platform/billing/lifecycle";
+import { reconcileAllListingLimits } from "@sheetal/backend-core/domain/listing-limit";
 import { PERIODS } from "@sheetal/backend-core/domain/plans";
 import { savePlatform } from "@sheetal/backend-core/domain/platform";
 import { staffOf } from "./routes.js";
@@ -225,7 +226,10 @@ export const billingJob = (app: FastifyInstance): JobSpec => ({
 /** Phase 3 (P3-BE-5): businesses on per-app subscriptions, every hour: statuses announced, renewal invoices, reminders. Does nothing while no business is on "apps". */
 export const subscriptionJob = (app: FastifyInstance): JobSpec => ({
   id: "billing.subscriptions", everyMs: 3600_000, firstRunMs: 60_000, failMessage: "subscription lifecycle failed",
-  run: () => runSubscriptionLifecycle(dbOf(app), { log: app.log }).then((r) => { if (r.businesses) app.log.info(r, "subscription lifecycle"); }),
+  // Then the listings: a business whose Listings limit fell (its paid period ended) keeps only that many on the website, and one whose
+  // limit rose (it paid) gets back exactly the listings that were paused for that reason (backend-core/src/domain/listing-limit.ts).
+  run: () => runSubscriptionLifecycle(dbOf(app), { log: app.log }).then((r) => { if (r.businesses) app.log.info(r, "subscription lifecycle"); })
+    .then(() => reconcileAllListingLimits(dbOf(app), { log: app.log })).then((r) => { if (r.paused || r.restored) app.log.info(r, "listing limits"); }),
 });
 /** The old entry point, kept as a shim over the jobs registry (it starts the job on its own, as before). */
 export function startBillingJob(app: FastifyInstance) { startJobs(app, [billingJob(app)], { enabled: true }); }
