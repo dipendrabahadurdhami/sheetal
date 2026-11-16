@@ -26,7 +26,7 @@ export const NEW_SERVICES = [
   ["/help/investing", ShieldCheck, "Investor guide", "For first-time investors", ["How investing works on Sheetal", "What to check before you invest", "How updates and returns are shown", "Risks explained in plain words"]],
 ];
 // services with paid plans: "See plans" opens the plans page on the right business type
-export const PLANS_OF = { "/stays": "/post-property?type=stay", "/project": "/post-property?type=project", "/investment/explore": "/post-property?type=invest", "/business": "/plans" };
+export const PLANS_OF = { "/stays": "/post-property?type=stay", "/project": "/post-property?type=project", "/investment/explore": "/post-property?type=invest", "/business": "/pricing" };
 
 const HOW = [
   ["Tell us what you need", "Pick a service or send the enquiry form. A few details are enough."],

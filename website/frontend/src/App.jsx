@@ -20,7 +20,6 @@ import PropertyDetail from "./pages/PropertyDetail";
 import ListingDetail from "./pages/ListingDetail";
 import Partners from "./pages/Partners";
 import AgencyProfile from "./pages/AgencyProfile";
-import Plans from "./pages/Plans";
 import PricingPage from "./pages/Pricing";
 import { AppDetailPage, AppsPage } from "./pages/Apps";
 import Profile from "./pages/Profile";
@@ -98,8 +97,9 @@ export default function App() {
           <Route path="/apps" element={<AppsPage />} />
           <Route path="/apps/:id" element={<AppDetailPage />} />
           <Route path="/pricing" element={<PricingPage />} />
-          <Route path="/plans" element={<Plans />} />
-          <Route path="/become-agency" element={<Plans />} />
+          {/* The Starter / Business / Pro plans page is retired (16 Nov): a business starts free and pays app by app, so the old links land on Pricing. */}
+          <Route path="/plans" element={<Navigate to="/pricing" replace />} />
+          <Route path="/become-agency" element={<Navigate to="/pricing" replace />} />
           <Route path="/become-agent" element={<Navigate to="/become-agency" replace />} />
           <Route path="/agency/:id" element={<AgencyProfile />} />
           <Route path="/agent/:id" element={<OldAgencyLink />} />

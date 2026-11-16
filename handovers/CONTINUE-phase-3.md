@@ -41,6 +41,20 @@ Every business is still on `billingMode = plans`: nothing has changed for any cu
   `apps`; it had no open plan invoice, so nothing was voided. After it: 2 on `plans`, 14 on `shadow`, 1 on `apps`, 0 "less". Sales are still
   off (Admin → Pricing → Billing rules). Undo (no sale yet): `RUN-P3-GO-BACK.cmd` with that id. The pilot hand test (runbook) is the owner's,
   signed in as that business's owner. **Billing code is frozen while the cutover runs (PHASE-3-TASKS section 1): no billing change before step 4.**
+- **Sales on, 16 Nov 2026 17:34** (the owner's yes): saved in Admin → Pricing → Billing rules by the test super admin, reason in the history.
+  No Sheetal payment method is live yet (eSewa is the owner's setup), so nobody can pay online until one is.
+
+## Wrap-up pass, 16 Nov evening (the owner: "wrap-up phase, make it ready to launch, I only do the integration setup")
+Done and pushed: `docs/SETUP-GUIDE.md` (what the super admin connects, when, step by step) and `docs/LAUNCH-CHECK.md` (what was fixed, what is
+still open before a public launch, known gaps). Unfinished things are hidden, not labelled: the 3 unbuilt apps (`visible: false` in the seed),
+the Social and Voice preview pages, unbuilt connections in the Setup center, the admin's sample "Orders" and "Live visitors" tabs, Google and
+phone sign-in. `/plans` and `/become-agency` open `/pricing`, which now says what is free. One old assertion changed and said so:
+`website/backend/test/app-catalog.test.ts` expected Payroll as "coming soon" on the public catalog.
+Found: the website's Apps and Pricing pages used sample data here (`public/catalog`, `start-free` missing from `VITE_API_LIVE` in
+`website/frontend/.env.local`, a local file): added locally; production needs `VITE_API_LIVE=*`.
+**Open, the owner's decision:** Sheetal Property (2,680 listings; free Listings = 3, full = 500) is to move to the free tier. Not done: ask how
+(free with its listings kept and no limit as the platform's own business, or the strict free limits). The mechanics are not built: no code path
+ends paid subscriptions at once (cancel works at period end; `billing:migrate --restore` + a plan change + migrate again is the tested route).
 
 ## Next, in order
 While Actions is off: branch, build, run the tests on the owner's PC workspace by workspace, fast-forward main, `git push origin main`.

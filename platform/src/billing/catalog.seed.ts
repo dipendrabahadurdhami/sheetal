@@ -33,7 +33,9 @@ export const SOFT_LIMITS: Readonly<Record<string, LimitBehaviour>> = { bills_per
 const lim = (value: number | null, behaviour: LimitBehaviour = "hard") => ({ value, behaviour });
 const free = (limits: AppCatalog["editions"][string]["limits"]) => ({ name: { en: "Free" }, free: true, priceMonthPaisa: 0, priceYearPaisa: 0, limits, features: [], sort: 0 });
 
-/** Apps sold in the marketplace that have no manifest yet (their code moves into apps/ later). */
+/** Apps sold in the marketplace that have no manifest yet (their code moves into apps/ later).
+ *  An app that is not built yet (coming_soon) starts hidden: nothing unfinished is shown to customers at launch (the owner's rule, 16 Nov).
+ *  Admin -> Pricing -> "Shown in the marketplace" shows it when it is ready. */
 export const SEED_EXTRA_APPS: Readonly<Record<string, AppCatalog>> = {
   // Business email: today's paid-plan mailboxes (1 GB). No free edition (MB 3.4: "none (locked)").
   mail: { name: { en: "Mail" }, availability: "live", visible: true, freeEditionEnabled: false, trialDays: 14, editions: {
@@ -44,14 +46,14 @@ export const SEED_EXTRA_APPS: Readonly<Record<string, AppCatalog>> = {
     free: free({ featured_slots: lim(0) }),
     full: { name: { en: "Full" }, free: false, ...month(300), limits: { featured_slots: lim(8) }, features: [], sort: 1 },
   } },
-  payroll: { name: { en: "Payroll" }, availability: "coming_soon", visible: true, freeEditionEnabled: false, trialDays: null, editions: {
+  payroll: { name: { en: "Payroll" }, availability: "coming_soon", visible: false, freeEditionEnabled: false, trialDays: null, editions: {
     full: { name: { en: "Full" }, free: false, ...month(400), limits: {}, features: [], sort: 1 },
   } },
-  accounting: { name: { en: "Accounting" }, availability: "coming_soon", visible: true, freeEditionEnabled: true, trialDays: 14, editions: {
+  accounting: { name: { en: "Accounting" }, availability: "coming_soon", visible: false, freeEditionEnabled: true, trialDays: 14, editions: {
     free: free({ ledgers: lim(1), entries_per_month: lim(50) }),
     full: { name: { en: "Full" }, free: false, ...month(500), limits: { ledgers: lim(null), entries_per_month: lim(null) }, features: [], sort: 1 },
   } },
-  restaurant: { name: { en: "Restaurant" }, availability: "coming_soon", visible: true, freeEditionEnabled: true, trialDays: 14, editions: {
+  restaurant: { name: { en: "Restaurant" }, availability: "coming_soon", visible: false, freeEditionEnabled: true, trialDays: 14, editions: {
     free: free({ outlets: lim(1) }),
     full: { name: { en: "Full" }, free: false, ...month(400), limits: { outlets: lim(null) }, features: [], sort: 1 },
   } },

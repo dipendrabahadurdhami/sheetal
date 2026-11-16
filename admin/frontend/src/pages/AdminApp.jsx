@@ -28,7 +28,7 @@ import { LiveAdminPromote } from "./LivePromote";
 import { LiveLeads } from "./LiveLeads";
 import { LiveEarnings } from "./LiveEarnings";
 import { LiveDashboard } from "./LiveDashboard";
-import { AdminCareers, AdminDemand, AdminEarnings, AdminLeads, AdminMessages, AdminRequests, AdminSocial, AdminVoice, Hub } from "./AdminGrowth";
+import { AdminCareers, AdminDemand, AdminEarnings, AdminLeads, AdminMessages, AdminRequests, Hub } from "./AdminGrowth";
 import { AdminAI, AdminAnalytics, AdminOrders } from "./AdminExtras";
 import { MyProfile, NotificationsPage, adminLive, useNotifs, useServerNotifs } from "@sheetal/shared/components/Me";
 import { AdminAudit, AdminBilling, AdminContent, AdminInbox, AdminModeration } from "./AdminOps";
@@ -109,21 +109,21 @@ export default function AdminApp() {
   ]} />;
   const contentHub = (start) => <Hub key={"content-" + (start || "")} start={start} title={t("nav.content")} sub={t("hub.contentSub")} tabs={[
     { id: "site", label: t("hub.pages"), icon: "newspaper", el: <AdminContent /> },
-    { id: "social", label: t("nav.social"), icon: "megaphone", el: <AdminSocial /> },
     { id: "careers", label: t("nav.careers"), icon: "briefcase", el: <AdminCareers /> },
   ]} />;
   const billingHub = (start) => <Hub key={"billing-" + (start || "")} start={start} title={t("nav.billing")} sub={t("hub.billingSub")} tabs={[
     { id: "billing", label: t("nav.billing"), icon: "receipt", el: <AdminBilling role={role} /> },
-    { id: "orders", label: "Orders, refunds and claims", icon: "rotate-ccw", el: <AdminOrders /> },
+    // Sample orders only: not shown to signed-in staff (app refunds are in App billing; a real orders list is not built).
+    ...(isStaffLive() ? [] : [{ id: "orders", label: "Orders, refunds and claims", icon: "rotate-ccw", el: <AdminOrders /> }]),
     { id: "earnings", label: t("nav.earnings"), icon: "hand-coins", el: isStaffLive() ? <LiveEarnings /> : <AdminEarnings /> },
   ]} />;
   const analyticsHub = (start) => <Hub key={"analytics-" + (start || "")} start={start} title={t("nav.traffic")} sub={t("an.trafficSub")} tabs={[
     { id: "traffic", label: t("an.traffic"), icon: "chart-column", el: isStaffLive() ? <LiveAnalytics /> : <AdminAnalytics /> },
-    { id: "live", label: t("gm.live"), icon: "radio", el: <AdminMessages only="live" /> },
+    // "Live visitors" is a sample list (invented numbers): not shown to signed-in staff.
+    ...(isStaffLive() ? [] : [{ id: "live", label: t("gm.live"), icon: "radio", el: <AdminMessages only="live" /> }]),
   ]} />;
   const aiHub = (start) => <Hub key={"ai-" + (start || "")} start={start} title={t("hub.aiTitle")} sub={t("hub.aiSub")} tabs={[
     { id: "ai", label: t("ai.featuresTitle"), icon: "sparkles", el: isStaffLive() ? <LiveAiFeatures embedded /> : <AdminAI embedded /> },
-    { id: "voice", label: t("nav.voice"), icon: "phone-call", el: <AdminVoice /> },
     { id: "templates", label: t("gm.templates"), icon: "file-text", el: isStaffLive() ? <LiveTemplates /> : <AdminMessages only="templates" /> },
     { id: "expiry", label: t("gm.expiry"), icon: "calendar-x", el: isStaffLive() ? <LiveExpiry /> : <AdminMessages only="expiry" /> },
   ]} />;

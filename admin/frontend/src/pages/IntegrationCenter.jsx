@@ -30,7 +30,9 @@ function List({ api }) {
   const [state, load] = useLoad("/admin/integrations", api);
   if (state.loading) return <><PageHead title="Setup center" sub="Every outside service Sheetal uses." /><Panel><p className="pf-pad small muted">Loading…</p></Panel></>;
   if (state.error) return <><PageHead title="Setup center" /><Panel><Empty icon="circle-alert" title="The connections could not be loaded" action={<Button size="sm" onClick={load}>Try again</Button>}>{state.error}</Empty></Panel></>;
-  const rows = state.data;
+  // Only the connections whose code is built are listed (launch clean-up): the others are in the registry and appear here by themselves the
+  // day their provider code lands. One that already holds saved details stays visible so nothing typed is hidden.
+  const rows = state.data.filter((r) => r.spec.built || r.steps.some((s) => s.done));
   return (
     <>
       <PageHead title="Setup center" sub={`Every outside service in one place: enter the details, test, go live. ${countLive(rows)} of ${rows.length} are live.`} />

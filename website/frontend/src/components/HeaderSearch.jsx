@@ -21,7 +21,7 @@ let blogCache = null;
 const PAGES = [
   ["Map search", "/map"], ["Partners", "/partners"], ["Agencies", "/partners?type=agency"], ["Partners", "/partners"], ["Services", "/services"], ["Journal", "/blog"],
   ["Post property", "/post-property"], ["Property demand", "/property-demand"], ["EMI calculator", "/tools/emi"], ["Offers", "/offers"],
-  ["Gallery", "/gallery"], ["About us", "/about"], ["Contact", "/contact"], ["Agency plans", "/plans"], ["My account", "/my-profile"],
+  ["Gallery", "/gallery"], ["About us", "/about"], ["Contact", "/contact"], ["Apps and pricing", "/pricing"], ["My account", "/my-profile"],
 ];
 const has = (q, ...xs) => xs.some((x) => String(x || "").toLowerCase().includes(q));
 let agencyCache = null;

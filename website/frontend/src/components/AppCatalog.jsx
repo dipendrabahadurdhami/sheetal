@@ -25,6 +25,22 @@ export const monthsSaved = (e) => (e.priceMonthPaisa && e.priceYearPaisa && e.pr
 /** The cheapest paid edition's monthly price, or null. */
 export const fromPrice = (app) => { const p = (app.editions || []).filter((e) => !e.free && e.priceMonthPaisa > 0).map((e) => e.priceMonthPaisa); return p.length ? Math.min(...p) : null; };
 
+/** What an app's free edition gives, in words from the catalog's own limits: ["3 listings", "Unlimited stays"]. Empty when the app has no free edition. */
+export function freeLimits(app) {
+  const free = (app.editions || []).find((e) => e.free);
+  if (!free) return [];
+  const list = Object.entries(free.limits || {}).map(([k, v]) => limitPhrase(k, v)).filter(Boolean);
+  return list.length ? list : ["The basics, no limits"];
+}
+/** One limit as words: "3 listings", "1 outlet", "100 bills per month", "50 MB receipt storage", "Unlimited stays". A limit of 0 is not part of the free edition (null). */
+export function limitPhrase(key, value) {
+  if (value === 0) return null;
+  const mb = /_mb$/.test(key);
+  let w = words(mb ? key.replace(/_mb$/, "") : key).toLowerCase();
+  if (value === 1) { const [head, ...rest] = w.split(" per "); w = [head.replace(/([^s])s$/, "$1"), ...rest].join(" per "); }
+  return mb ? `${limitText(value)} MB ${w}` : `${limitText(value)} ${w}`;
+}
+
 /** Signs the visitor in if needed, then opens the business marketplace on that app. */
 export function useStartFree() {
   const { user, setAuth, toast } = useApp();
@@ -53,6 +69,7 @@ export function AppCard({ app, onStart, busy }) {
           {from != null && <span data-paisa={from}>{app.freeEdition ? " · " : ""}from {rsPaisa(from)} a month</span>}
         </>}
       </p>
+      {!soon && app.freeEdition && <p className="small" style={{ margin: 0 }}>Free forever: {freeLimits(app).join(", ")}.</p>}
       {!soon && app.trialDays ? <p className="small muted" style={{ margin: 0 }}>{app.trialDays}-day free trial of the full edition, no card</p> : null}
       <div style={{ marginTop: "auto", display: "flex", gap: 8, flexWrap: "wrap" }}>
         {!soon && <button type="button" className="btn btn-primary" disabled={!!busy} onClick={() => onStart(app.id)}>Start free</button>}
@@ -87,18 +104,30 @@ export function EditionsTable({ app }) {
 export function PricingTable({ catalog, onStart, busy }) {
   const apps = (catalog?.apps || []).filter((a) => a.availability !== "coming_soon");
   const soon = (catalog?.apps || []).filter((a) => a.availability === "coming_soon");
+  const withFree = apps.filter((a) => a.freeEdition);
+  const trial = Math.max(0, ...apps.map((a) => a.trialDays || 0));
   return (
     <>
+      <section aria-labelledby="what-is-free" className="card" style={{ padding: 20, marginBottom: 24 }}>
+        <h2 id="what-is-free" style={{ marginTop: 0 }}>What is free</h2>
+        <ul style={{ margin: 0, paddingLeft: 20, display: "grid", gap: 6 }}>
+          <li><b>Posting property on the website is free.</b> No plan is needed to post.</li>
+          <li><b>{withFree.length} of {apps.length} apps have a free edition, free forever.</b> No card, no end date. The table shows what each free edition includes.</li>
+          {catalog?.business && <li><b>{catalog.business.freeSeats} team members are free</b> in every business.</li>}
+          {trial > 0 && <li><b>{trial}-day free trial</b> of any full edition, once per app, no card. Your data is never deleted when a trial ends.</li>}
+          <li><b>You pay only when you need more</b> than a free edition gives, app by app. Cancel a paid edition and the app returns to its free edition when the paid period ends.</li>
+        </ul>
+      </section>
       <div style={{ overflowX: "auto" }}>
         <table className="table" style={{ minWidth: 720, width: "100%" }}>
           <caption className="small muted" style={{ textAlign: "left" }}>All prices include 13% VAT. Yearly = 10 months.</caption>
-          <thead><tr><th scope="col">App</th><th scope="col">Free edition</th><th scope="col">Full, a month</th><th scope="col">Full, a year</th><th scope="col">Trial</th><th scope="col" aria-label="Start" /></tr></thead>
+          <thead><tr><th scope="col">App</th><th scope="col">Free edition includes</th><th scope="col">Full, a month</th><th scope="col">Full, a year</th><th scope="col">Trial</th><th scope="col" aria-label="Start" /></tr></thead>
           <tbody>{apps.map((a) => {
             const paid = (a.editions || []).filter((e) => !e.free).sort((x, y) => x.priceMonthPaisa - y.priceMonthPaisa)[0];
             return (
               <tr key={a.id}>
                 <th scope="row"><Link to={`/apps/${a.id}`}>{nameOf(a.name)}</Link></th>
-                <td>{a.freeEdition ? "Yes" : "—"}</td>
+                <td>{a.freeEdition ? freeLimits(a).join(", ") : "No free edition"}</td>
                 <td data-paisa={paid?.priceMonthPaisa ?? ""}>{paid ? rsPaisa(paid.priceMonthPaisa) : "—"}</td>
                 <td data-paisa={paid?.priceYearPaisa ?? ""}>{paid ? rsPaisa(paid.priceYearPaisa) : "—"}</td>
                 <td>{a.trialDays ? `${a.trialDays} days` : "—"}</td>

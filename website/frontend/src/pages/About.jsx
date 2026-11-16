@@ -33,7 +33,7 @@ const SVC_TEXT = {
  "Investor guide": "New to investing in property projects? The guide explains in plain words how investing works on Sheetal, what to check before you put money in, and which documents a sponsor must share. It shows how updates and returns appear on your account, what the risks are, and what happens if a project is delayed, so you can decide with clear expectations."
 };
 // services with paid plans: "See plans" opens the plans page on the right business type
-const SVC_PLANS = { "Sell a property": "/post-property?type=sell", "Rent out a property": "/post-property?type=rent", "Post a requirement": "/requirement", "Host your property as a stay": "/post-property?type=stay", "Sell your project": "/post-property?type=project", "Raise funds for a project": "/post-property?type=invest", "Run your business on Sheetal": "/plans" };
+const SVC_PLANS = { "Sell a property": "/post-property?type=sell", "Rent out a property": "/post-property?type=rent", "Post a requirement": "/requirement", "Host your property as a stay": "/post-property?type=stay", "Sell your project": "/post-property?type=project", "Raise funds for a project": "/post-property?type=invest", "Run your business on Sheetal": "/pricing" };
 const SVC_CTA = (t) => (t === "Run your business on Sheetal" ? "See plans" : "Post now");
 const tel = (x) => "tel:" + String(x).replace(/[^\d+]/g, "").replace(/^(?!\+)(9\d{9})$/, "+977$1");
 

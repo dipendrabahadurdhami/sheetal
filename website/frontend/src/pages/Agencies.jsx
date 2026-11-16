@@ -43,7 +43,7 @@ export function JoinPanel({ span }) {
       </div>
       <div className="join-actions" style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12, width: "100%" }}>
         <Link to="/plans?type=agency" className="btn btn-primary btn-block">See agency plans <ArrowRight size={16} /></Link>
-        <Link to="/plans" className="btn btn-outline btn-block">Refer an agency</Link>
+        <Link to="/pricing" className="btn btn-outline btn-block">Refer an agency</Link>
       </div>
     </div>
   );

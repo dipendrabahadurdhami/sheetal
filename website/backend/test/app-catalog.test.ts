@@ -32,7 +32,9 @@ describe("the public catalog", () => {
     expect(hotel).toMatchObject({ availability: "live", trialDays: 14, freeEdition: true, name: { en: "Hotel PMS" } });
     expect(hotel.editions.map((e: { id: string; priceMonthPaisa: number; priceYearPaisa: number; limits: object }) => [e.id, e.priceMonthPaisa, e.priceYearPaisa, e.limits]))
       .toEqual([["free", 0, 0, { rooms: 5 }], ["full", 70_000, 700_000, { rooms: 40 }]]);
-    expect(d.apps.find((a: { id: string }) => a.id === "payroll")).toMatchObject({ availability: "coming_soon", freeEdition: false });
+    // Changed on 16 Nov 2026 (the owner's rule: nothing unfinished is shown at launch): an app that is not built yet is hidden, not "coming soon".
+    expect(d.apps.some((a: { id: string }) => a.id === "payroll")).toBe(false);
+    expect(d.apps.some((a: { availability: string }) => a.availability === "coming_soon")).toBe(false);
     expect(d.apps.some((a: { id: string }) => a.id === "workspace")).toBe(false); // the always-on workspace is never sold
     expect(d.business.freeSeats).toBe(2);
   });

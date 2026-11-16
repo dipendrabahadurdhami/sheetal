@@ -18,7 +18,7 @@ const MORE = [
   ["Explore", [["/investment/explore", HandCoins, "Invest", "Hotels and projects"], ["/property-demand", ClipboardList, "Buyer requests", "What buyers want"], ["/partners?type=agency", Building2, "Agencies", "Local agencies"], ["/requirement", FilePlus2, "Post a requirement", "Tell us what you need"]]],
   ["Services", [["/services/home-loan", Landmark, "Home loan", "Compare bank offers"], ["/services/legal-help", Scale, "Legal help", "Papers and transfer"], ["/services/management", KeyRound, "Management", "Tenants and repairs"], ["/services/pay-rent", Wallet, "Pay rent", "Fonepay and eSewa"]]],
   ["Learn", [["/blog", Newspaper, "Journal", "Guides and news"], ["/rates-and-trends", TrendingUp, "Rates and trends", "Prices by area"], ["/tools/emi", Calculator, "Calculators", "EMI, tax and area"], ["/gallery", Images, "Gallery", "Photos and videos"]]],
-  ["Company", [["/about", Info, "About us", "Who we are"], ["/careers", Briefcase, "Careers", "Work with us"], ["/contact", Phone, "Contact", "Call or visit"], ["/plans", BadgeCheck, "Agency plans", "List as an agency"]]],
+  ["Company", [["/about", Info, "About us", "Who we are"], ["/careers", Briefcase, "Careers", "Work with us"], ["/contact", Phone, "Contact", "Call or visit"], ["/pricing", BadgeCheck, "Apps and pricing", "Free to start, for every business"]]],
 ];
 const MORE_RE = /^\/(investment|property-demand|offers|services\/|requirement|blog|rates-and-trends|tools|gallery|about|careers|contact|plans)/;
 

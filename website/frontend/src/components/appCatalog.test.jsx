@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { publicCatalog, seedCatalog } from "../../../../platform/src/billing/catalog.ts";
-import { AppCard, EditionsTable, PricingTable, fromPrice, monthsSaved, rsPaisa } from "./AppCatalog.jsx";
+import { AppCard, EditionsTable, PricingTable, freeLimits, fromPrice, limitPhrase, monthsSaved, rsPaisa } from "./AppCatalog.jsx";
 
 const CATALOG = JSON.parse(JSON.stringify(publicCatalog(seedCatalog()))); // exactly the JSON shape the API sends
 const render = (el) => renderToStaticMarkup(<MemoryRouter>{el}</MemoryRouter>);
@@ -43,6 +43,29 @@ describe("prices equal the API", () => {
     const full = hotel.editions.find((e) => !e.free);
     expect(monthsSaved(full)).toBe(2); // yearly = 10 months (the owner's answer 5)
     expect(pages.editions).toContain("You save 2 months");
+  });
+});
+
+describe("what is free (16 Nov: the owner asked the pricing page to say it plainly)", () => {
+  it("a free edition's limits become plain words; a 0 limit is left out; apps not built yet are not shown", () => {
+    expect(limitPhrase("listings", 3)).toBe("3 listings");
+    expect(limitPhrase("outlets", 1)).toBe("1 outlet");
+    expect(limitPhrase("bills_per_month", 100)).toBe("100 bills per month");
+    expect(limitPhrase("receipt_storage_mb", 50)).toBe("50 MB receipt storage");
+    expect(limitPhrase("stays", null)).toBe("Unlimited stays");
+    expect(limitPhrase("featured_slots", 0)).toBeNull();
+    const listings = CATALOG.apps.find((a) => a.id === "listings");
+    expect(freeLimits(listings)).toContain("3 listings");
+    expect(freeLimits(CATALOG.apps.find((a) => a.id === "mail"))).toEqual([]); // no free edition
+    expect(CATALOG.apps.some((a) => a.availability === "coming_soon")).toBe(false);
+  });
+  it("the pricing page has the 'What is free' block with the catalog's own numbers, and no 'Coming soon'", () => {
+    const withFree = CATALOG.apps.filter((a) => a.freeEdition).length;
+    expect(pages.pricing).toContain("What is free");
+    expect(pages.pricing).toContain(`${withFree} of ${CATALOG.apps.length} apps have a free edition`);
+    expect(pages.pricing).toContain(`${CATALOG.business.freeSeats} team members are free`);
+    expect(pages.pricing).toContain("Posting property on the website is free");
+    expect(pages.pricing + pages.cards).not.toMatch(/coming soon/i);
   });
 });
 
