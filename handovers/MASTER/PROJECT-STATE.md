@@ -1,4 +1,34 @@
-# Project state (16 Nov 2026, evening, Nepal time)
+# Project state (16 Nov 2026, about 11:30, Nepal time)
+
+**Phase 3 about 93% (51 of 55 by task size; OPS-2 counts half until the owner has run the cutover). Main = stage 20, OPS-2, pushed.**
+Stages 19 and 20 (16 Nov, late morning) went onto main the same way as 11-18 (branch `phase-3/P3-OPS-1-dry-run`, tests on the owner's PC, fast-forward, push):
+| Stage | Task | Note |
+|---|---|---|
+| 19 | OPS-1 | `npm run scratch` (scratch copy of the database), `npm run billing:mode` (the switch plans → shadow → apps: it did not exist), `check:money`, `check:catalog`, `RUN-P3-STEP-1.cmd` (`CHANGES-P3-OPS-1.md`) |
+| 20 | OPS-2 | `docs/p3-cutover-runbook.md`, `RUN-P3-STEP-2.cmd` (rehearsal on the copy), `RUN-P3-CUTOVER-1..4.cmd` / `GO-BACK` / `STATUS`, Admin → Pricing → **Billing rules** (the sales switch had no screen) (`CHANGES-P3-OPS-2.md`) |
+
+**What the dry run on a copy of the real data showed (16 Nov):** 17 businesses; 15 planned, 15 pass every proof, 2 skipped (a plan payment in
+flight). One real bug found and fixed (P1 false FAIL for a free plan with a leftover renewal date). The whole cutover and the way back were
+rehearsed on the copy. **Nothing was run on the real data: every business is on `plans`, 0 app rows, `salesEnabled` false.**
+**The owner must decide (gate G2):** after the 12-month lock, keeping every app costs 114% to 178% more than today's plan.
+
+Last test run (owner's PC, 16 Nov 11:00): backend-core 208/208, platform 321/321, root front-end 374/376 (the 2 known Windows-only
+`no-old-names.test.js` failures); lint, typecheck, `help --check`, `check:money`, `check:catalog`, admin build green. Business, admin and
+website API suites were not re-run (no file of theirs changed since stage 18).
+
+**Next:** the owner runs the cutover step by step (runbook), a yes before each step; then the launch gates (QA-2). Read `handovers/CONTINUE-phase-3.md`.
+
+## Lessons from 16 Nov, stages 19-20 (keep doing)
+- The built-in browser pane DOES reach localhost now: start the servers with the preview tool (`.claude/launch.json` has `sheetal-api` and
+  `sheetal-dev`), sign in on the website with a test account from `test-accounts.csv`, open `/admin/...`. Stop the servers after.
+- `npm run -s x -- run powershell -NoProfile ...`: npm eats the dash options. Call `node scripts/scratch-db.mjs run ...` directly for those.
+- Every `npm run backup` keeps only the newest 30 exports: many test runs in a row push old backups out. Don't loop it.
+- Never back up through `npm run scratch -- run`: the export would be of the copy (now refused by `backup.mjs`).
+- A dry run on real data finds what fixtures don't (the leftover `renewsAt` on a free plan). Run `RUN-P3-STEP-1.cmd` after any billing change.
+
+---
+
+# Earlier on 16 Nov (after stage 18; kept for the record)
 
 **Phase 3 about 87% (48 of 55 by task size). All screens are done. Main = stage 18, FE-6 (`08e77cc`), pushed.**
 Stages 11-18 went straight onto main (no PRs: `gh` isn't installed on the owner's PC and GitHub Actions is off). Each was built on its own branch,

@@ -23,10 +23,10 @@ one thing to do on their computer. There are no other chats. Files in this zip:
    how the earlier Lead worked: branch, push, PR, CI on GitHub, squash-merge through `gh api`). The owner's connected `sheetal` folder is the
    owner's own copy: read it to see their state, and use its shell only for the owner-side steps (or tell the owner the exact command).
    If you can't reach GitHub, say so in one line and work in the connected folder (commit there; ask the owner to run `git push`).
-3. Check `main` matches `PROJECT-STATE.md` (main = stage 18, FE-6, `08e77cc`, pushed 16 Nov). GitHub Actions is off (the owner's free GitHub limit; the owner
+3. Check `main` matches `PROJECT-STATE.md` (main = stage 20, OPS-2, pushed 16 Nov; see `git log`). GitHub Actions is off (the owner's free GitHub limit; the owner
    said to ignore CI) and `gh` is not installed on the owner's PC: test on the owner's PC instead (see PROJECT-STATE "16 Nov morning"), then
    squash onto main locally and `git push origin main`.
-4. Reply in at most 10 lines: what you found, what is next (Phase 3 continues at OPS-1, see CONTINUE-phase-3.md), and "Say **next** to continue Phase 3".
+4. Reply in at most 10 lines: what you found, what is next (Phase 3: the owner's cutover steps, see CONTINUE-phase-3.md and docs/p3-cutover-runbook.md), and "Say **next** to continue Phase 3".
 
 ## 2. On every "next": finish ONE whole phase (or continue it from its CONTINUE file)
 - Take the first unfinished phase in `ROADMAP.md` and do **all of it** in this reply: every stage, in order, without stopping to ask.
