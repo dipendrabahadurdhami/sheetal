@@ -10,10 +10,11 @@
 //      downgrade applied. Cancelled ones get none.
 //   3. reminders: at each reminder day count before the end, one note to the owner per period.
 //   4. Sheetal AI plan (appId "sheetal_ai"): the month's credits (aiAllowance in ai-credits.ts), nothing else.
+//   5. A business moved from a plan (P3-BE-10, R5): the month's credits of its "ai_credits_monthly" grant until the lock ends.
 // Rules: safe to run twice (each step checks it has not been done for this period); one business's failure never stops the others; nothing
 // here charges anyone (Nepal wallets keep no cards); a business on "plans" or "shadow" is never touched.
 
-import { AI_PLAN_APP, aiAllowance } from "./ai-credits.js";
+import { AI_PLAN_APP, aiAllowance, migratedAllowance } from "./ai-credits.js";
 import type { FastifyBaseLogger } from "fastify";
 import type { Db } from "../db/client.js";
 import { SettingsService } from "../settings/service.js";
@@ -105,6 +106,10 @@ export async function runSubscriptionLifecycle(db: Db, o: { log: FastifyBaseLogg
           out.reminders++;
         }
       }
+
+      // R5: the old plan's monthly AI credits for a moved business, until its lock ends.
+      const aiGrants = await db.entitlementGrant.findMany({ where: { tenantId: t.id, kind: "ai_credits_monthly", revokedAt: null, startsAt: { lte: now }, OR: [{ endsAt: null }, { endsAt: { gt: now } }] } });
+      for (const g of aiGrants) if ((await migratedAllowance(db, { tenantId: t.id, grant: g, now })).created) out.aiAllowances++;
 
       // One renewal invoice per business for what is due and not yet invoiced for its next period.
       const open = due.length ? await db.invoiceLine.findMany({ where: { appId: { in: due }, kind: "subscription", invoice: { tenantId: t.id, kind: "subscription", status: { in: ["open", "paid"] } } }, select: { appId: true, periodStart: true } }) : [];

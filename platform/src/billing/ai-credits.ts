@@ -93,3 +93,15 @@ export async function aiAllowance(db: Db, o: { tenantId: string; planKey: string
   const expiresAt = monthEnd < o.periodEnd ? monthEnd : o.periodEnd;
   return addGrant(db, { tenantId: o.tenantId, credits: plan.creditsPerMonth, source: "plan", expiresAt, ref: `allowance:${o.planKey}:${monthStart.toISOString().slice(0, 10)}` });
 }
+
+/** A moved business's monthly AI credits (MB 8.1 R5: an EntitlementGrant of kind "ai_credits_monthly" until the lock ends): one grant per
+ *  month counted from the grant's start, expiring at the month's end (or the grant's end). Called by the lifecycle job; safe to call again. */
+export async function migratedAllowance(db: Db, o: { tenantId: string; grant: { id: string; value: number | null; startsAt: Date; endsAt: Date | null }; now: Date }) {
+  const credits = o.grant.value ?? 0;
+  if (credits < 1 || o.now < o.grant.startsAt || (o.grant.endsAt && o.grant.endsAt <= o.now)) return { created: false };
+  const monthStart = new Date(o.grant.startsAt);
+  while (new Date(monthStart).setUTCMonth(monthStart.getUTCMonth() + 1) <= o.now.getTime()) monthStart.setUTCMonth(monthStart.getUTCMonth() + 1);
+  const monthEnd = new Date(monthStart); monthEnd.setUTCMonth(monthEnd.getUTCMonth() + 1);
+  const expiresAt = o.grant.endsAt && o.grant.endsAt < monthEnd ? o.grant.endsAt : monthEnd;
+  return addGrant(db, { tenantId: o.tenantId, credits, source: "migration", expiresAt, ref: `migrated-ai:${o.grant.id}:${monthStart.toISOString().slice(0, 10)}` });
+}
