@@ -1,10 +1,11 @@
-# Project state (14 Nov 2026, noon, Nepal time)
+# Project state (16 Nov 2026, 06:30, Nepal time)
 
-**Phase 3 is in progress: 8 stages merged (PRs #65-#73, 14 Nov), about 45% of PHASE-3-TASKS.** Main = the merge of PR #73, CI green, about 1450 tests.
-Phase 2 is closed (`handovers/CLOSE-OUT-phase-2.md`). **Read `handovers/CONTINUE-phase-3.md` first**: done table, next tasks in order, decisions, owner steps.
+**Phase 3 is in progress: 10 stages merged (PRs #65-#76, 14-16 Nov), about 53% of PHASE-3-TASKS (weighted by task size: S=1, M=2, L=3).**
+Main = the merge of PR #76 (16 Nov), CI green. Phase 2 is closed (`handovers/CLOSE-OUT-phase-2.md`).
+**Read `handovers/CONTINUE-phase-3.md` first**: done table, next tasks in order, decisions, owner steps.
 Every business is still on `billingMode = plans` and `platform.billing.salesEnabled` is false: no customer has seen any Phase 3 change.
 
-## Phase 3 so far (14 Nov)
+## Phase 3 so far
 | PR | Task | What |
 |---|---|---|
 | #65 | DB-1 + DB-2 | 12 billing tables (subscriptions, events, grants, add-ons, locks, migration runs, AI credits, invoice lines, revenue, coupons, redemptions, platform approvals); invoices/payments in paisa; CHECKs + triggers (issued invoice frozen, revenue append-only, refund ≤ payment) |
@@ -15,6 +16,23 @@ Every business is still on `billingMode = plans` and `platform.billing.salesEnab
 | #70 | BE-9 | payment router (Sheetal's vs a business's system, no fall-back), paisa amount check |
 | #71 | BE-5 | hourly lifecycle job (statuses, one renewal invoice per business, reminders); old plan cycle skips `apps` |
 | #73 | BE-6 | business marketplace API (install, trial, cart quote = invoice, checkout, change/cancel/resume/remove, coupons, overview) |
+| #75 | BE-7 | admin billing API: pricing (impact count, approval of rises), coupons, subscriptions + gifts, sales/revenue by Nepal day, VAT, tax-invoice/IRD lists, shadow counter, refunds (maker-checker, partial credit notes, one-person rule), `platform.company` seller details |
+| #76 | BE-8 | AI credits (first-expiring first, reserve then settle, failed call free), router own key → Sheetal AI → locked preview, Claude/OpenAI/Gemini/ElevenLabs built in the Integration Center, `business.ai`, `GET /v1/ai/credits`, admin AI credit gift |
+
+**Open: PR #77 (docs only: these handover files).** On 16 Nov GitHub Actions stopped starting jobs: "recent account payments have failed or your spending
+limit needs to be increased" (owner: GitHub → Settings → Billing & plans). When CI runs again: re-run PR #77's check, merge it when green, then go on.
+
+Left in Phase 3: BE-10 (migration script plans → apps), BE-11 (free website posting), FE-1..6 (all screens), OPS-1, OPS-2, QA-2 sign-offs.
+
+## Lessons from 16 Nov (keep doing)
+- `gh pr create` fails here (GraphQL is blocked): open PRs with `gh api repos/dipendrabahadurdhami/sheetal/pulls -f base=main -f head=<branch> -f title=… -f body=…`,
+  merge with `gh api -X PUT repos/…/pulls/<n>/merge -f merge_method=squash`, read CI with `gh api "repos/…/actions/runs?branch=<b>&per_page=1"` and job logs.
+- `backend-core/test/permissions-worlds.test.ts` scans the admin API: every `hasPerm(` must read `PLATFORM_ROLES[...]` (import both from backend-core/domain/permissions).
+- Prisma `Json` payloads: cast with `as unknown as T` (a direct cast fails typecheck in CI). A conditional `{ take }` vs `{ skip, take }` spread fails typecheck: pass both.
+- Locally: `npm ci --ignore-scripts`, then `npm rebuild @embedded-postgres/linux-x64`; the DB tests still can't run as root, so run pure tests with a temp vitest
+  config (`include: [...]`, no globalSetup) and let CI run the DB tests (~12 min per run).
+- An optimistic-lock check (`version`) must run before other validation, or a stale save answers 400 instead of 409.
+- Plugins registered per app instance (executors, caches): key them by `dbOf(app)` (shared by every plugin of one app), never a module-level Map of closures.
 
 ## Lessons from 14 Nov (keep doing)
 - Old tests pin lists (the admin job list, the business settings list): add new things beside them (`adminPlatformJobs`), never edit the pinned test.

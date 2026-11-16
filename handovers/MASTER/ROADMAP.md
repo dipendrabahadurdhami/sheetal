@@ -1,6 +1,6 @@
 # Roadmap: every phase still to do (one "next" = one phase)
 
-Progress on 14 Nov 2026, noon: Phase 0 100% · Phase 1 100% · Phase 2 100% (closed) · **Phase 3 about 45% (8 stages merged, PRs #65-#73; continue from `handovers/CONTINUE-phase-3.md`)** · whole project about 68% (rough).
+Progress on 16 Nov 2026, 06:30: Phase 0 100% · Phase 1 100% · Phase 2 100% (closed) · **Phase 3 about 53% (10 stages merged, PRs #65-#76; continue from `handovers/CONTINUE-phase-3.md` at BE-10)** · whole project about 71% (rough).
 Work strictly in this order. Details of each stage are in the architecture docs named. Each stage = one branch, one PR, CI green, merged.
 
 ---
