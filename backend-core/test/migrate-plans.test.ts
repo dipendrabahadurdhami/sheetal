@@ -177,7 +177,18 @@ beforeAll(async () => {
   await db.tenant.create({ data: { id: ids.over, name: "Over Realty", type: "agency", planId: "agency-starter", status: "active" } });
   for (let i = 0; i < 4; i++) await db.listing.create({ data: { tenantId: ids.over, title: `Flat ${i}`, code: `MIG-${i}`, slug: `mig-over-${i}`, purpose: "rent", category: "flat" } });
 });
-afterAll(() => db.$disconnect());
+// The suite's database is shared by every file: leave it as found (p3-billing-tables.test.ts expects the billing tables empty).
+afterAll(async () => {
+  const all = Object.values(ids);
+  await db.auditLog.deleteMany({ where: { tenantId: { in: all } } });
+  await db.payment.deleteMany({ where: { tenantId: { in: all } } });
+  await db.invoice.deleteMany({ where: { tenantId: { in: all } } });
+  await db.listing.deleteMany({ where: { tenantId: { in: all } } });
+  await db.tenantAddon.deleteMany({ where: { tenantId: { in: all } } });
+  await db.tenant.deleteMany({ where: { id: { in: all } } }); // subscriptions, grants, add-ons, locks and AI credits go with them
+  await db.billingMigrationRun.deleteMany({});
+  await db.$disconnect();
+});
 
 const counts = async (tenantId: string) => ({
   subs: await db.subscription.count({ where: { tenantId } }),
