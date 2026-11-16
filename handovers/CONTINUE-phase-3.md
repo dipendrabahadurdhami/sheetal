@@ -1,4 +1,4 @@
-# CONTINUE Phase 3 (updated 16 Nov 2026, about 11:00 Nepal time) · Phase 3 about 91% done (by task size: 50 of 55, S=1 M=2 L=3)
+# CONTINUE Phase 3 (updated 16 Nov 2026, about 11:30 Nepal time) · Phase 3 about 93% done (by task size: 51 of 55, S=1 M=2 L=3; OPS-2 counts half until the owner has run the cutover)
 
 Phase 3 is being built stage by stage (PHASE-3-TASKS.md order). Read this, then `docs/architecture/PHASE-3-TEST-PLAN.md`, then the CHANGES notes named below.
 
@@ -24,17 +24,21 @@ Phase 3 is being built stage by stage (PHASE-3-TASKS.md order). Read this, then 
 | 17 | main | FE-5 | website `/apps`, `/apps/:id`, `/pricing` from the public catalog, Start free; `/plans` kept until the cutover (`CHANGES-P3-FE-5.md`) |
 | 18 | main | FE-6 | business AI page (state, credits meter, Sheetal AI plans into the cart, own keys for 4 providers, preferred provider, fallback switch); `withAiApp`; `/v1/ai/connections`, `/v1/ai/settings` (`CHANGES-P3-FE-6.md`) |
 | 19 | main | OPS-1 | `npm run scratch` (a scratch copy of the database), `npm run billing:mode` (**the switch plans → shadow → apps, which did not exist**; R10 voiding), `check:money`, `check:catalog`, `RUN-P3-STEP-1.cmd`; dry run on a copy of the real data: 15 PASS, 2 skipped (payment in flight); a P1 false FAIL fixed (free plan with a leftover renewal date) (`CHANGES-P3-OPS-1.md`) |
+| 20 | main | OPS-2 (scripts and runbook; **the cutover itself is not run**) | `docs/p3-cutover-runbook.md`; `RUN-P3-STEP-2.cmd` (the rehearsal on the copy: nine OK lines); `RUN-P3-CUTOVER-1..4.cmd`, `RUN-P3-GO-BACK.cmd`, `RUN-P3-CUTOVER-STATUS.cmd` (backup, preview, typed YES, apply); **Admin → Pricing → Billing rules** (the sales switch and the billing numbers had no screen); `npm run backup` refuses the scratch copy (`CHANGES-P3-OPS-2.md`) |
 
 Every business is still on `billingMode = plans`: nothing has changed for any customer. `salesEnabled` is false.
 
 ## Next, in order
-0. Done: stages 11 and 12 merged (squashed onto main as two commits, tests run on the owner's PC; no PR, `gh` isn't installed and Actions is off).
-   While Actions is off: branch, build, run the tests on the owner's PC workspace by workspace, squash onto main, `git push origin main`.
-1. All screens are done (FE-1 to FE-6). Left from them (see each CHANGES "Not in this stage"): usage per limit in `/entitlements`; the AI
-   top-up as its own quote item; `AiLocked` on each app's AI button when that feature moves to `runAi()`; trial credits for new free businesses.
-2. OPS-1 (runbook, owner scripts for shadow/pilot; **the switch to `apps` voids the open plan invoices the migration dry run lists**, R10),
-   OPS-2 (shadow 7 days → pilot → all): the owner's yes at each step, backup first. Run `npm run billing:migrate` (dry run) before `--apply`.
-
+While Actions is off: branch, build, run the tests on the owner's PC workspace by workspace, fast-forward main, `git push origin main`.
+1. **The cutover on the real data, by the owner, one step at a time** (`docs/p3-cutover-runbook.md`). Ask for the owner's yes before each:
+   `RUN-P3-CUTOVER-1.cmd` (app rows; nobody sees a change) → `-2` (shadow) → 7 days, `RUN-P3-CUTOVER-STATUS.cmd` daily → `-3` (the pilot:
+   Sheetal's own business first) → sales on in Admin → Pricing → Billing rules → the pilot hand test → `-4` (everyone).
+   Before step 1: the 2 businesses with a plan payment in flight (approve or fail the payment in Admin → Billing, then `RUN-P3-STEP-1.cmd` again).
+2. **Gate G2, the owner's decision:** the price report shows that after the 12-month lock, keeping every app costs 114% to 178% more than
+   today's plan (the first renewal is unchanged). Lower the app prices in Admin → Pricing, or accept it; then `RUN-P3-STEP-1.cmd` again.
+3. QA-2 sign-offs = the launch gates G1 to G10 (runbook table): G3, G5, G6, G7, G9, G10 are the owner's, Finance's and the accountant's.
+4. Small leftovers from the screens (each CHANGES "Not in this stage"): usage per limit in `/entitlements`; the AI top-up as its own quote
+   item; `AiLocked` on each app's AI button when that feature moves to `runAi()`; trial credits for new free businesses.
 ## Decisions taken so far (all inside the design; see each CHANGES)
 - A cancelled subscription has no grace (MB 5.1 over one row of 5.2). Coupon before price protection. "Carry" below Rs 10.
 - Mail, Promote, Payroll, Accounting, Restaurant are catalog-only entries (no manifests yet; their permissions stay in workspace). Promote Rs 300 and
@@ -48,7 +52,15 @@ Every business is still on `billingMode = plans`: nothing has changed for any cu
 - BE-7: a refund's `endAccess` counts the refund window from the payment date. "Not sent to IRD" lists every issued tax invoice until the IRD link
   exists (`linked: false`). Approval requests last 72 hours. "Lapsed" in the revenue report = `expired` subscription events.
 
+## Decisions in OPS-1 and OPS-2
+- The mode switch is a script (`npm run billing:mode`), not an admin screen: every move is backed up, previewed and typed YES by the owner.
+- Moving to `apps` needs 7 days on shadow and zero "less" differences, recorded **or computed at that moment** (a business nobody opens
+  records nothing). `--force` skips the shadow rules only; a payment in flight and going back after a sale are never forced.
+- P1 checks the end of the period only for a paid plan or a trial (a free plan's leftover `renewsAt` decides nothing under plans).
+- One cutover script with `-Step`; a preview with one refused business stops the whole step; no owner script passes `--force`.
+
 ## Owner steps pending
-RUN-UPDATE (applies `20261113200000_p3_subscriptions` and `20261113210000_p3_invoicing_revenue`; backs up first). Then open
-`http://127.0.0.1:4000/v1/public/catalog`: the app cards with prices.
-Before the pilot: Admin → Settings → "Company details on invoices" (legal name, PAN, address).
+1. RUN-UPDATE (no new migrations in stages 19 and 20), then `RUN-P3-STEP-1.cmd` and `RUN-P3-STEP-2.cmd` (both safe: a copy only).
+2. Read `Desktop\p3-price-report.csv` and decide on the prices (gate G2).
+3. Admin → Legal and required info → "Company details on invoices" (legal name, PAN, address), before the pilot.
+4. Then the cutover, step by step, each with a yes (runbook).

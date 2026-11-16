@@ -13,6 +13,7 @@ import { Badge, Button, Empty, Field, Input, PageHead, Panel, Select, Textarea, 
 import { Icon } from "@sheetal/shared/core/icons";
 import { Link } from "@sheetal/shared/core/router";
 import { adminApi } from "../api";
+import { BillingRules } from "./BillingRules";
 import { isDirty, paisaToRupees, previewBody, reasonOk, rsPaisa, rupeesToPaisa, saveBody, setAddon, setAiPlan, setApp, setEdition, setLimit, setSeatPrice, textOf, toggleFeature } from "./pricingLogic";
 
 /** A rupee input that keeps the person's text and reports paisa (or null while it isn't a valid amount). */
@@ -162,7 +163,9 @@ export function Pricing() {
         </div>
       </Panel>}
 
-      <Panel title="History" sub="The last 20 saved versions.">
+      <BillingRules />
+
+      <Panel title="History" sub="The last 20 saved versions of the prices.">
         {data.history?.length ? <ul className="pf-list">{data.history.map((h, i) => <li key={i}><Icon name="history" size={15} /><div style={{ flex: 1 }}><b>{h.reason || "Saved"}</b><span className="small muted">{fdate(h.at)}{h.fields?.length ? ` · ${h.fields.join(", ")}` : ""}</span></div></li>)}</ul>
           : <Empty icon="history" title="No changes saved yet" />}
       </Panel>

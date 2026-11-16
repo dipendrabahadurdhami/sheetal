@@ -24,6 +24,8 @@ const photosDir = resolve(env.PHOTOS_BACKUP_DIR || join(homedir(), "Sheetal-Back
 const keep = Math.max(1, Number(env.BACKUP_KEEP) || 30);
 
 if (!env.DATABASE_URL) fail("DATABASE_URL isn't set in backend-core/.env.");
+// The scratch copy (npm run scratch) is never backed up: its export would sit among the real backups and could be restored by mistake.
+if (/\/sheetal_scratch(\?|$)/.test(env.DATABASE_URL)) fail("This is the scratch copy (sheetal_scratch), not the real database: nothing to back up.");
 
 // ───── Database ─────
 // Named by this computer's local date and time, e.g. 2026-11-04_1013.
