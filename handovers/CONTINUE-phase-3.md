@@ -36,6 +36,11 @@ Every business is still on `billingMode = plans`: nothing has changed for any cu
   15 moved, 0 refused. After it: 2 on `plans` (payment in flight), 15 on `shadow`, 0 "less". The plan still answers; nobody sees a change.
   Undo: `RUN-P3-GO-BACK.cmd`, type `ALL`. **Shadow runs until 23 Nov 2026. Next real step: `RUN-P3-CUTOVER-3.cmd` (the pilot) or, from
   23 Nov, `-4` (everyone), each with the owner's yes. Check `RUN-P3-CUTOVER-STATUS.cmd` on the days between.**
+- **Step 3 (pilot) done, 16 Nov 2026 about 17:03** (the owner's "next"): backup `2026-11-16_1703`, then
+  `billing:mode --to=apps --business=cmvz5otxn0007uoagt4l7h995 --min-days=0 --apply`: **Sheetal Property** (Sheetal's own business, Pro) is on
+  `apps`; it had no open plan invoice, so nothing was voided. After it: 2 on `plans`, 14 on `shadow`, 1 on `apps`, 0 "less". Sales are still
+  off (Admin → Pricing → Billing rules). Undo (no sale yet): `RUN-P3-GO-BACK.cmd` with that id. The pilot hand test (runbook) is the owner's,
+  signed in as that business's owner. **Billing code is frozen while the cutover runs (PHASE-3-TASKS section 1): no billing change before step 4.**
 
 ## Next, in order
 While Actions is off: branch, build, run the tests on the owner's PC workspace by workspace, fast-forward main, `git push origin main`.
