@@ -18,6 +18,10 @@ import { AdminSettings, AdminStaff } from "./AdminSystem";
 import { AdminCatalog } from "./AdminListingSetup";
 import { AdminAddons } from "@sheetal/shared/components/Addons";
 import { LiveAdminAddons } from "./LiveAddons";
+import { Pricing } from "./Pricing";
+import { Coupons } from "./Coupons";
+import { PlatformApprovals } from "./PlatformApprovals";
+import { BusinessSubscriptions } from "./BusinessSubscriptions";
 import { LiveAdminPromote } from "./LivePromote";
 import { LiveLeads } from "./LiveLeads";
 import { LiveEarnings } from "./LiveEarnings";
@@ -61,6 +65,12 @@ export default function AdminApp() {
       { to: "/admin/addons", icon: "puzzle", key: "nav.addons", perm: "platform.plan.read+platform.plan.create+platform.plan.update+platform.plan.delete" },
       { to: "/admin/promote", icon: "trending-up", key: "nav.promote", perm: "platform.billing.read" },
       { to: "/admin/billing", icon: "receipt", key: "nav.billing", perm: "platform.billing.read" },
+      // Phase 3 (P3-FE-3): per-app prices, coupons and the second-person approvals; live API only.
+      ...(isStaffLive() ? [
+        { to: "/admin/pricing", icon: "tag", key: "nav.pricing", perm: "platform.billing.read" },
+        { to: "/admin/coupons", icon: "ticket", key: "nav.coupons", perm: "platform.billing.read" },
+        { to: "/admin/approvals", icon: "shield-check", key: "nav.approvals", permAny: ["platform.pricing.manage", "platform.billing.refund"] },
+      ] : []),
     ] },
     { group: "group.marketplace", items: [
       { to: "/admin/moderation", icon: "shield-check", key: "nav.moderation", permAny: ["platform.listing.moderate", "platform.verification.review"], count: pending, countTone: "action" },
@@ -138,6 +148,10 @@ export default function AdminApp() {
         { path: "/admin", render: () => guard("platform.dashboard.read", isStaffLive() ? <LiveDashboard /> : <AdminDashboard />) },
         { path: "/admin/tenants", render: () => guard("platform.business.read", <AdminTenants />) },
         { path: "/admin/tenants/:id", render: ({ id }) => guard("platform.business.read", <TenantDetail id={id} role={role} />) },
+        { path: "/admin/tenants/:id/subscriptions", render: ({ id }) => guard("platform.business.read", <BusinessSubscriptions key={id} id={id} />) },
+        { path: "/admin/pricing", render: () => guard("platform.billing.read", <Pricing />) },
+        { path: "/admin/coupons", render: () => guard("platform.billing.read", <Coupons />) },
+        { path: "/admin/approvals", render: () => guard(["platform.pricing.manage", "platform.billing.refund"], <PlatformApprovals />) },
         { path: "/admin/plans", render: () => guard("platform.plan.read+platform.plan.create+platform.plan.update+platform.plan.delete", <AdminPlans />) },
         { path: "/admin/catalog", render: () => guard("platform.content.update", <AdminCatalog />) },
         { path: "/admin/ai", render: () => guard("platform.settings.read+platform.settings.update", aiHub()) },

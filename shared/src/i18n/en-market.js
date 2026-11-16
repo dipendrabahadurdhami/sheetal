@@ -72,4 +72,8 @@ export default {
   "bp.lockedTitle": "Your {app} subscription is paused. Everything is safe.",
   "bp.readOnlyText": "You can still see, print and export everything. Renew to add or change records.",
   "bp.export": "Export my data",
+  // Admin menu (P3-FE-3).
+  "nav.pricing": "Pricing",
+  "nav.coupons": "Coupons",
+  "nav.approvals": "Approvals",
 };

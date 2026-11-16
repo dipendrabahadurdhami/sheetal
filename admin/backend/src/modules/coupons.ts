@@ -11,35 +11,15 @@
 
 import type { FastifyInstance } from "fastify";
 import { Prisma } from "@prisma/client";
-import { z } from "zod";
 import { dbOf } from "@sheetal/platform/db/client";
 import { badRequest, conflict, notFound, versionConflict } from "@sheetal/platform/core/errors";
 import { SettingsService } from "@sheetal/platform/settings/service";
 import { CATALOG_SETTING, withNewApps } from "@sheetal/platform/billing/catalog";
 import { taxNumber } from "@sheetal/platform/billing/invoice";
 import { staffOf } from "./routes.js";
+import { CouponCreate, CouponPatch } from "./billing-bodies.js";
 
 const QUIET = { warn: () => undefined };
-const Id = z.string().regex(/^[a-z][a-z0-9_]{0,40}$/);
-const Create = z.object({
-  code: z.string().trim().toUpperCase().regex(/^[A-Z0-9_-]{3,32}$/, "Use 3 to 32 letters, numbers, - or _."),
-  kind: z.enum(["percent", "fixed_paisa", "trial_days"]),
-  value: z.number().int().min(1).max(100_000_000),
-  appliesTo: z.enum(["all", "apps", "editions"]).default("all"),
-  appIds: z.array(Id).max(50).default([]),
-  editionIds: z.array(z.string().regex(/^[a-z][a-z0-9_]{0,40}(:[a-z][a-z0-9_]{0,20})?$/)).max(100).default([]),
-  firstPurchaseOnly: z.boolean().default(false),
-  minSpendPaisa: z.number().int().min(0).max(100_000_000).nullable().default(null),
-  validFrom: z.coerce.date().nullable().default(null),
-  validTo: z.coerce.date().nullable().default(null),
-  maxRedemptions: z.number().int().min(1).max(1_000_000).nullable().default(null),
-  perBusinessLimit: z.number().int().min(1).max(100).default(1),
-  periods: z.number().int().min(1).max(12).default(1),
-}).strict();
-const Patch = z.object({
-  version: z.number().int().min(1), active: z.boolean().optional(), validTo: z.coerce.date().nullable().optional(),
-  maxRedemptions: z.number().int().min(1).max(1_000_000).nullable().optional(),
-}).strict();
 
 const n = (v: bigint | null | undefined) => (v == null ? null : Number(v));
 
@@ -60,7 +40,7 @@ export async function adminCouponRoutes(app: FastifyInstance) {
 
   app.post("/admin/coupons", async (request) => {
     const s = staffOf(request, "platform.pricing.manage");
-    const b = Create.parse(request.body);
+    const b = CouponCreate.parse(request.body);
     if (b.kind === "percent" && b.value > 100) throw badRequest("A percent is at most 100.");
     if (b.kind === "trial_days" && b.value > 90) throw badRequest("A trial is at most 90 days.");
     if (b.validFrom && b.validTo && b.validTo <= b.validFrom) throw badRequest("The end must be after the start.");
@@ -85,7 +65,7 @@ export async function adminCouponRoutes(app: FastifyInstance) {
 
   app.patch<{ Params: { id: string } }>("/admin/coupons/:id", async (request) => {
     const s = staffOf(request, "platform.pricing.manage");
-    const b = Patch.parse(request.body);
+    const b = CouponPatch.parse(request.body);
     const c = await db().coupon.findUnique({ where: { id: request.params.id } });
     if (!c) throw notFound("Coupon not found.");
     const data = { ...(b.active !== undefined ? { active: b.active } : {}), ...(b.validTo !== undefined ? { validTo: b.validTo } : {}), ...(b.maxRedemptions !== undefined ? { maxRedemptions: b.maxRedemptions } : {}) };

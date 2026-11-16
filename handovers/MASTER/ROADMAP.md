@@ -1,6 +1,6 @@
 # Roadmap: every phase still to do (one "next" = one phase)
 
-Progress on 16 Nov 2026, 08:00: Phase 0 100% · Phase 1 100% · Phase 2 100% (closed) · **Phase 3 about 71% (14 stages merged: PRs #65-#76, then BE-10, BE-11, FE-1 and FE-2 straight onto main while GitHub Actions is off; next FE-3, continue from `handovers/CONTINUE-phase-3.md`)** · whole project about 76% (rough).
+Progress on 16 Nov 2026, 08:00: Phase 0 100% · Phase 1 100% · Phase 2 100% (closed) · **Phase 3 about 76% (15 stages merged: PRs #65-#76, then BE-10, BE-11, FE-1, FE-2 and FE-3 straight onto main while GitHub Actions is off; next FE-4, continue from `handovers/CONTINUE-phase-3.md`)** · whole project about 78% (rough).
 Work strictly in this order. Details of each stage are in the architecture docs named. Each stage = one branch, one PR, CI green, merged.
 
 ---
@@ -18,7 +18,7 @@ delete, unused shims) are merged. Known limits handed on are listed in the close
 
 ## Phase 3: marketplace, per-app subscriptions, pricing
 Design is done and merged: `docs/architecture/MARKETPLACE-AND-BILLING.md` (MB), `PHASE-3-TASKS.md` (22 tasks in order), `PHASE-3-RISKS.md`.
-The 5 owner questions were **answered on 13 Nov** (all recommendations accepted, see `OWNER.md`). **Done: QA-1, DB-1, DB-2, BE-1 to BE-11, FE-1, FE-2. Next: FE-3.** Build PHASE-3-TASKS.md in its order (QA-1 → DB-1 → DB-2 → BE-1..11
+The 5 owner questions were **answered on 13 Nov** (all recommendations accepted, see `OWNER.md`). **Done: QA-1, DB-1, DB-2, BE-1 to BE-11, FE-1 to FE-3. Next: FE-4.** Build PHASE-3-TASKS.md in its order (QA-1 → DB-1 → DB-2 → BE-1..11
 → FE-1..6 → OPS-1 → OPS-2). The customer migration (OPS-2: shadow → pilot → all) needs the owner's yes at each step, and a backup first.
 
 **Done when:** every PHASE-3-TASKS task merged, launch gates G1-G10 of PHASE-3-RISKS met, migration done with the owner.

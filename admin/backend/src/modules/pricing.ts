@@ -15,7 +15,6 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { randomUUID } from "node:crypto";
 import type { Prisma } from "@prisma/client";
-import { z } from "zod";
 import { dbOf, type Db } from "@sheetal/platform/db/client";
 import { AppError, badRequest, versionConflict } from "@sheetal/platform/core/errors";
 import { SettingsService } from "@sheetal/platform/settings/service";
@@ -24,13 +23,11 @@ import { pricingImpact, type Impact, type ImpactCounts } from "@sheetal/platform
 import type { Catalog } from "@sheetal/platform/billing/types";
 import { notify } from "@sheetal/platform/notify/index";
 import { staffOf, type Staff } from "./routes.js";
+import { PricingPreview, PricingSave } from "./billing-bodies.js";
 import { approvalJson, approversFor, claimApproval, markExecuted, markFailed, registerExecutor, requestApproval } from "./platform-approvals.js";
 
 const QUIET = { warn: () => undefined };
 const ACTION = "platform.pricing.change";
-const Reason = z.string().trim().min(5, "Give a reason of 5 to 300 characters.").max(300);
-const Preview = z.object({ catalog: z.unknown() }).strict();
-const Save = z.object({ catalog: z.unknown(), reason: Reason }).strict();
 
 /** Subscriber counts per edition and add-on, for the impact check. */
 export async function impactCounts(db: Db, now: Date = new Date()): Promise<ImpactCounts> {
@@ -138,14 +135,14 @@ export async function adminPricingRoutes(app: FastifyInstance) {
 
   app.post("/admin/pricing/preview", async (request) => {
     const s = staffOf(request, "platform.pricing.manage");
-    const b = Preview.parse(request.body);
+    const b = PricingPreview.parse(request.body);
     const { impact, otherApprovers } = await preview(request, s, b.catalog);
     return { data: { ...impact, approvalSkipped: impact.needsApproval && otherApprovers === 0 } };
   });
 
   app.put("/admin/pricing", async (request, reply) => {
     const s = staffOf(request, "platform.pricing.manage");
-    const b = Save.parse(request.body);
+    const b = PricingSave.parse(request.body);
     const { prev, toSave, impact, otherApprovers } = await preview(request, s, b.catalog);
     if (impact.refused.length) throw badRequest(impact.refused[0]!, { catalog: impact.refused });
     if (!impact.changes.length && JSON.stringify(prev) === JSON.stringify({ ...toSave, version: prev.version })) return { message: "Nothing changed.", data: { version: prev.version, impact } };

@@ -26,15 +26,10 @@ import { taxNumber } from "@sheetal/platform/billing/invoice";
 import { addGrant, creditBalance } from "@sheetal/platform/billing/ai-credits";
 import type { SubscriptionStatus } from "@sheetal/platform/billing/types";
 import { staffOf } from "./routes.js";
+import { AiCredits, ExtendTrial, Grant, Id, Revoke } from "./billing-bodies.js";
 
 const QUIET = { warn: () => undefined };
 const DAY = 864e5;
-const Id = z.string().regex(/^[a-z][a-z0-9_]{0,40}$/);
-const Reason = z.string().trim().min(5, "Give a reason of 5 to 300 characters.").max(300);
-const Grant = z.object({
-  kind: z.enum(["app", "limit", "feature", "seats"]), appId: Id.optional(), key: z.string().regex(/^[a-z][a-z0-9_.]{0,60}$/).optional(),
-  value: z.number().int().min(0).max(1_000_000).optional(), endsAt: z.coerce.date(), reason: Reason,
-}).strict();
 const n = (v: bigint | null | undefined) => (v == null ? null : Number(v));
 
 export async function adminSubscriptionRoutes(app: FastifyInstance) {
@@ -128,7 +123,7 @@ export async function adminSubscriptionRoutes(app: FastifyInstance) {
 
   app.post<{ Params: { tenantId: string; grantId: string } }>("/admin/subscriptions/:tenantId/grants/:grantId/revoke", async (request) => {
     const s = staffOf(request, "platform.subscription.grant");
-    const { reason } = z.object({ reason: Reason }).strict().parse(request.body);
+    const { reason } = Revoke.parse(request.body);
     const now = new Date();
     const g = await db().entitlementGrant.findFirst({ where: { id: request.params.grantId, tenantId: request.params.tenantId } });
     if (!g) throw notFound("Gift not found.");
@@ -141,7 +136,7 @@ export async function adminSubscriptionRoutes(app: FastifyInstance) {
 
   app.post<{ Params: { tenantId: string } }>("/admin/subscriptions/:tenantId/ai-credits", async (request) => {
     const s = staffOf(request, "platform.subscription.grant");
-    const b = z.object({ credits: z.number().int().min(1).max(100_000), days: z.number().int().min(1).max(366), reason: Reason }).strict().parse(request.body);
+    const b = AiCredits.parse(request.body);
     const t = await db().tenant.findUnique({ where: { id: request.params.tenantId }, select: { id: true, name: true } });
     if (!t) throw notFound("Business not found.");
     const expiresAt = new Date(Date.now() + b.days * DAY);
@@ -152,7 +147,7 @@ export async function adminSubscriptionRoutes(app: FastifyInstance) {
 
   app.post<{ Params: { tenantId: string; appId: string } }>("/admin/subscriptions/:tenantId/:appId/extend-trial", async (request) => {
     const s = staffOf(request, "platform.subscription.grant");
-    const b = z.object({ days: z.number().int().min(1).max(30), reason: Reason, version: z.number().int().min(1) }).strict().parse(request.body);
+    const b = ExtendTrial.parse(request.body);
     const sub = await db().subscription.findUnique({ where: { tenantId_appId: { tenantId: request.params.tenantId, appId: request.params.appId } } });
     if (!sub) throw notFound("Subscription not found.");
     const now = new Date();

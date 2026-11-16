@@ -53,6 +53,7 @@ export function TenantDetail({ id, role }) {
       <PageHead back={<Link to="/admin/tenants" className="pf-back"><Icon name="arrow-left" size={15} />{t("tenants.title")}</Link>}
         title={x.name} sub={`${t(`type.${x.type}`)} · ${x.city} · ${t("tenants.since")} ${fdate(x.since)}`}
         actions={<>
+          {live && <Link to={`/admin/tenants/${id}/subscriptions`} className="btn btn-outline"><Icon name="layers" size={16} />App subscriptions</Link>}
           {can(role, "platform.business.impersonate") && !live && <Button variant="outline" icon="external-link" onClick={open}>{t("tenant.open")}</Button>}
           {/* Signed in to the admin API: a real, read-only support session (OpenAsSupport.jsx). */}
           {can(role, "platform.business.impersonate") && live && <Button variant="outline" icon="external-link" onClick={() => setSupport(true)}>Open as support</Button>}

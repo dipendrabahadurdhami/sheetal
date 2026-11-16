@@ -18,6 +18,7 @@ import { AppError, badRequest, conflict, forbidden, notFound } from "@sheetal/pl
 import { PLATFORM_ROLES, hasPerm } from "@sheetal/backend-core/domain/permissions";
 import { notify } from "@sheetal/platform/notify/index";
 import { staffOf, type Staff } from "./routes.js";
+import { Decide } from "./billing-bodies.js";
 
 type Tx = Prisma.TransactionClient;
 export const APPROVAL_HOURS = 72;
@@ -84,7 +85,6 @@ const json = (r: PlatformApproval, label?: string) => ({
 });
 export const approvalJson = json;
 
-const Decide = z.object({ decision: z.enum(["approve", "reject"]), note: z.string().trim().min(3, "Say why.").max(300) }).strict();
 
 export async function adminApprovalRoutes(app: FastifyInstance) {
   const db = () => dbOf(app);
