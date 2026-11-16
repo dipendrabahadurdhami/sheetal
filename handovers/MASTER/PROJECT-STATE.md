@@ -19,6 +19,9 @@ Every business is still on `billingMode = plans` and `platform.billing.salesEnab
 | #75 | BE-7 | admin billing API: pricing (impact count, approval of rises), coupons, subscriptions + gifts, sales/revenue by Nepal day, VAT, tax-invoice/IRD lists, shadow counter, refunds (maker-checker, partial credit notes, one-person rule), `platform.company` seller details |
 | #76 | BE-8 | AI credits (first-expiring first, reserve then settle, failed call free), router own key → Sheetal AI → locked preview, Claude/OpenAI/Gemini/ElevenLabs built in the Integration Center, `business.ai`, `GET /v1/ai/credits`, admin AI credit gift |
 
+**Open: PR #77 (docs only: these handover files).** On 16 Nov GitHub Actions stopped starting jobs: "recent account payments have failed or your spending
+limit needs to be increased" (owner: GitHub → Settings → Billing & plans). When CI runs again: re-run PR #77's check, merge it when green, then go on.
+
 Left in Phase 3: BE-10 (migration script plans → apps), BE-11 (free website posting), FE-1..6 (all screens), OPS-1, OPS-2, QA-2 sign-offs.
 
 ## Lessons from 16 Nov (keep doing)
