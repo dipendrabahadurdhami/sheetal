@@ -20,6 +20,7 @@
     "payouts:sample": "tsx scripts/payouts-sample.ts",
     "reviews:sample": "tsx scripts/reviews-sample.ts",
     "integrations:migrate": "tsx scripts/integrations-migrate.ts",
+    "billing:migrate": "tsx scripts/migrate-plans-to-apps.ts",
     "promote:gift": "tsx scripts/promote-gift.ts",
     "listings:codes": "tsx scripts/listing-codes.ts",
     "accounts:test": "tsx scripts/test-accounts.ts"

@@ -56,6 +56,7 @@
     "reviews:sample": "npm run reviews:sample -w @sheetal/backend-core --",
     "integrations:migrate": "npm run integrations:migrate -w @sheetal/backend-core --",
     "roles:new-names": "node backend-core/scripts/rewrite-role-perms.mjs",
+    "billing:migrate": "npm run billing:migrate -w @sheetal/backend-core --",
     "promote:gift": "npm run promote:gift -w @sheetal/backend-core --",
     "listings:codes": "npm run listings:codes -w @sheetal/backend-core --",
     "accounts:test": "npm run accounts:test -w @sheetal/backend-core --",

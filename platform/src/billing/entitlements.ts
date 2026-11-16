@@ -49,10 +49,12 @@ export function buildEntitlementsV3(o: EntitlementsV3Input): EntitlementsV3 {
     const app = o.catalog.apps[s.appId];
     status.set(s.appId, effectiveStatus(s, o.now, { freeEditionEnabled: app?.freeEditionEnabled ?? false, settings: o.settings }));
   }
-  // A staff or migration grant of a whole app gives full access to its edition (key = the edition, default "full").
+  // A staff or migration grant of a whole app gives full access to its edition (key = the edition, default "full"). It also lifts an app
+  // that is on its free edition (a covered business, a gift of the paid edition); it never replaces a paid edition already in full access.
   for (const g of grants) if (g.kind === "app" && g.appId) {
     const cur = status.get(g.appId);
-    if (!cur || cur.access !== "full") status.set(g.appId, { status: "active", access: "full", edition: g.key ?? "full", until: g.endsAt });
+    const ed = g.key ?? "full";
+    if (!cur || cur.access !== "full" || (cur.edition === "free" && ed !== "free")) status.set(g.appId, { status: "active", access: "full", edition: ed, until: g.endsAt });
   }
 
   const access = (appId: string): AccessMode => (core.has(appId) ? "full" : status.get(appId)?.access ?? "none");

@@ -40,6 +40,7 @@ const GROUPS = [
     ["backup", "Exports the database to OneDrive\\Sheetal-Backups and copies new photos. Add -- --no-photos for the database only."],
     ["restore", "Lists database backups; `npm run restore -- <name> --yes` puts one back (replaces all data)."],
     ["listings:tidy", "Fills empty listing fields from each title and description and writes a short description. Try -- --dry-run first."],
+    ["billing:migrate", "Moves businesses from Starter / Business / Pro to app subscriptions, with proofs. Dry run by default; --apply, --restore, --csv=file (docs/p3-migration-howto.md)."],
     ["promote:gift", "Gives listings that were featured on the old website a free 30-day home-page boost (run once after the Promote update)."],
     ["accounts:test", "Makes test accounts on this computer (staff, every business type and plan with its team, website users) plus sample data, and saves the list to test-accounts.csv. Never on the live site."],
     ["listings:codes", "Gives every business without one its property code prefix (its initials, Everest Realty → ER) and changes its listing codes; old codes keep working. Try -- --dry-run first."],

@@ -19,7 +19,7 @@ this list before its merge, and CI must be green.
 | 9 | Refunds | maker ≠ checker; two checkers decide once; never above the payment; credit note with the original percentages | BE-7; database CHECKs in DB-2 | database part done |
 | 10 | Coupons | one per business, dates, minimum spend, apps named, never below zero, one coupon per invoice | `billing-core.test.ts` (pure, done); redemption counters in BE-6 | pure part done |
 | 11 | AI credits | first-expiring first; 20 parallel calls never overspend; own key never uses credits; locked preview never calls a model; keys never in a response or log | BE-8; `remaining` CHECK in DB-1 | database part done |
-| 12 | Migration proofs P1 to P8 | nobody loses an app, limit, feature, seat or credit; nobody pays more at the first renewal; all-or-nothing per business; `--restore` removes only its run | `backend-core/test/migrate-plans.test.ts` (BE-10) | |
+| 12 | Migration proofs P1 to P8 | nobody loses an app, limit, feature, seat or credit; nobody pays more at the first renewal; all-or-nothing per business; `--restore` removes only its run | `backend-core/test/migrate-plans.test.ts` (BE-10) | done (52 tests, database part included) |
 
 ## 2. Rules every Phase 3 test follows
 - Money is paisa (`BigInt` in the database, `Money` in code). A test never compares floats.
