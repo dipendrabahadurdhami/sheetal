@@ -85,7 +85,8 @@ services. Take a backup before every update that has a migration.
 
 ## 8. Still to do before real customers (see LAUNCH-CHECK.md)
 
-- **Code:** the free limits of 12 apps are not enforced yet (only Listings). Until then a free business has no reason to pay.
+- **Code:** the main free limits are enforced since 17 Nov. A few smaller ones are not yet (People staff records, open investments,
+  number of projects, POS outlets, CRM pipelines, receipt storage, team seats).
 - A security review (sign-in, permissions, uploads, rate limits), a load test, error monitoring with alerts.
 - Nepali texts for the newer screens; the legal pages (sale terms, refund policy, privacy).
 - GitHub Actions is switched off (billing): the automatic checks do not run on changes.
