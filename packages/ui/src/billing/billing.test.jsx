@@ -152,6 +152,8 @@ describe("pages and apps; useEntitlements", () => {
     expect(appOfPath("/business/bookings")).toBe("hotel");
     expect(appOfPath("/business/invoices?x=1")).toBe("invoicing");
     expect(appOfPath("/business/settings")).toBeNull();
+    expect(appOfPath("/business/mail")).toBe("mail");
+    expect(appOfPath("/business/promote/boost/ER-1")).toBe("promote");
     expect(appOfPath("/admin/pos")).toBeNull();
   });
   it("on apps the answer is exact; on plans or while loading every app counts as there (the server still refuses)", () => {

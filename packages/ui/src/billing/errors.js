@@ -71,7 +71,7 @@ export function bannerVisible({ used, limit, seen = {}, now = Date.now(), formOp
 // The business panel's first path part → the app it belongs to (for the read-only banner and the menu by app). Pages not listed are the
 // workspace (settings, team, help), which is never read-only for billing.
 const PATH_APP = {
-  listings: "listings", checkups: "listings", promote: "listings",
+  listings: "listings", checkups: "listings", promote: "promote", mail: "mail",
   inbox: "crm", forms: "crm",
   bookings: "hotel", calendar: "hotel", channels: "hotel", frontdesk: "hotel",
   pos: "pos", stock: "pos",

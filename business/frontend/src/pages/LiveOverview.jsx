@@ -15,6 +15,7 @@ import { Button, Empty, Meter, PageHead, Panel, Stat } from "@sheetal/shared/cor
 import { Icon } from "@sheetal/shared/core/icons";
 import { bizApi } from "../api";
 import { SetupPanel } from "./Setup";
+import { useBillingMode } from "../billingMode";
 
 const LIMIT_LABEL = { seats: "Team seats", listings: "Listings", featured: "Featured listings", outlets: "POS outlets" };
 
@@ -24,6 +25,8 @@ export function LiveOverview({ tenant, role }) {
   const { navigate } = useRouter();
   const [d, setD] = useState(null);
   const [failed, setFailed] = useState(false);
+  // On per-app billing there is no "plan" to name: the business has apps.
+  const onApps = useBillingMode(tenant.id) === "apps";
   const load = useCallback(() => bizApi("GET", "/overview").then((r) => { setD(r.data); setFailed(false); }).catch(() => setFailed(true)), [tenant.id]);
   useEffect(() => { setD(null); load(); const every = setInterval(load, 60_000); return () => clearInterval(every); }, [load]);
 
@@ -36,7 +39,7 @@ export function LiveOverview({ tenant, role }) {
     { icon: "git-branch", label: t("nav.branches"), to: "/business/branches" },
   ].filter(Boolean).slice(0, 6);
 
-  const head = <PageHead title={t("bdash.hello", { name: db.session.userName.split(" ")[0] })} sub={`${tenant.name} · ${t(`type.${tenant.type}`)}${d?.plan ? ` · ${d.plan.name} ${t("bdash.plan")}` : ""}`} />;
+  const head = <PageHead title={t("bdash.hello", { name: db.session.userName.split(" ")[0] })} sub={`${tenant.name} · ${t(`type.${tenant.type}`)}${d?.plan && !onApps ? ` · ${d.plan.name} ${t("bdash.plan")}` : ""}`} />;
   if (!d) return <>{head}<SetupPanel tenant={tenant} /><p className="muted pf-pad">{failed ? "The overview couldn't load. Check your connection and try again." : "Loading…"}</p>{failed && <div className="pf-pad"><Button variant="outline" onClick={load}>Try again</Button></div>}</>;
 
   const s = d.today?.stays, ag = d.today?.agency, dev = d.today?.developer;
