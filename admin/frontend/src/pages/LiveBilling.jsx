@@ -13,6 +13,9 @@ const PROVIDER = { esewa: "eSewa", khalti: "Khalti", fonepay: "Fonepay", manual:
 const STATUS_TONE = { paid: "done", pending_review: "action", failed: "problem", refunded: "neutral", open: "action", void: "neutral" };
 const STATUS_WORD = { paid: "Paid", pending_review: "To check", failed: "Failed", refunded: "Refunded", initiated: "Started", open: "To pay", void: "Cancelled" };
 
+// An invoice from the Marketplace (apps) has no plan; show that in words instead of crashing.
+export const planWord = (planId) => (planId ? planId.split("-").pop() : "apps");
+
 function useApi(path) {
   const [s, setS] = useState({ data: null });
   const [tick, setTick] = useState(0);
@@ -55,7 +58,7 @@ export function LiveAdminBilling() {
       {tab === "payments" && <section className="card pf-panel">
         <div className="pf-toolbar"><Select value={show} onChange={setShow} style={{ width: 220 }} aria-label="Show" options={[["pending_review", "Bank transfers to check"], ["paid", "Paid"], ["failed", "Failed"], ["refunded", "Refunded"], ["all", "All"]].map(([id, label]) => ({ id, label }))} /></div>
         {!payments.data ? <p className="muted pf-pad">Loading…</p> : <Table rows={payments.data} minWidth={820} empty={<Empty icon="circle-check" title="Nothing here" />} columns={[
-          { key: "t", label: "Business", render: (r) => <span className="pf-two"><b>{r.tenant?.name || "—"}</b><small className="tnum">{r.invoice.number} · {r.invoice.planId.split("-").pop()} · {r.invoice.months} mo</small></span> },
+          { key: "t", label: "Business", render: (r) => <span className="pf-two"><b>{r.tenant?.name || "—"}</b><small className="tnum">{r.invoice.number} · {planWord(r.invoice.planId)} · {r.invoice.months} mo</small></span> },
           { key: "m", label: "Method", render: (r) => <span className="pf-two"><b>{PROVIDER[r.provider]}</b><small className="tnum">{r.providerRef || r.ref}</small></span> },
           { key: "a", label: "Amount", num: true, align: "right", render: (r) => rs(r.amount) },
           { key: "s", label: "Status", render: (r) => <span className="pf-two"><Badge tone={STATUS_TONE[r.status] || "neutral"}>{STATUS_WORD[r.status] || r.status}</Badge>{r.note && <small className="muted">{r.note}</small>}</span> },
@@ -71,7 +74,7 @@ export function LiveAdminBilling() {
       {tab === "invoices" && <Panel title="Invoices" sub="Businesses pay open invoices from their billing page." actions={<><Button variant="outline" onClick={() => adminApi("POST", "/admin/billing/run-cycle").then((r) => { toast(r.message); invoices.reload(); summary.reload(); }).catch((e) => toast(e.message))}>Run renewals now</Button><Button icon="plus" onClick={() => setBill({ tenantId: "", planId: "", months: 1 })}>Bill a business</Button></>}>
         {!invoices.data ? <p className="muted pf-pad">Loading…</p> : <Table rows={invoices.data} minWidth={720} empty={<Empty icon="receipt" title="No invoices yet" />} columns={[
           { key: "n", label: "Invoice", render: (r) => <span className="pf-two"><b className="tnum">{r.number}</b><small>{r.tenant || "—"}</small></span> },
-          { key: "p", label: "Plan", render: (r) => `${r.planId} · ${r.months} mo` },
+          { key: "p", label: "Plan", render: (r) => `${r.planId || "App purchase"} · ${r.months} mo` },
           { key: "a", label: "Total (VAT)", num: true, align: "right", render: (r) => <span className="pf-two" style={{ alignItems: "flex-end" }}><b>{rs(r.total)}</b><small className="muted">VAT {rs(r.vat)}</small></span> },
           { key: "s", label: "Status", render: (r) => <Badge tone={STATUS_TONE[r.status]}>{STATUS_WORD[r.status]}</Badge> },
           { key: "d", label: "Due / paid", num: true, render: (r) => fdate(r.paidAt || r.dueAt) },
