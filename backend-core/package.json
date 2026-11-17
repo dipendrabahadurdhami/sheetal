@@ -25,6 +25,7 @@
     "billing:free": "tsx scripts/billing-free.ts",
     "check:catalog": "tsx scripts/check-catalog.ts",
     "promote:gift": "tsx scripts/promote-gift.ts",
+    "roles:sync": "tsx scripts/sync-roles.ts",
     "listings:codes": "tsx scripts/listing-codes.ts",
     "accounts:test": "tsx scripts/test-accounts.ts"
   },

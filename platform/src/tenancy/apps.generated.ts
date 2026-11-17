@@ -39,7 +39,14 @@ export const APPS: readonly AppManifest[] = [
     ],
     roles: [
       { key: "owner", types: "all", add: ["*"] },
-      { key: "manager", types: ["hotel"], add: ["*"], except: ["workspace.role.*", "workspace.billing.*"] },
+      { key: "manager", types: ["hotel", "host", "developer", "agency", "sponsor"], add: ["*"], except: ["workspace.role.*", "workspace.billing.*"] },
+      { key: "customer_care", types: ["host", "developer", "agency", "sponsor"], add: ["workspace.overview.read:branch"] },
+      {
+        key: "viewer",
+        types: ["hotel", "host", "developer", "agency", "sponsor"],
+        add: ["*.*.read"],
+        except: ["workspace.role.read", "expenses.profit.read", "invoicing.payout.read", "investments.investor.read"],
+      },
       { key: "frontdesk", types: ["hotel"], add: ["workspace.overview.read:branch"] },
       { key: "cashier", types: ["hotel"], add: [] },
       { key: "housekeeping", types: ["hotel"], add: [] },
@@ -236,6 +243,8 @@ export const APPS: readonly AppManifest[] = [
     ],
     roles: [
       { key: "frontdesk", types: ["hotel"], add: ["crm.customer.read:branch", "crm.message.reply:branch"] },
+      { key: "customer_care", types: ["agency"], add: ["crm.lead.read:branch", "crm.customer.read:branch", "crm.message.reply:branch"] },
+      { key: "customer_care", types: ["host", "developer", "sponsor"], add: ["crm.customer.read:branch", "crm.message.reply:branch"] },
       { key: "cohost", types: ["host"], add: ["crm.customer.read:branch", "crm.message.reply:branch"] },
       { key: "sales_manager", types: ["developer"], add: ["crm.customer.read:branch", "crm.message.reply:branch"] },
       { key: "sales_exec", types: ["developer"], add: ["crm.customer.read:branch", "crm.message.reply:branch"] },
@@ -915,6 +924,7 @@ export const APPS: readonly AppManifest[] = [
     ],
     roles: [
       { key: "frontdesk", types: ["hotel"], add: ["reviews.review.read:branch"] },
+      { key: "customer_care", types: ["host", "developer", "agency", "sponsor"], add: ["reviews.review.read:branch", "reviews.review.reply:branch"] },
       { key: "cohost", types: ["host"], add: ["reviews.review.read:branch", "reviews.review.reply:branch"] },
       { key: "sales_manager", types: ["developer"], add: ["reviews.review.read:branch"] },
       { key: "sales_exec", types: ["developer"], add: ["reviews.review.read:branch"] },

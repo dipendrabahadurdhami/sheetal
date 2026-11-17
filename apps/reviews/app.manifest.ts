@@ -30,6 +30,7 @@ const manifest = {
   ],
   roles: [
     { key: "frontdesk", types: ["hotel"], add: ["reviews.review.read:branch"] },
+    { key: "customer_care", types: ["host", "developer", "agency", "sponsor"], add: ["reviews.review.read:branch", "reviews.review.reply:branch"] },
     { key: "cohost", types: ["host"], add: ["reviews.review.read:branch", "reviews.review.reply:branch"] },
     { key: "sales_manager", types: ["developer"], add: ["reviews.review.read:branch"] },
     { key: "sales_exec", types: ["developer"], add: ["reviews.review.read:branch"] },

@@ -63,6 +63,7 @@
     "billing:free": "npm run billing:free -w @sheetal/backend-core --",
     "scratch": "node scripts/scratch-db.mjs",
     "promote:gift": "npm run promote:gift -w @sheetal/backend-core --",
+    "roles:sync": "npm run roles:sync -w @sheetal/backend-core --",
     "listings:codes": "npm run listings:codes -w @sheetal/backend-core --",
     "accounts:test": "npm run accounts:test -w @sheetal/backend-core --",
     "qc": "eslint admin business website shared && tsc -p tsconfig.json",

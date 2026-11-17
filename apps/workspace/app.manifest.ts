@@ -49,7 +49,11 @@ const manifest = {
   ],
   roles: [
     { key: "owner", types: "all", add: ["*"] },
-    { key: "manager", types: ["hotel"], add: ["*"], except: ["workspace.role.*", "workspace.billing.*"] },
+    // Standard roles every kind of business gets: a Manager (everything except roles and the Sheetal plan), Customer care (messages and reviews only)
+    // and a Viewer (read only; no profit, payout, investor or role details). The kind-specific roles come below.
+    { key: "manager", types: ["hotel", "host", "developer", "agency", "sponsor"], add: ["*"], except: ["workspace.role.*", "workspace.billing.*"] },
+    { key: "customer_care", types: ["host", "developer", "agency", "sponsor"], add: ["workspace.overview.read:branch"] },
+    { key: "viewer", types: ["hotel", "host", "developer", "agency", "sponsor"], add: ["*.*.read"], except: ["workspace.role.read", "expenses.profit.read", "invoicing.payout.read", "investments.investor.read"] },
     { key: "frontdesk", types: ["hotel"], add: ["workspace.overview.read:branch"] },
     { key: "cashier", types: ["hotel"], add: [] },
     { key: "housekeeping", types: ["hotel"], add: [] },

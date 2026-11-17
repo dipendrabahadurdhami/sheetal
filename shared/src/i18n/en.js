@@ -35,7 +35,8 @@ export default {
   // roles
   "role.owner": "Owner", "role.manager": "Manager", "role.frontdesk": "Front desk", "role.cashier": "Restaurant cashier", "role.housekeeping": "Housekeeping", "role.accountant": "Accountant",
   "role.cohost": "Co-host", "role.cleaner": "Cleaner", "role.sales_manager": "Sales manager", "role.sales_exec": "Sales executive", "role.site_engineer": "Site engineer", "role.branch_manager": "Team lead",
-  "role.agent": "Associate agent", "role.investor_relations": "Investor relations", "role.super_admin": "Super admin", "role.operations": "Operations", "role.finance": "Finance", "role.content_editor": "Content editor", "role.support": "Support",
+  "role.agent": "Associate agent", "role.customer_care": "Customer care", "role.viewer": "Viewer", "role.investor_relations": "Investor relations", "role.super_admin": "Super admin", "role.operations": "Operations", "role.finance": "Finance", "role.content_editor": "Content editor", "role.support": "Support",
+  "roledesc.customer_care": "Answers messages and enquiries and replies to reviews. Sees nothing else.", "roledesc.viewer": "Can look at everything but change nothing. No profit, payouts or roles.",
   "roledesc.owner": "Full access, including plan, payouts and roles. Can't be removed.", "roledesc.manager": "Runs daily work. Everything except roles and the Sheetal plan.",
   "roledesc.frontdesk": "Bookings, check-in and check-out, the front-desk till and guest messages.", "roledesc.cashier": "Restaurant and bar orders, extras and their own shift.",
   "roledesc.housekeeping": "Sees the calendar and room status only.", "roledesc.accountant": "Reports, invoices and payouts. Can't change bookings.",

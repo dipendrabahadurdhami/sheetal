@@ -33,6 +33,8 @@ const manifest = {
   ],
   roles: [
     { key: "frontdesk", types: ["hotel"], add: ["crm.customer.read:branch", "crm.message.reply:branch"] },
+    { key: "customer_care", types: ["agency"], add: ["crm.lead.read:branch", "crm.customer.read:branch", "crm.message.reply:branch"] },
+    { key: "customer_care", types: ["host", "developer", "sponsor"], add: ["crm.customer.read:branch", "crm.message.reply:branch"] },
     { key: "cohost", types: ["host"], add: ["crm.customer.read:branch", "crm.message.reply:branch"] },
     { key: "sales_manager", types: ["developer"], add: ["crm.customer.read:branch", "crm.message.reply:branch"] },
     { key: "sales_exec", types: ["developer"], add: ["crm.customer.read:branch", "crm.message.reply:branch"] },

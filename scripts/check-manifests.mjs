@@ -219,7 +219,13 @@ for (const { file, manifest: m, text } of all) {
     const everyOld = typeGroups.flatMap((g) => g.perms);
     const oldRoles = L.LEGACY_TEMPLATES[type].map(([key, perms]) => ({ key, perms: perms ?? everyOld.filter((p) => p !== "roles.manage" && p !== "billing.manage") }));
     const newRoles = model.roleTemplates[type];
-    if (oldRoles.map((r) => r.key).join() !== newRoles.map((r) => r.key).join()) err("extra", `roles of ${type}: old [${oldRoles.map((r) => r.key)}] vs manifests [${newRoles.map((r) => r.key)}]`);
+    // Every old role must still be there, unchanged in order. Standard roles added on purpose after the move (Manager, Customer care, Viewer, 18 Nov 2026)
+    // may be extra; any other new role is flagged so it is added here on purpose.
+    const ADDED_ON_PURPOSE = ["manager", "customer_care", "viewer"];
+    const oldKeys = oldRoles.map((r) => r.key);
+    const keptKeys = newRoles.map((r) => r.key).filter((k) => oldKeys.includes(k));
+    const strange = newRoles.map((r) => r.key).filter((k) => !oldKeys.includes(k) && !ADDED_ON_PURPOSE.includes(k));
+    if (oldKeys.join() !== keptKeys.join() || strange.length) err("extra", `roles of ${type}: old [${oldKeys}] vs manifests [${newRoles.map((r) => r.key)}]${strange.length ? `; not an agreed standard role: ${strange}` : ""}`);
     for (const o of oldRoles) {
       const n = newRoles.find((r) => r.key === o.key);
       if (!n) continue;
