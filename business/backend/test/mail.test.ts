@@ -54,6 +54,22 @@ describe("plans and roles", () => {
     expect((await call("free", "GET", "/mail")).json().data).toMatchObject({ paid: false, quota: { limit: 0 } });
   });
 
+  it("unlocks team email for a business on app billing that has the Mail app, for example as a staff gift", async () => {
+    const db = app.db!;
+    await db.tenant.update({ where: { id: ids.freeTenant }, data: { billingMode: "apps" } });
+    // App billing, no Mail app yet: still locked.
+    expect((await call("free", "GET", "/mail")).json().data).toMatchObject({ paid: false, quota: { limit: 0 } });
+    const grant = await db.entitlementGrant.create({ data: { tenantId: ids.freeTenant!, kind: "app", appId: "mail", key: "full", source: "staff", reason: "own company email", createdBy: ids.free!, endsAt: new Date(Date.now() + 30 * 864e5) } });
+    expect((await call("free", "GET", "/mail")).json().data).toMatchObject({ paid: true, quota: { limit: 1024 ** 3 } });
+    expect((await call("free", "POST", "/mail/domains", { name: "small.test" })).statusCode).toBe(200);
+    // Taking the gift back locks it again (the domain stays, but nothing new can be set up).
+    await db.entitlementGrant.update({ where: { id: grant.id }, data: { revokedAt: new Date() } });
+    expect((await call("free", "GET", "/mail")).json().data).toMatchObject({ paid: false, quota: { limit: 0 } });
+    expect((await call("free", "POST", "/mail/mailboxes", { domainId: "x", localPart: "info" })).statusCode).toBe(402);
+    await db.tenant.update({ where: { id: ids.freeTenant }, data: { billingMode: "plans" } });
+    await db.mailDomain.deleteMany({ where: { tenantId: ids.freeTenant } });
+  });
+
   it("lets only owners and managers set up email", async () => {
     expect((await call("agent", "POST", "/mail/domains", { name: "everest.test" })).statusCode).toBe(403);
   });

@@ -13,7 +13,8 @@ import type { Mailbox, Prisma } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 import type { FastifyBaseLogger } from "fastify";
 import { AppError, badRequest, conflict, forbidden, notFound } from "@sheetal/platform/core/errors";
-import type { BusinessContext } from "@sheetal/platform/core/context";
+import type { BusinessContext, Entitlements } from "@sheetal/platform/core/context";
+import { loadEntitlementsV3, modeOf } from "@sheetal/platform/billing/load";
 import type { EventBus } from "@sheetal/platform/core/events";
 import { BaseRepository, type BusinessEntity } from "@sheetal/platform/core/repository";
 import { BaseService } from "@sheetal/platform/core/service";
@@ -86,7 +87,25 @@ export class MailService extends BaseService<BusinessEntity, never, never> {
   /** A person's own mail work (flags, folders, drafts): refused in a read-only support session, no audit line. */
   private own<R>(ctx: BusinessContext, run: (tx: BusinessContext) => Promise<R>): Promise<R> { this.refuseReadOnly(ctx); return this.inTransaction(ctx, run); }
   private me(ctx: BusinessContext) { return ctx.member.userId; }
-  private async quota(ctx: BusinessContext) { return mailQuotaBytes(await this.mail.myPlan(ctx)); }
+  /** Mail storage a business may use: from the old paid plan, or from the Mail app (a subscription, a trial or a staff gift). The larger wins; nothing is lowered. */
+  private appQuota(e: Entitlements): number {
+    const access = e.access?.("mail");
+    if (access !== "full" && access !== "limited") return 0;
+    const mb = e.limit("mail", "storage_mb");
+    return mb == null ? mailQuotaBytes({ price: 1 }) : mb * 1024 * 1024;
+  }
+  private async quota(ctx: BusinessContext) { return Math.max(mailQuotaBytes(await this.mail.myPlan(ctx)), this.appQuota(ctx.entitlements)); }
+  /** The same answer for another business (delivery between Sheetal mailboxes, and mail from the mail server): null when the business does not exist. */
+  private async quotaOfTenant(db: Tx, tenantId: string): Promise<number | null> {
+    const t = await this.mail.tenantPlan(db, tenantId);
+    if (!t) return null;
+    let q = mailQuotaBytes(t.plan);
+    if (modeOf(t.billingMode) !== "plans" && this.x.log) {
+      const e = await loadEntitlementsV3(this.x.db as never, this.x.log, tenantId, new Date(), 0).catch(() => null);
+      if (e) q = Math.max(q, this.appQuota(e));
+    }
+    return q;
+  }
   private async paidOnly(ctx: BusinessContext) { if (!(await this.quota(ctx))) throw new AppError(402, "upgrade_needed", "Team email is part of the Business and Pro plans."); }
   private async manage(ctx: BusinessContext) { await this.paidOnly(ctx); if (!ctx.permissions.can(SETTINGS_PERM)) throw forbidden("Only owners and managers can set up email."); }
   /** Mailboxes this person may open in this business. */
@@ -305,8 +324,8 @@ export class MailService extends BaseService<BusinessEntity, never, never> {
       for (const r of local) {
         // A teammate's mailbox, or another Sheetal business; never more than their storage allows.
         const theirUsed = await this.mail.used(t, r.tenantId);
-        const theirTenant = await this.mail.tenantPlan(t, r.tenantId);
-        if (!theirTenant || theirUsed + size > mailQuotaBytes(theirTenant.plan)) continue;
+        const theirQuota = await this.quotaOfTenant(t, r.tenantId);
+        if (theirQuota === null || theirUsed + size > theirQuota) continue;
         await this.mail.deliver(t, { ...common, mailboxId: r.id, tenantId: r.tenantId, folder: "inbox", status: "received", attachments: attachCreate });
       }
       if (b.draftId) await this.mail.dropDraft(tx, b.draftId, box.id);
@@ -331,8 +350,8 @@ export class MailService extends BaseService<BusinessEntity, never, never> {
     const size = sizeOf({ subject: b.subject, text: b.text, html }, files.reduce((s, f) => s + f.size, 0));
     const delivered: string[] = [], full: string[] = [];
     for (const box of boxes) {
-      const tenant = await this.mail.tenantPlan(db, box.tenantId);
-      if (!tenant || (await this.mail.used(db, box.tenantId)) + size > mailQuotaBytes(tenant.plan)) { full.push(box.address); continue; }
+      const boxQuota = await this.quotaOfTenant(db, box.tenantId);
+      if (boxQuota === null || (await this.mail.used(db, box.tenantId)) + size > boxQuota) { full.push(box.address); continue; }
       const parent = b.inReplyTo ? await this.mail.parentThread(db, box.id, b.inReplyTo) : null;
       const id = createId();
       await this.mail.deliver(db, {

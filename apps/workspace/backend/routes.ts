@@ -50,7 +50,7 @@ export async function workspaceRoutes(app: FastifyInstance, opts: WorkspaceRoute
   new GrowthController(new GrowthService({ bus: busOf(app, "workspace"), db: host.db, vault: new Vault(host.config.SECRETS_KEY, host.config.NODE_ENV === "production"), ai: opts.ai }), opts.contextOf).register(app);
   new MailController(new MailService({
     bus: busOf(app, "workspace"), db: host.db, vault: new Vault(host.config.SECRETS_KEY, host.config.NODE_ENV === "production"),
-    resolver: opts.resolver ?? systemResolver, mailHost: host.config.MAIL_HOST, inboundSecret: host.config.MAIL_INBOUND_SECRET,
+    resolver: opts.resolver ?? systemResolver, mailHost: host.config.MAIL_HOST, inboundSecret: host.config.MAIL_INBOUND_SECRET, log: app.log,
   }), opts.contextOf).register(app);
   new FormController(new FormService({ bus: busOf(app, "workspace"), siteUrl: host.config.SITE_URL, readFile: (name) => readPrivateFile(host.config.MEDIA_DIR, "forms", name) as never }), opts.contextOf).register(app);
   const team = new TeamService({
