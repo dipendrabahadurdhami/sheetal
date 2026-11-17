@@ -9,6 +9,8 @@ import { Menu } from "../core/ui";
 export function BranchPicker({ branch, allowed, canAll, onPick, footer, allLabel = "All branches", label = "Branch" }) {
   if (!allowed.length) return null;
   const single = allowed.length === 1;
+  // One branch and nothing to manage (not an owner or manager): there is nothing to pick, so show nothing.
+  if (single && !footer) return null;
   const current = single ? allowed[0] : branch;
   const name = current === "all" ? allLabel : current;
   const options = [...(canAll && !single ? [{ id: "all", label: allLabel, sub: `${allowed.length} branches together`, icon: "layers" }] : []), ...allowed.map((b) => ({ id: b, label: b, icon: "map-pin" }))];

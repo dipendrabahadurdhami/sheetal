@@ -18,6 +18,10 @@ function oldPerms(type, key) {
 }
 const held = (perms, old) => perms.includes("*") || perms.includes(old);
 
+// Roles added on purpose after the permission move (18 Nov 2026): they have no old twin, so they are not compared with one.
+const ADDED_ROLES = ["manager", "customer_care", "viewer", "it_support"];
+const ADDED_STAFF = ["it_admin", "moderator"];
+
 describe("new permission names give the same answers as the old ones did", () => {
   it("joins names with + as 'all of them', and understands only the manifests' names", () => {
     const role = { perms: ["a.b.read", "a.b.update:branch"] };
@@ -35,6 +39,7 @@ describe("new permission names give the same answers as the old ones did", () =>
     let roles = 0;
     for (const type of Object.keys(BUSINESS_TYPES)) {
       for (const role of roleTemplatesFor(type)) {
+        if (ADDED_ROLES.includes(role.key) && oldPerms(type, role.key) === null) continue; // standard roles added on purpose (18 Nov 2026) have no old twin
         const before = oldPerms(type, role.key);
         expect(before, `${type}/${role.key} existed before`).not.toBeNull();
         roles++;
@@ -42,14 +47,15 @@ describe("new permission names give the same answers as the old ones did", () =>
           expect(can(role, newNameFor(old, "business")), `${type}/${role.key}: ${old}`).toBe(held(before, old));
         }
       }
-      expect(roleTemplatesFor(type).map((r) => r.key)).toEqual(LEGACY_TEMPLATES[type].map(([k]) => k));
+      expect(roleTemplatesFor(type).map((r) => r.key).filter((k) => !ADDED_ROLES.includes(k) || LEGACY_TEMPLATES[type].some(([o]) => o === k))).toEqual(LEGACY_TEMPLATES[type].map(([k]) => k));
     }
     expect(roles).toBeGreaterThan(15);
   });
 
   it("every staff role passes exactly the checks its old permissions passed", () => {
-    expect(PLATFORM_ROLE_TEMPLATES.map((r) => r.key)).toEqual(Object.keys(LEGACY_PLATFORM_ROLES));
+    expect(PLATFORM_ROLE_TEMPLATES.map((r) => r.key).filter((k) => !ADDED_STAFF.includes(k))).toEqual(Object.keys(LEGACY_PLATFORM_ROLES));
     for (const role of PLATFORM_ROLE_TEMPLATES) {
+      if (ADDED_STAFF.includes(role.key)) continue;
       for (const old of Object.keys(LEGACY_PLATFORM_ALIASES)) {
         expect(can(role, newNameFor(old, "platform")), `${role.key}: ${old}`).toBe(held(LEGACY_PLATFORM_ROLES[role.key], old));
       }

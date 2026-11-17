@@ -34,7 +34,7 @@ describe("notifyStaff", () => {
     const db = { user: { findMany }, notification: { createMany } } as never;
     await notifyStaff(db, "platform.verification.review", { type: "kyc", title: "Check a document", link: "/admin/kyc" });
     const roles = ((findMany.mock.calls[0] as unknown as [{ where: { platformRole: { in: string[] } } }])[0].where.platformRole.in).sort();
-    expect(roles).toEqual(["operations", "super_admin"]);        // finance, support and the content editor do not handle KYC
+    expect(roles).toEqual(["moderator", "operations", "super_admin"]);        // the moderator checks verification documents too; finance, support, IT and the content editor do not
     expect((createMany.mock.calls[0] as unknown as [{ data: Record<string, unknown>[] }])[0].data.map((d) => d.tenantId)).toEqual([null, null]);
   });
   it("a permission only the super admin has goes to the super admin alone", async () => {

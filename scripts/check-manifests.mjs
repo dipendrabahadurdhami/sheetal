@@ -252,7 +252,12 @@ for (const { file, manifest: m, text } of all) {
     const extra = [...got].filter((x) => !want.has(x) && reachStaff.has(x));        // anything extra must be a new-only permission
     if (lost.length || extra.length) err("extra", `staff ${key}: manifest differs from the old role${lost.length ? `; missing ${lost.join(", ")}` : ""}${extra.length ? `; extra ${extra.join(", ")}` : ""}`);
   }
-  if (model.platformRoles.map((r) => r.key).join() !== Object.keys(L.LEGACY_PLATFORM_ROLES).join()) err("extra", "staff roles differ from the old ones");
+  // Every old staff role must still be there in order; staff roles added on purpose (18 Nov 2026) may be extra, any other is flagged.
+  const STAFF_ADDED_ON_PURPOSE = ["it_admin", "moderator"];
+  const oldStaff = Object.keys(L.LEGACY_PLATFORM_ROLES);
+  const keptStaff = model.platformRoles.map((r) => r.key).filter((k) => oldStaff.includes(k));
+  const strangeStaff = model.platformRoles.map((r) => r.key).filter((k) => !oldStaff.includes(k) && !STAFF_ADDED_ON_PURPOSE.includes(k));
+  if (keptStaff.join() !== oldStaff.join() || strangeStaff.length) err("extra", `staff roles differ from the old ones${strangeStaff.length ? `; not an agreed staff role: ${strangeStaff}` : ""}`);
   void matchPattern;
 }
 

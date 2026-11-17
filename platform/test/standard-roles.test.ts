@@ -30,7 +30,7 @@ describe("standard roles for every kind of business", () => {
       expect(v.length, t).toBeGreaterThan(5);
       for (const g of v) expect(g.split(":")[0], `${t}: ${g}`).toMatch(/\.read$/);
       for (const g of v) expect(g.split(":")[0]).not.toMatch(WRITE);
-      for (const no of ["expenses.profit.read", "invoicing.payout.read", "investments.investor.read", "workspace.role.read"]) expect(hasPerm(v, no), `${t}: ${no}`).toBe(false);
+      for (const no of ["expenses.expense.read", "expenses.profit.read", "invoicing.payout.read", "investments.investor.read", "workspace.role.read"]) expect(hasPerm(v, no), `${t}: ${no}`).toBe(false);
       expect(hasPerm(v, "workspace.overview.read")).toBe(true);
     }
   });

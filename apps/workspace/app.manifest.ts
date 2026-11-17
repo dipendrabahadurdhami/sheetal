@@ -55,7 +55,7 @@ const manifest = {
     { key: "customer_care", types: ["host", "developer", "agency", "sponsor"], add: ["workspace.overview.read:branch"] },
     // IT support: looks after the settings, domain and email, branches, API keys and AI accounts. No bills, payouts, profit or role changes.
     { key: "it_support", types: ["hotel", "host", "developer", "agency", "sponsor"], add: ["workspace.overview.read:branch", "workspace.team.read:all", "workspace.settings.*", "workspace.profile.*", "workspace.branding.*", "workspace.branch.*"] },
-    { key: "viewer", types: ["hotel", "host", "developer", "agency", "sponsor"], add: ["*.*.read"], except: ["workspace.role.read", "expenses.profit.read", "invoicing.payout.read", "investments.investor.read"] },
+    { key: "viewer", types: ["hotel", "host", "developer", "agency", "sponsor"], add: ["*.*.read"], except: ["workspace.role.read", "expenses.expense.read", "expenses.recurring.read", "expenses.profit.read", "invoicing.payout.read", "investments.investor.read"] },
     { key: "frontdesk", types: ["hotel"], add: ["workspace.overview.read:branch"] },
     { key: "cashier", types: ["hotel"], add: [] },
     { key: "housekeeping", types: ["hotel"], add: [] },

@@ -90,6 +90,14 @@ const manifest = {
         "platform.revenue.read",
       ],
     },
+    // Added 18 Nov 2026: the technical staff member (settings, connections, system and email health; no bills, plans or staff changes) and a moderator
+    // who only checks listings and verification documents.
+    {
+      key: "it_admin",
+      types: "all",
+      add: ["platform.dashboard.read", "platform.business.read", "platform.audit.read", "platform.integration.read", "platform.integration.manage", "platform.settings.read", "platform.settings.update"],
+    },
+    { key: "moderator", types: "all", add: ["platform.dashboard.read", "platform.business.read", "platform.listing.moderate", "platform.verification.review"] },
     { key: "content_editor", types: "all", add: ["platform.content.update", "platform.content.publish", "platform.listing.moderate"] },
     {
       key: "support",

@@ -66,7 +66,7 @@ import { BackupOnly } from "./BusinessBilling";
 import { LiveBranches, branchesOf } from "./Branches";
 import { LivePromote } from "./LivePromote";
 import { BranchProvider } from "@sheetal/shared/core/branch";
-import { atListingCap, isFree, listingCap, planOf, typesFor } from "@sheetal/shared/core/plans";
+import { isFree, listingCap, planOf, typesFor } from "@sheetal/shared/core/plans";
 import { UpgradeNeeded } from "./planBits";
 import { Social, VoiceAssistant } from "./Connections";
 import { ListingCheckups } from "./ListingCheckups";
@@ -153,6 +153,9 @@ function Workspace() {
   React.useEffect(() => { if (!hasColours && db.session.theme === "bars") update((d) => { d.session.theme = "dark"; }); }, [hasColours, db.session.theme]);
   const roles = db.tenantRoles[tenant.id];
   const owner = roles.find((r) => r.perms.includes("*"));
+  // "View as another role" is a tool for the real owner only; staff and everyone else never see it.
+  const realRole = roles.find((r) => r.id === s.liveRoles?.[tenant.id]);
+  const canPreview = !!realRole?.perms.includes("*");
   // Previewing a role (owners checking what someone sees) wins; then the person's own role in this business.
   const role = roles.find((r) => r.id === s.previewRoleId) || roles.find((r) => r.id === s.liveRoles?.[tenant.id]) || owner || roles[0];
   const ts = db.tenantSettings[tenant.id] || defaultTenantSettings(tenant);
@@ -180,6 +183,9 @@ function Workspace() {
   // On apps, what a business may use comes from its app subscriptions (GET /entitlements), not from the old plan's Free/paid split (P3-FE-2).
   const ent = useBusinessEntitlements(tenant.id);
   const free = onApps ? false : isFree(plan);
+  // The listing limit: on per-app billing it is the Listings edition the business has (free 3, full 500, more with a gift); on plans it is the old plan limit.
+  const capNow = billingMode == null ? -1 : onApps ? (ent.limitOf("listings", "listings") ?? -1) : listingCap(plan); // unknown while loading: no wall
+  const atCapNow = (count) => capNow !== -1 && count >= capNow;
   const { path: here } = useRouter();
   const hereApp = appOfPath(here);
   const appName = (id) => APP_MANIFESTS.find((a) => a.id === id)?.name?.en || id;
@@ -289,7 +295,7 @@ function Workspace() {
       topExtra={<BranchPicker branch={branch} allowed={allowed} canAll={canAll} allLabel={t("br.all")} label={t("br.filter")}
         footer={can(role, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete") ? <MenuLink to="/business/branches" icon={openBranches.length > 1 ? "settings" : "plus"}>{openBranches.length > 1 ? "Manage branches" : "Add a branch"}</MenuLink> : null}
         onPick={(v) => update((d) => { d.session.branchOf = { ...(d.session.branchOf || {}), [tenant.id]: v }; })} />}
-      sideFooter={<><SetupChip tenant={tenant} /><Link to="/business/billing" className="pf-plan-chip"><Icon name="layers" size={15} /><span>{onApps ? t("mkt.chip") : `${(db.plans.find((p) => p.id === tenant.planId) || {}).name} plan`}</span><Icon name="chevron-right" size={14} /></Link>{(config.demo || role !== owner) && <div className="pf-side-foot"><span className="small muted">{t("preview.viewAs")}</span>
+      sideFooter={<><SetupChip tenant={tenant} /><Link to="/business/billing" className="pf-plan-chip"><Icon name="layers" size={15} /><span>{onApps ? t("mkt.chip") : `${(db.plans.find((p) => p.id === tenant.planId) || {}).name} plan`}</span><Icon name="chevron-right" size={14} /></Link>{canPreview && <div className="pf-side-foot"><span className="small muted">{t("preview.viewAs")}</span>
         <Select value={role.id} onChange={(v) => update((d) => { d.session.previewRoleId = v; })} options={roles.map((r) => ({ id: r.id, label: roleName(r, t) }))} aria-label={t("preview.role")} />
         <span className="tiny muted">{t("preview.viewAsHint")}</span></div>}</>}
       userMenu={<>
@@ -316,7 +322,7 @@ function Workspace() {
         { path: "/business/team", render: () => <TeamHub key={tenant.id + "m"} tenant={tenant} role={role} start={can(role, "workspace.team.read") ? "members" : "attendance"} /> },
         { path: "/business/roles", render: () => <TeamHub key={tenant.id + "r"} tenant={tenant} role={role} start="roles" /> },
         { path: "/business/listings", render: () => <ListingsPage tenant={tenant} canEdit={any("listings.listing.read+listings.listing.create+listings.listing.update+listings.listing.delete+listings.listing.publish", "projects.project.read+projects.project.create+projects.project.update+projects.project.delete", "investments.offering.read+investments.offering.create+investments.offering.update+investments.offering.delete", "hotel.calendar.update")} /> },
-        { path: "/business/listings/new", render: () => (!db.drafts[tenant.id]?.editId && atListingCap(plan, db.listings.filter((l) => l.tenantId === tenant.id && l.status !== "archived" && l.status !== "rejected").length) ? <UpgradeNeeded cap={listingCap(plan)} /> : guard(any("listings.listing.read+listings.listing.create+listings.listing.update+listings.listing.delete+listings.listing.publish", "projects.project.read+projects.project.create+projects.project.update+projects.project.delete", "investments.offering.read+investments.offering.create+investments.offering.update+investments.offering.delete", "hotel.calendar.update"), <ListingWizard key={tenant.id} tenant={tenant} />)) },
+        { path: "/business/listings/new", render: () => (!db.drafts[tenant.id]?.editId && atCapNow(db.listings.filter((l) => l.tenantId === tenant.id && l.status !== "archived" && l.status !== "rejected").length) ? <UpgradeNeeded cap={capNow} /> : guard(any("listings.listing.read+listings.listing.create+listings.listing.update+listings.listing.delete+listings.listing.publish", "projects.project.read+projects.project.create+projects.project.update+projects.project.delete", "investments.offering.read+investments.offering.create+investments.offering.update+investments.offering.delete", "hotel.calendar.update"), <ListingWizard key={tenant.id} tenant={tenant} />)) },
         { path: "/business/agreements", render: () => (paid(can(role, "agreements.agreement.read+agreements.agreement.create+agreements.agreement.update+agreements.agreement.delete"), <LiveAgreements key={tenant.id} tenant={tenant} />)) },
         { path: "/business/agreements/new/:from/:fromId", render: ({ from, fromId }) => (paid(can(role, "agreements.agreement.read+agreements.agreement.create+agreements.agreement.update+agreements.agreement.delete"), <LiveAgreements key={tenant.id + from + fromId} tenant={tenant} from={from} fromId={fromId} />)) },
         { path: "/business/agreements/:id", render: ({ id }) => (paid(can(role, "agreements.agreement.read+agreements.agreement.create+agreements.agreement.update+agreements.agreement.delete"), <LiveAgreements key={tenant.id + id} tenant={tenant} id={id} />)) },

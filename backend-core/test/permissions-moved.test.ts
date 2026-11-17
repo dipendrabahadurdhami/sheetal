@@ -27,8 +27,11 @@ describe("the new names give every built-in role exactly what the old names gave
   it("business roles: same keys in the same order, and the same answer for every old name (server and screens)", () => {
     for (const type of TYPES) {
       const before = oldApi.roleTemplatesFor(type);
-      const now = api.roleTemplatesFor(type);
-      const nowUi = ui.roleTemplatesFor(type);
+      // Standard roles added on purpose (18 Nov 2026) have no old twin: only the roles that existed before are compared.
+      const ADDED = ["manager", "customer_care", "viewer", "it_support"];
+      const wasThere = (r: { key: string }) => before.some((o: { key: string }) => o.key === r.key) || !ADDED.includes(r.key);
+      const now = api.roleTemplatesFor(type).filter(wasThere);
+      const nowUi = ui.roleTemplatesFor(type).filter(wasThere);
       expect(now.map((r) => r.key), type).toEqual(before.map((r: { key: string }) => r.key));
       expect(nowUi.map((r: { key: string }) => r.key), type).toEqual(now.map((r) => r.key));
       before.forEach((old: { key: string; perms: string[] }, i: number) => {
@@ -43,8 +46,9 @@ describe("the new names give every built-in role exactly what the old names gave
   });
 
   it("staff roles: same keys in the same order, and the same answer for every old name", () => {
-    expect(Object.keys(api.PLATFORM_ROLES)).toEqual(Object.keys(oldApi.PLATFORM_ROLES));
-    expect(ui.PLATFORM_ROLE_TEMPLATES.map((r: { key: string }) => r.key)).toEqual(Object.keys(oldApi.PLATFORM_ROLES));
+    const ADDED_STAFF = ["it_admin", "moderator"]; // added on purpose (18 Nov 2026), no old twin
+    expect(Object.keys(api.PLATFORM_ROLES).filter((k) => !ADDED_STAFF.includes(k))).toEqual(Object.keys(oldApi.PLATFORM_ROLES));
+    expect(ui.PLATFORM_ROLE_TEMPLATES.map((r: { key: string }) => r.key).filter((k: string) => !ADDED_STAFF.includes(k))).toEqual(Object.keys(oldApi.PLATFORM_ROLES));
     for (const [key, oldPerms] of Object.entries(oldApi.PLATFORM_ROLES) as [string, string[]][]) {
       for (const name of staffNames) {
         const want = oldApi.hasPerm(oldPerms, name);
