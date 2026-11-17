@@ -8,6 +8,7 @@ import { fdatetime } from "@sheetal/shared/core/format";
 import { Badge, Button, Drawer, Empty, Field, Input, PageHead, Panel, Select, Table, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { bizApi, bizApiReady, formatBytes, signedIn } from "../api";
+import { shortName } from "./domainsLogic.js";
 
 const STATUS = { ok: ["Found", "done"], missing: ["Not added yet", "action"], wrong: ["Different value", "problem"], unchecked: ["Not checked", "neutral"] };
 
@@ -103,6 +104,34 @@ function AutoDns({ d, run, onClose }) {
   );
 }
 
+/** A step-by-step guide for a business owner who has never edited DNS. Shown while the domain is not ready. */
+function DnsGuide({ d }) {
+  return (
+    <details className="card" style={{ margin: "0 16px 14px", padding: "12px 16px" }}>
+      <summary style={{ cursor: "pointer", fontWeight: 600 }}>How do I add these records? (step by step)</summary>
+      <div className="pf-stack" style={{ marginTop: 10, gap: 10 }}>
+        <p className="small" style={{ margin: 0 }}>The <b>domain provider</b> is the website where you bought or manage <b>{d.name}</b> (for example Cloudflare, GoDaddy, Namecheap or HimalayanHost). You need to sign in there. Not sure where? Ask the person who bought the domain.</p>
+        <ol className="small" style={{ margin: 0, paddingLeft: 20, display: "grid", gap: 6 }}>
+          <li>Sign in to your domain provider and open the <b>DNS</b> settings of <b>{d.name}</b> (it may be called "DNS", "DNS zone", "Manage DNS" or "Advanced DNS").</li>
+          <li>Click <b>Add record</b>. Do this once for <b>each row</b> in the table above.</li>
+          <li>Fill in the boxes from the row:
+            <ul style={{ paddingLeft: 18, margin: "4px 0 0" }}>
+              <li><b>Type</b>: TXT or MX, as the row says.</li>
+              <li><b>Name</b> (or "Host"): type what is under "Type in the Name box". <code>@</code> means the domain itself. If your provider asks for the full name, use the full name shown in the table.</li>
+              <li><b>Value</b> (or "Content", "Text"): press the copy button and paste it. Don't retype it.</li>
+              <li>For the <b>MX</b> row, set <b>Priority</b> to <code>10</code> and the mail server to <code>{d.records.find((r) => r.id === "mx")?.value ?? "mail.sheetalproperty.com"}</code>.</li>
+              <li><b>TTL</b>: leave on Auto.</li>
+            </ul></li>
+          <li><b>Remove old email records.</b> If this domain already has other <b>MX</b> records (from an old email service), delete them: mail goes to the lowest number, and old ones send mail elsewhere. A domain may have only <b>one</b> SPF record (a TXT that starts with <code>v=spf1</code>): replace the old one with ours.</li>
+          <li>If your provider is <b>Cloudflare</b>: set Proxy status to <b>DNS only</b> (grey cloud) where it asks.</li>
+          <li>Come back here and press <b>Check records</b>. It can take a few minutes, sometimes up to an hour. When every row says <b>Found</b>, this domain is <b>Ready</b> and you can create mailboxes.</li>
+        </ol>
+        <p className="small muted" style={{ margin: 0 }}>Stuck? Send your domain provider's name to Sheetal support and we will tell you exactly where to click.</p>
+      </div>
+    </details>
+  );
+}
+
 function DomainPanel({ d, run }) {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
@@ -120,11 +149,14 @@ function DomainPanel({ d, run }) {
         <Button size="sm" variant="ghost" icon="trash-2" onClick={() => setRemoving(true)}>Remove</Button></>}>
       <Table rows={d.records} minWidth={760} columns={[
         { key: "t", label: "Type", render: (r) => <b className="tnum">{r.type}</b> },
-        { key: "h", label: "Name / host", render: (r) => <span className="pf-two"><code className="small">{r.host}</code><small>{r.purpose}{r.required ? "" : " · optional"}</small></span> },
+        { key: "h", label: "Name / host", render: (r) => <span className="pf-two"><code className="small">{r.host}</code><small>{r.purpose}{r.required ? "" : " · optional"}</small>
+          {!d.verified && <small className="row" style={{ gap: 4 }}>Type in the Name box: <code className="small">{shortName(r.host, d.name)}</code>
+            <button type="button" className="btn btn-ghost btn-icon" aria-label="Copy name" onClick={() => copy(shortName(r.host, d.name))}><Icon name="copy" size={12} /></button></small>}</span> },
         { key: "v", label: "Value", render: (r) => <span className="row" style={{ gap: 6 }}><code className="small mail-dns-value">{r.priority ? `${r.priority} ` : ""}{r.value}</code><button type="button" className="btn btn-ghost btn-icon" aria-label="Copy value" onClick={() => copy(r.value)}><Icon name="copy" size={14} /></button></span> },
         { key: "s", label: "Status", render: (r) => <Badge tone={STATUS[r.status][1]}>{STATUS[r.status][0]}</Badge> },
       ]} />
       <p className="small muted" style={{ padding: "10px 16px 14px", margin: 0 }}>{d.checkedAt ? `Last checked ${fdatetime(d.checkedAt)}. ` : ""}DNS changes can take up to an hour to show. Keep any other MX records off this domain, or mail may go elsewhere.</p>
+      {!d.verified && <DnsGuide d={d} />}
       {auto && <AutoDns d={d} run={run} onClose={() => setAuto(false)} />}
       {removing && <RemoveDomain d={d} run={run} onClose={() => setRemoving(false)} />}
     </Panel>
