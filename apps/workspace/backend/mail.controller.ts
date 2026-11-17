@@ -22,7 +22,7 @@ export class MailController extends BaseController<never, never, never> {
     app.get("/mail", async (req) => ({ data: await s.overview(await ctx(req)) }));
     app.post("/mail/domains", async (req) => s.addDomain(await ctx(req), req.body));
     app.post<P>("/mail/domains/:id/check", async (req) => s.checkDomain(await ctx(req), req.params.id));
-    app.post<P>("/mail/domains/:id/dns/auto", async (req) => s.autoDns(await ctx(req), req.params.id, req.body));
+    app.post<P>("/mail/domains/:id/dns/auto", { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } }, async (req) => s.autoDns(await ctx(req), req.params.id, req.body));
     app.delete<P>("/mail/domains/:id", async (req) => s.removeDomain(await ctx(req), req.params.id));
     app.get("/mail/team", async (req) => ({ data: await s.team(await ctx(req)) }));
     app.post("/mail/mailboxes", async (req) => s.addBox(await ctx(req), req.body));

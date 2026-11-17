@@ -1,6 +1,7 @@
 // Adds a business's email DNS records through Cloudflare, so the owner doesn't copy them by hand.
-// Where it fits: MailService.autoDns() (Settings → Domain and email → "Add the records for me"). The Cloudflare token and zone come from the
-// platform's Cloudflare connection (Admin → Setup center); this file only talks to Cloudflare and never sees where they are stored.
+// Where it fits: MailService.autoDns() (Settings → Domain and email → "Add the records for me"). Two ways to reach Cloudflare: Sheetal's own connection
+// (Admin → Setup center, for Sheetal's own domain), or a token the business pastes for its own domain, used for that one request and never stored
+// (the zone is then found from the domain name). This file only talks to Cloudflare and never sees where a token comes from.
 // How it works: planDns() reads what is already at each record's name and says, for every wanted record, "ok" (already right), "add"
 // (nothing there) or "replace" (something else is there, for example the old provider's MX and SPF). applyDns() does the adds always and the
 // replaces only when the caller said so, because replacing an MX stops mail at the old provider. Replacing never touches records of other kinds.
@@ -9,7 +10,8 @@
 
 import type { DnsRecord } from "./mail-dns.js";
 
-export interface CloudflareAccess { token: string; zoneId: string }
+/** The token, and the zone when it is known (the platform's own connection). With a token only, the zone is found from the domain name. */
+export interface CloudflareAccess { token: string; zoneId?: string }
 export type FetchLike = (url: string, init?: { method?: string; headers?: Record<string, string>; body?: string; signal?: AbortSignal }) => Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>;
 
 export interface ZoneRecord { id: string; type: string; name: string; content: string; priority?: number; ttl?: number; proxied?: boolean }
@@ -53,13 +55,21 @@ export function cloudflareApi(access: CloudflareAccess, fetchFn: FetchLike = fet
     }
     return { result: json.result };
   };
-  const zonePath = `/zones/${access.zoneId}`;
+  let zoneId = access.zoneId;
+  const zonePath = () => { if (!zoneId) throw new CloudflareError("Cloudflare site not chosen yet."); return `/zones/${zoneId}`; };
   return {
-    async zoneName(): Promise<string> { const r = (await call("GET", zonePath)).result as { name?: string }; return String(r?.name ?? "").toLowerCase(); },
-    async list(name: string): Promise<ZoneRecord[]> { return ((await call("GET", `${zonePath}/dns_records?per_page=100&name=${encodeURIComponent(name)}`)).result ?? []) as ZoneRecord[]; },
-    async add(r: { type: string; name: string; content: string; priority?: number }) { await call("POST", `${zonePath}/dns_records`, { ...r, ttl: 1 }); },
-    async update(id: string, r: { type: string; name: string; content: string; priority?: number }) { await call("PUT", `${zonePath}/dns_records/${id}`, { ...r, ttl: 1 }); },
-    async remove(id: string) { await call("DELETE", `${zonePath}/dns_records/${id}`); },
+    /** The name of the zone that will be changed. With a known zone id it reads that zone; with a token only, it finds the zone whose name is `domain`. */
+    async zoneFor(domain: string): Promise<string> {
+      if (zoneId) { const r = (await call("GET", zonePath())).result as { name?: string }; return String(r?.name ?? "").toLowerCase(); }
+      const found = (((await call("GET", `/zones?name=${encodeURIComponent(domain)}&per_page=5`)).result ?? []) as { id: string; name: string }[]).find((z) => String(z.name).toLowerCase() === domain);
+      if (!found) throw new CloudflareError(`This token can't see ${domain}. In Cloudflare, make the token for the site ${domain} (Zone, DNS, Edit; also Zone, Zone, Read) and try again.`);
+      zoneId = found.id;
+      return domain;
+    },
+    async list(name: string): Promise<ZoneRecord[]> { return ((await call("GET", `${zonePath()}/dns_records?per_page=100&name=${encodeURIComponent(name)}`)).result ?? []) as ZoneRecord[]; },
+    async add(r: { type: string; name: string; content: string; priority?: number }) { await call("POST", `${zonePath()}/dns_records`, { ...r, ttl: 1 }); },
+    async update(id: string, r: { type: string; name: string; content: string; priority?: number }) { await call("PUT", `${zonePath()}/dns_records/${id}`, { ...r, ttl: 1 }); },
+    async remove(id: string) { await call("DELETE", `${zonePath()}/dns_records/${id}`); },
   };
 }
 export type CloudflareApi = ReturnType<typeof cloudflareApi>;

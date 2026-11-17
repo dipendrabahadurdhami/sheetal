@@ -65,19 +65,45 @@ const ACTION = { ok: ["Already right", "done"], add: ["Will be added", "action"]
 /** "Add the records for me": shows what Cloudflare will get, asks before replacing anything already there, then does it. */
 function AutoDns({ d, run, onClose }) {
   const [plan, setPlan] = useState(null);
+  const [needToken, setNeedToken] = useState(false);
+  const [token, setToken] = useState("");   // lives only in this window: sent with the request, never saved
   const [sure, setSure] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
-  useEffect(() => { bizApi("POST", `/mail/domains/${d.id}/dns/auto`, {}).then((r) => setPlan(r.data.plan)).catch((e) => setErr(e.message)); }, [d.id]);
+  const url = `/mail/domains/${d.id}/dns/auto`;
+  const body = (more) => ({ ...(token.trim() ? { token: token.trim() } : {}), ...more });
+  const look = () => {
+    setBusy(true); setErr(null);
+    bizApi("POST", url, body({})).then((r) => { setPlan(r.data.plan); setNeedToken(false); })
+      .catch((e) => { if (e.code === "needs_token" && !token.trim()) setNeedToken(true); else setErr(e.message); })
+      .finally(() => setBusy(false));
+  };
+  useEffect(() => { look(); }, [d.id]);
   const todo = plan ? plan.items.filter((i) => i.action !== "ok").length : 0;
-  const go = () => { setBusy(true); run(bizApi("POST", `/mail/domains/${d.id}/dns/auto`, { apply: true, replace: plan.needsConfirm && sure })).then(onClose).catch(() => {}).finally(() => setBusy(false)); };
+  const go = () => { setBusy(true); run(bizApi("POST", url, body({ apply: true, replace: plan.needsConfirm && sure }))).then(onClose).catch(() => {}).finally(() => setBusy(false)); };
+  const askToken = !plan && (needToken || (token && err));
   return (
     <Drawer open onClose={onClose} title={`Add the records for ${d.name}`}
       footer={<><Button variant="outline" onClick={onClose}>Cancel</Button>
-        <Button disabled={busy || !plan || (plan.needsConfirm && !sure) || !todo} onClick={go}>{busy ? "Working…" : todo ? "Add the records" : "Nothing to add"}</Button></>}>
+        {askToken
+          ? <Button disabled={busy || token.trim().length < 20} onClick={look}>{busy ? "Looking…" : "Find my domain"}</Button>
+          : <Button disabled={busy || !plan || (plan.needsConfirm && !sure) || !todo} onClick={go}>{busy ? "Working…" : todo ? "Add the records" : "Nothing to add"}</Button>}</>}>
       <div className="pf-stack">
         {err && <p className="small" role="alert">{err}</p>}
-        {!plan && !err && <p className="muted">Looking at your Cloudflare settings…</p>}
+        {!plan && !err && !needToken && <p className="muted">Looking at your Cloudflare settings…</p>}
+        {askToken && <>
+          <p>If <b>{d.name}</b> is on <b>Cloudflare</b>, Sheetal can add the records for you. Make a Cloudflare <b>token</b> (2 minutes) and paste it here. Sheetal uses it <b>once</b> for this setup and <b>does not keep it</b>.</p>
+          <ol className="small" style={{ margin: 0, paddingLeft: 20, display: "grid", gap: 6 }}>
+            <li>Open <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener noreferrer">Cloudflare → My Profile → API Tokens</a> and click <b>Create Token</b>.</li>
+            <li>Next to <b>Edit zone DNS</b>, click <b>Use template</b>.</li>
+            <li>Under <b>Zone Resources</b> choose <b>Include → Specific zone → {d.name}</b>.</li>
+            <li>Click <b>Continue to summary</b>, then <b>Create Token</b>, then <b>Copy</b>. Paste it below.</li>
+          </ol>
+          <Field label="Cloudflare token" hint="Shown only once by Cloudflare. It is not saved by Sheetal.">
+            <Input type="password" value={token} onChange={(e) => setToken(e.target.value)} autoComplete="off" placeholder="Paste the token here" />
+          </Field>
+          <p className="small muted" style={{ margin: 0 }}>Not on Cloudflare? Close this window and follow the step-by-step guide under the records table.</p>
+        </>}
         {plan && <>
           <p>Sheetal will set these up in Cloudflare for <b>{plan.zone}</b>. Nothing is changed until you press the button.</p>
           <div className="pf-stack" style={{ gap: 10 }}>

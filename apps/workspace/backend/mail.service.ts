@@ -179,17 +179,19 @@ export class MailService extends BaseService<BusinessEntity, never, never> {
   async autoDns(ctx: BusinessContext, id: string, raw: unknown) {
     this.refuseReadOnly(ctx);
     await this.manage(ctx);
-    const b = z.object({ apply: z.boolean().default(false), replace: z.boolean().default(false) }).parse(raw ?? {});
+    const b = z.object({ apply: z.boolean().default(false), replace: z.boolean().default(false), token: z.string().trim().min(20).max(300).optional() }).parse(raw ?? {});
     const d = await this.mail.domain(ctx, id);
     if (!d) throw notFound("Domain not found.");
-    const access = await this.x.cloudflare?.();
-    if (!access) throw new AppError(409, "cloudflare_not_connected", "Automatic setup needs Cloudflare. A Sheetal admin connects it once in Admin → Setup center → Cloudflare. Until then, add the records by hand at your domain provider.");
+    // A token pasted by the business is used for this one request and never stored, logged or returned. Without one, only Sheetal's own Cloudflare connection is used.
+    const needToken = () => new AppError(409, "needs_token", `Paste a Cloudflare token for ${d.name} to set it up automatically. Sheetal uses it once and does not keep it.`);
+    const access: CloudflareAccess | null = b.token ? { token: b.token } : (await this.x.cloudflare?.()) ?? null;
+    if (!access) throw needToken();
     const api = cloudflareApi(access, this.x.fetch);
     let plan: Awaited<ReturnType<typeof planDns>>;
     let results: Awaited<ReturnType<typeof applyDns>> | null = null;
     try {
-      const zone = await api.zoneName();
-      if (zone !== d.name) throw badRequest(`Automatic setup works for ${zone || "the connected Cloudflare site"} only, not ${d.name}. Add the records by hand at your domain provider.`);
+      const zone = await api.zoneFor(d.name);
+      if (zone !== d.name) throw b.token ? badRequest(`This token is for ${zone || "another site"}, not ${d.name}. Make the token for ${d.name} and try again.`) : needToken();
       plan = await planDns(api, zone, recordsFor(d.name, d, this.x.mailHost), this.x.mailHost);
       if (b.apply) results = await applyDns(api, plan, b.replace);
     } catch (e) {

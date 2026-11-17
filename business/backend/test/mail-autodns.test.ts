@@ -24,6 +24,8 @@ const cloudflareFetch = async (url: string, init?: { method?: string; body?: str
   seen.push(`${method} ${url.replace("https://api.cloudflare.com/client/v4", "")}`);
   const ok = (result: unknown) => ({ ok: true, status: 200, json: async () => ({ success: true, result }) });
   const u = new URL(url);
+  // Find a zone by its name (what a business token uses): only the zone this fake owns is visible.
+  if (u.pathname.endsWith("/zones") && method === "GET") return ok(u.searchParams.get("name") === zoneName ? [{ id: "customer-zone-id", name: zoneName }] : []);
   const m = /\/zones\/[^/]+(\/dns_records(?:\/([\w-]+))?)?$/.exec(u.pathname);
   if (!m) return { ok: false, status: 404, json: async () => ({ success: false, errors: [{ message: "bad path" }] }) };
   if (!m[1]) return ok({ name: zoneName });
@@ -126,17 +128,52 @@ describe("add the records for me", () => {
     expect(seen.some((s) => !s.startsWith("GET"))).toBe(false);
   });
 
-  it("refuses without Cloudflare, for another domain's zone, and for a team member who is not a manager", async () => {
+  it("asks for a token without a Sheetal connection or when the connection is for another site, and refuses a team member who is not a manager", async () => {
     connected = null;
     const off = await call("owner", "POST", `/mail/domains/${ids.domain}/dns/auto`, {});
     expect(off.statusCode).toBe(409);
-    expect(off.json().message).toMatch(/Cloudflare/);
+    expect(off.json().code).toBe("needs_token");
+    expect(off.json().message).toMatch(/Paste a Cloudflare token for everest\.test/);
     connected = { token: "cf-secret-token-for-tests", zoneId: "z".repeat(32) };
     zoneName = "other-site.test";
     const wrong = await call("owner", "POST", `/mail/domains/${ids.domain}/dns/auto`, { apply: true, replace: true });
-    expect(wrong.statusCode).toBe(400);
-    expect(wrong.json().message).toMatch(/other-site\.test/);
+    expect(wrong.statusCode).toBe(409);          // Sheetal's own Cloudflare is for another site: the business must bring its own token
+    expect(wrong.json().code).toBe("needs_token");
     zoneName = "everest.test";
     expect((await call("agent", "POST", `/mail/domains/${ids.domain}/dns/auto`, {})).statusCode).toBe(403);
+  });
+});
+
+describe("a business brings its own Cloudflare token", () => {
+  const TOKEN = "customer-token-0123456789abcdefghij";
+  it("finds the site by itself, plans, applies, and never shows or keeps the token", async () => {
+    reset();
+    connected = null;                             // Sheetal has no Cloudflare connection at all: only the business's token is used
+    const plan = await call("owner", "POST", `/mail/domains/${ids.domain}/dns/auto`, { token: TOKEN });
+    expect(plan.statusCode, plan.body).toBe(200);
+    expect(plan.json().data.plan.zone).toBe("everest.test");
+    expect(seen).toContain("GET /zones?name=everest.test&per_page=5");
+    expect(seen.every((s) => s.startsWith("GET"))).toBe(true);
+    const done = await call("owner", "POST", `/mail/domains/${ids.domain}/dns/auto`, { token: TOKEN, apply: true, replace: true });
+    expect(done.statusCode, done.body).toBe(200);
+    expect(done.json().data.domain).toMatchObject({ verified: true });
+    expect(zoneRecords.filter((r) => r.type === "MX").map((r) => r.content)).toEqual(["mail.sheetal.test"]);
+    for (const text of [plan.body, done.body]) expect(text).not.toContain(TOKEN);
+    // Nothing was kept: the next request without a token asks for one again.
+    const again = await call("owner", "POST", `/mail/domains/${ids.domain}/dns/auto`, {});
+    expect(again.json().code).toBe("needs_token");
+    // Nothing in the database holds it either.
+    const rows = await app.db!.$queryRawUnsafe<{ n: bigint }[]>(`select (select count(*) from app_settings where value::text like '%${TOKEN}%') + (select count(*) from audit_logs where meta::text like '%${TOKEN}%') as n`);
+    expect(Number(rows[0]!.n)).toBe(0);
+  });
+
+  it("says plainly when the token cannot see the domain, or is not a token at all", async () => {
+    reset();
+    zoneName = "other-site.test";
+    const cant = await call("owner", "POST", `/mail/domains/${ids.domain}/dns/auto`, { token: TOKEN });
+    expect(cant.statusCode).toBe(400);
+    expect(cant.json().message).toMatch(/can't see everest\.test/);
+    zoneName = "everest.test";
+    expect((await call("owner", "POST", `/mail/domains/${ids.domain}/dns/auto`, { token: "short" })).statusCode).toBe(422);
   });
 });
