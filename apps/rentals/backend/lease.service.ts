@@ -6,6 +6,7 @@
 // Bills for coming months are made when the month starts. A stale `version` answers 409; none saves as today.
 
 import { badRequest } from "@sheetal/platform/core/errors";
+import { requireRoom } from "@sheetal/platform/billing/room";
 import { actorIdOf, type BusinessContext, type DataScope } from "@sheetal/platform/core/context";
 import { dayOf, ymd } from "@sheetal/backend-core/domain/money";
 import { nepalDay } from "@sheetal/backend-core/domain/payouts";
@@ -45,6 +46,8 @@ export class LeaseService extends RentalService<LeaseRow, LeaseCreate, LeaseChan
       run: async (tx, scope) => {
         const b = this.parse(LeaseBody, raw);
         if (b.end < b.start) throw badRequest(MSG.beforeStart);
+        // On app subscriptions: the Rentals edition's limit on leases that are running (free 5).
+        await requireRoom(tx, "rentals", "leases", () => tx.db.rentLease.count({ where: { tenantId: tx.business.id, deletedAt: null, status: "active" } }));
         const u = await this.repos.units.get(tx, b.unitId, scope);
         unitName = u.name;
         // The unit is taken only if it is still free, so two leases can't start on one unit.

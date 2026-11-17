@@ -11,6 +11,7 @@
 
 import { z } from "zod";
 import { badRequest, conflict, forbidden, notFound, versionConflict } from "@sheetal/platform/core/errors";
+import { monthStart, requireRoom } from "@sheetal/platform/billing/room";
 import type { BusinessContext, DataScope } from "@sheetal/platform/core/context";
 import type { EventBus } from "@sheetal/platform/core/events";
 import { BaseService } from "@sheetal/platform/core/service";
@@ -124,6 +125,8 @@ export class InvoiceService extends BaseService<InvoiceRow, never, never> {
     const a = check(b);
     const branchId = ctx.branches.branchForNew(b.branchId);
     const link = await this.linkOrder(ctx, scope, b.order);
+    // On app subscriptions: the Invoicing edition's invoices a month (free 20; a soft limit: 20% over is allowed before it stops).
+    await requireRoom(ctx, "invoicing", "invoices_per_month", () => ctx.db.bizInvoice.count({ where: { tenantId: ctx.business.id, deletedAt: null, kind: "invoice", createdAt: { gte: monthStart(ctx.now) } } }));
     const row = await this.write(ctx, async (tx) => {
       const made = await this.invoices.make(tx, { branchId, kind: "invoice", toName: b.to, toPhone: b.phone || null, toPan: b.pan || null, ...link, issuedOn: dayOf(b.date), dueOn: dayOf(b.due), vatPct: b.vatPct, lines: json(b.lines), subtotal: a.sub, vat: a.vat, total: a.total, notes: b.notes || null });
       if (b.send) await this.issue(tx, made.id);

@@ -56,7 +56,10 @@ Found: the website's Apps and Pricing pages used sample data here (`public/catal
 many listings as its Listings edition allows; the rest are paused and return when it pays; what was hidden before stays hidden.
 Built (`CHANGES-P3-FREE-TIER.md`): `listings.limit_paused_at`, `npm run billing:free`, the hourly job, the Listings app on the edition's limit.
 Applied to Sheetal Property on the real data: free editions, Starter plan, 2,592 of 2,595 listings paused; the public site has 90 listings.
-**Most important code task left:** no other app enforces its free limits on apps (`requireLimit()` is called nowhere): see `docs/LAUNCH-CHECK.md`.
+**17 Nov: the free limits are enforced** on apps for Hotel, Projects (units), Rentals, Invoicing, Agreements, POS and Expenses through
+`platform/src/billing/room.ts` (`CHANGES-P3-LIMITS.md`). Public arrivals (leads, reviews, online bookings) are never refused. Still open:
+People staff records, open investments, number of projects, POS outlets, CRM pipelines, receipt storage, invoice import, seats.
+Also made: `docs/Sheetal-System-Report.pdf`, `docs/HOSTING-GUIDE.md`, and a handover zip for the owner.
 
 ## Next, in order
 While Actions is off: branch, build, run the tests on the owner's PC workspace by workspace, fast-forward main, `git push origin main`.

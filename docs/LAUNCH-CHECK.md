@@ -43,11 +43,13 @@ Setup steps for the super admin are in [SETUP-GUIDE.md](SETUP-GUIDE.md). The cut
 | 14 | Step 4 of the cutover (everyone to `apps`), not before 23 Nov by the 7-day rule | 14 businesses still on `shadow` | owner's yes |
 | 15 | A full hand test of every app on a phone | not done | owner |
 
-## A blocker for earning money (found 16 Nov)
-**The free limits are not enforced in the apps.** The catalog says "5 rooms free", "100 leads free", "20 invoices a month free", and the
-pricing page shows it, but on app subscriptions no app checks those numbers (only Listings does, since 16 Nov). A free business is not
-stopped at its limits, so nothing makes it upgrade. Each app (Hotel, CRM, Invoicing, POS, Expenses, Reviews, People, Agreements, Rentals,
-Projects, Collections, Investments) must call the limit check where it adds a record. This is the most important code task left.
+## Free limits (found 16 Nov, mostly fixed 17 Nov)
+The catalog's free limits were shown and sold but checked nowhere. **Now enforced on app subscriptions:** Listings, Hotel rooms, Project
+units, Rental leases, Invoices a month, Agreements a month, POS bills a month, Expenses a month and recurring expenses
+(`handovers/CHANGES-P3-LIMITS.md`). A refused action shows the upgrade panel.
+**By design never refused:** leads, chats, reviews and online bookings that arrive from the public website.
+**Still not enforced:** People staff records, open investments and number of projects (made as listings), POS outlets, CRM pipelines,
+receipt storage, the invoice CSV import, and team seats. Each needs one decision on what exactly is counted.
 
 ## Known gaps in what is built (not blockers; say so if one matters to you)
 - Sign in with Google and by phone, SMS, card gateway, Fonepay dynamic QR, Facebook and Instagram posting, AI voice assistant page, delivery partners,

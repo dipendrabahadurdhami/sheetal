@@ -8,6 +8,7 @@
 // saves as today (last write wins) until the new page sends it (P1-FE-2). Amounts are written in rupees AND paisa; the API shows whole rupees.
 
 import { badRequest, notFound, versionConflict } from "@sheetal/platform/core/errors";
+import { monthStart, requireRoom } from "@sheetal/platform/billing/room";
 import { actorIdOf, type BusinessContext, type DataScope } from "@sheetal/platform/core/context";
 import type { EventBus } from "@sheetal/platform/core/events";
 import { BaseService, type WriteKind } from "@sheetal/platform/core/service";
@@ -86,6 +87,8 @@ export class ExpenseService extends BaseService<ExpenseRow, ExpenseCreate, Expen
 
   protected override async beforeCreate(ctx: BusinessContext, data: ExpenseCreate): Promise<ExpenseCreate> {
     await checkCategory(ctx, data.category, data.note);
+    // On app subscriptions: the Expenses edition's expenses a month (free 50).
+    await requireRoom(ctx, "expenses", "expenses_per_month", () => ctx.db.expense.count({ where: { tenantId: ctx.business.id, deletedAt: null, createdAt: { gte: monthStart(ctx.now) } } }));
     return { ...data, status: "confirmed", confirmedBy: actorIdOf(ctx), confirmedAt: ctx.now };
   }
   protected override async beforeUpdate(ctx: BusinessContext, current: ExpenseRow, data: ExpenseChange): Promise<ExpenseChange> {
@@ -283,6 +286,8 @@ export class RecurringExpenseService extends BaseService<RecurringExpenseRow, Re
 
   protected override async beforeCreate(ctx: BusinessContext, data: RecurringCreate): Promise<RecurringCreate> {
     await checkCategory(ctx, data.category, data.note);
+    // On app subscriptions: recurring expenses are part of the full edition (the free edition's limit is 0).
+    await requireRoom(ctx, "expenses", "recurring_templates", () => ctx.db.recurringExpense.count({ where: { tenantId: ctx.business.id, deletedAt: null, status: { not: "stopped" } } }));
     return data;
   }
   protected override async beforeUpdate(ctx: BusinessContext, current: RecurringExpenseRow, data: RecurringChange): Promise<RecurringChange> {

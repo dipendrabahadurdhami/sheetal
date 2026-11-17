@@ -10,6 +10,7 @@
 
 import { z } from "zod";
 import { badRequest, conflict, forbidden, notFound } from "@sheetal/platform/core/errors";
+import { onApps, requireRoom } from "@sheetal/platform/billing/room";
 import type { BusinessContext } from "@sheetal/platform/core/context";
 import type { EventBus } from "@sheetal/platform/core/events";
 import { BaseRepository, type BranchEntity } from "@sheetal/platform/core/repository";
@@ -90,8 +91,12 @@ export class HotelService extends BaseService<B, never, never> {
     const b = AddRooms.parse(raw);
     const branchId = ctx.branches.branchForNew(b.branchId);
     const host = ctx.business.type === "host";
-    const cap = (await this.rooms.planLimits(ctx))[host ? "units" : "rooms"];
-    if (cap !== undefined && cap !== -1 && (await this.rooms.countActive(ctx)) + b.nos.length > cap) throw badRequest(`Your plan has room for ${cap} ${host ? "units" : "rooms"}. Upgrade to add more.`);
+    // On app subscriptions the Hotel edition's room limit decides (free 5, full 40); on the old plans, the plan's number as before.
+    if (onApps(ctx)) await requireRoom(ctx, "hotel", "rooms", () => this.rooms.countActive(ctx), b.nos.length);
+    else {
+      const cap = (await this.rooms.planLimits(ctx))[host ? "units" : "rooms"];
+      if (cap !== undefined && cap !== -1 && (await this.rooms.countActive(ctx)) + b.nos.length > cap) throw badRequest(`Your plan has room for ${cap} ${host ? "units" : "rooms"}. Upgrade to add more.`);
+    }
     const exists = await this.rooms.numbersTaken(ctx, b.nos);
     if (exists.length) throw conflict(`Room ${exists.map((e) => e.no).join(", ")} already exists.`);
     await this.write(ctx, (tx) => this.rooms.addMany(tx, b.nos.map((no) => ({ no, type: b.type, rate: b.rate, maxGuests: b.maxGuests, floor: b.floor, branchId, listingId: b.listingId }))),

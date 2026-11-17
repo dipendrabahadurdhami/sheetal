@@ -9,6 +9,7 @@
 
 import { z } from "zod";
 import { badRequest, conflict, forbidden, notFound } from "@sheetal/platform/core/errors";
+import { monthStart, requireRoom } from "@sheetal/platform/billing/room";
 import type { BusinessContext } from "@sheetal/platform/core/context";
 import type { EventBus } from "@sheetal/platform/core/events";
 import { hotelBill } from "@sheetal/backend-core/domain/money";
@@ -109,6 +110,8 @@ export class PosService extends PosBase {
     const b = Bill.parse(raw);
     need(ctx, "pos.restaurant.use", "pos.extra.create", "pos.frontdesk.use");
     if (b.discount > 0) need(ctx, "pos.bill.discount");
+    // On app subscriptions: the Point of sale edition's bills a month (free 100; a soft limit: 20% over is allowed so a sale is not lost).
+    await requireRoom(ctx, "pos", "bills_per_month", () => ctx.db.posBill.count({ where: { tenantId: ctx.business.id, deletedAt: null, createdAt: { gte: monthStart(ctx.now) } } }));
     // Prices come from the menu when the item is on it, so a bill can't be rung up below the menu price.
     const branchId = this.till(ctx);
     const items = new Map((await this.menu.forBill(ctx, branchId, b.lines.map((l) => l.itemId).filter((x): x is string => !!x))).map((i) => [i.id, i]));

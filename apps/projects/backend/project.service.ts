@@ -9,6 +9,7 @@
 
 import { z } from "zod";
 import { badRequest, conflict, forbidden, notFound, versionConflict } from "@sheetal/platform/core/errors";
+import { onApps, requireRoom } from "@sheetal/platform/billing/room";
 import type { BusinessContext, DataScope } from "@sheetal/platform/core/context";
 import type { EventBus } from "@sheetal/platform/core/events";
 import { BaseService } from "@sheetal/platform/core/service";
@@ -73,9 +74,13 @@ export class ProjectService extends BaseService<UnitRow, never, Partial<UnitRow>
     const scope = this.need(ctx, PROJECT);
     const p = await listingInView(ctx, scope, listingId, "project");
     const b = S.AddUnits.parse(raw);
-    const plan = await this.units.planLimits(ctx);
     const total = await this.units.countAll(ctx);
-    if (plan.units !== undefined && plan.units !== -1 && total + b.nos.length > plan.units) throw badRequest(`Your plan has room for ${plan.units} units. Upgrade to add more.`);
+    // On app subscriptions the Projects edition's unit limit decides (free 50, full 1,000); on the old plans, the plan's number as before.
+    if (onApps(ctx)) await requireRoom(ctx, "projects", "units", () => total, b.nos.length);
+    else {
+      const plan = await this.units.planLimits(ctx);
+      if (plan.units !== undefined && plan.units !== -1 && total + b.nos.length > plan.units) throw badRequest(`Your plan has room for ${plan.units} units. Upgrade to add more.`);
+    }
     const count = await this.write(ctx, (tx) => this.units.addMany(tx, p.id, b), (c) => ({ audit: { action: "units.added", target: `${c} in ${p.code}` }, event: { name: PROJECT_EVENTS.unitsAdded, payload: { listingId: p.id, count: c } } }));
     return { message: count === b.nos.length ? `${count} units added.` : `${count} added; ${b.nos.length - count} already existed.` };
   }

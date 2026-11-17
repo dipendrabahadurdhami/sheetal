@@ -9,6 +9,7 @@
 
 import { z } from "zod";
 import { AppError, badRequest, forbidden, notFound, versionConflict } from "@sheetal/platform/core/errors";
+import { monthStart, requireRoom } from "@sheetal/platform/billing/room";
 import type { BusinessContext, DataScope } from "@sheetal/platform/core/context";
 import type { EventBus } from "@sheetal/platform/core/events";
 import { BaseService } from "@sheetal/platform/core/service";
@@ -73,6 +74,8 @@ export class AgreementService extends BaseService<AgreementRow, never, never> {
   async makeDraft(ctx: BusinessContext, raw: unknown) {
     this.access(ctx);
     const b = Create.parse(raw);
+    // On app subscriptions: the Agreements edition's agreements a month (free 2).
+    await requireRoom(ctx, "agreements", "agreements_per_month", () => ctx.db.agreement.count({ where: { tenantId: ctx.business.id, deletedAt: null, createdAt: { gte: monthStart(ctx.now) } } }));
     const t = TEMPLATES[b.kind];
     const { a } = await this.change(ctx, "create", (r) => ({ action: "agreement.created", target: label(r.a) }), AGREEMENT_EVENTS.created, async (tx, scope) => {
       const values: Record<string, unknown> = { date: nepalDay() };
