@@ -54,7 +54,8 @@ import type { AiClient } from "@sheetal/backend-core/lib/ai";
 import type { Fetch } from "@sheetal/backend-core/lib/payments";
 import type { Resolver } from "./modules/mail/dns.js";
 
-export async function buildApp(config: Config, deps: AppDeps & { resolver?: Resolver; fetch?: Fetch; ai?: { client: AiClient; model: string; credits: Record<string, number> } } = {}): Promise<FastifyInstance> {
+export async function buildApp(config: Config, deps: AppDeps & { resolver?: Resolver; fetch?: Fetch; ai?: { client: AiClient; model: string; credits: Record<string, number> };
+  /** Tests swap the Cloudflare connection and its fetch for "Add the records for me". */ cloudflare?: () => Promise<{ token: string; zoneId: string } | null>; cloudflareFetch?: (url: string, init?: never) => Promise<{ ok: boolean; status: number; json(): Promise<unknown> }> } = {}): Promise<FastifyInstance> {
   const app = await buildBaseApp(config, deps);
   // Before any route: a hook only covers the routes registered after it. Support-session tokens (read-only by default) are recognised here.
   registerSupportSessions(app);
@@ -66,7 +67,7 @@ export async function buildApp(config: Config, deps: AppDeps & { resolver?: Reso
   app.decorate("approvals", approvals);
   await app.register(approvalRoutes, { prefix: "/v1", contextOf: businessContextOf, service: approvals });
   await app.register(supportSessionRoutes, { prefix: "/v1" });
-  await app.register(workspaceRoutes, { prefix: "/v1", contextOf: businessContextOf, resolver: deps.resolver, ai: deps.ai });   // branches, settings, check-ups, team, overview, import/export, forms, email, growth
+  await app.register(workspaceRoutes, { prefix: "/v1", contextOf: businessContextOf, resolver: deps.resolver, ai: deps.ai, cloudflare: deps.cloudflare, cloudflareFetch: deps.cloudflareFetch as never });   // branches, settings, check-ups, team, overview, import/export, forms, email, growth
   await app.register(reviewRoutes, { prefix: "/v1", contextOf: businessContextOf });
   await app.register(verificationRoutes, { prefix: "/v1" });
   await app.register(invoicingRoutes, { prefix: "/v1", contextOf: businessContextOf });   // customer invoices and payouts

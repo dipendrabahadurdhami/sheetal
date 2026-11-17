@@ -22,6 +22,8 @@ import type { AiClient } from "@sheetal/backend-core/lib/ai";
 import { MailController } from "./mail.controller.js";
 import { MailService } from "./mail.service.js";
 import { systemResolver, type Resolver } from "./mail-dns.js";
+import { IntegrationService, PLATFORM } from "@sheetal/platform/integrations/service";
+import type { CloudflareAccess, FetchLike } from "./mail-cloudflare.js";
 import { DataService } from "./data.service.js";
 import { FormController } from "./form.controller.js";
 import { FormService } from "./form.service.js";
@@ -34,6 +36,7 @@ import { SettingsService } from "@sheetal/platform/settings/service";
 import { TeamService, type TeamUser } from "./team.service.js";
 
 export interface WorkspaceRoutesOptions { contextOf: (req: FastifyRequest) => Promise<BusinessContext>; /** DNS lookups for email domains (tests swap it). */ resolver?: Resolver;
+  /** The platform's Cloudflare connection for "Add the records for me" (tests swap it); otherwise read from Admin → Setup center → Cloudflare. */ cloudflare?: () => Promise<CloudflareAccess | null>; cloudflareFetch?: FetchLike;
   /** The AI to use (tests swap it); otherwise the business's own key or Sheetal's. */ ai?: { client: AiClient; model: string; credits: Record<string, number>; own?: boolean; cap?: number } }
 
 export async function workspaceRoutes(app: FastifyInstance, opts: WorkspaceRoutesOptions) {
@@ -51,6 +54,15 @@ export async function workspaceRoutes(app: FastifyInstance, opts: WorkspaceRoute
   new MailController(new MailService({
     bus: busOf(app, "workspace"), db: host.db, vault: new Vault(host.config.SECRETS_KEY, host.config.NODE_ENV === "production"),
     resolver: opts.resolver ?? systemResolver, mailHost: host.config.MAIL_HOST, inboundSecret: host.config.MAIL_INBOUND_SECRET, log: app.log,
+    fetch: opts.cloudflareFetch,
+    cloudflare: opts.cloudflare ?? (async () => {
+      // The platform's own Cloudflare connection (live and healthy), with its zone id and sealed token.
+      const env = host.config.NODE_ENV === "production" ? "production" : host.config.NODE_ENV === "test" ? "test" : "development";
+      const svc = new IntegrationService({ db: host.db as never, vault: new Vault(host.config.SECRETS_KEY, host.config.NODE_ENV === "production"), env, log: app.log });
+      const r = await svc.resolve(PLATFORM, "cloudflare").catch(() => null);
+      const token = r?.secrets.get("apiToken"), zoneId = r?.config.zoneId;
+      return token && zoneId ? { token, zoneId } : null;
+    }),
   }), opts.contextOf).register(app);
   new FormController(new FormService({ bus: busOf(app, "workspace"), siteUrl: host.config.SITE_URL, readFile: (name) => readPrivateFile(host.config.MEDIA_DIR, "forms", name) as never }), opts.contextOf).register(app);
   const team = new TeamService({

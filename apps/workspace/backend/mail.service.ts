@@ -22,6 +22,7 @@ import { newToken, safeEqual } from "@sheetal/platform/auth/secrets";
 import type { Vault } from "@sheetal/platform/auth/vault";
 import { mailQuotaBytes } from "@sheetal/backend-core/domain/plans";
 import { checkRecords, isVerified, newDkimKeys, recordsFor, type Resolver } from "./mail-dns.js";
+import { applyDns, cloudflareApi, CloudflareError, planDns, type CloudflareAccess, type FetchLike } from "./mail-cloudflare.js";
 import { MailRepository } from "./mail.repository.js";
 import { SETTINGS_PERM } from "./workspace.service.js";
 import { TEAM_PERM } from "./team.service.js";
@@ -66,7 +67,13 @@ type Line = { audit: { action: string; target: string } | null; event: { name: s
 class MailBase extends BaseRepository<BusinessEntity, never, never> {
   constructor() { super({ model: "mailbox", branchField: null, ownerField: null, label: "This mailbox", filterable: {}, sortable: ["createdAt"], defaultSort: [{ field: "createdAt", dir: "asc" }] }); }
 }
-export interface MailDeps { bus: EventBus; db: unknown; vault: Vault; resolver: Resolver; mailHost: string; inboundSecret: string | undefined; log?: FastifyBaseLogger }
+export interface MailDeps {
+  bus: EventBus; db: unknown; vault: Vault; resolver: Resolver; mailHost: string; inboundSecret: string | undefined; log?: FastifyBaseLogger;
+  /** The platform's Cloudflare connection (token and zone), or null when it is not connected. Used by "Add the records for me". */
+  cloudflare?: () => Promise<CloudflareAccess | null>;
+  /** Swapped in tests; the real fetch otherwise. */
+  fetch?: FetchLike;
+}
 
 export class MailService extends BaseService<BusinessEntity, never, never> {
   readonly mail = new MailRepository();
@@ -166,6 +173,36 @@ export class MailService extends BaseService<BusinessEntity, never, never> {
     const saved = await this.write(ctx, (tx) => this.mail.saveChecks(tx, d.id, checks as Prisma.InputJsonValue, isVerified(checks)),
       (s) => ({ audit: null, event: { name: "workspace.maildomain.checked", payload: { id: d.id, verified: s.verified } } }));
     return { status: 200, message: saved.verified ? "All set: you can create mailboxes." : "Some records are not there yet. DNS changes can take up to an hour.", data: this.domainJson(saved) };
+  }
+  /** "Add the records for me": reads the platform's Cloudflare connection, plans what to add or replace, and (when asked) does it, then re-checks the domain.
+   *  Works only for the exact domain of the connected Cloudflare site. `replace` must be true to change records that are already there (old MX or SPF). */
+  async autoDns(ctx: BusinessContext, id: string, raw: unknown) {
+    this.refuseReadOnly(ctx);
+    await this.manage(ctx);
+    const b = z.object({ apply: z.boolean().default(false), replace: z.boolean().default(false) }).parse(raw ?? {});
+    const d = await this.mail.domain(ctx, id);
+    if (!d) throw notFound("Domain not found.");
+    const access = await this.x.cloudflare?.();
+    if (!access) throw new AppError(409, "cloudflare_not_connected", "Automatic setup needs Cloudflare. A Sheetal admin connects it once in Admin → Setup center → Cloudflare. Until then, add the records by hand at your domain provider.");
+    const api = cloudflareApi(access, this.x.fetch);
+    let plan: Awaited<ReturnType<typeof planDns>>;
+    let results: Awaited<ReturnType<typeof applyDns>> | null = null;
+    try {
+      const zone = await api.zoneName();
+      if (zone !== d.name) throw badRequest(`Automatic setup works for ${zone || "the connected Cloudflare site"} only, not ${d.name}. Add the records by hand at your domain provider.`);
+      plan = await planDns(api, zone, recordsFor(d.name, d, this.x.mailHost), this.x.mailHost);
+      if (b.apply) results = await applyDns(api, plan, b.replace);
+    } catch (e) {
+      if (e instanceof CloudflareError) throw badRequest(e.message);
+      throw e;
+    }
+    if (!results) return { status: 200, message: plan.needsConfirm ? "Check what will change before you confirm." : "Ready to add the records.", data: { plan, applied: false } };
+    const checks = await checkRecords(this.x.resolver, d.name, d, this.x.mailHost);
+    const saved = await this.write(ctx, (tx) => this.mail.saveChecks(tx, d.id, checks as Prisma.InputJsonValue, isVerified(checks)),
+      (s) => ({ audit: { action: "mail.dns_applied", target: d.name }, event: { name: "workspace.maildomain.checked", payload: { id: d.id, verified: s.verified } } }));
+    const skipped = results.filter((r) => r.done === "skipped").length;
+    const message = skipped ? "The new records are added. Some existing records still need your OK to be replaced." : saved.verified ? "All set: the records are in and verified. You can create mailboxes." : "The records are added in Cloudflare. DNS can take a few minutes to show; press Check records.";
+    return { status: 200, message, data: { plan, results, applied: true, domain: this.domainJson(saved) } };
   }
   async removeDomain(ctx: BusinessContext, id: string) {
     this.refuseReadOnly(ctx);

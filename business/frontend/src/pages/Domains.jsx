@@ -59,9 +59,54 @@ function AddDomain({ run, first }) {
   );
 }
 
+const ACTION = { ok: ["Already right", "done"], add: ["Will be added", "action"], replace: ["Will be replaced", "problem"] };
+
+/** "Add the records for me": shows what Cloudflare will get, asks before replacing anything already there, then does it. */
+function AutoDns({ d, run, onClose }) {
+  const [plan, setPlan] = useState(null);
+  const [sure, setSure] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+  useEffect(() => { bizApi("POST", `/mail/domains/${d.id}/dns/auto`, {}).then((r) => setPlan(r.data.plan)).catch((e) => setErr(e.message)); }, [d.id]);
+  const todo = plan ? plan.items.filter((i) => i.action !== "ok").length : 0;
+  const go = () => { setBusy(true); run(bizApi("POST", `/mail/domains/${d.id}/dns/auto`, { apply: true, replace: plan.needsConfirm && sure })).then(onClose).catch(() => {}).finally(() => setBusy(false)); };
+  return (
+    <Drawer open onClose={onClose} title={`Add the records for ${d.name}`}
+      footer={<><Button variant="outline" onClick={onClose}>Cancel</Button>
+        <Button disabled={busy || !plan || (plan.needsConfirm && !sure) || !todo} onClick={go}>{busy ? "Working…" : todo ? "Add the records" : "Nothing to add"}</Button></>}>
+      <div className="pf-stack">
+        {err && <p className="small" role="alert">{err}</p>}
+        {!plan && !err && <p className="muted">Looking at your Cloudflare settings…</p>}
+        {plan && <>
+          <p>Sheetal will set these up in Cloudflare for <b>{plan.zone}</b>. Nothing is changed until you press the button.</p>
+          <div className="pf-stack" style={{ gap: 10 }}>
+            {plan.items.map((i) => (
+              <div key={i.id} className="card" style={{ padding: 12 }}>
+                <div className="row" style={{ gap: 8, justifyContent: "space-between" }}>
+                  <span><b>{i.type}</b> <code className="small">{i.host}</code></span>
+                  <Badge tone={ACTION[i.action][1]}>{ACTION[i.action][0]}</Badge>
+                </div>
+                <small className="muted">{i.note}</small>
+                {i.action === "replace" && i.current.length > 0 && <div className="small" style={{ marginTop: 6 }}>Removed or changed: {i.current.map((c) => <code key={c} className="small" style={{ marginRight: 6 }}>{c}</code>)}</div>}
+              </div>
+            ))}
+          </div>
+          {plan.needsConfirm && (
+            <label className="row" style={{ gap: 8, alignItems: "flex-start" }}>
+              <input type="checkbox" checked={sure} onChange={(e) => setSure(e.target.checked)} />
+              <span>I understand. Email for <b>{plan.zone}</b> will go to Sheetal from now on. Mail at the old provider stops arriving, and I have saved anything I still need there.</span>
+            </label>
+          )}
+        </>}
+      </div>
+    </Drawer>
+  );
+}
+
 function DomainPanel({ d, run }) {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
+  const [auto, setAuto] = useState(false);
   const check = () => { setBusy(true); run(bizApi("POST", `/mail/domains/${d.id}/check`)).catch(() => {}).finally(() => setBusy(false)); };
   const copy = (v) => navigator.clipboard?.writeText(v).then(() => toast("Copied"), () => toast("Couldn't copy"));
   const required = d.records.filter((r) => r.required);
@@ -69,6 +114,7 @@ function DomainPanel({ d, run }) {
   return (
     <Panel title={d.name} sub={d.verified ? "Ready: mailboxes can use this domain" : `Add these records at your domain provider (${ok} of ${required.length} found)`}
       actions={<>{d.verified ? <Badge tone="done" icon="check">Ready</Badge> : <Badge tone="action">Waiting for DNS</Badge>}
+        {!d.verified && <Button size="sm" icon="wand-sparkles" onClick={() => setAuto(true)}>Add the records for me</Button>}
         <Button size="sm" variant="outline" icon="refresh-cw" disabled={busy} onClick={check}>{busy ? "Checking…" : "Check records"}</Button></>}>
       <Table rows={d.records} minWidth={760} columns={[
         { key: "t", label: "Type", render: (r) => <b className="tnum">{r.type}</b> },
@@ -77,6 +123,7 @@ function DomainPanel({ d, run }) {
         { key: "s", label: "Status", render: (r) => <Badge tone={STATUS[r.status][1]}>{STATUS[r.status][0]}</Badge> },
       ]} />
       <p className="small muted" style={{ padding: "10px 16px 14px", margin: 0 }}>{d.checkedAt ? `Last checked ${fdatetime(d.checkedAt)}. ` : ""}DNS changes can take up to an hour to show. Keep any other MX records off this domain, or mail may go elsewhere.</p>
+      {auto && <AutoDns d={d} run={run} onClose={() => setAuto(false)} />}
     </Panel>
   );
 }
