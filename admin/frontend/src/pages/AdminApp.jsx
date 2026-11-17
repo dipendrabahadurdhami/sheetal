@@ -42,6 +42,7 @@ import { config } from "@sheetal/shared/core/config";
 import { isStaffLive, useLiveStaff, useReviewQueue } from "../live";
 import { adminApi } from "../api";
 import { LiveAnalytics, LiveOutbox, LiveSetup, LiveStatus } from "./LiveSetup";
+import { AdminEmail } from "./AdminEmail";
 import { LivePlatformSettings } from "./LivePlatformSettings";
 import { LiveChannels, useOtaWaiting } from "./LiveChannels";
 import { LiveAiFeatures } from "./LiveAiFeatures";
@@ -89,6 +90,7 @@ export default function AdminApp() {
     ] },
     { group: "group.connections", items: [
       { to: "/admin/integrations", icon: "plug", key: "nav.setup", perm: "platform.settings.read+platform.settings.update" },
+      { to: "/admin/email", icon: "mail", key: "nav.email", perm: "platform.settings.read+platform.settings.update" },
       { to: "/admin/channels", icon: "network", key: "nav.channels", perm: "platform.business.read", count: (isStaffLive() ? otaWaiting : otaOf(db).requests.filter((r) => r.status === "requested").length) || undefined, countTone: "action" },
       { to: "/admin/ai", icon: "sparkles", key: "nav.aiAdmin", perm: "platform.settings.read+platform.settings.update" },
     ] },
@@ -189,6 +191,7 @@ export default function AdminApp() {
         { path: "/admin/settings/fields", render: () => guard("platform.settings.read+platform.settings.update", isStaffLive() ? <FieldBuilderPage /> : <AdminSettings />) },
         { path: "/admin/settings/theme", render: () => guard("platform.settings.read+platform.settings.update", isStaffLive() ? <ThemePage /> : <AdminSettings />) },
         { path: "/admin/settings/revenue", render: () => guard("platform.settings.read+platform.settings.update", isStaffLive() ? <RevenuePage /> : <AdminSettings />) },
+        { path: "/admin/email", render: () => guard("platform.settings.read+platform.settings.update", isStaffLive() ? <AdminEmail /> : <section className="card pf-panel"><p className="muted">Sign in to the live admin to see email health.</p></section>) },
         { path: "/admin/status", render: () => guard("platform.settings.read+platform.settings.update", isStaffLive() ? <><LiveStatus /><LiveOutbox /></> : <AdminStatus />) },
         // Signed in to the admin API: the Integration Center (stage 1.3). Not signed in: the old sample screen. LiveSetup keeps the AI and Meta key forms
         // until those connections are built in the Center.

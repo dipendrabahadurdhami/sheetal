@@ -21,6 +21,7 @@ import { adminDashboardRoutes } from "./modules/dashboard.js";
 import { adminPromoteRoutes } from "./modules/promote.js";
 import { adminLeadRoutes } from "./modules/leads.js";
 import { adminInsightRoutes } from "./modules/insight.js";
+import { adminEmailRoutes, type EmailDns, type SmtpProbe } from "./modules/email-health.js";
 import { adminPlatformRoutes } from "./modules/platform.js";
 import { adminChannelRoutes } from "./modules/channels.js";
 import { adminAiFeatureRoutes } from "./modules/ai-features.js";
@@ -48,7 +49,7 @@ import { adminSubscriptionRoutes } from "./modules/subscriptions.js";
 import { adminSalesRoutes } from "./modules/sales.js";
 import { adminRefundRoutes } from "./modules/refunds.js";
 
-export async function buildApp(config: Config, deps: AppDeps & { fetch?: Fetch } = {}): Promise<FastifyInstance> {
+export async function buildApp(config: Config, deps: AppDeps & { fetch?: Fetch; emailDns?: EmailDns; emailSmtp?: SmtpProbe } = {}): Promise<FastifyInstance> {
   const app = await buildBaseApp(config, deps);
   await app.register(adminRoutes, { prefix: "/v1" });
   await app.register(adminListingRoutes, { prefix: "/v1" });
@@ -63,6 +64,7 @@ export async function buildApp(config: Config, deps: AppDeps & { fetch?: Fetch }
   await app.register(adminPromoteRoutes, { prefix: "/v1" });
   await app.register(adminLeadRoutes, { prefix: "/v1" });
   await app.register(adminInsightRoutes, { prefix: "/v1" });
+  await app.register(adminEmailRoutes, { prefix: "/v1", dns: deps.emailDns, smtp: deps.emailSmtp });   // Super Admin → Email: domain, mail server and system email health
   await app.register(adminPlatformRoutes, { prefix: "/v1", fetch: deps.fetch });
   await app.register(adminChannelRoutes, { prefix: "/v1" });
   await app.register(adminAiFeatureRoutes, { prefix: "/v1" });
