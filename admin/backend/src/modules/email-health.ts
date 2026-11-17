@@ -94,7 +94,7 @@ export async function adminEmailRoutes(app: FastifyInstance, opts: EmailHealthOp
   const audit = (actorId: string, ip: string, action: string, target: string) => db().auditLog.create({ data: { actorId, action, target, ip } });
 
   app.get("/admin/email/overview", async (request) => {
-    staffOf(request, PERM);
+    const staff = staffOf(request, PERM);
     const own = platformDomainOf(app.config.SITE_URL);
     const day = new Date(Date.now() - 864e5);
     const [domains, boxes, lastSent, lastIn, waiting, failed, pendingDeliveries, failedDeliveries, recent, listening] = await Promise.all([
@@ -113,6 +113,16 @@ export async function adminEmailRoutes(app: FastifyInstance, opts: EmailHealthOp
     const boxCount = new Map(boxes.map((b) => [b.domainId, b._count]));
     const ownRow = domains.find((d) => d.name === own) ?? null;
     const checks = [...(ownRow ? await domainChecks(ownRow, mailHost(), dns) : []), ...(await hostChecks(mailHost(), dns))];
+    // Sheetal's own mailboxes (admin@, info@...) with how much waits in each, and whether THIS staff login may open them (a member of that business).
+    const ownBoxes = ownRow ? await db().mailbox.findMany({ where: { domainId: ownRow.id }, orderBy: { address: "asc" }, select: { id: true, address: true, name: true, kind: true, active: true } }) : [];
+    const boxIds = ownBoxes.map((b) => b.id);
+    const [inboxTotals, inboxUnread, member] = await Promise.all([
+      boxIds.length ? db().mailMessage.groupBy({ by: ["mailboxId"], where: { mailboxId: { in: boxIds }, folder: "inbox" }, _count: true }) : [],
+      boxIds.length ? db().mailMessage.groupBy({ by: ["mailboxId"], where: { mailboxId: { in: boxIds }, folder: "inbox", seen: false }, _count: true }) : [],
+      ownRow ? db().membership.findFirst({ where: { userId: staff.user.id, tenantId: ownRow.tenantId, status: "active" }, select: { id: true } }) : null,
+    ]);
+    const totalOf = new Map(inboxTotals.map((t) => [t.mailboxId, t._count]));
+    const unreadOf = new Map(inboxUnread.map((t) => [t.mailboxId, t._count]));
     const problems = checks.filter((c) => c.status !== "ok" && !c.optional).length;
     const connected = !!ownRow?.verified && !checks.some((c) => ["verify", "mx", "spf", "dkim"].includes(c.id) && c.status !== "ok");
     return {
@@ -120,6 +130,8 @@ export async function adminEmailRoutes(app: FastifyInstance, opts: EmailHealthOp
         platformDomain: own, mailHost: mailHost(), domainAdded: !!ownRow, connected, problems,
         healthy: connected && problems === 0 && listening !== false && failed === 0,
         checks,
+        mailboxes: ownBoxes.map((b) => ({ address: b.address, name: b.name, kind: b.kind, active: b.active, inbox: totalOf.get(b.id) ?? 0, unread: unreadOf.get(b.id) ?? 0 })),
+        mailboxAccess: ownRow ? !!member : null,
         server: { listening, lastSentAt: lastSent?.sentAt ?? null, lastReceivedAt: lastIn?.createdAt ?? null, waitingToSend: waiting, failedLast24h: failed,
           deliveriesWaiting: pendingDeliveries, deliveriesFailedLast24h: failedDeliveries, mailboxes: boxes.reduce((n, b) => n + b._count, 0) },
         domains: domains.map((d) => ({ id: d.id, name: d.name, business: tenants.get(d.tenantId) ?? "", verified: d.verified, checkedAt: d.checkedAt, checks: d.checks, mailboxes: boxCount.get(d.id) ?? 0, isPlatform: d.name === own })),

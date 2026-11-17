@@ -91,6 +91,7 @@ export default function AdminApp() {
     { group: "group.connections", items: [
       { to: "/admin/integrations", icon: "plug", key: "nav.setup", perm: "platform.settings.read+platform.settings.update" },
       { to: "/admin/email", icon: "mail", key: "nav.email", perm: "platform.settings.read+platform.settings.update" },
+      { to: "/business/mail", icon: "inbox", key: "nav.mailbox", perm: "platform.settings.read+platform.settings.update" },
       { to: "/admin/channels", icon: "network", key: "nav.channels", perm: "platform.business.read", count: (isStaffLive() ? otaWaiting : otaOf(db).requests.filter((r) => r.status === "requested").length) || undefined, countTone: "action" },
       { to: "/admin/ai", icon: "sparkles", key: "nav.aiAdmin", perm: "platform.settings.read+platform.settings.update" },
     ] },

@@ -45,6 +45,24 @@ export function AdminEmail() {
         </div>
       </section>
 
+      <Panel title="Your mailboxes: read and send" sub="Open a mailbox to read, reply or write a new email. It opens in the business Email page, with this same login." pad>
+        {!d.mailboxes.length ? <p className="muted">No mailboxes yet. Create them in the business panel: Settings → Domain and email.</p> : (
+          <div className="pf-table-wrap"><table className="table">
+            <thead><tr><th>Address</th><th>Unread</th><th>In inbox</th><th /></tr></thead>
+            <tbody>{d.mailboxes.map((b) => (
+              <tr key={b.address}>
+                <td><b>{b.address}</b><div className="small muted">{b.name}{b.kind === "shared" ? " · shared" : ""}{b.active ? "" : " · switched off"}</div></td>
+                <td>{b.unread ? <Badge tone="action">{b.unread} new</Badge> : "0"}</td>
+                <td className="tnum">{b.inbox}</td>
+                <td style={{ textAlign: "right" }}><a className="btn btn-outline btn-sm" href="/business/mail">Open</a></td>
+              </tr>
+            ))}</tbody>
+          </table></div>
+        )}
+        {d.mailboxAccess === false && <p className="small" role="note" style={{ marginTop: 10 }}><b>Your login is not a member of the Sheetal Property business yet</b>, so it cannot open these mailboxes. In the business panel go to Team → Invite, and add this login.</p>}
+        <p style={{ marginTop: 12 }}><a className="btn btn-primary" href="/business/mail">Open my mailboxes</a></p>
+      </Panel>
+
       <Panel title={`Your email domain: ${d.platformDomain}`} sub={`Mail host: ${d.mailHost}. Each row is read live from the internet's address book (DNS).`}>
         <div className="pf-table-wrap"><table className="table">
           <thead><tr><th>What</th><th>Status</th><th>What we found</th></tr></thead>

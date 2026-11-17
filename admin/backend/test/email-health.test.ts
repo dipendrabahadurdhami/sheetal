@@ -155,3 +155,26 @@ describe("send a test email", () => {
     expect((await call("editor", "POST", "/admin/email/test", { to: "x@y.test" })).statusCode).toBe(403);
   });
 });
+
+describe("Sheetal's own mailboxes", () => {
+  it("lists them with how much waits, and says whether this login may open them", async () => {
+    allGood();
+    const db = app.db!;
+    const info = await db.mailbox.create({ data: { tenantId: ids.tenant1!, domainId: ids.own!, address: "info@sheetal.test", name: "Info", kind: "shared" } });
+    const admin = await db.mailbox.create({ data: { tenantId: ids.tenant1!, domainId: ids.own!, address: "admin@sheetal.test", name: "Admin", kind: "shared", active: false } });
+    const msg = (mailboxId: string, seen: boolean, n: number) => ({ mailboxId, tenantId: ids.tenant1!, folder: "inbox", threadId: `t${n}`, messageId: `m${n}@x.test`, fromAddress: "a@x.test", to: ["x@sheetal.test"], subject: "Hi", text: "x", snippet: "x", size: 10, status: "received", seen });
+    await db.mailMessage.createMany({ data: [msg(info.id, false, 1), msg(info.id, false, 2), msg(info.id, true, 3), msg(admin.id, true, 4)] });
+    await db.mailMessage.create({ data: { ...msg(info.id, false, 5), folder: "sent" } });            // only the inbox counts
+    const first = (await call("boss", "GET", "/admin/email/overview")).json().data;
+    expect(first.mailboxes).toEqual([
+      { address: "admin@sheetal.test", name: "Admin", kind: "shared", active: false, inbox: 1, unread: 0 },
+      { address: "info@sheetal.test", name: "Info", kind: "shared", active: true, inbox: 3, unread: 2 },
+    ]);
+    expect(first.mailboxAccess).toBe(false);                                                         // the staff login is not a member of that business yet
+    expect(first.server.mailboxes).toBe(2);
+    const owner = await db.role.findFirstOrThrow({ where: { tenantId: ids.tenant1!, key: "owner" } });
+    await db.membership.create({ data: { userId: ids.boss!, tenantId: ids.tenant1!, roleId: owner.id } });
+    expect((await call("boss", "GET", "/admin/email/overview")).json().data.mailboxAccess).toBe(true);
+    expect(JSON.stringify(first)).not.toMatch(/"text"|"html"|messageId/);                            // mail content never leaves the business API
+  });
+});
