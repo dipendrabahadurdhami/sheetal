@@ -763,6 +763,19 @@ export const ROLE_TEMPLATES_V2: Record<BusinessType, RoleTemplateV2[]> = {
       ],
     },
     {
+      key: "it_support",
+      grants: [
+        "workspace.overview.read:branch",
+        "workspace.team.read:all",
+        "workspace.settings.update:all",
+        "workspace.profile.update:all",
+        "workspace.branding.update:all",
+        "workspace.branch.create:all",
+        "workspace.branch.update:all",
+        "workspace.branch.delete:all",
+      ],
+    },
+    {
       key: "viewer",
       grants: [
         "workspace.overview.read:branch",
@@ -874,6 +887,19 @@ export const ROLE_TEMPLATES_V2: Record<BusinessType, RoleTemplateV2[]> = {
     },
     { key: "customer_care", grants: ["workspace.overview.read:branch", "crm.customer.read:branch", "crm.message.reply:branch", "reviews.review.read:branch", "reviews.review.reply:branch"] },
     {
+      key: "it_support",
+      grants: [
+        "workspace.overview.read:branch",
+        "workspace.team.read:all",
+        "workspace.settings.update:all",
+        "workspace.profile.update:all",
+        "workspace.branding.update:all",
+        "workspace.branch.create:all",
+        "workspace.branch.update:all",
+        "workspace.branch.delete:all",
+      ],
+    },
+    {
       key: "viewer",
       grants: [
         "workspace.overview.read:branch",
@@ -967,6 +993,19 @@ export const ROLE_TEMPLATES_V2: Record<BusinessType, RoleTemplateV2[]> = {
       ],
     },
     { key: "customer_care", grants: ["workspace.overview.read:branch", "crm.customer.read:branch", "crm.message.reply:branch", "reviews.review.read:branch", "reviews.review.reply:branch"] },
+    {
+      key: "it_support",
+      grants: [
+        "workspace.overview.read:branch",
+        "workspace.team.read:all",
+        "workspace.settings.update:all",
+        "workspace.profile.update:all",
+        "workspace.branding.update:all",
+        "workspace.branch.create:all",
+        "workspace.branch.update:all",
+        "workspace.branch.delete:all",
+      ],
+    },
     {
       key: "viewer",
       grants: [
@@ -1122,6 +1161,19 @@ export const ROLE_TEMPLATES_V2: Record<BusinessType, RoleTemplateV2[]> = {
     {
       key: "customer_care",
       grants: ["workspace.overview.read:branch", "crm.lead.read:branch", "crm.customer.read:branch", "crm.message.reply:branch", "reviews.review.read:branch", "reviews.review.reply:branch"],
+    },
+    {
+      key: "it_support",
+      grants: [
+        "workspace.overview.read:branch",
+        "workspace.team.read:all",
+        "workspace.settings.update:all",
+        "workspace.profile.update:all",
+        "workspace.branding.update:all",
+        "workspace.branch.create:all",
+        "workspace.branch.update:all",
+        "workspace.branch.delete:all",
+      ],
     },
     {
       key: "viewer",
@@ -1280,6 +1332,19 @@ export const ROLE_TEMPLATES_V2: Record<BusinessType, RoleTemplateV2[]> = {
       ],
     },
     { key: "customer_care", grants: ["workspace.overview.read:branch", "crm.customer.read:branch", "crm.message.reply:branch", "reviews.review.read:branch", "reviews.review.reply:branch"] },
+    {
+      key: "it_support",
+      grants: [
+        "workspace.overview.read:branch",
+        "workspace.team.read:all",
+        "workspace.settings.update:all",
+        "workspace.profile.update:all",
+        "workspace.branding.update:all",
+        "workspace.branch.create:all",
+        "workspace.branch.update:all",
+        "workspace.branch.delete:all",
+      ],
+    },
     {
       key: "viewer",
       grants: [

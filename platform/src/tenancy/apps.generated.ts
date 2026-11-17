@@ -42,6 +42,11 @@ export const APPS: readonly AppManifest[] = [
       { key: "manager", types: ["hotel", "host", "developer", "agency", "sponsor"], add: ["*"], except: ["workspace.role.*", "workspace.billing.*"] },
       { key: "customer_care", types: ["host", "developer", "agency", "sponsor"], add: ["workspace.overview.read:branch"] },
       {
+        key: "it_support",
+        types: ["hotel", "host", "developer", "agency", "sponsor"],
+        add: ["workspace.overview.read:branch", "workspace.team.read:all", "workspace.settings.*", "workspace.profile.*", "workspace.branding.*", "workspace.branch.*"],
+      },
+      {
         key: "viewer",
         types: ["hotel", "host", "developer", "agency", "sponsor"],
         add: ["*.*.read"],

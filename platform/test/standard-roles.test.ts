@@ -44,6 +44,15 @@ describe("standard roles for every kind of business", () => {
     }
   });
 
+  it("lets IT support run the settings, domain and branches but never money or roles", () => {
+    for (const t of BUSINESS_TYPE_IDS) {
+      const it = grants(t, "it_support")!;
+      expect(it, t).toBeTruthy();
+      for (const yes of ["workspace.settings.update", "workspace.profile.update", "workspace.branding.update", "workspace.branch.create", "workspace.branch.update", "workspace.branch.delete", "workspace.overview.read"]) expect(hasPerm(it, yes), `${t}: ${yes}`).toBe(true);
+      for (const no of ["workspace.billing.manage", "workspace.role.update", "workspace.role.create", "workspace.team.invite", "invoicing.invoice.read", "expenses.profit.read", "invoicing.payout.read"]) expect(hasPerm(it, no), `${t}: ${no}`).toBe(false);
+    }
+  });
+
   it("keeps the roles each kind of business already had", () => {
     expect(ROLE_TEMPLATES_V2.agency.map((r) => r.key)).toEqual(expect.arrayContaining(["branch_manager", "agent", "accountant"]));
     expect(ROLE_TEMPLATES_V2.hotel.map((r) => r.key)).toEqual(expect.arrayContaining(["frontdesk", "cashier", "housekeeping", "accountant"]));
