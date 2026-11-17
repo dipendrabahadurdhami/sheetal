@@ -107,6 +107,7 @@ function DomainPanel({ d, run }) {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [auto, setAuto] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const check = () => { setBusy(true); run(bizApi("POST", `/mail/domains/${d.id}/check`)).catch(() => {}).finally(() => setBusy(false)); };
   const copy = (v) => navigator.clipboard?.writeText(v).then(() => toast("Copied"), () => toast("Couldn't copy"));
   const required = d.records.filter((r) => r.required);
@@ -115,7 +116,8 @@ function DomainPanel({ d, run }) {
     <Panel title={d.name} sub={d.verified ? "Ready: mailboxes can use this domain" : `Add these records at your domain provider (${ok} of ${required.length} found)`}
       actions={<>{d.verified ? <Badge tone="done" icon="check">Ready</Badge> : <Badge tone="action">Waiting for DNS</Badge>}
         {!d.verified && <Button size="sm" icon="wand-sparkles" onClick={() => setAuto(true)}>Add the records for me</Button>}
-        <Button size="sm" variant="outline" icon="refresh-cw" disabled={busy} onClick={check}>{busy ? "Checking…" : "Check records"}</Button></>}>
+        <Button size="sm" variant="outline" icon="refresh-cw" disabled={busy} onClick={check}>{busy ? "Checking…" : "Check records"}</Button>
+        <Button size="sm" variant="ghost" icon="trash-2" onClick={() => setRemoving(true)}>Remove</Button></>}>
       <Table rows={d.records} minWidth={760} columns={[
         { key: "t", label: "Type", render: (r) => <b className="tnum">{r.type}</b> },
         { key: "h", label: "Name / host", render: (r) => <span className="pf-two"><code className="small">{r.host}</code><small>{r.purpose}{r.required ? "" : " · optional"}</small></span> },
@@ -124,7 +126,23 @@ function DomainPanel({ d, run }) {
       ]} />
       <p className="small muted" style={{ padding: "10px 16px 14px", margin: 0 }}>{d.checkedAt ? `Last checked ${fdatetime(d.checkedAt)}. ` : ""}DNS changes can take up to an hour to show. Keep any other MX records off this domain, or mail may go elsewhere.</p>
       {auto && <AutoDns d={d} run={run} onClose={() => setAuto(false)} />}
+      {removing && <RemoveDomain d={d} run={run} onClose={() => setRemoving(false)} />}
     </Panel>
+  );
+}
+
+/** Takes a domain off the business. The server refuses while the domain still has mailboxes (delete those first). DNS records at the provider are not touched. */
+function RemoveDomain({ d, run, onClose }) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <Drawer open onClose={onClose} title={`Remove ${d.name}?`}
+      footer={<><Button variant="outline" onClick={onClose}>Keep it</Button>
+        <Button className="pf-danger" disabled={busy} onClick={() => { setBusy(true); run(bizApi("DELETE", `/mail/domains/${d.id}`)).then(onClose).catch(() => {}).finally(() => setBusy(false)); }}>{busy ? "Removing…" : "Remove domain"}</Button></>}>
+      <div className="pf-stack">
+        <p>This takes <b>{d.name}</b> out of Sheetal. Mailboxes on it must be deleted first; Sheetal tells you if there are any.</p>
+        <p className="small muted">Nothing is changed at your domain provider (Cloudflare or other). You can add the domain again later.</p>
+      </div>
+    </Drawer>
   );
 }
 
