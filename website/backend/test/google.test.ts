@@ -31,7 +31,7 @@ beforeAll(async () => {
 afterAll(async () => { await app.close(); });
 beforeEach(async () => {
   on = true; tokenStatus = 200; lastTokenBody = "";
-  claims = { aud: CLIENT, iss: "https://accounts.google.com", email: "Sita@Example.com", email_verified: true, name: "Sita Rai" };
+  claims = { aud: CLIENT, iss: "https://accounts.google.com", email: "Sita@Example.com", email_verified: true, name: "Sita Rai", given_name: "Sita", family_name: "Rai", picture: "https://lh3.example/p.jpg" };
   await app.db!.$executeRawUnsafe(`TRUNCATE users, tenants, audit_logs RESTART IDENTITY CASCADE`);
 });
 
@@ -68,6 +68,7 @@ describe("Continue with Google", () => {
     const user = await app.db!.user.findUnique({ where: { email: "sita@example.com" }, include: { memberships: true } });
     expect(user!.emailVerifiedAt).not.toBeNull();
     expect(user!.memberships.length).toBe(1);
+    expect([user!.firstName, user!.lastName, user!.photoUrl]).toEqual(["Sita", "Rai", "https://lh3.example/p.jpg"]);
     // The token really works.
     const me = await app.inject({ method: "GET", url: "/v1/user-info", remoteAddress: ip(), headers: { authorization: `Bearer ${decodeURIComponent(loc.split("#token=")[1]!)}` } });
     expect(me.statusCode).toBe(200);
@@ -79,6 +80,20 @@ describe("Continue with Google", () => {
     const res = await callback(`code=abc&state=${state}`, cookie);
     expect(String(res.headers.location)).toContain("#token=");
     expect(await app.db!.user.count()).toBe(1);
+  });
+
+  it("fills a missing or one-character old name from Google but keeps a good name", async () => {
+    await app.db!.user.create({ data: { email: "sita@example.com", userName: "old", firstName: "6", passwordHash: "x" } });
+    let s = await start();
+    await callback(`code=abc&state=${s.state}`, s.cookie);
+    let u = await app.db!.user.findUnique({ where: { email: "sita@example.com" } });
+    expect([u!.firstName, u!.lastName, u!.photoUrl]).toEqual(["Sita", "Rai", "https://lh3.example/p.jpg"]);
+    await app.db!.user.update({ where: { id: u!.id }, data: { firstName: "Sitaram" } });
+    claims.given_name = "Other";
+    s = await start();
+    await callback(`code=abc&state=${s.state}`, s.cookie);
+    u = await app.db!.user.findUnique({ where: { email: "sita@example.com" } });
+    expect(u!.firstName).toBe("Sitaram");
   });
 
   it("refuses a state that was already used, or a missing or wrong cookie", async () => {

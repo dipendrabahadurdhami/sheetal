@@ -79,7 +79,7 @@ export async function googleRoutes(app: FastifyInstance, opts: GoogleRouteOption
     if (state) await app.cache.del(`gsign:${state}`); // one use only
     if (!state || !verifier || cookieOf(request) !== state || typeof q.code !== "string" || !q.code) return back(reply, "expired");
 
-    let profile: { email?: string; verified?: boolean; name?: string; picture?: string };
+    let profile: { email?: string; verified?: boolean; name?: string; first?: string; last?: string; picture?: string };
     try {
       const res = await doFetch(TOKEN_URL, {
         method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
@@ -90,7 +90,7 @@ export async function googleRoutes(app: FastifyInstance, opts: GoogleRouteOption
       // The id token came straight from Google over a secure connection in answer to our own request, so it is read, not re-signed.
       const claims = JSON.parse(Buffer.from(j.id_token.split(".")[1] ?? "", "base64url").toString("utf8")) as Record<string, unknown>;
       if (claims.aud !== g.clientId || !["https://accounts.google.com", "accounts.google.com"].includes(String(claims.iss))) return back(reply, "failed");
-      profile = { email: typeof claims.email === "string" ? claims.email.trim().toLowerCase() : undefined, verified: claims.email_verified === true || claims.email_verified === "true", name: typeof claims.name === "string" ? claims.name : undefined, picture: typeof claims.picture === "string" ? claims.picture : undefined };
+      profile = { email: typeof claims.email === "string" ? claims.email.trim().toLowerCase() : undefined, verified: claims.email_verified === true || claims.email_verified === "true", name: typeof claims.name === "string" ? claims.name : undefined, first: typeof claims.given_name === "string" ? claims.given_name.trim().slice(0, 60) : undefined, last: typeof claims.family_name === "string" ? claims.family_name.trim().slice(0, 60) : undefined, picture: typeof claims.picture === "string" ? claims.picture : undefined };
     } catch (e) {
       app.log.warn({ err: (e as Error).message }, "google sign-in: could not complete");
       return back(reply, "failed");
@@ -105,13 +105,19 @@ export async function googleRoutes(app: FastifyInstance, opts: GoogleRouteOption
       const { trialDays } = await platformSettings(db);
       const userName = (profile.name || profile.email.split("@")[0]!).trim().slice(0, 60).padEnd(2, " ");
       user = await db.$transaction(async (tx) => {
-        const u = await tx.user.create({ data: { email: profile.email!, userName, passwordHash: await hashPassword(b64url(randomBytes(24))), emailVerifiedAt: new Date(), photoUrl: profile.picture?.slice(0, 500), userType: "user" } });
+        const u = await tx.user.create({ data: { email: profile.email!, userName, firstName: profile.first || null, lastName: profile.last || null, passwordHash: await hashPassword(b64url(randomBytes(24))), emailVerifiedAt: new Date(), photoUrl: profile.picture?.slice(0, 500), userType: "user" } });
         await createWorkspace(tx, { ownerId: u.id, name: userName, type: "agency", email: profile.email!, trialDays });
         return u;
       });
       await db.auditLog.create({ data: { action: "register", actorId: user.id, ip: request.ip, meta: { via: "google" } } });
-    } else if (!user.emailVerifiedAt) {
-      await db.user.update({ where: { id: user.id }, data: { emailVerifiedAt: new Date() } }); // Google has proven the address
+    } else {
+      // Google has proven the address; fill what is empty (or a leftover single character from the old site), never overwrite good details.
+      const empty = (v: string | null) => !v || v.trim().length < 2;
+      const fill: Record<string, unknown> = {};
+      if (!user.emailVerifiedAt) fill.emailVerifiedAt = new Date();
+      if (empty(user.firstName) && profile.first) { fill.firstName = profile.first; fill.lastName = profile.last || user.lastName; }
+      if (!user.photoUrl && profile.picture) fill.photoUrl = profile.picture.slice(0, 500);
+      if (Object.keys(fill).length) await db.user.update({ where: { id: user.id }, data: fill });
     }
     const token = await createSession(app as never, user.id, request);
     await db.auditLog.create({ data: { action: "login", actorId: user.id, ip: request.ip, meta: { via: "google" } } });
