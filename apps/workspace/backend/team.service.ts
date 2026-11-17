@@ -166,7 +166,7 @@ export class TeamService extends BaseService<BusinessEntity, never, never> {
     // Covered by the person's own Pro business, if they have one: Pro for its type, no bill of its own.
     const pro = proOf(user);
     const tenant = await this.userWrite(info, user, async (tx) => {
-      const t = await createWorkspace(tx, { ownerId: user.id, name: b.name, type: b.type, city: b.city, email: user.email, phone: user.phone ?? undefined, emailVerified: true, ...(pro ? { planId: `${b.type}-pro` } : {}) });
+      const t = await createWorkspace(tx, { ownerId: user.id, name: b.name, type: b.type, city: b.city, email: user.email, phone: user.phone ?? undefined, emailVerified: true, ...(pro ? { planId: `${b.type}-pro` } : { startOnApps: true }) });
       const r = pro ? await this.tokens.coverNew(tx, t.id, pro.id) : t;
       return { r, tenantId: r.id, line: { audit: { action: "business.created", target: b.name, meta: pro ? { coveredBy: pro.name } : undefined }, event: { name: "workspace.business.created", payload: { id: r.id } } } };
     });

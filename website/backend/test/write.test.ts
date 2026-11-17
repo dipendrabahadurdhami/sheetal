@@ -154,7 +154,15 @@ describe("posting a property", () => {
     expect(mine.map((x: { id: number; listing_status: string }) => [x.id, x.listing_status])).toEqual([[Number(ids.posted), "pending"]]);
   });
 
-  it("holds Starter to one listing", async () => {
+  it("starts a new business on the free apps, with only the basics", async () => {
+    const ws = await app.db!.membership.findFirstOrThrow({ where: { userId: ids.buyer }, include: { tenant: { include: { subscriptions: true } } } });
+    expect(ws.tenant).toMatchObject({ billingMode: "apps", status: "active", renewsAt: null });
+    expect(ws.tenant.subscriptions.map((s) => s.appId).sort()).toEqual(["crm", "expenses", "invoicing", "listings", "people"]);
+    expect(ws.tenant.subscriptions.every((s) => s.editionId === "free" && s.status === "active")).toBe(true);
+  });
+
+  it("holds a business still on the old Starter plan to one listing", async () => {
+    await app.db!.tenant.updateMany({ where: { memberships: { some: { userId: ids.buyer } } }, data: { billingMode: "plans" } });
     const res = await post("buyer", listing);
     expect(res.statusCode).toBe(402);
     expect(res.json().message).toContain("one listing");

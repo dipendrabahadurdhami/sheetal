@@ -9,6 +9,7 @@ import { Button, PageHead, Panel, SearchInput } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { isLive } from "../live";
 import { LiveSupport } from "./LiveSupport";
+import { searchGuides } from "./setupGuide";
 
 const STEPS = [
   ["sparkles", "tour.s1", "/business"],
@@ -34,39 +35,49 @@ export function Tour({ tenant, onDone }) {
       <div className="pf-row-actions">
         <Button variant="ghost" size="sm" onClick={onDone}>{t("tour.skip")}</Button>
         {i > 0 && <Button variant="outline" size="sm" onClick={() => navigate(to)}>{t("tour.show")}</Button>}
-        <Button size="sm" onClick={() => (i < STEPS.length - 1 ? setI(i + 1) : onDone())}>{i < STEPS.length - 1 ? t("common.next") : t("tour.finish")}</Button>
+        <Button size="sm" onClick={() => { if (i < STEPS.length - 1) setI(i + 1); else { onDone(); navigate("/business/start"); } }}>{i < STEPS.length - 1 ? t("common.next") : t("tour.finish")}</Button>
       </div>
     </div>
   );
 }
 
-const GUIDES = [
-  ["rocket", "start", ["g_start1", "g_start2", "g_start3"]],
-  ["house-plus", "listings", ["g_list1", "g_list2", "g_list3"]],
-  ["store", "pos", ["g_pos1", "g_pos2", "g_pos3"]],
-  ["file-signature", "agreements", ["g_ag1", "g_ag2", "g_ag3"]],
-  ["wallet", "payments", ["g_pay1", "g_pay2", "g_pay3"]],
-  ["users", "team", ["g_team1", "g_team2", "g_team3"]],
-];
-
 export function Help({ tenant }) {
   const t = useT();
+  const { navigate } = useRouter();
   const [q, setQ] = useState("");
-  const ql = q.toLowerCase();
+  const [open, setOpen] = useState(null);
+  const guides = searchGuides(q);
   return (
     <>
       <PageHead title={t("help.title")} sub={t("help.sub")} actions={<SearchInput value={q} onChange={setQ} placeholder={t("help.search")} />} />
+      <section className="card pf-panel" style={{ padding: 16 }}>
+        <div className="row" style={{ gap: 12, alignItems: "center", flexWrap: "wrap", justifyContent: "space-between" }}>
+          <div><b>New here?</b><div className="small muted">Open the step-by-step guide to set up your business.</div></div>
+          <Button icon="map" onClick={() => navigate("/business/start")}>Open Getting started</Button>
+        </div>
+      </section>
       <div className="pf-help-grid">
-        {GUIDES.map(([icon, k, items]) => {
-          const list = items.filter((g) => t(`help.${g}`).toLowerCase().includes(ql));
-          if (!list.length) return null;
-          return (
-            <section key={k} className="card pf-help">
-              <div className="pf-help-head"><Icon name={icon} size={20} /><b>{t(`help.c_${k}`)}</b></div>
-              <ul>{list.map((g) => <li key={g}><a href="#" onClick={(e) => e.preventDefault()}><Icon name="file-text" size={15} />{t(`help.${g}`)}</a></li>)}</ul>
-            </section>
-          );
-        })}
+        {guides.map((g) => (
+          <section key={g.id} className="card pf-help">
+            <div className="pf-help-head"><Icon name={g.icon} size={20} /><b>{g.title}</b></div>
+            <ul>{g.items.map((it) => {
+              const key = `${g.id}:${it.q}`;
+              const shown = open === key || !!q.trim();
+              return (
+                <li key={key} style={{ display: "block" }}>
+                  <button type="button" className="link" aria-expanded={shown} onClick={() => setOpen(open === key ? null : key)} style={{ background: "none", border: 0, padding: 0, textAlign: "left", cursor: "pointer", display: "flex", gap: 8, alignItems: "center" }}><Icon name={shown ? "chevron-down" : "chevron-right"} size={15} />{it.q}</button>
+                  {shown && (
+                    <div style={{ margin: "8px 0 4px 23px" }}>
+                      <ol className="small" style={{ margin: 0, paddingLeft: 18 }}>{it.steps.map((x) => <li key={x} style={{ marginBottom: 3 }}>{x}</li>)}</ol>
+                      {it.to && <Button size="sm" variant="outline" style={{ marginTop: 8 }} onClick={() => navigate(it.to)}>{it.cta}</Button>}
+                    </div>
+                  )}
+                </li>
+              );
+            })}</ul>
+          </section>
+        ))}
+        {!guides.length && <p className="muted pf-pad">Nothing matches that. Try another word, or message Sheetal below.</p>}
       </div>
       {tenant && isLive(tenant.id) && <LiveSupport tenant={tenant} />}
       <Panel title={t("help.contact")} sub={t("help.contactSub")} pad>

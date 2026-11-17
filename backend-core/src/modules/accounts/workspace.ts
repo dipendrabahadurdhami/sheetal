@@ -7,6 +7,7 @@
 import type { Prisma } from "@prisma/client";
 import { roleTemplatesFor, type BusinessType } from "../../domain/permissions.js";
 import { starterPlanId } from "../../domain/plans.js";
+import { startOnApps } from "../../domain/start-apps.js";
 
 export const HEAD_OFFICE = "Head office";
 
@@ -20,7 +21,7 @@ export async function createRoles(tx: Tx, tenantId: string, type: BusinessType) 
   return Object.fromEntries(rows.map((r) => [r.key, r]));
 }
 
-export async function createWorkspace(tx: Tx, opts: { ownerId: string; name: string; type: BusinessType; planId?: string; email?: string; phone?: string; city?: string; period?: number; renewsAt?: Date; emailVerified?: boolean; trialDays?: number }) {
+export async function createWorkspace(tx: Tx, opts: { ownerId: string; name: string; type: BusinessType; planId?: string; email?: string; phone?: string; city?: string; period?: number; renewsAt?: Date; emailVerified?: boolean; trialDays?: number; /** Start on the per-app system with only the basics for the type (real sign-ups). */ startOnApps?: boolean }) {
   const trial = opts.trialDays && opts.trialDays > 0 && !opts.renewsAt ? new Date(Date.now() + opts.trialDays * 864e5) : undefined;
   const tenant = await tx.tenant.create({
     data: {
@@ -31,5 +32,6 @@ export async function createWorkspace(tx: Tx, opts: { ownerId: string; name: str
   const roles = await createRoles(tx, tenant.id, opts.type);
   await tx.branch.create({ data: { tenantId: tenant.id, name: HEAD_OFFICE } });
   await tx.membership.create({ data: { userId: opts.ownerId, tenantId: tenant.id, roleId: roles.owner!.id } });
+  if (opts.startOnApps) await startOnApps(tx, tenant.id, opts.type);
   return tenant;
 }

@@ -87,7 +87,7 @@ export async function authRoutes(app: FastifyInstance) {
     const { trialDays } = await platformSettings(db());
     const user = await db().$transaction(async (tx) => {
       const u = await tx.user.create({ data: { email: body.email, userName: body.user_name, passwordHash: await hashPassword(body.password), userType: (body.user_type || "user").toLowerCase() } });
-      await createWorkspace(tx, { ownerId: u.id, name: body.user_name, type: "agency", email: body.email, trialDays });
+      await createWorkspace(tx, { ownerId: u.id, name: body.user_name, type: "agency", email: body.email, trialDays, startOnApps: true });
       return u;
     });
     await app.mailer.send(emails.verify(user.email, user.userName, await emailLink(user.id, "verify_email")));

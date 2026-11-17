@@ -28,13 +28,11 @@ describe("platform settings in sign-in and sign-up", () => {
     expect(r.json().message).toMatch(/Too many tries/);
   });
 
-  it("gives a new business the trial", async () => {
+  it("starts a new business on the free apps instead of a plan trial", async () => {
     const r = await post("/register", { user_name: "Ram Shrestha", email: "ram@example.com", password: "a-good-password", password_confirmation: "a-good-password" }, "10.3.0.1");
     expect(r.statusCode).toBeLessThan(300);
     const m = await app.db!.membership.findFirstOrThrow({ where: { user: { email: "ram@example.com" } }, include: { tenant: true } });
-    expect(m.tenant).toMatchObject({ status: "trial", planId: "agency-business" });
-    const days = (m.tenant.renewsAt!.getTime() - Date.now()) / 864e5;
-    expect(days).toBeGreaterThan(13.9);
-    expect(days).toBeLessThan(14.1);
+    // A new business now starts on the free basics (each app has its own trial in the Marketplace), so the platform trial days no longer start a Business plan.
+    expect(m.tenant).toMatchObject({ status: "active", planId: "agency-starter", billingMode: "apps", renewsAt: null });
   });
 });

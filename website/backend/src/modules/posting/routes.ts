@@ -44,7 +44,7 @@ export async function postingRoutes(app: FastifyInstance) {
     if (m) return { tenantId: m.tenantId, plan: m.tenant.plan };
     const db = dbOf(app);
     const { trialDays } = await platformSettings(db);
-    const t = await db.$transaction((tx) => createWorkspace(tx, { ownerId: user.id, name: user.userName, type: "agency", email: user.email, phone: user.phone ?? undefined, trialDays }));
+    const t = await db.$transaction((tx) => createWorkspace(tx, { ownerId: user.id, name: user.userName, type: "agency", email: user.email, phone: user.phone ?? undefined, trialDays, startOnApps: true }));
     return { tenantId: t.id, plan: (await db.plan.findUniqueOrThrow({ where: { id: t.planId } })) };
   }
 
@@ -184,7 +184,7 @@ export async function postingRoutes(app: FastifyInstance) {
     let tenantId = own?.tenantId;
     if (!tenantId) {
       const { trialDays } = await platformSettings(db);
-      tenantId = (await db.$transaction((tx) => createWorkspace(tx, { ownerId: user.id, name: user.userName, type: b.type, email: user.email, phone: user.phone ?? undefined, trialDays }))).id;
+      tenantId = (await db.$transaction((tx) => createWorkspace(tx, { ownerId: user.id, name: user.userName, type: b.type, email: user.email, phone: user.phone ?? undefined, trialDays, startOnApps: true }))).id;
     }
     return { status: 200, data: { business_id: tenantId, created: !own, link: `/business/marketplace${b.app ? `?app=${encodeURIComponent(b.app)}` : ""}` } };
   });

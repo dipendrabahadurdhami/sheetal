@@ -36,6 +36,7 @@ import { useBillingMode, useBusinessEntitlements } from "../billingMode";
 import { appOfPath, BillingPrompts, ReadOnlyBanner } from "@sheetal/ui/billing";
 import { APPS as APP_MANIFESTS } from "@sheetal/config/apps";
 import { Help, Tour } from "./Help";
+import { GettingStarted } from "./GettingStarted";
 import { MyProfile, NotificationsPage, useServerNotifs } from "@sheetal/shared/components/Me";
 import { Domains } from "./Domains";
 import { Mail } from "./Mail";
@@ -361,6 +362,7 @@ function Workspace() {
         { path: "/business/voice", render: () => paid(any("crm.message.reply", "crm.lead.read", "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete"), <VoiceAssistant key={tenant.id} tenant={tenant} />) },
         { path: "/business/checkups", render: () => guard(any("listings.listing.read+listings.listing.create+listings.listing.update+listings.listing.delete+listings.listing.publish", "projects.project.read+projects.project.create+projects.project.update+projects.project.delete", "investments.offering.read+investments.offering.create+investments.offering.update+investments.offering.delete", "hotel.calendar.update"), <ListingCheckups key={tenant.id} tenant={tenant} role={role} />) },
         { path: "/business/social", render: () => guard(any("listings.listing.read+listings.listing.create+listings.listing.update+listings.listing.delete+listings.listing.publish", "projects.project.read+projects.project.create+projects.project.update+projects.project.delete", "investments.offering.read+investments.offering.create+investments.offering.update+investments.offering.delete", "hotel.calendar.update"), <Social key={tenant.id} tenant={tenant} />) },
+        { path: "/business/start", render: () => <GettingStarted key={tenant.id} tenant={tenant} /> },
         { path: "/business/help", render: () => <Help tenant={tenant} /> },
         { path: "/business/me", render: () => <MyProfile key={tenant.id} scope={`b-${tenant.id}`} roleLabel={roleName(role, t)} access={canAll ? "All branches" : allowed.join(", ")} homeTo="/business/settings" /> },
         { path: "/business/notifications", render: () => <NotificationsPage notifs={notifs} prefsTo="/business/me" /> },

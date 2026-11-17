@@ -29,6 +29,8 @@ import { FormController } from "./form.controller.js";
 import { FormService } from "./form.service.js";
 import { OverviewController } from "./overview.controller.js";
 import { OverviewService } from "./overview.service.js";
+import { SetupController } from "./setup.controller.js";
+import { SetupService } from "./setup.service.js";
 import { TeamController } from "./team.controller.js";
 import { AppSettingsController } from "./app-settings.controller.js";
 import { AppSettingsService } from "./app-settings.service.js";
@@ -49,6 +51,7 @@ export async function workspaceRoutes(app: FastifyInstance, opts: WorkspaceRoute
   });
   new WorkspaceController(service, opts.contextOf).register(app);
   new OverviewController(new OverviewService(), opts.contextOf).register(app);
+  new SetupController(new SetupService(), opts.contextOf).register(app);
   new DataController(new DataService({ bus: busOf(app, "workspace"), catalogKinds: () => catalogKindsNow(host.db as never) }), opts.contextOf).register(app);
   new GrowthController(new GrowthService({ bus: busOf(app, "workspace"), db: host.db, vault: new Vault(host.config.SECRETS_KEY, host.config.NODE_ENV === "production"), ai: opts.ai }), opts.contextOf).register(app);
   new MailController(new MailService({

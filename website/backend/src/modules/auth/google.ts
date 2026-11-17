@@ -106,7 +106,7 @@ export async function googleRoutes(app: FastifyInstance, opts: GoogleRouteOption
       const userName = (profile.name || profile.email.split("@")[0]!).trim().slice(0, 60).padEnd(2, " ");
       user = await db.$transaction(async (tx) => {
         const u = await tx.user.create({ data: { email: profile.email!, userName, firstName: profile.first || null, lastName: profile.last || null, passwordHash: await hashPassword(b64url(randomBytes(24))), emailVerifiedAt: new Date(), photoUrl: profile.picture?.slice(0, 500), userType: "user" } });
-        await createWorkspace(tx, { ownerId: u.id, name: userName, type: "agency", email: profile.email!, trialDays });
+        await createWorkspace(tx, { ownerId: u.id, name: userName, type: "agency", email: profile.email!, trialDays, startOnApps: true });
         return u;
       });
       await db.auditLog.create({ data: { action: "register", actorId: user.id, ip: request.ip, meta: { via: "google" } } });
