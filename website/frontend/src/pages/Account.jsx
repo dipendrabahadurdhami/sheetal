@@ -56,6 +56,35 @@ export function Messages() {
   );
 }
 
+// Where Google sends the person back to after "Continue with Google": the API puts the session token (or a short error word) after the # in the address.
+const GOOGLE_ERRORS = {
+  cancelled: "You cancelled the Google sign-in. You can try again, or use your email and password.",
+  expired: "That sign-in took too long or was already used. Please try Continue with Google again.",
+  unverified: "Google says this email address is not verified, so we could not sign you in.",
+  staff: "Sheetal staff sign in with their email and password, not with Google.",
+  suspended: "This account is suspended. Please contact Sheetal support.",
+  off: "Sign in with Google is not available right now. Please use your email and password.",
+  failed: "Google sign-in did not work. Please try again, or use your email and password.",
+};
+export function GoogleReturn() {
+  useSEO("Signing in", undefined, { noindex: true });
+  const nav = useNavigate();
+  const { loadUser, toast } = useApp();
+  const [state, setState] = useState("Signing you in…");
+  const started = useRef(false);
+  useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+    const h = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    window.history.replaceState(null, "", window.location.pathname); // take the token out of the address bar and the history
+    const token = h.get("token");
+    if (!token) { setState(GOOGLE_ERRORS[h.get("error")] || GOOGLE_ERRORS.failed); return; }
+    localStorage.setItem("sheetal_token", token);
+    loadUser().then(() => { toast("You are signed in with Google."); nav("/", { replace: true }); });
+  }, []);
+  return <div className="container"><Empty icon={Loader2} title={state}><Link to="/">Go to home</Link></Empty></div>;
+}
+
 export function VerifyEmail() {
   useSEO("Verify email", undefined, { noindex: true });
   const [params] = useSearchParams();

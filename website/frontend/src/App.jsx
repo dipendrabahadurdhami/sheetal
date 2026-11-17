@@ -32,7 +32,7 @@ import RatesTrends from "./pages/RatesTrends";
 import { Project, Gallery } from "./pages/InvestHub";
 import MapSearch from "./pages/MapSearch";
 import Catalog from "./pages/Catalog";
-import { VerifyEmail, ResetPassword } from "./pages/Account";
+import { VerifyEmail, ResetPassword, GoogleReturn } from "./pages/Account";
 import Tools from "./pages/Tools";
 import About from "./pages/About";
 import { Requirement, Demands, DemandDetail } from "./pages/Requirement";
@@ -126,6 +126,7 @@ export default function App() {
           <Route path="/property-demand" element={<Demands />} />
           <Route path="/property-demand/:id" element={<DemandDetail />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/google-signin" element={<GoogleReturn />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/privacy-policy" element={<Legal kind="privacy" />} />
           <Route path="/privacy" element={<Navigate to="/privacy-policy" replace />} />

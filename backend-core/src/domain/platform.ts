@@ -76,13 +76,13 @@ export async function savePlatform(db: Db, patch: Stored) {
 export const INTEGRATION_IDS = ["google", "whatsapp", "cloudflare"] as const;
 export type IntegrationId = (typeof INTEGRATION_IDS)[number];
 
-export interface GoogleSettings { measurementId?: string; searchConsoleToken?: string; mapsKey?: string }
+export interface GoogleSettings { measurementId?: string; searchConsoleToken?: string; mapsKey?: string; signInClientId?: string; signInClientSecret?: string; signIn?: string }
 export interface WhatsappSettings { mode?: "cloud" | "qr"; phoneId?: string; token?: string; qrStatus?: "not_paired" | "waiting" | "paired" }
 export interface CloudflareSettings { zoneId?: string; apiToken?: string }
 export interface IntegrationShape { google: GoogleSettings; whatsapp: WhatsappSettings; cloudflare: CloudflareSettings }
 
 /** Which fields of each integration are secrets (sealed, write-only). */
-export const SECRET_FIELDS: { [K in IntegrationId]: string[] } = { google: ["mapsKey"], whatsapp: ["token"], cloudflare: ["apiToken"] };
+export const SECRET_FIELDS: { [K in IntegrationId]: string[] } = { google: ["mapsKey", "signInClientSecret"], whatsapp: ["token"], cloudflare: ["apiToken"] };
 
 export async function integrationSettings<K extends IntegrationId>(db: Db, id: K): Promise<IntegrationShape[K]> {
   return ((await db.appSetting.findUnique({ where: { key: `integration.${id}` } }))?.value ?? {}) as IntegrationShape[K];

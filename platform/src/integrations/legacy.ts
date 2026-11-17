@@ -17,7 +17,7 @@ import type { Mode } from "./types.js";
 
 export const LEGACY_GATEWAYS = ["esewa", "khalti", "fonepay"] as const;
 export const LEGACY_WEB = ["google", "whatsapp", "cloudflare"] as const;
-const WEB_SECRETS: Record<string, string[]> = { google: ["mapsKey"], whatsapp: ["token"], cloudflare: ["apiToken"] };
+const WEB_SECRETS: Record<string, string[]> = { google: ["mapsKey", "signInClientSecret"], whatsapp: ["token"], cloudflare: ["apiToken"] };
 const GATEWAY_FIELDS: Record<string, string[]> = { esewa: ["productCode"], khalti: [], fonepay: ["merchantCode"] };
 export const isLegacyId = (id: string) => (LEGACY_GATEWAYS as readonly string[]).includes(id) || (LEGACY_WEB as readonly string[]).includes(id);
 

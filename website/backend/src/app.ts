@@ -8,6 +8,7 @@ import type { FastifyInstance } from "fastify";
 import type { Config } from "@sheetal/platform/core/config";
 import { buildBaseApp, type AppDeps } from "@sheetal/backend-core/app";
 import { authRoutes } from "./modules/auth/routes.js";
+import { googleRoutes, type GoogleSignInSettings } from "./modules/auth/google.js";
 import { registerDemoGuard } from "@sheetal/platform/demo/guard";
 import { catalogRoutes, mediaRoutes } from "./modules/catalog/routes.js";
 import { catalogOptionRoutes } from "./modules/catalog/options.js";
@@ -27,12 +28,13 @@ import { publicApiRoutes } from "./modules/public/routes.js";
 import type { AiClient } from "@sheetal/backend-core/lib/ai";
 import type { Fetch } from "@sheetal/backend-core/lib/payments";
 
-export async function buildApp(config: Config, deps: AppDeps & { ai?: { client: AiClient; model: string }; fetch?: Fetch } = {}): Promise<FastifyInstance> {
+export async function buildApp(config: Config, deps: AppDeps & { ai?: { client: AiClient; model: string }; fetch?: Fetch; google?: () => Promise<GoogleSignInSettings | null> } = {}): Promise<FastifyInstance> {
   const app = await buildBaseApp(config, deps);
   // A "Try the demo" visitor (platform/src/demo/guard.ts) can read the website like anyone, but can change nothing here except signing out:
   // no listing, enquiry, review or payment ever comes from a demo user.
   registerDemoGuard(app, { allow: [/^\/v1(\/auth)?\/logout$/] });
   await app.register(authRoutes, { prefix: "/v1" });
+  await app.register(googleRoutes, { prefix: "/v1", google: deps.google, fetch: deps.fetch });
   await app.register(catalogRoutes, { prefix: "/v1" });
   await app.register(catalogOptionRoutes, { prefix: "/v1" });
   // Phase 3 (P3-BE-1): the marketplace catalog, public.
@@ -47,7 +49,7 @@ export async function buildApp(config: Config, deps: AppDeps & { ai?: { client: 
   await app.register(signRoutes, { prefix: "/v1" });
   await app.register(promoteRoutes, { prefix: "/v1" });
   await app.register(bannerRoutes, { prefix: "/v1" });
-  await app.register(siteRoutes, { prefix: "/v1" });
+  await app.register(siteRoutes, { prefix: "/v1", google: deps.google });
   await app.register(publicApiRoutes, { prefix: "/v1" });
   await app.register(mediaRoutes);
   return app;

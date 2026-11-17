@@ -10,6 +10,8 @@ const LIVE = String(import.meta.env.VITE_API_LIVE || "").split(",").map((s) => s
 const isLive = (url) => !!API_URL && (LIVE.includes("*") || LIVE.some((p) => url.slice(1) === p || url.slice(1).startsWith(`${p}/`)));
 
 /** True when this path is answered by the real API rather than demo data. */
+/** The API address, e.g. https://api.sheetalproperty.com/v1 (empty in sample mode). */
+export const apiBase = API_URL;
 export const isLivePath = (path) => isLive("/" + String(path).replace(/^\/+/, ""));
 export const getMode = () => (!API_URL || !LIVE.length ? "mock" : LIVE.includes("*") ? "live" : "mixed");
 export const setMode = () => {};
