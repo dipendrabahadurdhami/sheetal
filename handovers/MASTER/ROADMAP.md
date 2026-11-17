@@ -1,6 +1,6 @@
 # Roadmap: every phase still to do (one "next" = one phase)
 
-Progress on 16 Nov 2026, 11:30: Phase 0 100% · Phase 1 100% · Phase 2 100% (closed) · **Phase 3 about 93% (20 stages merged; everything is built and rehearsed on a copy; what is left is the cutover on the real data, run by the owner step by step from `docs/p3-cutover-runbook.md`, and the launch gates; continue from `handovers/CONTINUE-phase-3.md`)** · whole project about 84% (rough).
+Progress on 17 Nov 2026: Phase 0 100% · Phase 1 100% · Phase 2 100% (closed) · **Phase 3 about 96% (cutover steps 1-3 done, sales on, launch clean-up done; left: free limits in 12 apps, step 4 from 23 Nov, the gates; see `docs/LAUNCH-CHECK.md`)** · Phase 4 not started (`docs/HOSTING-GUIDE.md`) · whole project about 86% (rough).
 Work strictly in this order. Details of each stage are in the architecture docs named. Each stage = one branch, one PR, CI green, merged.
 
 ---

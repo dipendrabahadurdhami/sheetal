@@ -1,3 +1,25 @@
+# Project state (17 Nov 2026)
+
+**Phase 3 about 96%. The owner calls this the wrap-up phase: he does only the integration setup in the admin UI.**
+Read first: `docs/LAUNCH-CHECK.md` (what is open), `docs/HOSTING-GUIDE.md` (going online), `docs/SETUP-GUIDE.md` (the owner's setup),
+`docs/Sheetal-System-Report.pdf` (what is built and how the parts connect), `handovers/CONTINUE-phase-3.md` (the cutover log).
+
+Since the 16 Nov morning state below:
+- Cutover steps 1, 2 and 3 are done on the real data: 1 business on `apps` (Sheetal Property), 14 on `shadow` until 23 Nov, 2 on `plans`
+  (a payment in flight). **Sales are on.** Step 4 (everyone) needs the owner's yes, from 23 Nov.
+- The owner's rule (16 Nov): no business is special. A business shows only as many listings as its Listings edition allows; the extra are
+  paused (`listings.limit_paused_at`), never deleted, and return when it pays. `npm run billing:free` moves a business to the free tier.
+  Applied to Sheetal Property: Starter, free editions, 2,592 of 2,595 listings paused; the public site has 90 listings.
+- Launch clean-up: nothing unfinished is shown (unbuilt apps hidden in the seed, preview pages and sample admin tabs removed, unbuilt
+  connections filtered, Google and phone sign-in hidden); `/plans` opens `/pricing`, which says what is free.
+- **Most important code task left: no app except Listings enforces its free limits on apps (`requireLimit()` is called nowhere).**
+- Phase 4 (server, mail, clean database, backups, security) is not started.
+
+Lessons (keep doing): the dev servers of the owner cannot be stopped from here; ask the owner to close the server windows before
+`prisma generate`. A failed generate with servers running leaves the client half new: apply the migration at once (after a backup) or
+listings answer 500. The PC has little free memory with the servers up: run tests one workspace at a time, `--no-file-parallelism`.
+
+---
 # Project state (16 Nov 2026, about 11:30, Nepal time)
 
 **Phase 3 about 93% (51 of 55 by task size; OPS-2 counts half until the owner has run the cutover). Main = stage 20, OPS-2, pushed.**
