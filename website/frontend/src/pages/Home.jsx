@@ -96,7 +96,7 @@ export default function Home() {
 
       <section className="section container">
         <SectionHead kicker="Hand-picked" title="Featured properties"
-          action={<span style={{ display: "flex", gap: 16, alignItems: "baseline" }}><a href="/business/promote" className="muted" style={adLink}>Boost your listing here</a><Link to="/featured" className="link">View all</Link></span>} />
+          action={<span style={{ display: "flex", gap: 16, alignItems: "baseline" }}>{!phone && <a href="/business/promote" className="muted" style={adLink}>Boost your listing here</a>}<Link to="/featured" className="link">View all</Link></span>} />
         <Row loading={featured.loading} items={featured.data?.items || []} />
       </section>
 
@@ -116,7 +116,7 @@ export default function Home() {
 
       <section className="section container">
         <SectionHead kicker="For sale" title="Latest for sale" action={<Link to="/sale" className="link">View all</Link>} />
-        <PropertyGrid loading={sale.loading} items={(sale.data?.items || []).slice(0, phone ? 4 : 8)} count={phone ? 4 : 8} />
+        {phone ? <Row loading={sale.loading} items={sale.data?.items || []} /> : <PropertyGrid loading={sale.loading} items={sale.data?.items || []} count={8} />}
       </section>
 
 

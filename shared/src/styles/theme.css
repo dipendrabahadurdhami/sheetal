@@ -2954,3 +2954,32 @@ main section:has(> .section-head), main section:has(> .container > .section-head
   .pa-seg { background: var(--surface); }
   .pa-seg button.on { border: 0; background: var(--bg); box-shadow: 0 1px 2px color-mix(in srgb, var(--c-slate) 18%, transparent); }
 }
+
+/* Phone Home as an app screen: every block is one short sideways strip, about two and a half screens in all */
+@media (max-width: 600px) {
+  .scroller { grid-auto-columns: 168px !important; gap: 10px; }
+  .scroller .pcard { gap: 6px; }
+  .scroller .pcard-media { aspect-ratio: 4 / 3; border-radius: var(--r); }
+  .scroller .pcard-top { top: 6px; left: 6px; right: 0; }
+  .scroller .pcard-top .tag + .tag, .scroller .pcard-code, .scroller .pcard-specs, .scroller .pcard-loc, .scroller .pcard-body .tiny { display: none; }
+  .scroller .pcard-body { gap: 0; padding: 0 2px; }
+  .scroller .pcard-body > .row { order: -1; margin-top: 0 !important; }
+  .scroller .pcard-price { margin-top: 0; font-size: 15px; line-height: 1.3; }
+  .scroller .pcard-title { font-size: 13px; }
+  .scroller .heart { top: 0; right: 0; }
+  /* agencies: small cards in a strip */
+  .agents-grid { display: grid !important; grid-auto-flow: column; grid-template-columns: none !important; grid-auto-columns: 250px; overflow-x: auto; scrollbar-width: none; gap: 10px; scroll-snap-type: x mandatory; }
+  .agents-grid::-webkit-scrollbar { display: none; }
+  .agents-grid > * { scroll-snap-align: start; }
+  .agent-card { min-height: 0; }
+  /* journal on Home: small cards in a strip (the Blog page keeps small rows) */
+  .grid-3.home-blog-grid { display: grid !important; grid-auto-flow: column; grid-template-columns: none !important; grid-auto-columns: 210px; overflow-x: auto; scrollbar-width: none; gap: 10px; scroll-snap-type: x mandatory; }
+  .grid-3.home-blog-grid::-webkit-scrollbar { display: none; }
+  .grid-3.home-blog-grid > .post-card { display: flex !important; flex-direction: column; align-items: stretch; gap: 0; scroll-snap-align: start; }
+  .grid-3.home-blog-grid .post-card .media { height: 96px; }
+  .grid-3.home-blog-grid .post-card > :not(.media) { padding: 8px 10px 0; grid-column: auto; }
+  .grid-3.home-blog-grid .post-card h3 { padding-bottom: 10px; }
+  .section, .section-sm { padding-block: 14px; }
+  .section-head, .sec-head { margin-bottom: 8px; }
+  .pa-home { padding-bottom: 4px; }
+}
