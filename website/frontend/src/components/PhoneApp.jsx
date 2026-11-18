@@ -127,6 +127,21 @@ const GROUPS = [
 const THEME_ICON = { light: Sun, dark: Moon, red: Droplet };
 
 /** The side menu: person card, groups that open one at a time, theme, WhatsApp and Call, small legal links. */
+const SORTS = [["", "Newest first"], ["low_to_high", "Price: low to high"], ["high_to_low", "Price: high to low"], ["oldest", "Oldest first"]];
+
+/** Sort as a bottom sheet with radio rows. */
+export function SortSheet({ value, onChange, onClose }) {
+  return (
+    <div className="pa-dim" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="pa-bsheet" role="dialog" aria-label="Sort by">
+        <div className="pa-grabbar" />
+        <b className="pa-bs-t">Sort by</b>
+        {SORTS.map(([v, l]) => <button key={l} type="button" className="pa-radio" role="radio" aria-checked={value === v} onClick={() => { onChange(v); onClose(); }}><span>{l}</span><i className={value === v ? "on" : ""} /></button>)}
+      </div>
+    </div>
+  );
+}
+
 export function PhoneMenu({ onClose }) {
   const { user, setAuth, theme, setTheme } = useApp();
   const [open, setOpen] = useState("Explore");

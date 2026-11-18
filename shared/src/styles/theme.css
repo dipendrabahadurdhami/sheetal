@@ -2794,3 +2794,22 @@ main section:has(> .section-head), main section:has(> .container > .section-head
   .pl-bar-in .btn { min-height: 52px; }
   body:has(.pl-bar) .tabbar, body:has(.pl-bar) .wa-btn { display: none; }
 }
+
+/* ---- Phone app, batch 3: sort sheet, result count, checkout action bar ---- */
+.pa-dim { position: fixed; inset: 0; z-index: 140; background: color-mix(in srgb, var(--c-slate) 55%, transparent); display: flex; align-items: flex-end; }
+.pa-bsheet { width: 100%; background: var(--bg); border-radius: 12px 12px 0 0; box-shadow: 0 -8px 24px color-mix(in srgb, var(--c-slate) 28%, transparent); padding: 8px 16px calc(16px + env(safe-area-inset-bottom)); }
+.pa-grabbar { width: 40px; height: 4px; border-radius: 2px; background: var(--line-strong); margin: 0 auto 12px; }
+.pa-bs-t { display: block; font-size: 18px; font-weight: 600; color: var(--text-strong); margin-bottom: 4px; }
+.pa-radio { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 56px; border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--text); font: inherit; font-size: 15px; text-align: left; }
+.pa-radio:last-child { border: 0; }
+.pa-radio[aria-checked="true"] { color: var(--text-strong); font-weight: 500; }
+.pa-radio i { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line-strong); flex: none; }
+.pa-radio i.on { border-color: var(--accent); background: radial-gradient(circle, var(--accent) 0 5px, transparent 6px); }
+.pa-count { font-size: 13px; color: var(--text-strong); margin: 0 0 10px; }
+@media (max-width: 600px) {
+  /* Checkout (stays, reserve, invest): the action buttons stay at the bottom; no tab bar or floating chat in the way */
+  .ck-actions { position: sticky; bottom: 0; z-index: 40; background: var(--bg); padding: 10px 0 calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); margin-inline: -4px; }
+  .ck-actions .btn { min-height: 52px; }
+  body:has(.ck) .tabbar, body:has(.ck) .wa-btn { display: none; }
+  .ck .input, .ck input, .ck select { font-size: 16px; }
+}

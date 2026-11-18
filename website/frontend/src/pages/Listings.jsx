@@ -13,6 +13,7 @@ import { PropertyGrid } from "../components/PropertyCard";
 import { PageHead, Pagination, Empty } from "../components/ui";
 import { Dropdown } from "../components/Dropdown";
 import { SearchFilters } from "../components/SearchFilters";
+import { SortSheet } from "../components/PhoneApp";
 import { platformListings, matches } from "../utils/platformDb";
 
 const PER = 12;
@@ -30,6 +31,8 @@ export default function Listings({ purpose }) {
 
   const [showFilters, setShowFilters] = useState(false);
   const wide = useMedia("(min-width: 1081px)");
+  const phone = useMedia("(max-width: 600px)");
+  const [sortOpen, setSortOpen] = useState(false);
   const meta = META[purpose];
   const page = Number(params.get("page") || 1);
   const q = Object.fromEntries(params);
@@ -71,6 +74,7 @@ export default function Listings({ purpose }) {
 
   return (
     <>
+      {sortOpen && <SortSheet value={q.price_order || ""} onChange={(v) => set("price_order", v)} onClose={() => setSortOpen(false)} />}
       <div className="tools-hero listings-hero"><PageHead crumbs={[{ label: meta.kicker }]} kicker={meta.kicker} title={meta.title}>{meta.text}</PageHead></div>
       <div className="container listing-layout">
         {wide && filters}
@@ -87,13 +91,16 @@ export default function Listings({ purpose }) {
             <div className="row" style={{ gap: 8 }}>
               {!wide && <button className="btn btn-outline btn-sm" onClick={() => setShowFilters((s) => !s)}><SlidersHorizontal size={15} /> Filters{active.length ? ` (${active.length})` : ""}</button>}
               <Link to={`/map${purpose === "sale" || purpose === "rent" ? `?advertisement_purpose=${purpose}` : ""}`} className="btn btn-outline btn-sm"><MapPin size={15} /> Map</Link>
-              <div style={{ width: 200 }}><Dropdown value={q.price_order || ""} onChange={(v) => set("price_order", v)} align="right" options={[["", "Newest first"], ["low_to_high", "Price: low to high"], ["high_to_low", "Price: high to low"], ["oldest", "Oldest first"]]} /></div>
+              {phone
+                ? <button className="btn btn-outline btn-sm" onClick={() => setSortOpen(true)}>Sort{q.price_order ? " ·" : ""}</button>
+                : <div style={{ width: 200 }}><Dropdown value={q.price_order || ""} onChange={(v) => set("price_order", v)} align="right" options={[["", "Newest first"], ["low_to_high", "Price: low to high"], ["high_to_low", "Price: high to low"], ["oldest", "Oldest first"]]} /></div>}
               <div className="seg hide-sm">
                 <button className={layout === "grid" ? "on" : ""} onClick={() => setLayout("grid")} aria-label="Grid"><LayoutGrid size={15} /></button>
                 <button className={layout === "list" ? "on" : ""} onClick={() => setLayout("list")} aria-label="List"><List size={15} /></button>
               </div>
             </div>
           </div>
+          {phone && !loading && data?.total > 0 && <div className="pa-count"><b>{data.total.toLocaleString("en-IN")}</b> places {purpose === "rent" ? "for rent" : purpose === "sale" ? "for sale" : "found"}</div>}
           {active.length > 0 && (
             <div className="row-wrap" style={{ gap: 8, marginBottom: 20 }}>
               {active.map((k) => <button key={k} className="chip active" style={{ height: 32 }} onClick={() => set(k, "")}>{q[k]}<X size={13} /></button>)}
