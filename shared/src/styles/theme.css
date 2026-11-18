@@ -3226,3 +3226,13 @@ html.pa-lock, html.pa-lock body { overflow: hidden !important; }
   .map-show { width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%; background: var(--bg); color: var(--accent-ink); display: inline-flex; align-items: center; justify-content: center; flex: none; }
   .map-show svg { width: 16px; height: 16px; }
 }
+
+/* Phone map: the info and layers buttons are the same small size on the same line */
+@media (max-width: 600px) {
+  .pa-legend-btn, .map-views .map-layers { width: 36px !important; height: 36px !important; }
+  .pa-legend-btn svg, .map-views .map-layers svg { width: 16px !important; height: 16px !important; }
+  .pa-legend-btn { top: 12px !important; left: 12px !important; }
+  .map-canvas .leaflet-top.leaflet-right { top: 12px !important; right: 12px !important; }
+  .map-views { width: 36px; height: 36px; }
+  .map-legend.pa-open { top: 56px !important; }
+}
