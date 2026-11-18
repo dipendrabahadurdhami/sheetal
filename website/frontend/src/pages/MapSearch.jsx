@@ -776,7 +776,7 @@ function MapSearchInner() {
               <span className="tiny muted">{it.line}</span>
               <span className="row between" style={{ gap: 8 }}>
                 <span style={{ fontWeight: 600, color: "var(--text-strong)" }} className="tnum">{it.price}</span>
-                <button type="button" className="map-show" title="Show on map" aria-label="Show on map" onClick={(e) => { e.preventDefault(); e.stopPropagation(); const mk = catList.find((x) => x.id === it.id)?._mk; if (mk && map.current) { map.current.flyTo(mk.getLatLng(), 13, { duration: 0.6 }); setTimeout(() => mk.openPopup(), 650); } }}><MapIcon size={15} strokeWidth={1.8} /></button>
+                <button type="button" className="map-show" title="Show on map" aria-label="Show on map" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSheet(0); const mk = catList.find((x) => x.id === it.id)?._mk; if (mk && map.current) { map.current.flyTo(mk.getLatLng(), 13, { duration: 0.6 }); setTimeout(() => mk.openPopup(), 650); } }}><MapIcon size={15} strokeWidth={1.8} /></button>
               </span>
             </div>
           </Link>
@@ -792,7 +792,7 @@ function MapSearchInner() {
                 <span className="tiny muted">{s2.beds ? `${s2.beds} bed` : ""}{s2.beds && s2.area ? " · " : ""}{s2.area || ""}</span>
                 <span className="row between" style={{ gap: 8 }}>
                   <span style={{ fontWeight: 600, color: "var(--text-strong)" }} className="tnum">{fmtPrice(purposeKey(p) === "rent" ? (p.rent_per_month || p.total_price) : p.total_price)}</span>
-                  <button type="button" className="map-show" title="Show on map" aria-label="Show on map" onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (sel === p.id) unfocus(); else { setSel(p.id); focus(p); } }}><MapIcon size={15} strokeWidth={1.8} /></button>
+                  <button type="button" className="map-show" title="Show on map" aria-label="Show on map" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSheet(0); if (sel === p.id) unfocus(); else { setSel(p.id); focus(p); } }}><MapIcon size={15} strokeWidth={1.8} /></button>
                 </span>
               </div>
             </Link>

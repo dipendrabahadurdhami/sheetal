@@ -3206,3 +3206,23 @@ html.pa-lock, html.pa-lock body { overflow: hidden !important; }
 .pa-sbar { padding: 8px 8px 8px 16px; gap: 0; }
 .pa-sbar input { border: 0 !important; outline: 0 !important; box-shadow: none; background: var(--surface); height: 48px; }
 .pa-sbar input:focus, .pa-sbar input:focus-visible { outline: 0 !important; box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--accent) 50%, transparent); }
+
+/* Phone map: tidy top buttons, list rows whose photo and details are the same height */
+@media (max-width: 600px) {
+  .pa-legend-btn, .map-views .map-layers { width: 40px; height: 40px; border-radius: 50%; }
+  .pa-legend-btn { top: 12px; left: 12px; }
+  .pa-legend-btn svg, .map-views .map-layers svg { width: 18px; height: 18px; }
+  .map-canvas .leaflet-top.leaflet-right { top: 12px; right: 12px; }
+  .map-canvas .leaflet-top.leaflet-right .leaflet-control { margin: 0; }
+  .map-views { box-shadow: 0 2px 10px color-mix(in srgb, var(--c-slate) 25%, transparent); }
+  .map-legend.pa-open { top: 60px; }
+  .map-item { grid-template-columns: 96px minmax(0, 1fr); gap: 0; padding: 0; min-height: 104px; align-items: stretch; overflow: hidden; border-radius: 12px; background: var(--surface); }
+  .map-item img { width: 96px; height: 100%; min-height: 104px; border-radius: 0; object-fit: cover; align-self: stretch; }
+  .map-item > .stack { padding: 10px 12px; justify-content: center; gap: 3px !important; min-width: 0; }
+  .map-item b { font-size: 14px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .map-item .tiny { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; max-width: 100%; }
+  .map-item .tiny.row { display: flex; }
+  .map-item .row.between { align-items: center; }
+  .map-show { width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%; background: var(--bg); color: var(--accent-ink); display: inline-flex; align-items: center; justify-content: center; flex: none; }
+  .map-show svg { width: 16px; height: 16px; }
+}
