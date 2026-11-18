@@ -192,9 +192,6 @@ export function PhoneMenu({ onClose }) {
     <div className="pa-menu-wrap" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <nav className="pa-menu" aria-label="Menu">
         <div className="pa-mtop"><PhoneLogo /><button type="button" className="pa-hbtn" aria-label="Close menu" onClick={onClose}><X size={22} /></button></div>
-        {user
-          ? <Link to="/my-profile" className="pa-person" onClick={onClose}><span className="pa-av">{(name || "U").slice(0, 2).toUpperCase()}</span><span><b>{name}</b><small>{user.email}</small></span><ChevronRight size={16} /></Link>
-          : <button className="pa-person" onClick={() => { onClose(); setAuth("login"); }}><span className="pa-av"><User size={22} /></span><span><b>Log in or sign up</b><small>Save homes, get alerts</small></span><ChevronRight size={16} /></button>}
         <div className="pa-groups">
           {GROUPS.map(([g, GI, rows, grid]) => (
             <div key={g}>
@@ -208,6 +205,9 @@ export function PhoneMenu({ onClose }) {
           ))}
         </div>
         <div className="pa-foot">
+          {user
+            ? <Link to="/my-profile" className="pa-person" onClick={onClose}><User size={22} /><span><b>{name}</b>{user.email && user.email !== name && <small>{user.email}</small>}</span><ChevronRight size={16} /></Link>
+            : <button className="pa-person" onClick={() => { onClose(); setAuth("login"); }}><User size={22} /><span><b>Log in or sign up</b><small>Save homes, get alerts</small></span><ChevronRight size={16} /></button>}
           <div className="pa-seg" role="group" aria-label="Theme">{THEMES.map((t) => { const I = THEME_ICON[t.id] || Sun; return <button key={t.id} className={theme === t.id ? "on" : ""} onClick={() => setTheme(t.id)}><I size={14} />{t.label || t.id[0].toUpperCase() + t.id.slice(1)}</button>; })}</div>
           <div className="pa-two"><a href="https://wa.me/9779801136817" target="_blank" rel="noreferrer"><MessageCircle size={16} />WhatsApp</a><a href="tel:+9779801136817"><Phone size={16} />Call</a></div>
           <div className="pa-legal"><Link to="/privacy-policy" onClick={onClose}>Privacy</Link> · <Link to="/terms-and-conditions" onClick={onClose}>Terms</Link> · <Link to="/data-deletion" onClick={onClose}>Data deletion</Link> · Version 1.0</div>
