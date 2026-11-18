@@ -9,17 +9,20 @@ import { StayCard, ProjectCard, InvestCard, useCatalog } from "./Market";
 import { rs } from "@sheetal/shared/core/format";
 import "@sheetal/shared/styles/platform.css";
 import { InviteCards } from "../components/InviteCards";
+import { useMedia } from "../hooks/useAsync";
 
 // Usage in pages/Home.jsx:  <HomePlatformRows SectionHead={SectionHead} Link={Link} />
 function Rows({ SectionHead, Link }) {
   const { stays, projects, invests } = useCatalog();
+  const phone = useMedia("(max-width: 600px)");
   const rows = [
     ["stay", "Stay in Nepal", "Popular stays", "/stays", "See all stays", stays.slice(0, 4).map((s) => <StayCard key={s.id} s={s} />)],
     ["project", "Under construction and ready", "Featured projects", "/project", "See all projects", projects.slice(0, 4).map((p) => <ProjectCard key={p.id} p={p} />)],
     ["invest", "Fund from Rs. 10,000", "Open investments", "/investment/explore", "See all", invests.slice(0, 4).map((v) => <InvestCard key={v.id} v={v} />)],
   ];
   // Until something is posted, a row invites owners to post the first one instead of standing empty.
-  return rows.map(([kind, kicker, title, to, label, cards]) => (
+  // On a phone an empty row is left out (no repeated "post the first one" cards); owners find it in the menu and Post.
+  return rows.filter(([, , , , , cards]) => !phone || cards.length).map(([kind, kicker, title, to, label, cards]) => (
     <section key={title} className="section container">
       <SectionHead kicker={kicker} title={title} action={cards.length ? <Link to={to} className="link">{label}</Link> : null} />
       {cards.length ? <div className="pb-grid pb-home-row">{cards}</div> : <InviteCards kind={kind} compact />}

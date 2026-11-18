@@ -2896,3 +2896,18 @@ main section:has(> .section-head), main section:has(> .container > .section-head
   .pa-hbar .brand img { height: 34px; }
   .post-card .media { grid-row: span 2; }
 }
+
+/* Phone: agencies as small rows, stays/projects/investments as sideways strips */
+@media (max-width: 600px) {
+  .agents-grid { display: flex !important; flex-direction: column; overflow: visible; gap: 10px; }
+  .agent-card { flex-direction: row !important; align-items: center; text-align: left; gap: 12px !important; padding: 12px !important; min-height: 76px; }
+  .agent-card .agent-logo { flex: none; }
+  .agent-card .avatar { width: 56px !important; height: 56px !important; font-size: 18px; }
+  .agent-card h3 { font-size: 16px !important; margin: 0; }
+  .agent-card .tier { order: -1; }
+  .agent-card > :not(.agent-logo) { min-width: 0; }
+  .agents-grid .join-panel, .agents-grid .agent-join { display: none; }
+  .pb-home-row { display: grid !important; grid-template-columns: none !important; grid-auto-flow: column; grid-auto-columns: 230px; overflow-x: auto; gap: 12px; scrollbar-width: none; scroll-snap-type: x mandatory; }
+  .pb-home-row::-webkit-scrollbar { display: none; }
+  .pb-home-row > * { scroll-snap-align: start; }
+}
