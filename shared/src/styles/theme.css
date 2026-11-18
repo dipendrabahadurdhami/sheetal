@@ -2838,3 +2838,11 @@ main section:has(> .section-head), main section:has(> .container > .section-head
   .pa-links { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 16px 12px; }
   .pa-links a { min-height: 44px; display: inline-flex; align-items: center; padding: 0 14px; border: 1px solid var(--line); border-radius: var(--r); font-size: 13px; color: var(--text-strong); }
 }
+
+/* Phone: text never under 12 px, and small controls get a 44 px touch area */
+@media (max-width: 600px) {
+  .tag, .tier, .tiny, .small-caps { font-size: 12px; }
+  .heart { position: relative; }
+  .heart::after { content: ""; position: absolute; inset: -4px; }
+  .chip, .btn-sm, .seg button, .tabs button { min-height: 44px; }
+}
