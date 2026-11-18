@@ -5,13 +5,13 @@ import { useSEO } from "../utils/seo";
 import { Link, useSearchParams } from "react-router-dom";
 import { MessagesSquare } from "lucide-react";
 import { Messages } from "./Account";
-import { LayoutGrid, Home, Heart, Bell, Crown, Settings, LogIn, Plus, Trash2, CheckCircle2, Eye, CalendarCheck, PieChart, Building2, Receipt, KeyRound } from "lucide-react";
+import { ChevronRight, ArrowLeft, LayoutGrid, Home, Heart, Bell, Crown, Settings, LogIn, Plus, Trash2, CheckCircle2, Eye, CalendarCheck, PieChart, Building2, Receipt, KeyRound } from "lucide-react";
 import { MyRentals } from "./MyRentals";
 import PlatformProfileTab from "../market/ProfileTabs";
 import { useApp } from "../context/AppContext";
 import { api } from "../api/endpoints";
 import { toList , toItem } from "../api/client";
-import { useAsync } from "../hooks/useAsync";
+import { useAsync, useMedia } from "../hooks/useAsync";
 import { PropertyGrid } from "../components/PropertyCard";
 import { Avatar, Confirm, Empty, usePaged, Paged } from "../components/ui";
 import { POST_TYPES, STATUS, FREE_PER_TYPE, hasPlan, myPosts, saveSitePosts, sitePosts } from "../utils/sitePosts";
@@ -196,11 +196,31 @@ function SettingsTab({ user, loadUser, toast, only }) {
   );
 }
 
+
+// On a phone the Account tab is a hub: person card, four quick tiles, then grouped rows. Each row opens its own screen.
+function PhoneHub({ user, favs, logout, go }) {
+  const tiles = [["listings", "My properties", Home], ["saved", "Saved", Heart, favs.size], ["messages", "Messages", MessagesSquare], ["orders", "Bookings", CalendarCheck]];
+  return (
+    <div className="pa-hub">
+      <Link to="?tab=settings" className="pa-hub-person"><Avatar src={user.photo} name={agentName(user)} size={56} /><span><b>{agentName(user)}</b><small>{user.email}</small></span><ChevronRight size={18} /></Link>
+      <div className="pa-hub-tiles">{tiles.map(([k, l, I, n]) => <button key={k} onClick={() => go(k)}><I size={22} />{l}{n > 0 && <em>{n}</em>}</button>)}</div>
+      {NAV_GROUPS.map(([g, keys]) => (
+        <div key={g}><div className="pa-gh">{g}</div>
+          <div className="pa-hub-list">{keys.map((k) => { const [, l, I] = TABS.find((x) => x[0] === k); return <button key={k} onClick={() => go(k)}><span className="pa-ico"><I size={18} /></span><span>{l}</span><ChevronRight size={16} /></button>; })}</div></div>
+      ))}
+      <a href="/business" className="pa-hub-biz"><span><b>Start a business free</b><small>Opens in your browser</small></span><ChevronRight size={18} /></a>
+      <button className="pa-hub-out" onClick={logout}>Log out</button>
+    </div>
+  );
+}
+
 export default function Profile() {
   useSEO("My profile", undefined, { noindex: true });
   const { user, setAuth, loadUser, toast, favs, logout } = useApp();
   const [params, setParams] = useSearchParams();
+  const phone = useMedia("(max-width: 600px)");
   const tab = params.get("tab") || "overview";
+  const hub = phone && !params.get("tab");
   const hasToken = !!localStorage.getItem("sheetal_token");
   useEffect(() => { if (!hasToken) setAuth("login"); }, [hasToken, setAuth]);
 
@@ -210,9 +230,12 @@ export default function Profile() {
     </Empty></div>
   );
 
+  if (hub) return <div className="container"><PhoneHub user={user} favs={favs} logout={logout} go={(k) => setParams({ tab: k })} /></div>;
+
   return (
     <>
     <div className="container profile-layout">
+      {phone && <button type="button" className="pa-back" onClick={() => setParams({})}><ArrowLeft size={20} />Account</button>}
       <aside className="stack profile-side" style={{ gap: 24 }}>
         <div className="row hide-sm"><Avatar src={user.photo} name={agentName(user)} size={56} /><div><b style={{ color: "var(--text-strong)", fontWeight: 500 }}>{agentName(user)}</b><div className="tiny muted">{user.email}</div></div></div>
         <nav className="side-nav">
