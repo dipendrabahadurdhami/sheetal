@@ -174,7 +174,7 @@ export function WhatsAppButton() {
   const href = `https://wa.me/${WA}?text=${encodeURIComponent("Hello Sheetal Property, I found you on your website: " + window.location.href)}`;
   return (
     <>
-      <a className="wa-btn wa-call" href="tel:+9779801136817" aria-label="Call Sheetal"><Phone size={22} /></a>
+      <a className="wa-btn wa-call" href="tel:+9779801000434" aria-label="Call Sheetal"><Phone size={22} /></a>
       <a className="wa-btn wa-whats" href={href} target="_blank" rel="noreferrer" aria-label="Chat on WhatsApp"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d={WA_PATH} /></svg></a>
     </>
   );

@@ -3167,3 +3167,12 @@ html.pa-lock, html.pa-lock body { overflow: hidden !important; }
 @media (max-width: 600px) {
   .pa-loop, .scroller, .grid-4, .agents-grid, .home-blog-grid, .tool-tiles { overscroll-behavior-x: contain; touch-action: pan-x pan-y; }
 }
+
+/* Phone map sheet: pull it up with a finger (or tap Show list) and the map shrinks; the list scrolls */
+@media (max-width: 600px) {
+  .map-list.pa-s0 { overflow-y: hidden; touch-action: none; }
+  .map-list.pa-s1, .map-list.pa-s2 { overflow-y: auto; touch-action: pan-y; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+  .pa-count-btn { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 44px; padding: 0; border: 0; background: none; font: inherit; color: var(--muted); text-align: left; }
+  .pa-count-btn b { font-weight: 500; color: var(--accent-ink); font-size: 14px; }
+  .map-list { transition: height .3s var(--ease); }
+}

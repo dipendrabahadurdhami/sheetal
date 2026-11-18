@@ -306,6 +306,7 @@ function MapSearchInner() {
 
   const [sel, setSel] = useState(null);
   const [legend, setLegend] = useState(false);
+  const touchY = useRef(0);
   const [sheet, setSheet] = useState(0); // phone: the list sheet height (peek, half, full)
   const [view, setView] = useState({ z: 6.5, b: null });
   // load coordinates only for what is on screen (like Google Maps)
@@ -747,12 +748,18 @@ function MapSearchInner() {
 
   return (
     <div className="map-layout">
-      <div className={`map-list pa-s${sheet}`}>
+      <div className={`map-list pa-s${sheet}`}
+        onTouchStart={(e) => { touchY.current = e.touches[0].clientY; }}
+        onTouchMove={(e) => {
+          const d = touchY.current - e.touches[0].clientY, top = e.currentTarget.scrollTop <= 0;
+          if (d > 36 && sheet < 2) { setSheet(sheet + 1); touchY.current = e.touches[0].clientY; }
+          else if (d < -36 && sheet > 0 && top) { setSheet(sheet - 1); touchY.current = e.touches[0].clientY; }
+        }}>
         <button type="button" className="pa-grab" aria-label="Show more or fewer results" onClick={() => setSheet((x) => (x + 1) % 3)}><i /></button>
         <div className="stack" style={{ gap: 10 }}>
           <div style={{ position: "relative" }}><Search size={16} className="muted" style={{ position: "absolute", left: 14, top: 16 }} /><input className="input" style={{ paddingLeft: 40 }} placeholder="Locality or city" defaultValue={keyword} key={keyword} onKeyDown={(e) => e.key === "Enter" && set("keyword", e.currentTarget.value.trim())} /></div>
           <div className="map-chips">{[["", "All"], ["sale", "Buy"], ["rent", "Rent"]].map(([v, l]) => <button key={l} className={`chip ${!kind && purpose === v ? "active" : ""}`} onClick={() => pickPurpose(v)}>{l}</button>)}<span className="map-chips-sep" />{Object.entries(KINDS).map(([k, x]) => <button key={k} className={`chip ${kind === k ? "active" : ""}`} onClick={() => pickKind(k)}>{x.label}</button>)}</div>
-          <span className="small muted tnum">{kind ? `${catList.length} ${KINDS[kind].label.toLowerCase()}` : `${data?.total ?? "…"} properties`}{!kind && !done && progress.total ? ` · loading ${progress.loaded}/${progress.total}` : ""}</span>
+          <button type="button" className="pa-count-btn small tnum" onClick={() => setSheet(sheet === 0 ? 1 : 0)}><span>{kind ? `${catList.length} ${KINDS[kind].label.toLowerCase()}` : `${data?.total ?? "…"} properties`}{!kind && !done && progress.total ? ` · loading ${progress.loaded}/${progress.total}` : ""}</span><b>{sheet === 0 ? "Show list" : "Show map"}</b></button>
         </div>
         {kind ? catList.map((it) => (
           <Link to={it.to} key={it.id} className="map-item">
