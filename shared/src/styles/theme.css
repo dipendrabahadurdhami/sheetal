@@ -2661,3 +2661,87 @@ main section:has(> .section-head), main section:has(> .container > .section-head
   .scroller .pcard-media { aspect-ratio: 4 / 3; }
   .scroller .pcard { gap: 8px; }
 }
+
+/* ---- Phone app: compact Home top, full-screen search, side menu, filters sheet, listing action bar ---- */
+.pa-listbar { display: none; }
+.pa-ib { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 0; background: none; color: var(--text-strong); flex: none; }
+.pa-chip { height: 40px; padding: 0 14px; border: 1px solid var(--line); border-radius: var(--r); display: inline-flex; align-items: center; font-size: 13px; color: var(--text); background: var(--bg); white-space: nowrap; flex: none; cursor: pointer; font-family: inherit; }
+.pa-chip.on { background: var(--accent-soft); border-color: var(--accent); color: var(--text-strong); font-weight: 500; }
+.pa-gh { font-size: 12px; font-weight: 500; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; margin: 14px 16px 2px; }
+.pa-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 6px 16px; }
+.pa-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 6px 16px; border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--text-strong); text-align: left; font: inherit; }
+.pa-row-in { display: flex; align-items: center; gap: 12px; flex: 1; border: 0; background: none; font: inherit; color: inherit; text-align: left; min-height: 44px; }
+.pa-ico { width: 40px; height: 40px; border-radius: var(--r); background: var(--surface); display: inline-flex; align-items: center; justify-content: center; color: var(--text-strong); flex: none; }
+.pa-t { flex: 1; font-size: 15px; line-height: 1.3; min-width: 0; }
+.pa-t small { display: block; font-size: 12px; color: var(--muted); }
+.pa-full { position: fixed; inset: 0; z-index: 120; background: var(--bg); display: flex; flex-direction: column; padding-top: env(safe-area-inset-top); }
+.pa-sbar { display: flex; align-items: center; gap: 4px; padding: 6px 8px; }
+.pa-sbar input { flex: 1; min-width: 0; height: 52px; border: 2px solid var(--accent); border-radius: var(--r); padding: 0 14px; font-size: 16px; background: var(--bg); color: var(--text-strong); font-family: inherit; }
+.pa-sbody { flex: 1; overflow: auto; padding-bottom: 24px; }
+@media (max-width: 600px) {
+  .footer { display: none; }
+  .listings-hero, .tools-hero.listings-hero { display: none; }
+  main { min-height: 60vh; }
+  .pa-home { padding: 8px 0 0; }
+  .pa-pill { display: flex; align-items: center; gap: 10px; width: calc(100% - 32px); height: 52px; margin: 0 16px; padding: 0 14px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); color: var(--muted); font: inherit; font-size: 14px; text-align: left; }
+  .pa-pill span { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .pa-types { display: flex; gap: 8px; padding: 12px 16px 0; overflow-x: auto; scrollbar-width: none; }
+  .pa-banner { position: relative; margin: 12px 16px 0; height: 170px; border-radius: var(--r-xl); overflow: hidden; background: var(--surface-2); }
+  .pa-banner > img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .pa-house { background: var(--c-crimson); color: var(--c-white); padding: 16px; display: flex; flex-direction: column; justify-content: space-between; }
+  .pa-house small { font-size: 12px; letter-spacing: .1em; opacity: .9; }
+  .pa-house h2 { margin: 4px 0 0; font-size: 22px; line-height: 1.25; color: var(--c-white); }
+  .pa-house p { margin: 0; font-size: 13px; }
+  .pa-wb { align-self: flex-start; height: 40px; padding: 0 14px; border-radius: var(--r); background: var(--c-white); color: var(--c-crimson); font-size: 13px; font-weight: 500; display: inline-flex; align-items: center; flex: none; }
+  .pa-spn { position: absolute; top: 10px; left: 10px; height: 24px; padding: 0 8px; border-radius: 6px; font-size: 12px; font-weight: 500; color: #fff; background: color-mix(in srgb, var(--c-slate) 78%, transparent); display: flex; align-items: center; }
+  .pa-shade { position: absolute; left: 0; right: 0; bottom: 0; padding: 34px 12px 22px; background: linear-gradient(transparent, color-mix(in srgb, var(--c-slate) 88%, transparent)); color: #fff; display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
+  .pa-shade b { font-weight: 600; font-size: 16px; line-height: 1.3; }
+  .pa-dots { position: absolute; bottom: 4px; left: 0; right: 0; display: flex; justify-content: center; }
+  .pa-dots button { width: 24px; height: 18px; border: 0; background: none; padding: 0; position: relative; }
+  .pa-dots button::after { content: ""; position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px; border-radius: 3px; background: #fff; opacity: .6; }
+  .pa-dots button.on::after { width: 16px; margin-left: -8px; opacity: 1; }
+  .pa-adv { text-align: right; padding: 2px 20px 0; line-height: 24px; color: var(--muted); }
+  .pa-quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px 0; padding: 8px 8px 8px; }
+  .pa-q { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12px; color: var(--text-strong); text-align: center; line-height: 1.25; min-height: 88px; }
+  .pa-q span { width: 56px; height: 56px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); display: flex; align-items: center; justify-content: center; color: var(--text-strong); }
+  .pa-q span.hot { background: var(--btn-bg); color: var(--btn-ink); border-color: var(--btn-bg); }
+  .section { padding-block: 20px; }
+  .pa-menu-wrap { position: fixed; inset: 0; z-index: 130; background: color-mix(in srgb, var(--c-slate) 55%, transparent); }
+  .pa-menu { position: absolute; left: 0; top: 0; bottom: 0; width: 85%; max-width: 360px; background: var(--bg); display: flex; flex-direction: column; box-shadow: 8px 0 24px color-mix(in srgb, var(--c-slate) 30%, transparent); padding-top: env(safe-area-inset-top); }
+  .pa-person { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border: 0; border-bottom: 1px solid var(--line); background: var(--surface); color: var(--text-strong); text-align: left; font: inherit; min-height: 76px; width: 100%; }
+  .pa-person > span:nth-child(2) { flex: 1; display: flex; flex-direction: column; line-height: 1.3; min-width: 0; }
+  .pa-person small { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+  .pa-av { width: 48px; height: 48px; border-radius: 50%; background: var(--surface-2); display: inline-flex; align-items: center; justify-content: center; font-weight: 600; flex: none; }
+  .pa-groups { flex: 1; overflow-y: auto; }
+  .pa-grp { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 0 16px; border: 0; border-bottom: 1px solid var(--line); background: none; font: inherit; font-weight: 500; color: var(--text-strong); text-align: left; }
+  .pa-grp span { flex: 1; }
+  .pa-grp svg:first-child { color: var(--muted); }
+  .pa-grp.open { background: var(--surface); }
+  .pa-grp.open svg:first-child { color: var(--accent); }
+  .pa-mrow { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 4px 16px 4px 20px; color: var(--text-strong); }
+  .pa-mrow .pa-ico { width: 34px; height: 34px; }
+  .pa-mrow .pa-t { font-size: 14px; }
+  .pa-tgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px 12px 12px; }
+  .pa-tgrid a { min-height: 48px; border: 1px solid var(--line); border-radius: var(--r); display: flex; align-items: center; gap: 8px; padding: 0 10px; font-size: 13px; color: var(--text-strong); line-height: 1.2; }
+  .pa-foot { padding: 10px 16px calc(14px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; background: var(--bg); }
+  .pa-seg { display: flex; background: var(--surface); border-radius: var(--r); padding: 3px; gap: 3px; }
+  .pa-seg button { flex: 1; height: 38px; border: 0; border-radius: 6px; background: none; color: var(--muted); font: inherit; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+  .pa-seg button.on { background: var(--card); border: 1px solid var(--line); color: var(--text-strong); font-weight: 500; }
+  .pa-two { display: flex; gap: 8px; }
+  .pa-two a { flex: 1; height: 44px; border: 1px solid var(--line); border-radius: var(--r); display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; color: var(--text-strong); }
+  .pa-legal { font-size: 12px; color: var(--muted); line-height: 1.6; }
+  .pa-legal a { color: var(--muted); text-decoration: underline; }
+  .toolbar { gap: 8px; }
+  .pa-listbar { display: flex; gap: 8px; align-items: center; position: fixed; left: 0; right: 0; bottom: 0; z-index: 60; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: var(--bg); border-top: 1px solid var(--line); border-radius: 12px 12px 0 0; box-shadow: 0 -6px 18px color-mix(in srgb, var(--c-slate) 18%, transparent); }
+  .pa-listbar .pa-sq { width: 56px; height: 52px; flex: none; border: 1px solid var(--line); border-radius: var(--r); display: flex; align-items: center; justify-content: center; color: var(--text-strong); }
+  .pa-listbar .btn { flex: 1; height: 52px; }
+  body:has(.pa-listbar) .tabbar, body:has(.pa-listbar) .wa-btn { display: none; }
+  body:has(.pa-listbar) main { padding-bottom: 84px; }
+}
+.pa-sheet { position: fixed; inset: 0; z-index: 110; background: var(--bg); display: flex; flex-direction: column; padding-top: env(safe-area-inset-top); }
+.pa-sheet-top { display: flex; align-items: center; justify-content: space-between; height: 56px; padding: 0 8px; border-bottom: 1px solid var(--line); font-weight: 600; color: var(--text-strong); }
+.pa-sheet-body { flex: 1; overflow: auto; padding: 0 16px 16px; }
+.pa-sheet-bar { display: flex; align-items: center; gap: 8px; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--bg); }
+.pa-clear { height: 44px; padding: 0 12px; border: 0; background: none; color: var(--text-strong); text-decoration: underline; font: inherit; font-size: 14px; }
+.pa-show { flex: 1; height: 52px; }
+.pa-sheet .sf, .pa-sheet .filter-panel { position: static; max-height: none; overflow: visible; }

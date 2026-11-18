@@ -174,7 +174,7 @@ export default function PropertyDetail() {
         </div>
 
         <aside style={{ paddingTop: 32 }}>
-          <div className="card card-pad stack" style={{ gap: 20, boxShadow: "var(--shadow)" }}>
+          <div id="enquire" className="card card-pad stack" style={{ gap: 20, boxShadow: "var(--shadow)" }}>
             <div>
               <span className="price-big tnum">{fmtPrice(price)}</span>{isRent && <span className="muted"> / month</span>}
               {Number(price) > 0 && <div className="small muted tnum" style={{ marginTop: 4 }}>{fmtFull(price)}{p.price_negotiable ? " · negotiable" : ""}</div>}
@@ -213,6 +213,12 @@ export default function PropertyDetail() {
           <div className="grid-cards">{related.data.items.map((r) => <PropertyCard key={r.id} p={r} />)}</div>
         </section>
       )}
+
+      <div className="pa-listbar" role="group" aria-label="Contact">
+        <a className="pa-sq" href={`tel:${agent?.phone || "+9779801136817"}`} aria-label="Call"><Phone size={20} /></a>
+        <a className="pa-sq" href={`https://wa.me/${String(agent?.whatsapp || "9779801136817").replace(/\D/g, "")}?text=${encodeURIComponent(`Hello, I am asking about ${titleOf(p)} (#${p.property_code || p.id})`)}`} target="_blank" rel="noreferrer" aria-label="WhatsApp"><MessageCircle size={20} /></a>
+        <button type="button" className="btn btn-primary" onClick={() => { setSide("contact"); document.getElementById("enquire")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>{isSold(p) ? "Ask about similar" : "Enquire"}</button>
+      </div>
 
       {box !== null && <Lightbox images={imgs} index={box} onClose={() => setBox(null)} />}
       {ai && <AskAi open={ai} onClose={() => setAi(false)} start={p} />}

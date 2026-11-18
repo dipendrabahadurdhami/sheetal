@@ -11,6 +11,8 @@ import { api } from "../api/endpoints";
 import { toList } from "../api/client";
 import { useAsync } from "../hooks/useAsync";
 import { HeroSearch } from "../components/HeroSearch";
+import { PhoneHomeTop } from "../components/PhoneApp";
+import { useMedia } from "../hooks/useAsync";
 import { PropertyCard, CardSkeleton, PropertyGrid } from "../components/PropertyCard";
 import { SectionHead } from "../components/ui";
 import { fmtDate, imgUrl } from "../utils/format";
@@ -85,9 +87,11 @@ export default function Home() {
   const agencies = useAsync(() => api.agents().then(toList), []);
   const blogs = useAsync(() => api.blogs(1, 4).then(toList), []);
 
+  const phone = useMedia("(max-width: 600px)");
+
   return (
     <>
-      <Hero />
+      {phone ? <PhoneHomeTop /> : <Hero />}
 
 
       <section className="section container">

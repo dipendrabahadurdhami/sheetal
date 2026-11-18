@@ -8,6 +8,7 @@ import { Newspaper, Calculator, TrendingUp, ClipboardList, Images, Info, Buildin
 import { useApp } from "../context/AppContext";
 import { Logo, Avatar } from "./ui";
 import { HeaderSearch } from "./HeaderSearch";
+import { PhoneMenu } from "./PhoneApp";
 import { agentName } from "../utils/format";
 import { THEMES } from "@sheetal/shared/core/theme";
 
@@ -96,14 +97,7 @@ export function Header() {
           <button className="btn btn-ghost btn-icon" style={{ display: "none" }} data-burger onClick={() => setDrawer(true)} aria-label="Menu"><Menu size={20} /></button>
         </div>
       </div>
-      {drawer && (
-        <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && setDrawer(false)}>
-          <div className="modal">
-            <button className="btn btn-ghost btn-icon modal-x" onClick={() => setDrawer(false)}><X size={18} /></button>
-            <div className="stack" style={{ gap: 4, marginTop: 24 }}>{[...NAV, ...MORE].map(([to, l]) => <Link key={to} to={to} className="btn btn-ghost" style={{ justifyContent: "flex-start" }}>{l}</Link>)}</div>
-          </div>
-        </div>
-      )}
+      {drawer && <PhoneMenu onClose={() => setDrawer(false)} />}
     </header>
   );
 }

@@ -73,7 +73,14 @@ export default function Listings({ purpose }) {
     <>
       <div className="tools-hero listings-hero"><PageHead crumbs={[{ label: meta.kicker }]} kicker={meta.kicker} title={meta.title}>{meta.text}</PageHead></div>
       <div className="container listing-layout">
-        {(wide || showFilters) && filters}
+        {wide && filters}
+        {!wide && showFilters && (
+          <div className="pa-sheet" role="dialog" aria-label="All filters">
+            <div className="pa-sheet-top"><button type="button" className="pa-ib" aria-label="Close filters" onClick={() => setShowFilters(false)}><X size={22} /></button><b>All filters</b><span style={{ width: 44 }} /></div>
+            <div className="pa-sheet-body">{filters}</div>
+            <div className="pa-sheet-bar"><button type="button" className="pa-clear" onClick={clear}>Clear all</button><button type="button" className="btn btn-primary pa-show" onClick={() => setShowFilters(false)}>{loading ? "Show results" : `Show ${(data?.total ?? 0).toLocaleString("en-IN")} results`}</button></div>
+          </div>
+        )}
         <section>
           <div className="toolbar">
             <SearchTabs />
