@@ -3095,3 +3095,31 @@ html.pa-lock, html.pa-lock body { overflow: hidden !important; }
   .grid-4 .loc-tile { height: 130px; aspect-ratio: auto; }
   .scroller .pcard-media { aspect-ratio: 4 / 3; }
 }
+
+/* Phone map: clean. Controls in the corners, the legend on demand, one tidy sheet at the bottom */
+.pa-legend-btn { display: none; }
+@media (max-width: 600px) {
+  .map-canvas .leaflet-control-zoom { display: none; }
+  /* Map / Satellite: small switch at the top right */
+  .map-canvas .leaflet-bottom.leaflet-right { bottom: auto; top: 12px; right: 12px; }
+  .map-views { display: flex; background: var(--bg); border-radius: var(--r); padding: 3px; gap: 2px; box-shadow: 0 2px 10px color-mix(in srgb, var(--c-slate) 25%, transparent); border: 0 !important; }
+  .map-views button { height: 36px; padding: 0 12px; border: 0; border-radius: 6px; background: none; color: var(--muted); font: inherit; font-size: 13px; }
+  .map-views button.on { background: var(--btn-bg); color: var(--btn-ink); font-weight: 500; }
+  /* legend: hidden until you tap the info button */
+  .pa-legend-btn { display: flex; align-items: center; justify-content: center; position: absolute; z-index: 500; left: 12px; top: 12px; width: 44px; height: 44px; border: 0; border-radius: var(--r); background: var(--bg); color: var(--text-strong); box-shadow: 0 2px 10px color-mix(in srgb, var(--c-slate) 25%, transparent); }
+  .map-legend { display: none !important; }
+  .map-legend.pa-open { display: grid !important; grid-template-columns: 1fr 1fr; gap: 8px 14px; left: 12px; top: 64px; bottom: auto; max-width: calc(100% - 24px); padding: 12px 14px; border: 0; border-radius: var(--r); box-shadow: 0 6px 20px color-mix(in srgb, var(--c-slate) 28%, transparent); font-size: 13px; }
+  .map-legend.pa-open .map-key-sep { display: none; }
+  .map-legend.pa-open > .muted { grid-column: 1 / -1; font-size: 12px; }
+  .map-canvas .leaflet-control-attribution { font-size: 10px; max-width: 70vw; opacity: .85; }
+  .map-deep-note { top: 64px; bottom: auto; }
+  /* the sheet: search, one line of chips, the count */
+  .map-list { padding: 0 16px 16px; border: 0; }
+  .map-list.pa-s0 { height: 188px; }
+  .map-list .input { height: 46px; font-size: 16px; }
+  .map-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 6px; margin: 0 -16px; padding: 0 16px; }
+  .map-chips::-webkit-scrollbar { display: none; }
+  .map-chips .chip { flex: none; height: 38px; }
+  .map-list .stack > .small { font-size: 13px; }
+  .map-item { grid-template-columns: 92px 1fr; border: 0; background: var(--surface); }
+}

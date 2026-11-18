@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams , useNavigate } from "react-router-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Search, MapPin, Map as MapIcon } from "lucide-react";
+import { Search, MapPin, Map as MapIcon, Info } from "lucide-react";
 import { api } from "../api/endpoints";
 import { toList, toItem } from "../api/client";
 import { useAsync } from "../hooks/useAsync";
@@ -305,6 +305,7 @@ function MapSearchInner() {
   }, [all, tick, geoTick]);  
 
   const [sel, setSel] = useState(null);
+  const [legend, setLegend] = useState(false);
   const [sheet, setSheet] = useState(0); // phone: the list sheet height (peek, half, full)
   const [view, setView] = useState({ z: 6.5, b: null });
   // load coordinates only for what is on screen (like Google Maps)
@@ -788,7 +789,8 @@ function MapSearchInner() {
         {!kind && <Pagination page={page} last={data?.last} onChange={(n) => { const q = new URLSearchParams(params); q.set("page", n); setParams(q); }} />}
       </div>
       <div className="map-canvas"><div ref={mapEl} className="map-canvas-el" style={{ position: "absolute", inset: 0 }} />
-        <div className="map-legend map-key">
+        <button type="button" className="pa-legend-btn" aria-label="Show what the pins mean" aria-expanded={legend} onClick={() => setLegend((v) => !v)}><Info size={20} /></button>
+        <div className={`map-legend map-key${legend ? " pa-open" : ""}`}>
           {kind ? Object.entries(KINDS).map(([k, x]) => <span key={k} className={kind === k ? "" : "muted"}><i className={`cat-dot ${k}`} />{x.label}</span>) : <>
           {Object.values(CATS).map((c) => <span key={c.label}><i style={{ background: c.color }} />{c.label}</span>)}
           <span className="map-key-sep" />
