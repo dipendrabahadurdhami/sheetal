@@ -153,7 +153,7 @@ export function Footer() {
             <a href="tel:+9779801136817"><Phone size={14} />+977 980-1136817</a>
             <a href={`https://wa.me/${WA}`} target="_blank" rel="noreferrer"><MessageCircle size={14} />WhatsApp</a>
             <a href="mailto:info@sheetalproperty.com"><Mail size={14} />info@sheetalproperty.com</a>
-            <a href="https://maps.google.com/?q=Kathmandu" target="_blank" rel="noreferrer"><MapPin size={14} />Kathmandu, Nepal</a>
+            <a href="https://www.google.com/maps/place/Sheetal+Real+Estate/@27.7441799,85.3412356,17z" target="_blank" rel="noreferrer"><MapPin size={14} />Maharajgunj, Kathmandu</a>
             <a href="https://www.facebook.com/shetalestate" target="_blank" rel="noreferrer"><Facebook size={14} />Facebook</a>
             <a href="https://www.instagram.com/shetal_realestate/" target="_blank" rel="noreferrer"><Instagram size={14} />Instagram</a>
           </div>
