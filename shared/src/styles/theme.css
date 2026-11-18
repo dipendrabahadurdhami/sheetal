@@ -3246,3 +3246,11 @@ html.pa-lock, html.pa-lock body { overflow: hidden !important; }
   .map-item .tiny.row { display: block !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .map-item .tiny.row svg { display: inline; vertical-align: -2px; margin-right: 4px; }
 }
+
+/* Phone list rows: the photo fills the left edge of the card (outer corners only follow the card, no separate rounded photo) */
+@media (max-width: 600px) {
+  .map-item { padding: 0 !important; gap: 0 !important; overflow: hidden; }
+  .map-item img { border-radius: 0 !important; margin: 0 !important; display: block; }
+  .grid-cards > .pcard .pcard-media, .stack > .pcard.list .pcard-media { border-radius: 0 !important; }
+  .grid-cards > .pcard .pcard-media img, .stack > .pcard.list .pcard-media img { border-radius: 0 !important; }
+}
