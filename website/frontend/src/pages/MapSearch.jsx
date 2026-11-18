@@ -371,10 +371,12 @@ function MapSearchInner() {
       options: { position: "topright" },
       onAdd() {
         const box = L.DomUtil.create("div", "map-views");
-        box.innerHTML = '<button type="button" data-v="map" class="on">Map</button><button type="button" data-v="sat">Satellite</button>';
+        box.innerHTML = '<button type="button" data-v="map" class="on">Map</button><button type="button" data-v="sat">Satellite</button><button type="button" class="map-layers" aria-label="Switch between map and satellite"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 2 10 5-10 5L2 7zM2 12l10 5 10-5M2 17l10 5 10-5"/></svg></button>';
         L.DomEvent.disableClickPropagation(box);
         box.addEventListener("click", (e) => {
-          const v = e.target?.dataset?.v; if (!v) return;
+          let v = e.target?.dataset?.v;
+          if (!v && e.target?.closest?.(".map-layers")) v = box.querySelector('[data-v="sat"]').classList.contains("on") ? "map" : "sat";
+          if (!v) return;
           box.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.v === v));
           if (v === "sat") { if (tiles) map.current.removeLayer(tiles); sat.addTo(map.current); }
           else { map.current.removeLayer(sat); if (tiles) tiles.addTo(map.current); }

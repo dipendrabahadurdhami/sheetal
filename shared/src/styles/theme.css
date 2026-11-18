@@ -3190,3 +3190,19 @@ html.pa-lock, html.pa-lock body { overflow: hidden !important; }
   .pa-sbar input { border: 0 !important; outline: 0 !important; background: var(--surface); box-shadow: none; }
   .pa-sbar input:focus { box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--accent) 55%, transparent); }
 }
+
+/* Map / Satellite as one layers button on phones; the sheet's half and full heights balanced */
+.map-layers { display: none; }
+@media (max-width: 600px) {
+  .map-views { padding: 0; background: var(--bg); border-radius: 50%; }
+  .map-views button[data-v] { display: none; }
+  .map-views .map-layers { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 0; border-radius: 50%; background: none; color: var(--text-strong); }
+  .map-views:has([data-v="sat"].on) .map-layers { color: var(--accent); }
+  .map-list.pa-s1 { height: 56%; }
+  .map-list.pa-s2 { height: 82%; }
+}
+
+.pa-cancel { height: 44px; padding: 0 12px; border: 0; background: none; color: var(--accent-ink); font: inherit; font-size: 15px; font-weight: 500; flex: none; }
+.pa-sbar { padding: 8px 8px 8px 16px; gap: 0; }
+.pa-sbar input { border: 0 !important; outline: 0 !important; box-shadow: none; background: var(--surface); height: 48px; }
+.pa-sbar input:focus, .pa-sbar input:focus-visible { outline: 0 !important; box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--accent) 50%, transparent); }

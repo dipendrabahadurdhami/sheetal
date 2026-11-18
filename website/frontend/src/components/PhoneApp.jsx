@@ -113,9 +113,9 @@ export function PhoneSearch({ onClose }) {
   return (
     <div className="pa-full" role="dialog" aria-label="Search">
       <form className="pa-sbar" onSubmit={(e) => { e.preventDefault(); if (s) goText(s); }}>
-        <button type="button" className="pa-ib" aria-label="Back" onClick={onClose}><ArrowLeft size={22} /></button>
         <input ref={box} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search homes, stays, land, projects" enterKeyHint="search" aria-label="Search" />
         {q && <button type="button" className="pa-ib" aria-label="Clear" onClick={() => { setQ(""); box.current?.focus(); }}><X size={20} /></button>}
+        <button type="button" className="pa-cancel" onClick={onClose}>Cancel</button>
       </form>
       <div className="pa-sbody">
         {s.length < 2 ? <>
