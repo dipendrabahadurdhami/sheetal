@@ -27,6 +27,8 @@ code { font-size: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monosp
 .pf-side { padding-top: 0; }
 .pf-side-top { position: sticky; top: 0; z-index: 2; display: flex; flex-direction: column; gap: 16px; margin: 0 -14px; padding: 18px 14px 12px; background: var(--card); border-bottom: 1px solid var(--line); }
 .pf-brand { padding: 0 8px; } .pf-brand img { height: 30px; }
+/* The website bottom-aligns its logo (theme.css); in the panels the logo and its words sit in the middle of the top bar. */
+.brand.pf-brand { align-items: center !important; }
 .pf-nav { display: flex; flex-direction: column; gap: 2px; }
 .pf-nav-group { display: block; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; color: var(--muted); padding: 14px 10px 6px; }
 .pf-nav a { display: flex; align-items: center; gap: 12px; min-height: 40px; padding: 0 10px; border-radius: var(--r); color: var(--text) !important; font-size: 14px; }
