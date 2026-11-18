@@ -3149,3 +3149,8 @@ html.pa-lock, html.pa-lock body { overflow: hidden !important; }
   .tool-tile { padding: 0 10px !important; gap: 8px; font-size: 13px; }
   .grid-4 .loc-tile { height: 120px; }
 }
+
+/* Looping strips scroll freely (no snapping) so the jump back by one copy is invisible */
+@media (max-width: 600px) {
+  .pa-loop { position: relative; scroll-snap-type: none !important; }
+}

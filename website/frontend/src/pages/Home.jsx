@@ -11,7 +11,7 @@ import { api } from "../api/endpoints";
 import { toList } from "../api/client";
 import { useAsync } from "../hooks/useAsync";
 import { HeroSearch } from "../components/HeroSearch";
-import { PhoneHomeTop } from "../components/PhoneApp";
+import { PhoneHomeTop, LoopStrip } from "../components/PhoneApp";
 import { useMedia } from "../hooks/useAsync";
 import { PropertyCard, CardSkeleton, PropertyGrid } from "../components/PropertyCard";
 import { SectionHead } from "../components/ui";
@@ -73,10 +73,16 @@ function Hero() {
   );
 }
 
+// On a phone a strip loops: swipe past the last card and the first comes round again, and the other way too.
+const Strip = ({ className, children }) => {
+  const phone = useMedia("(max-width: 600px)");
+  return phone ? <LoopStrip className={className}>{children}</LoopStrip> : <div className={className}>{children}</div>;
+};
+
 const Row = ({ loading, items }) => (
-  <div className="scroller">
+  <Strip className="scroller">
     {loading ? Array.from({ length: 4 }, (_, i) => <CardSkeleton key={i} />) : items.map((p) => <PropertyCard key={p.id} p={p} />)}
-  </div>
+  </Strip>
 );
 
 export default function Home() {
@@ -104,14 +110,14 @@ export default function Home() {
 
       <section className="container">
         <SectionHead kicker="Explore by city" title="Browse by city" action={<Link to="/search" className="link">View all</Link>} />
-        <div className="grid-4">
+        <Strip className="grid-4">
           {PLACES.map(([c, img]) => (
             <Link key={c} to={`/search?keyword=${c}`} className="loc-tile">
               <img src={img} alt="" loading="lazy" />
               <div><h3>{c}</h3></div>
             </Link>
           ))}
-        </div>
+        </Strip>
       </section>
 
       <section className="section container">
@@ -127,29 +133,29 @@ export default function Home() {
 
       <section className="container">
         <SectionHead kicker="Our partners" title="Agencies" action={<Link to="/partners?type=agency" className="link">View all</Link>} />
-        <div className="agents-grid">
+        <Strip className="agents-grid">
           {(agencies.data?.items || []).slice(0, 4).map((a) => <AgencyCard key={a.id} a={a} />)}
           {agencies.loading && Array.from({ length: 4 }, (_, i) => <div key={i} className="sk" style={{ height: 200, borderRadius: "var(--r-xl)" }} />)}
           {!agencies.loading && (agencies.data?.items || []).length < 4 && <JoinPanel span={4 - (agencies.data?.items || []).length} />}
-        </div>
+        </Strip>
       </section>
 
       <section className="section container">
         <SectionHead kicker="Plan with numbers" title="Calculators" action={<Link to="/tools/emi" className="link">View all</Link>} />
-        <div className="tool-tiles">
+        <Strip className="tool-tiles">
           {[["emi", Calculator, "Home loan EMI"], ["units", Ruler, "Land units"], ["land-price", Landmark, "Land price"], ["property-tax", Receipt, "Property tax"], ["roi", TrendingUp, "Rental yield"], ["rent-vs-buy", KeyRound, "Rent vs buy"], ["afford", Wallet, "Affordability"]].map(([k, I, t]) => (
             <Link key={k} to={`/tools/${k}`} className="tool-tile">
               <span className="tool-tile-ico"><I size={20} strokeWidth={1.7} /></span>
               <span>{t}</span>
             </Link>
           ))}
-        </div>
+        </Strip>
       </section>
 
       <section className="container">
         <SectionHead kicker="Journal" title="Blog" action={<Link to="/blog" className="link">View all</Link>} />
         <style>{`@media (min-width: 1100px) { .home-blog-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 20px !important; } .home-blog-grid .post-card h3 { font-size: 16px; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; } }`}</style>
-        <div className="grid-3 home-blog-grid">
+        <Strip className="grid-3 home-blog-grid">
           {(blogs.data?.items || []).slice(0, phone ? 3 : 8).map((b) => (
             <Link key={b.id} to={`/blog/${b.slug}`} className="post-card">
               <div className="media"><img src={imgUrl(b.thumbnail || b.featured_image || b.image)} alt="" loading="lazy" /></div>
@@ -157,7 +163,7 @@ export default function Home() {
               <h3>{b.title}</h3>
             </Link>
           ))}
-        </div>
+        </Strip>
       </section>
 
     </>

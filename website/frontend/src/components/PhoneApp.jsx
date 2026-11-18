@@ -2,7 +2,7 @@
 // and the side menu with groups that open one at a time. They only show on phones (see "Phone app" in theme.css).
 // Where it fits: Home.jsx shows PhoneHomeTop instead of the big hero on a phone; Layout.jsx shows PhoneMenu as the menu.
 
-import { useEffect, useRef, useState } from "react";
+import { Children, cloneElement, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Menu, Search, SlidersHorizontal, X, ArrowLeft, Clock, MapPin, Navigation, Home, KeyRound, BedDouble, Building2, TrendingUp, Map as MapIcon, Plus, ClipboardList, ChevronDown, ChevronRight, Compass, Wallet, Scale, Ruler, Calculator, Newspaper, Briefcase, Phone, MessageCircle, User, Sun, Moon, Droplet, HandCoins, Users, Images, Info, BadgeCheck, ExternalLink, Tag, Landmark, Receipt, HelpCircle, Layers } from "lucide-react";
 import { api } from "../api/endpoints";
@@ -11,6 +11,37 @@ import { useAsync } from "../hooks/useAsync";
 import { useApp } from "../context/AppContext";
 import { fmtPrice, linkOf, titleOf, agencyName } from "../utils/format";
 import { THEMES } from "@sheetal/shared/core/theme";
+
+/** A sideways strip that goes round like a circle: the cards are repeated three times and the scroll is moved back
+ *  by one copy whenever you reach either end, so you never hit a wall. With fewer than three cards it is a plain strip. */
+export function LoopStrip({ className, children }) {
+  const ref = useRef(null);
+  const kids = Children.toArray(children);
+  const n = kids.length;
+  const loop = n >= 3;
+  const items = loop ? [0, 1, 2].flatMap((c) => kids.map((k) => cloneElement(k, { key: `${k.key}__${c}` }))) : kids;
+  const geo = () => {
+    const el = ref.current;
+    if (!el || !el.children[n]) return null;
+    const base2 = el.children[n].offsetLeft - parseFloat(getComputedStyle(el).paddingLeft || 0);
+    const w = el.children[n].offsetLeft - el.children[0].offsetLeft;
+    return { base2, w };
+  };
+  useLayoutEffect(() => {
+    if (!loop) return;
+    const g = geo();
+    if (g) ref.current.scrollLeft = g.base2;
+  }, [n, loop]);
+  const onScroll = () => {
+    if (!loop) return;
+    const el = ref.current, g = geo();
+    if (!g) return;
+    const base1 = g.base2 - g.w, base3 = g.base2 + g.w;
+    if (el.scrollLeft <= base1 + 1) el.scrollLeft += g.w;
+    else if (el.scrollLeft >= base3 - 1) el.scrollLeft -= g.w;
+  };
+  return <div ref={ref} className={`${className}${loop ? " pa-loop" : ""}`} onScroll={onScroll}>{items}</div>;
+}
 
 /** The logo for the phone bars: the mark, and SHEETAL over PROPERTY set to exactly the same width. */
 export function PhoneLogo() {
