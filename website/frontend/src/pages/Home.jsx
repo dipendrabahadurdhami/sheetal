@@ -103,7 +103,7 @@ export default function Home() {
       <HomePlatformRows SectionHead={SectionHead} Link={Link} />
 
       <section className="container">
-        <SectionHead kicker="Explore by city" title="Browse by city" />
+        <SectionHead kicker="Explore by city" title="Browse by city" action={<Link to="/search" className="link">View all</Link>} />
         <div className="grid-4">
           {PLACES.map(([c, img]) => (
             <Link key={c} to={`/search?keyword=${c}`} className="loc-tile">
@@ -135,7 +135,7 @@ export default function Home() {
       </section>
 
       <section className="section container">
-        <SectionHead kicker="Plan with numbers" title="Calculators" />
+        <SectionHead kicker="Plan with numbers" title="Calculators" action={<Link to="/tools/emi" className="link">View all</Link>} />
         <div className="tool-tiles">
           {[["emi", Calculator, "Home loan EMI"], ["units", Ruler, "Land units"], ["land-price", Landmark, "Land price"], ["property-tax", Receipt, "Property tax"], ["roi", TrendingUp, "Rental yield"], ["rent-vs-buy", KeyRound, "Rent vs buy"], ["afford", Wallet, "Affordability"]].map(([k, I, t]) => (
             <Link key={k} to={`/tools/${k}`} className="tool-tile">
@@ -147,7 +147,7 @@ export default function Home() {
       </section>
 
       <section className="container">
-        <SectionHead kicker="Journal" title="Blog" action={<Link to="/blog" className="link">All articles</Link>} />
+        <SectionHead kicker="Journal" title="Blog" action={<Link to="/blog" className="link">View all</Link>} />
         <style>{`@media (min-width: 1100px) { .home-blog-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 20px !important; } .home-blog-grid .post-card h3 { font-size: 16px; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; } }`}</style>
         <div className="grid-3 home-blog-grid">
           {(blogs.data?.items || []).slice(0, phone ? 3 : 8).map((b) => (
