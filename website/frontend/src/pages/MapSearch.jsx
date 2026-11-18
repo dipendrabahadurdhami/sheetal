@@ -307,6 +307,7 @@ function MapSearchInner() {
   const [sel, setSel] = useState(null);
   const [legend, setLegend] = useState(false);
   const touchY = useRef(0);
+  const startTop = useRef(true);
   const [sheet, setSheet] = useState(0); // phone: the list sheet height (peek, half, full)
   const [view, setView] = useState({ z: 6.5, b: null });
   // load coordinates only for what is on screen (like Google Maps)
@@ -338,6 +339,7 @@ function MapSearchInner() {
   }, [view.z]);
   useEffect(() => {
     map.current = L.map(mapEl.current, { preferCanvas: true, renderer: L.canvas({ padding: 0.5 }), zoomControl: true, minZoom: 6, maxZoom: 19, zoomSnap: 0.25, zoomDelta: 0.5, wheelPxPerZoomLevel: 90, wheelDebounceTime: 40, zoomAnimationThreshold: 6, zoomAnimation: true, fadeAnimation: true, markerZoomAnimation: true, inertia: true, maxBounds: [[25.8, 79.6], [30.8, 88.6]], maxBoundsViscosity: 0.8 }).setView([28.2, 84.1], 6.5);
+    map.current.attributionControl.setPrefix(false);
     // dynamic zoom speed: fast across Nepal / provinces, slower and finer near toles and streets
     const SPEED = [[8, 45, 1], [10, 70, 0.75], [12, 95, 0.5], [14, 125, 0.5], [99, 160, 0.25]]; // [below zoom, wheel px per level, +/- step]
     const tune = () => {
@@ -361,12 +363,12 @@ function MapSearchInner() {
     loadProvider();
     // Satellite view with place + road labels on top (Esri World Imagery, free with attribution)
     const sat = L.layerGroup([
-      L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19, maxNativeZoom: 18, keepBuffer: 2, updateWhenZooming: false, updateWhenIdle: true, attribution: "Imagery © Esri, Maxar, Earthstar Geographics" }),
-      L.tileLayer("https://{s}.basemap.cartocdn.com/rastertiles/dark_only_labels/{z}/{x}/{y}{r}.png", { subdomains: "abcd", maxZoom: 19, keepBuffer: 2, updateWhenZooming: false, updateWhenIdle: true, attribution: "Labels © OpenStreetMap © CARTO" }),
+      L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19, maxNativeZoom: 18, keepBuffer: 2, updateWhenZooming: false, updateWhenIdle: true, attribution: "© Esri" }),
+      L.tileLayer("https://{s}.basemap.cartocdn.com/rastertiles/dark_only_labels/{z}/{x}/{y}{r}.png", { subdomains: "abcd", maxZoom: 19, keepBuffer: 2, updateWhenZooming: false, updateWhenIdle: true, attribution: "© OpenStreetMap © CARTO" }),
       L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19, maxNativeZoom: 18, keepBuffer: 2, updateWhenZooming: false, updateWhenIdle: true }),
     ]);
     const ViewSwitch = L.Control.extend({
-      options: { position: "bottomright" },
+      options: { position: "topright" },
       onAdd() {
         const box = L.DomUtil.create("div", "map-views");
         box.innerHTML = '<button type="button" data-v="map" class="on">Map</button><button type="button" data-v="sat">Satellite</button>';
@@ -749,12 +751,13 @@ function MapSearchInner() {
   return (
     <div className="map-layout">
       <div className={`map-list pa-s${sheet}`}
-        onTouchStart={(e) => { touchY.current = e.touches[0].clientY; }}
+        onTouchStart={(e) => { touchY.current = e.touches[0].clientY; startTop.current = e.currentTarget.scrollTop <= 0; }}
         onTouchMove={(e) => {
-          const d = touchY.current - e.touches[0].clientY, top = e.currentTarget.scrollTop <= 0;
+          const d = touchY.current - e.touches[0].clientY;
           if (d > 36 && sheet < 2) { setSheet(sheet + 1); touchY.current = e.touches[0].clientY; }
-          else if (d < -36 && sheet > 0 && top) { setSheet(sheet - 1); touchY.current = e.touches[0].clientY; }
-        }}>
+          else if (d < -80 && sheet > 0 && startTop.current && e.currentTarget.scrollTop <= 0) { setSheet(sheet - 1); touchY.current = e.touches[0].clientY; }
+        }}
+        onScroll={(e) => { if (sheet === 1 && e.currentTarget.scrollTop > 24) setSheet(2); }}>
         <button type="button" className="pa-grab" aria-label="Show more or fewer results" onClick={() => setSheet((x) => (x + 1) % 3)}><i /></button>
         <div className="stack" style={{ gap: 10 }}>
           <div style={{ position: "relative" }}><Search size={16} className="muted" style={{ position: "absolute", left: 14, top: 16 }} /><input className="input" style={{ paddingLeft: 40 }} placeholder="Locality or city" defaultValue={keyword} key={keyword} onKeyDown={(e) => e.key === "Enter" && set("keyword", e.currentTarget.value.trim())} /></div>

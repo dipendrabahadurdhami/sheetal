@@ -3176,3 +3176,17 @@ html.pa-lock, html.pa-lock body { overflow: hidden !important; }
   .pa-count-btn b { font-weight: 500; color: var(--accent-ink); font-size: 14px; }
   .map-list { transition: height .3s var(--ease); }
 }
+
+/* Phone map and search, calmer: small Map/Satellite switch, credit line above the sheet, clean search box, smoother sheet */
+@media (max-width: 600px) {
+  .map-canvas .leaflet-top.leaflet-right { top: 12px; right: 12px; }
+  .map-canvas .leaflet-bottom.leaflet-right { top: auto !important; bottom: 0 !important; right: 0 !important; }
+  .map-layout:has(.map-list.pa-s0) .map-canvas .leaflet-bottom { bottom: 190px !important; }
+  .map-views { padding: 2px; border-radius: 8px; }
+  .map-views button { height: 28px; padding: 0 9px; font-size: 12px; }
+  .map-canvas .leaflet-control-attribution { font-size: 10px; line-height: 1.4; padding: 0 5px; background: color-mix(in srgb, var(--bg) 70%, transparent); color: var(--muted); border-radius: 4px 0 0 0; margin: 0; max-width: 60vw; }
+  .map-canvas .leaflet-control-attribution a { color: var(--muted); }
+  .map-list { transition: height .38s cubic-bezier(.2, .8, .2, 1); will-change: height; }
+  .pa-sbar input { border: 0 !important; outline: 0 !important; background: var(--surface); box-shadow: none; }
+  .pa-sbar input:focus { box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--accent) 55%, transparent); }
+}
