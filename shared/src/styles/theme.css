@@ -3070,3 +3070,28 @@ html.pa-lock, html.pa-lock body { overflow: hidden !important; }
   .listing-layout .toolbar .search-tabs-row .hx-tabs a, .listing-layout .toolbar .hx-tabs a, .search-tabs-row .hx-tabs a, .hx-tabs a, .hx-tabs button { padding: 0 2px !important; font-size: 13px !important; flex: 1 1 auto; justify-content: center; text-align: center; }
   .hx-tabs { gap: 0 !important; padding: 3px !important; }
 }
+
+/* Phone Home carousels: one card in the centre, a small slice of its neighbours on both sides, snap on swipe */
+@media (max-width: 600px) {
+  .scroller, .grid-4, .agents-grid, .grid-3.home-blog-grid, .tool-tiles, .pb-home-row {
+    --cw: 240px;
+    display: grid !important; grid-template-columns: none !important; grid-auto-flow: column !important; grid-auto-columns: var(--cw) !important;
+    gap: 10px !important; overflow-x: auto; overflow-y: hidden;
+    margin-inline: -16px !important; padding-inline: calc((100vw - var(--cw)) / 2) !important; scroll-padding-inline: calc((100vw - var(--cw)) / 2) !important;
+    scroll-snap-type: x mandatory; scrollbar-width: none; flex-wrap: nowrap;
+  }
+  .scroller::-webkit-scrollbar, .grid-4::-webkit-scrollbar, .agents-grid::-webkit-scrollbar, .grid-3.home-blog-grid::-webkit-scrollbar, .tool-tiles::-webkit-scrollbar, .pb-home-row::-webkit-scrollbar { display: none; }
+  .scroller > *, .grid-4 > *, .agents-grid > *, .grid-3.home-blog-grid > *, .tool-tiles > *, .pb-home-row > * { scroll-snap-align: center !important; width: auto !important; min-width: 0; }
+  .tool-tiles { --cw: 200px; }
+  /* calculators: small, app-sized tiles */
+  .tool-tile { flex-direction: row !important; gap: 10px; min-height: 56px; padding: 0 14px !important; align-items: center; justify-content: flex-start; font-size: 14px; }
+  .tool-tile-ico { width: 28px !important; height: 28px !important; background: none !important; border: 0 !important; flex: none; display: inline-flex; align-items: center; justify-content: center; color: var(--pa-icon); }
+  .tool-tile-ico svg { width: 20px; height: 20px; }
+  /* quick tiles: a bit smaller */
+  .pa-q span { width: 52px; height: 52px; }
+  .pa-q span svg { width: 24px; height: 24px; }
+  .pa-q { min-height: 82px; }
+  /* city tiles: same height as the others */
+  .grid-4 .loc-tile { height: 130px; aspect-ratio: auto; }
+  .scroller .pcard-media { aspect-ratio: 4 / 3; }
+}
