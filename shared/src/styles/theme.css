@@ -3123,3 +3123,29 @@ html.pa-lock, html.pa-lock body { overflow: hidden !important; }
   .map-list .stack > .small { font-size: 13px; }
   .map-item { grid-template-columns: 92px 1fr; border: 0; background: var(--surface); }
 }
+
+/* Phone Home strips, final: two cards fit side by side at the start (a slice of the third shows), swipe both ways */
+@media (max-width: 600px) {
+  .scroller, .grid-4, .agents-grid, .grid-3.home-blog-grid, .tool-tiles, .pb-home-row {
+    --cw: calc((100vw - 50px) / 2);
+    padding-inline: 16px !important; scroll-padding-inline: 16px !important;
+  }
+  .agents-grid { --cw: 252px; }
+  .scroller > *, .grid-4 > *, .agents-grid > *, .grid-3.home-blog-grid > *, .tool-tiles > *, .pb-home-row > * { scroll-snap-align: start !important; }
+  .tool-tile { padding: 0 10px !important; font-size: 13px; gap: 8px; }
+}
+
+/* Phone Home strips, final: two cards fit side by side at the start, and you can swipe left or right from there */
+@media (max-width: 600px) {
+  .scroller, .grid-4, .agents-grid, .grid-3.home-blog-grid, .tool-tiles, .pb-home-row {
+    --cw: calc((100vw - 42px) / 2);
+    padding-inline: 16px !important; scroll-padding-inline: 16px !important;
+    scroll-snap-type: x proximity;
+  }
+  .tool-tiles { --cw: calc((100vw - 42px) / 2); }
+  .scroller > *, .grid-4 > *, .agents-grid > *, .grid-3.home-blog-grid > *, .tool-tiles > *, .pb-home-row > * { scroll-snap-align: start !important; }
+  .agents-grid .agent-card { grid-template-columns: 44px minmax(0, 1fr); padding: 10px !important; }
+  .agents-grid .agent-card .avatar { width: 44px !important; height: 44px !important; font-size: 15px; }
+  .tool-tile { padding: 0 10px !important; gap: 8px; font-size: 13px; }
+  .grid-4 .loc-tile { height: 120px; }
+}
