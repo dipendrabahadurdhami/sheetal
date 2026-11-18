@@ -25,6 +25,15 @@ export function PhoneLogo() {
   );
 }
 
+/** While a full-screen layer is open, the page behind it must not scroll (only the layer does). */
+function useLock() {
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.add("pa-lock");
+    return () => root.classList.remove("pa-lock");
+  }, []);
+}
+
 const PLACES = ["Kathmandu", "Lalitpur", "Bhaktapur", "Pokhara", "Chitwan", "Nagarkot", "Lumbini", "Bandipur"];
 const RECENT = "sheetal.recent.searches";
 const recent = () => { try { return JSON.parse(localStorage.getItem(RECENT)) || []; } catch { return []; } };
@@ -37,7 +46,8 @@ export function PhoneSearch({ onClose }) {
   const [items, setItems] = useState([]);
   const [rec, setRec] = useState(recent);
   const box = useRef(null);
-  useEffect(() => { box.current?.focus(); document.body.style.overflow = "hidden"; return () => { document.body.style.overflow = ""; }; }, []);
+  useLock();
+  useEffect(() => { box.current?.focus(); }, []);
   const s = q.trim();
   useEffect(() => {
     if (s.length < 2) { setItems([]); return undefined; }
@@ -81,6 +91,29 @@ const TYPES = [["All", "/search"], ["Buy", "/sale"], ["Rent", "/rent"], ["Stays"
 const QUICK = [[Home, "Buy", "/sale"], [KeyRound, "Rent", "/rent"], [BedDouble, "Stays", "/stays"], [Building2, "Projects", "/project"], [TrendingUp, "Invest", "/investment/explore"], [MapIcon, "Map", "/map"], [ClipboardList, "Requirement", "/requirement"], [Menu, "More", "#menu", true]];
 const adLink = { fontSize: 12, textDecoration: "underline", textUnderlineOffset: 3 };
 
+const SLIDES = [[KeyRound, "Pay rent online", "Find your lease and pay in minutes", "Pay rent", "/services/pay-rent"], [Landmark, "Home loan", "Compare banks and see your EMI", "Compare", "/services/home-loan"], [Scale, "Legal help", "Land papers, agreements, transfers", "Get help", "/services/legal-help"], [Building2, "Property management", "We look after your tenants", "Learn more", "/services/management"], [Ruler, "Property valuation", "Find out what your property is worth", "Request", "/services/valuation"]];
+
+/** With no paid banner, our own services slide by on their own: no arrows, no dots, one tap opens the service. */
+function ServiceSlides() {
+  const box = useRef(null);
+  useEffect(() => {
+    const el = box.current;
+    if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
+    let k = 0;
+    const t = setInterval(() => { k = (k + 1) % SLIDES.length; el.scrollTo({ left: k * el.clientWidth, behavior: "smooth" }); }, 4000);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <>
+      <div className="pa-slides" ref={box}>
+        {SLIDES.map(([I, t, d, b, to]) => (
+          <Link key={to} to={to} className="pa-slide"><span className="pa-slide-ico"><I size={30} strokeWidth={1.6} /></span><b>{t}</b><small>{d}</small><span className="pa-wb">{b}</span></Link>
+        ))}
+      </div>
+    </>
+  );
+}
+
 function Banner() {
   const banners = useAsync(() => api.banners().then((r) => r?.data || []).catch(() => []), []);
   const list = banners.data || [];
@@ -94,14 +127,7 @@ function Banner() {
   useEffect(() => { if (list.length) api.bannerSeen({ ids: list.map((b) => b.id) }).catch(() => {}); }, [list.length]);
   // The space is always the same height: while loading it is a skeleton, and with no paid banner it is our own.
   if (banners.loading) return <div className="pa-banner sk" aria-hidden="true" />;
-  if (!list.length) {
-    return (
-      <>
-        <div className="pa-banner pa-house"><div><small>SHEETAL PROPERTY</small><h2>Pay rent online</h2><p>Find your lease and pay in minutes.</p></div><Link to="/services/pay-rent" className="pa-wb">Pay rent</Link></div>
-        <div className="pa-adv"><a href="/business/promote/banner" style={adLink}>Advertise here</a></div>
-      </>
-    );
-  }
+  if (!list.length) return <ServiceSlides />;
   const cur = list[i % list.length];
   return (
     <>
@@ -160,7 +186,7 @@ export function SortSheet({ value, onChange, onClose }) {
 export function PhoneMenu({ onClose }) {
   const { user, setAuth, theme, setTheme } = useApp();
   const [open, setOpen] = useState("Explore");
-  useEffect(() => { document.body.style.overflow = "hidden"; return () => { document.body.style.overflow = ""; }; }, []);
+  useLock();
   const name = user ? (user.name || [user.first_name, user.last_name].filter(Boolean).join(" ") || user.email) : null;
   return (
     <div className="pa-menu-wrap" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
@@ -174,7 +200,7 @@ export function PhoneMenu({ onClose }) {
             <div key={g}>
               <button className={`pa-grp ${open === g ? "open" : ""}`} aria-expanded={open === g} onClick={() => setOpen(open === g ? "" : g)}><GI size={20} /><span>{g}</span>{open === g ? <ChevronDown size={16} /> : <ChevronRight size={16} />}</button>
               {open === g && (grid
-                ? <div className="pa-tgrid">{rows.map(([I, t, , to]) => <Link key={to} to={to} onClick={onClose}><I size={16} />{t}</Link>)}</div>
+                ? rows.map(([I, t, , to]) => <Link key={to} to={to} className="pa-mrow" onClick={onClose}><span className="pa-t">{t}</span></Link>)
                 : rows.map(([I, t, d, to, , ext]) => (ext
                   ? <a key={to} href={to} className="pa-mrow" onClick={onClose}><span className="pa-ico"><I size={16} /></span><span className="pa-t">{t}<small>{d}</small></span></a>
                   : <Link key={to} to={to} className="pa-mrow" onClick={onClose}><span className="pa-ico"><I size={16} /></span><span className="pa-t">{t}<small>{d}</small></span></Link>)))}

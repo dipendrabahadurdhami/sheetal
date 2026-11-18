@@ -51,6 +51,7 @@ function ScrollDir() {
     let last = window.scrollY;
     const root = document.documentElement;
     const on = () => {
+      if (root.classList.contains("pa-lock")) return;
       const y = window.scrollY, d = y - last;
       if (Math.abs(d) > 8) { root.dataset.scroll = d > 0 && y > 96 ? "down" : "up"; last = y; }
       if (y <= 16) root.dataset.scroll = "up";
