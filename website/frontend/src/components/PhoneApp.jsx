@@ -32,7 +32,21 @@ export function LoopStrip({ className, children }) {
     const g = geo();
     if (g) ref.current.scrollLeft = g.base2;
   }, [n, loop]);
+  const timer = useRef(null);
+  const touching = useRef(false);
+  // When you let go, the strip eases to the nearest card so two cards sit neatly side by side again.
+  const settle = () => {
+    const el = ref.current;
+    if (!el || touching.current) return;
+    const pad = parseFloat(getComputedStyle(el).paddingLeft || 0);
+    let best = null, d = Infinity;
+    for (const c of el.children) { const x = Math.abs(c.offsetLeft - pad - el.scrollLeft); if (x < d) { d = x; best = c; } }
+    if (best && d > 1) el.scrollTo({ left: best.offsetLeft - pad, behavior: "smooth" });
+  };
+  const later = (ms) => { clearTimeout(timer.current); timer.current = setTimeout(settle, ms); };
+  useEffect(() => () => clearTimeout(timer.current), []);
   const onScroll = () => {
+    later(160);
     if (!loop) return;
     const el = ref.current, g = geo();
     if (!g) return;
@@ -40,7 +54,12 @@ export function LoopStrip({ className, children }) {
     if (el.scrollLeft <= base1 + 1) el.scrollLeft += g.w;
     else if (el.scrollLeft >= base3 - 1) el.scrollLeft -= g.w;
   };
-  return <div ref={ref} className={`${className}${loop ? " pa-loop" : ""}`} onScroll={onScroll}>{items}</div>;
+  return (
+    <div ref={ref} className={`${className}${loop ? " pa-loop" : ""}`} onScroll={onScroll}
+      onTouchStart={() => { touching.current = true; clearTimeout(timer.current); }}
+      onTouchEnd={() => { touching.current = false; later(260); }}
+      onTouchCancel={() => { touching.current = false; later(260); }}>{items}</div>
+  );
 }
 
 /** The logo for the phone bars: the mark, and SHEETAL over PROPERTY set to exactly the same width. */

@@ -3154,3 +3154,16 @@ html.pa-lock, html.pa-lock body { overflow: hidden !important; }
 @media (max-width: 600px) {
   .pa-loop { position: relative; scroll-snap-type: none !important; }
 }
+
+/* Floating WhatsApp (its own green) and Call buttons */
+.wa-call { display: none; }
+.wa-btn.wa-whats { background: #25D366; color: #fff; }
+.wa-btn.wa-whats:hover { background: #1ebe5b; color: #fff; }
+@media (max-width: 760px) {
+  .wa-btn.wa-call { display: flex; bottom: calc(84px + 48px + 10px + env(safe-area-inset-bottom)); background: var(--c-crimson); color: #fff; }
+  html[data-scroll="down"] .wa-btn.wa-call { transform: translateY(calc(130px + env(safe-area-inset-bottom))); }
+  body:has(.pa-listbar) .wa-btn, body:has(.pl-bar) .wa-btn, body:has(.ck) .wa-btn { display: none; }
+}
+@media (max-width: 600px) {
+  .pa-loop, .scroller, .grid-4, .agents-grid, .home-blog-grid, .tool-tiles { overscroll-behavior-x: contain; touch-action: pan-x pan-y; }
+}
