@@ -31,6 +31,7 @@ export function Header() {
   const [drawer, setDrawer] = useState(false);
   const phone = useMedia("(max-width: 600px)");
   const [psearch, setPsearch] = useState(false);
+  useEffect(() => { const o = () => setDrawer(true); window.addEventListener("pa-open-menu", o); return () => window.removeEventListener("pa-open-menu", o); }, []);
   const ref = useRef(null);
   const [moreOpen, setMoreOpen] = useState(false);
   const moreT = useRef(null);

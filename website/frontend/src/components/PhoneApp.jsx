@@ -4,7 +4,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Search, SlidersHorizontal, X, ArrowLeft, Clock, MapPin, Navigation, Home, KeyRound, BedDouble, Building2, TrendingUp, Map as MapIcon, Plus, ClipboardList, ChevronDown, ChevronRight, Compass, Wallet, Scale, Ruler, Calculator, Newspaper, Briefcase, Phone, MessageCircle, User, Sun, Moon, Droplet, HandCoins, Users, Images, Info, BadgeCheck, ExternalLink, Tag, Landmark, Receipt, HelpCircle, Layers } from "lucide-react";
+import { Menu, Search, SlidersHorizontal, X, ArrowLeft, Clock, MapPin, Navigation, Home, KeyRound, BedDouble, Building2, TrendingUp, Map as MapIcon, Plus, ClipboardList, ChevronDown, ChevronRight, Compass, Wallet, Scale, Ruler, Calculator, Newspaper, Briefcase, Phone, MessageCircle, User, Sun, Moon, Droplet, HandCoins, Users, Images, Info, BadgeCheck, ExternalLink, Tag, Landmark, Receipt, HelpCircle, Layers } from "lucide-react";
 import { api } from "../api/endpoints";
 import { toList } from "../api/client";
 import { useAsync } from "../hooks/useAsync";
@@ -65,7 +65,7 @@ export function PhoneSearch({ onClose }) {
 }
 
 const TYPES = [["All", "/search"], ["Buy", "/sale"], ["Rent", "/rent"], ["Stays", "/stays"], ["Projects", "/project"], ["Invest", "/investment/explore"]];
-const QUICK = [[Home, "Buy", "/sale"], [KeyRound, "Rent", "/rent"], [BedDouble, "Stays", "/stays"], [Building2, "Projects", "/project"], [TrendingUp, "Invest", "/investment/explore"], [MapIcon, "Map", "/map"], [Plus, "Post property", "/post-property", true], [ClipboardList, "Requirement", "/requirement"]];
+const QUICK = [[Home, "Buy", "/sale"], [KeyRound, "Rent", "/rent"], [BedDouble, "Stays", "/stays"], [Building2, "Projects", "/project"], [TrendingUp, "Invest", "/investment/explore"], [MapIcon, "Map", "/map"], [ClipboardList, "Requirement", "/requirement"], [Menu, "More", "#menu", true]];
 const adLink = { fontSize: 12, textDecoration: "underline", textUnderlineOffset: 3 };
 
 function Banner() {
@@ -84,7 +84,7 @@ function Banner() {
   if (!list.length) {
     return (
       <>
-        <div className="pa-banner pa-house"><div><small>SHEETAL PROPERTY</small><h2>Post your property free</h2><p>Checked posts go live at once.</p></div><Link to="/post-property" className="pa-wb">Post now</Link></div>
+        <div className="pa-banner pa-house"><div><small>SHEETAL PROPERTY</small><h2>Pay rent online</h2><p>Find your lease and pay in minutes.</p></div><Link to="/services/pay-rent" className="pa-wb">Pay rent</Link></div>
         <div className="pa-adv"><a href="/business/promote/banner" style={adLink}>Advertise here</a></div>
       </>
     );
@@ -111,11 +111,9 @@ export function PhoneHomeTop() {
       <button className="pa-pill" onClick={() => setOpen(true)}><Search size={20} /><span>Search homes, stays, land, projects</span><SlidersHorizontal size={18} /></button>
       <div className="pa-types">{TYPES.map(([l, to], k) => <Link key={l} to={to} className={`pa-chip ${k === 0 ? "on" : ""}`}>{l}</Link>)}</div>
       <Banner />
-      <div className="pa-quick">{QUICK.map(([I, l, to, hot]) => <Link key={l} to={to} className="pa-q"><span className={hot ? "hot" : ""}><I size={26} strokeWidth={1.75} /></span>{l}</Link>)}</div>
-      <div className="pa-strip-h"><b>Services</b></div>
-      <div className="pa-strip">{[[KeyRound, "Pay rent", "/services/pay-rent"], [Landmark, "Home loan", "/services/home-loan"], [Scale, "Legal help", "/services/legal-help"], [Building2, "Management", "/services/management"], [Ruler, "Valuation", "/services/valuation"], [Calculator, "Calculators", "/tools/emi"]].map(([I, l, to]) => <Link key={to} to={to} className="pa-tile"><I size={22} />{l}</Link>)}</div>
-      <div className="pa-strip-h"><b>About Sheetal</b></div>
-      <div className="pa-links"><Link to="/about">About us</Link><Link to="/blog">Journal</Link><Link to="/careers">Careers</Link><Link to="/partners?type=agency">Agencies</Link><a href="tel:+9779801136817">Contact</a><Link to="/pricing">Apps and pricing</Link></div>
+      <div className="pa-quick">{QUICK.map(([I, l, to, hot]) => (hot
+        ? <button key={l} type="button" className="pa-q" onClick={() => window.dispatchEvent(new Event("pa-open-menu"))}><span><I size={26} strokeWidth={1.75} /></span>{l}</button>
+        : <Link key={l} to={to} className="pa-q"><span><I size={26} strokeWidth={1.75} /></span>{l}</Link>))}</div>
       {open && <PhoneSearch onClose={() => setOpen(false)} />}
     </section>
   );
