@@ -2846,3 +2846,53 @@ main section:has(> .section-head), main section:has(> .container > .section-head
   .heart::after { content: ""; position: absolute; inset: -4px; }
   .chip, .btn-sm, .seg button, .tabs button { min-height: 44px; }
 }
+
+/* Phone Home: every row is one sideways strip, so the page is about five screens long */
+@media (max-width: 600px) {
+  .grid-4, .agents-grid { display: grid !important; grid-template-columns: none !important; grid-auto-flow: column; overflow-x: auto; gap: 12px; scrollbar-width: none; scroll-snap-type: x mandatory; padding-bottom: 4px; }
+  .grid-4::-webkit-scrollbar, .agents-grid::-webkit-scrollbar, .tool-tiles::-webkit-scrollbar { display: none; }
+  .grid-4 { grid-auto-columns: 150px; }
+  .grid-4 > *, .agents-grid > * { scroll-snap-align: start; }
+  .agents-grid { grid-auto-columns: 240px; }
+  .tool-tiles { display: flex !important; flex-wrap: nowrap; overflow-x: auto; gap: 10px; scrollbar-width: none; }
+  .tool-tiles > * { flex: none; width: 136px; }
+  /* Journal cards: small rows (photo 104 px on the left) on every page */
+  .grid-3:has(> .post-card) { display: flex !important; flex-direction: column; gap: 10px !important; row-gap: 10px !important; }
+  .post-card { display: grid !important; grid-template-columns: 104px minmax(0, 1fr); gap: 12px; align-items: center; padding: 0; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; background: var(--card); }
+  .post-card .media { aspect-ratio: auto !important; height: 88px; border-radius: 0; }
+  .post-card .media img { width: 100%; height: 100%; object-fit: cover; }
+  .post-card h3 { font-size: 14px; line-height: 1.3; white-space: normal !important; display: -webkit-box !important; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 2px 0 0; }
+  .post-card > :not(.media) { padding-right: 12px; grid-column: 2; }
+  .post-card .tiny { font-size: 12px; }
+}
+
+/* Smooth, clean motion on phones: pages rise in, the menu and sheets slide, taps give soft feedback */
+@keyframes pa-up { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes pa-left { from { transform: translateX(-100%); } to { transform: none; } }
+@keyframes pa-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (max-width: 600px) {
+  main > * { animation: pa-rise .32s var(--ease) both; }
+  .pa-menu { animation: pa-left .26s var(--ease) both; }
+  .pa-menu-wrap, .pa-dim { animation: pa-fade .2s ease-out both; }
+  .pa-bsheet, .pa-sheet { animation: pa-up .28s var(--ease) both; }
+  .pa-full { animation: pa-fade .18s ease-out both; }
+  .btn, .pcard, .pa-q, .pa-tile, .pa-chip, .chip, .tabbar a, .pa-row, .pa-grp, .pa-pill, .pa-hub-tiles button, .pa-hub-list button, .post-card { transition: transform .15s var(--ease), background-color .15s, border-color .15s; }
+  .btn:active, .pcard:active, .pa-q:active, .pa-tile:active, .pa-chip:active, .chip:active, .tabbar a:active, .pa-pill:active, .pa-hub-tiles button:active, .post-card:active { transform: scale(.97); }
+  .pa-row:active, .pa-grp:active, .pa-hub-list button:active { background-color: var(--surface); }
+}
+@media (prefers-reduced-motion: reduce) {
+  main > *, .pa-menu, .pa-menu-wrap, .pa-dim, .pa-bsheet, .pa-sheet, .pa-full { animation: none !important; }
+  .btn:active, .pcard:active, .pa-q:active, .pa-tile:active, .tabbar a:active { transform: none; }
+}
+
+/* Phone header: three items only, perfectly balanced */
+@media (max-width: 600px) {
+  :root { --header-h: 60px; }
+  .pa-header { height: 60px; display: flex; align-items: center; padding-top: env(safe-area-inset-top); }
+  .pa-hbar { width: 100%; display: grid; grid-template-columns: 52px 1fr 52px; align-items: center; padding: 0 4px; }
+  .pa-hbar > .brand, .pa-hbar > a { justify-self: center; }
+  .pa-hbtn { width: 48px; height: 48px; display: inline-flex; align-items: center; justify-content: center; border: 0; background: none; color: var(--text-strong); border-radius: var(--r); transition: background-color .15s, transform .15s var(--ease); }
+  .pa-hbtn:active { background: var(--surface); transform: scale(.94); }
+  .pa-hbar .brand img { height: 34px; }
+  .post-card .media { grid-row: span 2; }
+}

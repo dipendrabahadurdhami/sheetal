@@ -116,7 +116,7 @@ export default function Home() {
 
       <section className="section container">
         <SectionHead kicker="For sale" title="Latest for sale" action={<Link to="/sale" className="link">View all</Link>} />
-        <PropertyGrid loading={sale.loading} items={sale.data?.items || []} count={8} />
+        <PropertyGrid loading={sale.loading} items={(sale.data?.items || []).slice(0, phone ? 4 : 8)} count={phone ? 4 : 8} />
       </section>
 
 
@@ -150,7 +150,7 @@ export default function Home() {
         <SectionHead kicker="Journal" title="Blog" action={<Link to="/blog" className="link">All articles</Link>} />
         <style>{`@media (min-width: 1100px) { .home-blog-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 20px !important; } .home-blog-grid .post-card h3 { font-size: 16px; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; } }`}</style>
         <div className="grid-3 home-blog-grid">
-          {(blogs.data?.items || []).map((b) => (
+          {(blogs.data?.items || []).slice(0, phone ? 3 : 8).map((b) => (
             <Link key={b.id} to={`/blog/${b.slug}`} className="post-card">
               <div className="media"><img src={imgUrl(b.thumbnail || b.featured_image || b.image)} alt="" loading="lazy" /></div>
               <span className="tiny muted" style={{ textTransform: "uppercase", letterSpacing: ".12em" }}>{b.category?.name} · {fmtDate(b.published_at || b.created_at)}</span>

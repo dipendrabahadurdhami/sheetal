@@ -8,7 +8,8 @@ import { Newspaper, Calculator, TrendingUp, ClipboardList, Images, Info, Buildin
 import { useApp } from "../context/AppContext";
 import { Logo, Avatar } from "./ui";
 import { HeaderSearch } from "./HeaderSearch";
-import { PhoneMenu } from "./PhoneApp";
+import { PhoneMenu, PhoneSearch } from "./PhoneApp";
+import { useMedia } from "../hooks/useAsync";
 import { agentName } from "../utils/format";
 import { THEMES } from "@sheetal/shared/core/theme";
 
@@ -28,6 +29,8 @@ export function Header() {
   const { user, setAuth, logout } = useApp();
   const [menu, setMenu] = useState(false);
   const [drawer, setDrawer] = useState(false);
+  const phone = useMedia("(max-width: 600px)");
+  const [psearch, setPsearch] = useState(false);
   const ref = useRef(null);
   const [moreOpen, setMoreOpen] = useState(false);
   const moreT = useRef(null);
@@ -46,6 +49,23 @@ export function Header() {
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
+
+  // Phone: a clean, balanced bar. Menu on the left, logo in the middle, search on the right.
+  if (phone) {
+    return (
+      <>
+        <header className="header pa-header">
+          <div className="pa-hbar">
+            <button type="button" className="pa-hbtn" aria-label="Open menu" onClick={() => setDrawer(true)}><Menu size={22} /></button>
+            <Logo />
+            <button type="button" className="pa-hbtn" aria-label="Search" onClick={() => setPsearch(true)}><Search size={22} /></button>
+          </div>
+        </header>
+        {drawer && <PhoneMenu onClose={() => setDrawer(false)} />}
+        {psearch && <PhoneSearch onClose={() => setPsearch(false)} />}
+      </>
+    );
+  }
 
   return (
     <header className="header">
