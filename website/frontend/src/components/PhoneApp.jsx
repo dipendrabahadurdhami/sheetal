@@ -12,6 +12,19 @@ import { useApp } from "../context/AppContext";
 import { fmtPrice, linkOf, titleOf, agencyName } from "../utils/format";
 import { THEMES } from "@sheetal/shared/core/theme";
 
+/** The logo for the phone bars: the mark, and SHEETAL over PROPERTY set to exactly the same width. */
+export function PhoneLogo() {
+  return (
+    <Link to="/" className="pa-logo" aria-label="Sheetal Property home">
+      <img src="/brand/logo-mark.png" alt="" />
+      <svg viewBox="0 0 112 32" width="112" height="32" aria-hidden="true" focusable="false">
+        <text x="0" y="14" textLength="112" lengthAdjust="spacing" className="pa-lw1">SHEETAL</text>
+        <text x="0" y="29" textLength="112" lengthAdjust="spacing" className="pa-lw2">PROPERTY</text>
+      </svg>
+    </Link>
+  );
+}
+
 const PLACES = ["Kathmandu", "Lalitpur", "Bhaktapur", "Pokhara", "Chitwan", "Nagarkot", "Lumbini", "Bandipur"];
 const RECENT = "sheetal.recent.searches";
 const recent = () => { try { return JSON.parse(localStorage.getItem(RECENT)) || []; } catch { return []; } };
@@ -152,6 +165,7 @@ export function PhoneMenu({ onClose }) {
   return (
     <div className="pa-menu-wrap" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <nav className="pa-menu" aria-label="Menu">
+        <div className="pa-mtop"><PhoneLogo /><button type="button" className="pa-hbtn" aria-label="Close menu" onClick={onClose}><X size={22} /></button></div>
         {user
           ? <Link to="/my-profile" className="pa-person" onClick={onClose}><span className="pa-av">{(name || "U").slice(0, 2).toUpperCase()}</span><span><b>{name}</b><small>{user.email}</small></span><ChevronRight size={16} /></Link>
           : <button className="pa-person" onClick={() => { onClose(); setAuth("login"); }}><span className="pa-av"><User size={22} /></span><span><b>Log in or sign up</b><small>Save homes, get alerts</small></span><ChevronRight size={16} /></button>}

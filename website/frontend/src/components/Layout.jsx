@@ -8,7 +8,7 @@ import { Newspaper, Calculator, TrendingUp, ClipboardList, Images, Info, Buildin
 import { useApp } from "../context/AppContext";
 import { Logo, Avatar } from "./ui";
 import { HeaderSearch } from "./HeaderSearch";
-import { PhoneMenu, PhoneSearch } from "./PhoneApp";
+import { PhoneMenu, PhoneLogo } from "./PhoneApp";
 import { useMedia } from "../hooks/useAsync";
 import { agentName } from "../utils/format";
 import { THEMES } from "@sheetal/shared/core/theme";
@@ -30,7 +30,6 @@ export function Header() {
   const [menu, setMenu] = useState(false);
   const [drawer, setDrawer] = useState(false);
   const phone = useMedia("(max-width: 600px)");
-  const [psearch, setPsearch] = useState(false);
   useEffect(() => { const o = () => setDrawer(true); window.addEventListener("pa-open-menu", o); return () => window.removeEventListener("pa-open-menu", o); }, []);
   const ref = useRef(null);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -57,13 +56,11 @@ export function Header() {
       <>
         <header className="header pa-header">
           <div className="pa-hbar">
-            <button type="button" className="pa-hbtn" aria-label="Open menu" onClick={() => setDrawer(true)}><Menu size={22} /></button>
-            <Logo />
-            <button type="button" className="pa-hbtn" aria-label="Search" onClick={() => setPsearch(true)}><Search size={22} /></button>
+            <PhoneLogo />
+            <button type="button" className="pa-hbtn" aria-label="Open menu" onClick={() => setDrawer(true)}><Menu size={24} /></button>
           </div>
         </header>
         {drawer && <PhoneMenu onClose={() => setDrawer(false)} />}
-        {psearch && <PhoneSearch onClose={() => setPsearch(false)} />}
       </>
     );
   }
