@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams , useNavigate } from "react-router-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { PropertyCard } from "../components/PropertyCard";
 import { Search, MapPin, Map as MapIcon, Info } from "lucide-react";
 import { api } from "../api/endpoints";
 import { toList, toItem } from "../api/client";
@@ -780,24 +781,12 @@ function MapSearchInner() {
               </span>
             </div>
           </Link>
-        )) : loading ? Array.from({ length: 5 }, (_, i) => <div key={i} className="sk" style={{ height: 100 }} />) : items.map((p) => {
-          const s2 = specs(p); const a = areaOf(p);
-          return (
-            <Link to={linkOf(p)} key={p.id} className={"map-item" + (sel === p.id ? " on" : "")}>
-              <img src={images(p)[0] || "/demo/1.jpg"} alt="" loading="lazy" />
-              <div className="stack" style={{ gap: 2, minWidth: 0 }}>
-                <span className="tiny muted" style={{ textTransform: "uppercase", letterSpacing: ".1em" }}>For {purposeOf(p)}</span>
-                <b style={{ fontWeight: 500, color: "var(--text-strong)", lineHeight: 1.35 }}>{titleOf(p)}</b>
-                <span className="tiny row" style={{ gap: 4, color: "var(--text)" }}><MapPin size={12} />{[a.locality, a.district, a.province && `${a.province} Province`].filter(Boolean).join(", ")}</span>
-                <span className="tiny muted">{s2.beds ? `${s2.beds} bed` : ""}{s2.beds && s2.area ? " · " : ""}{s2.area || ""}</span>
-                <span className="row between" style={{ gap: 8 }}>
-                  <span style={{ fontWeight: 600, color: "var(--text-strong)" }} className="tnum">{fmtPrice(purposeKey(p) === "rent" ? (p.rent_per_month || p.total_price) : p.total_price)}</span>
-                  <button type="button" className="map-show" title="Show on map" aria-label="Show on map" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSheet(0); if (sel === p.id) unfocus(); else { setSel(p.id); focus(p); } }}><MapIcon size={15} strokeWidth={1.8} /></button>
-                </span>
-              </div>
-            </Link>
-          );
-        })}
+        )) : loading ? Array.from({ length: 5 }, (_, i) => <div key={i} className="sk" style={{ height: 100 }} />) : items.map((p) => (
+          <div key={p.id} className={"map-pc" + (sel === p.id ? " on" : "")}>
+            <PropertyCard p={p} layout="list" />
+            <button type="button" className="map-show" title="Show on map" aria-label="Show on map" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSheet(0); if (sel === p.id) unfocus(); else { setSel(p.id); focus(p); } }}><MapIcon size={15} strokeWidth={1.8} /></button>
+          </div>
+        ))}
         {!kind && <Pagination page={page} last={data?.last} onChange={(n) => { const q = new URLSearchParams(params); q.set("page", n); setParams(q); }} />}
       </div>
       <div className="map-canvas"><div ref={mapEl} className="map-canvas-el" style={{ position: "absolute", inset: 0 }} />
