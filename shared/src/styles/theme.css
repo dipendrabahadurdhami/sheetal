@@ -3236,3 +3236,8 @@ html.pa-lock, html.pa-lock body { overflow: hidden !important; }
   .map-views { width: 36px; height: 36px; }
   .map-legend.pa-open { top: 56px !important; }
 }
+
+@media (max-width: 600px) {
+  .map-list > .map-item { flex: none; height: auto; }
+  .map-item > .stack { padding-block: 10px; }
+}
