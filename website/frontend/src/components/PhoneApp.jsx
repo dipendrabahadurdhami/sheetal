@@ -112,6 +112,10 @@ export function PhoneHomeTop() {
       <div className="pa-types">{TYPES.map(([l, to], k) => <Link key={l} to={to} className={`pa-chip ${k === 0 ? "on" : ""}`}>{l}</Link>)}</div>
       <Banner />
       <div className="pa-quick">{QUICK.map(([I, l, to, hot]) => <Link key={l} to={to} className="pa-q"><span className={hot ? "hot" : ""}><I size={26} strokeWidth={1.75} /></span>{l}</Link>)}</div>
+      <div className="pa-strip-h"><b>Services</b></div>
+      <div className="pa-strip">{[[KeyRound, "Pay rent", "/services/pay-rent"], [Landmark, "Home loan", "/services/home-loan"], [Scale, "Legal help", "/services/legal-help"], [Building2, "Management", "/services/management"], [Ruler, "Valuation", "/services/valuation"], [Calculator, "Calculators", "/tools/emi"]].map(([I, l, to]) => <Link key={to} to={to} className="pa-tile"><I size={22} />{l}</Link>)}</div>
+      <div className="pa-strip-h"><b>About Sheetal</b></div>
+      <div className="pa-links"><Link to="/about">About us</Link><Link to="/blog">Journal</Link><Link to="/careers">Careers</Link><Link to="/partners?type=agency">Agencies</Link><a href="tel:+9779801136817">Contact</a><Link to="/pricing">Apps and pricing</Link></div>
       {open && <PhoneSearch onClose={() => setOpen(false)} />}
     </section>
   );

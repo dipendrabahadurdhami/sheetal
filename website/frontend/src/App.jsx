@@ -45,6 +45,21 @@ function ScrollTop() {
   useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
   return null;
 }
+// Phones: the top bar and the tab bar slide away while you scroll down and come back the moment you scroll up (CSS does the sliding).
+function ScrollDir() {
+  useEffect(() => {
+    let last = window.scrollY;
+    const root = document.documentElement;
+    const on = () => {
+      const y = window.scrollY, d = y - last;
+      if (Math.abs(d) > 8) { root.dataset.scroll = d > 0 && y > 96 ? "down" : "up"; last = y; }
+      if (y <= 16) root.dataset.scroll = "up";
+    };
+    window.addEventListener("scroll", on, { passive: true });
+    return () => window.removeEventListener("scroll", on);
+  }, []);
+  return null;
+}
 const To = ({ to }) => <Navigate to={to} replace />;
 const InvestDetail = () => <Navigate to="/investment" replace />;
 
@@ -74,6 +89,7 @@ export default function App() {
   return (
     <SiteGate>
       <ScrollTop />
+      <ScrollDir />
       <Header />
       <main>
         <Routes>

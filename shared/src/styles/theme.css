@@ -2813,3 +2813,28 @@ main section:has(> .section-head), main section:has(> .container > .section-head
   body:has(.ck) .tabbar, body:has(.ck) .wa-btn { display: none; }
   .ck .input, .ck input, .ck select { font-size: 16px; }
 }
+
+/* ---- Phone app: bars slide away on scroll down, return on scroll up ---- */
+@media (max-width: 600px) {
+  .tabbar a { font-size: 12px; }
+  .header { transition: transform .28s var(--ease); will-change: transform; }
+  .tabbar { transition: transform .28s var(--ease); will-change: transform; }
+  .wa-btn { transition: transform .28s var(--ease), background .2s; }
+  html[data-scroll="down"] .header { transform: translateY(-100%); }
+  html[data-scroll="down"] .tabbar { transform: translateY(100%); }
+  html[data-scroll="down"] .wa-btn { transform: translateY(calc(70px + env(safe-area-inset-bottom))); }
+  .fade-in { animation: pa-rise .32s var(--ease) both; }
+}
+@keyframes pa-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .header, .tabbar, .wa-btn, .fade-in { transition: none !important; animation: none !important; }
+  html[data-scroll="down"] .header, html[data-scroll="down"] .tabbar, html[data-scroll="down"] .wa-btn { transform: none; }
+}
+
+@media (max-width: 600px) {
+  .pa-strip-h { padding: 8px 16px 0; font-size: 18px; color: var(--text-strong); }
+  .pa-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 8px 16px 4px; }
+  .pa-tile { min-height: 76px; border: 1px solid var(--line); border-radius: var(--r); background: var(--card); color: var(--text-strong); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; font-size: 13px; text-align: center; line-height: 1.2; padding: 6px; }
+  .pa-links { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 16px 12px; }
+  .pa-links a { min-height: 44px; display: inline-flex; align-items: center; padding: 0 14px; border: 1px solid var(--line); border-radius: var(--r); font-size: 13px; color: var(--text-strong); }
+}
