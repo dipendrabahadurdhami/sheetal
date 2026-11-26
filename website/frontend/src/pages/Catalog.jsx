@@ -6,6 +6,7 @@ import { FilterRail, PRICE_RANGES } from "../components/SearchFilters";
 import { SearchTabs } from "../components/SearchTabs";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { LayoutGrid, List, SlidersHorizontal, X, MapPin, Star, BedDouble, Building2, TrendingUp } from "lucide-react";
+import { ResultsSearch } from "../components/ResultsSearch";
 import { InviteCards } from "../components/InviteCards";
 import { useMedia } from "../hooks/useAsync";
 import { PageHead, Empty } from "../components/ui";
@@ -88,13 +89,16 @@ function Inner({ kind }) {
   const [layout, setLayout] = useState("grid");
   const [showFilters, setShowFilters] = useState(false);
   const wide = useMedia("(min-width: 1081px)");
+  const phone = useMedia("(max-width: 600px)");
   const cat = useCatalog();
   const q = Object.fromEntries(params);
   const set = (k, v) => { const n = new URLSearchParams(params); v ? n.set(k, v) : n.delete(k); setParams(n); };
   const all = useMemo(() => ({ stay: cat.stays, project: cat.projects, invest: cat.invests }[kind]).map((x) => norm(kind, x)), [cat, kind]);
   const cities = [...new Set(all.map((x) => x.city).filter(Boolean))];
   const kw = (q.keyword || q.where || q.city || "").toLowerCase();
-  let list = all.filter((x) => (!kw || `${x.name} ${x.city} ${x.area}`.toLowerCase().includes(kw)) && (!q.type || x.type.toLowerCase() === q.type.toLowerCase()) && (!q.status || x.status === q.status)
+  // The keyword matches the name, place and type (so "hotel" or "apartment" works too).
+  const hay = (x) => [x.name, x.city, x.area, x.type].filter(Boolean).join(" ").toLowerCase();
+  let list = all.filter((x) => (!kw || hay(x).includes(kw)) && (!q.type || x.type.toLowerCase() === q.type.toLowerCase()) && (!q.status || x.status === q.status)
     && (!q.min_price || x.price >= Number(q.min_price)) && (!q.max_price || x.price <= Number(q.max_price)));
   EXTRA[kind].forEach((f) => { if (q[f.k]) list = list.filter((x) => f.test(x.raw, q[f.k])); });
   const s = q.sort || "";
@@ -104,7 +108,7 @@ function Inner({ kind }) {
   const flip = (k, v) => { const cur = (q[k] || "").split("|").filter(Boolean); set(k, (cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v]).join("|")); };
   // The same filter panel as Buy and Rent (components/SearchFilters.jsx). Counts beside every choice: each list
   // counts what matches all the other filters, so picking one choice never empties the rest of its list.
-  const match = (x, except) => (except === "keyword" || !kw || `${x.name} ${x.city} ${x.area}`.toLowerCase().includes(kw))
+  const match = (x, except) => (except === "keyword" || !kw || hay(x).includes(kw))
     && (except === "type" || !q.type || String(x.type).toLowerCase() === q.type.toLowerCase())
     && (except === "status" || !q.status || x.status === q.status)
     && (except === "price" || ((!q.min_price || x.price >= Number(q.min_price)) && (!q.max_price || x.price <= Number(q.max_price))))
@@ -134,6 +138,7 @@ function Inner({ kind }) {
       <div className="container listing-layout">
         {(wide || showFilters) && filters}
         <section>
+          {phone && <ResultsSearch kind={kind} value={q.keyword} onSearch={(v) => set("keyword", v)} />}
           <div className="toolbar">
             <SearchTabs />
             <div className="row" style={{ gap: 8 }}>

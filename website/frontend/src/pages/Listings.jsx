@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useSEO } from "../utils/seo";
 import { SearchTabs } from "../components/SearchTabs";
 import { useSearchParams } from "react-router-dom";
-import { LayoutGrid, List, SlidersHorizontal, X, MapPin, Search } from "lucide-react";
+import { LayoutGrid, List, SlidersHorizontal, X, MapPin } from "lucide-react";
+import { ResultsSearch } from "../components/ResultsSearch";
 import { Link } from "react-router-dom";
 import { api } from "../api/endpoints";
 import { isLivePath, toList } from "../api/client";
@@ -67,10 +68,6 @@ export default function Listings({ purpose }) {
     setParams(n);
   };
   const clear = () => setParams({});
-  // Phone: a search box at the top of the results, so a new word never needs going back to Home.
-  const [kw, setKw] = useState(q.keyword || "");
-  useEffect(() => { setKw(q.keyword || ""); }, [q.keyword]);
-  const searchHere = (e) => { e.preventDefault(); set("keyword", kw.trim()); e.currentTarget.querySelector("input")?.blur(); };
   const active = useMemo(() => FILTER_KEYS.filter((k) => q[k] && k !== "price_order"), [key]);  
 
   // The panel stays mounted while filters change (no remount), so it never jumps or loses its scroll.
@@ -90,14 +87,7 @@ export default function Listings({ purpose }) {
           </div>
         )}
         <section>
-          {phone && (
-            <form className="pa-pill pa-list-search" role="search" onSubmit={searchHere}>
-              <Search size={20} aria-hidden="true" />
-              <input value={kw} onChange={(e) => setKw(e.target.value)} enterKeyHint="search" aria-label={`Search ${purpose === "rent" ? "places for rent" : purpose === "sale" ? "property for sale" : "all listings"}`}
-                placeholder={purpose === "rent" ? "Search places for rent: area, type…" : purpose === "sale" ? "Search for sale: area, type…" : "Search area, type, keyword…"} />
-              {kw && <button type="button" className="pa-ib" aria-label="Clear the search" onClick={() => { setKw(""); if (q.keyword) set("keyword", ""); }}><X size={18} /></button>}
-            </form>
-          )}
+          {phone && <ResultsSearch kind={purpose} value={q.keyword} onSearch={(v) => set("keyword", v)} />}
           <div className="toolbar">
             <SearchTabs />
             <div className="row" style={{ gap: 8 }}>
