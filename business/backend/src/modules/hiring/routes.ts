@@ -24,6 +24,7 @@ const Job = z.object({
   title: z.string().trim().min(3, "Write the job title.").max(120), department: opt(80),
   jobType: z.enum(["full_time", "part_time", "contract", "internship"]).default("full_time"),
   location: opt(120), remote: z.boolean().default(false), experience: opt(80),
+  form: z.object({ portfolio: z.enum(["off", "optional", "required"]).default("optional"), references: z.enum(["off", "optional", "required"]).default("optional"), vehicle: z.boolean().default(false), camera: z.boolean().default(false) }).default(() => ({ portfolio: "optional" as const, references: "optional" as const, vehicle: false, camera: false })),
   salaryMin: z.number().int().min(0).max(10_000_000).nullable().optional(), salaryMax: z.number().int().min(0).max(10_000_000).nullable().optional(),
   showSalary: z.boolean().default(false), vacancies: z.number().int().min(1).max(500).default(1),
   description: z.string().trim().min(20, "Write a few lines about the job (at least 20 letters).").max(50_000),
@@ -60,7 +61,7 @@ export async function hiringRoutes(app: FastifyInstance) {
   const view = (j: Awaited<ReturnType<typeof mine>> & { _count?: { applications: number } }, fresh = 0) => ({
     id: j.id, title: j.title, slug: j.slug, department: j.department, jobType: j.jobType, location: j.location, remote: j.remote,
     experience: j.experience, salaryMin: j.salaryMin, salaryMax: j.salaryMax, showSalary: j.showSalary, vacancies: j.vacancies,
-    description: j.description, responsibilities: j.responsibilities, requirements: j.requirements, benefits: j.benefits,
+    description: j.description, responsibilities: j.responsibilities, requirements: j.requirements, benefits: j.benefits, form: j.form,
     deadline: j.deadline, status: j.status, review: j.review, reviewNote: j.reviewNote, views: j.views, createdAt: j.createdAt,
     applications: j._count?.applications ?? 0, newApplications: fresh,
   });

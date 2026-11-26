@@ -12,6 +12,7 @@ import { badRequest, notFound } from "@sheetal/platform/core/errors";
 import { mediaBase, photoUrl } from "@sheetal/backend-core/lib/photos";
 import { savePrivateFile } from "@sheetal/backend-core/lib/files";
 import { notify, teamWith } from "@sheetal/platform/notify/index";
+import { answerLines, jobFormOf, readAnswers } from "./application.js";
 
 const words = (html: string) => html.replace(/<[^>]*>/g, " ").split(/\s+/).filter(Boolean).length;
 const text = (max: number) => z.string().trim().max(max).optional().transform((v) => v || undefined);
@@ -103,7 +104,8 @@ export async function contentRoutes(app: FastifyInstance) {
       location: j.remote ? `${j.location ?? "Nepal"} (remote possible)` : j.location, experience: j.experience, salary, vacancies: j.vacancies,
       description: j.description, responsibilities: j.responsibilities, requirements: j.requirements, benefits: j.benefits,
       deadline: j.deadline ? j.deadline.toISOString().slice(0, 10) : null, created_at: j.createdAt,
-      company: companyOf(j.tenant ?? null),
+      company: companyOf(j.tenant ?? null), vacancies_text: j.vacancies > 1 ? `${j.vacancies} openings` : "1 opening",
+      salary_min: j.showSalary ? j.salaryMin : null, salary_max: j.showSalary ? j.salaryMax : null, remote: j.remote, form: jobFormOf(j.form),
     };
   };
   // Open and approved; a business's job only while that business is running (not suspended or cancelled).
@@ -125,15 +127,19 @@ export async function contentRoutes(app: FastifyInstance) {
     const raw = (request.body ?? {}) as Record<string, unknown>;
     const b = z.object({
       name: z.string().trim().min(2, "Enter your name.").max(80), email: z.email("Enter a valid email address."),
-      phone: text(30), cover_letter: text(5000), message: text(5000), website: z.string().max(0).optional(),
-    }).parse(Object.fromEntries(Object.entries(raw).filter(([, v]) => !Buffer.isBuffer(v))));
+      phone: z.string().trim().min(7, "Enter your mobile number.").max(30), cover_letter: text(5000), message: text(5000), website: z.string().max(0).optional(),
+    }).passthrough().parse(Object.fromEntries(Object.entries(raw).filter(([, v]) => !Buffer.isBuffer(v))));
     const j = await db().jobPost.findFirst({ where: { ...openJob(), slug: request.params.slug.slice(0, 200) } });
     if (!j) throw notFound("This job isn't open any more.");
+    const answers = readAnswers(b as Record<string, unknown>, j.form);
     const cv = files(raw.cv ?? raw.resume ?? raw.file)[0];
     if (!cv) throw badRequest("Attach your CV.", { cv: ["Attach your CV."] });
     const cvFile = await savePrivateFile(app.config.MEDIA_DIR, "cv", cv);
-    await db().jobApplication.create({ data: { jobId: j.id, name: b.name, email: b.email.toLowerCase(), phone: b.phone, coverLetter: b.cover_letter ?? b.message, cvFile, ip: request.ip } });
-    const who = `${b.name} <${b.email}>${b.phone ? `, ${b.phone}` : ""} applied for ${j.title}.`;
+    await db().jobApplication.create({ data: { jobId: j.id, name: b.name, email: b.email.toLowerCase(), phone: b.phone, coverLetter: b.cover_letter ?? b.message, cvFile, answers, ip: request.ip } });
+    const who = `${b.name} <${b.email}>, ${b.phone} applied for ${j.title}.
+
+${answerLines(answers)}
+`;
     if (!j.tenantId) {
       await app.mailer.send({ to: app.config.SUPPORT_EMAIL, subject: `Job application: ${j.title} — ${b.name}`, text: `${who}\nOpen it in the admin panel: Content → Careers.` });
     } else {

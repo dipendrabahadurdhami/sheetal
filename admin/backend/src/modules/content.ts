@@ -135,7 +135,7 @@ export async function adminContentRoutes(app: FastifyInstance) {
   // ───── Careers ─────
   const Job = z.object({
     title: z.string().trim().min(3).max(150), department: opt(80), jobType: z.enum(["full_time", "part_time", "contract", "internship"]).default("full_time"),
-    location: opt(120), remote: z.boolean().default(false), experience: opt(80),
+    location: opt(120), remote: z.boolean().default(false), experience: opt(80), form: z.object({ portfolio: z.enum(["off", "optional", "required"]).default("optional"), references: z.enum(["off", "optional", "required"]).default("optional"), vehicle: z.boolean().default(false), camera: z.boolean().default(false) }).default(() => ({ portfolio: "optional" as const, references: "optional" as const, vehicle: false, camera: false })),
     salaryMin: z.number().int().min(0).nullable().optional(), salaryMax: z.number().int().min(0).nullable().optional(), showSalary: z.boolean().default(false),
     vacancies: z.number().int().min(1).max(500).default(1), description: z.string().max(50_000), responsibilities: opt(50_000), requirements: opt(50_000), benefits: opt(50_000),
     deadline: z.coerce.date().nullable().optional(), status: z.enum(["draft", "open", "closed"]).default("draft"),

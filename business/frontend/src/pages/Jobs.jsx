@@ -9,6 +9,8 @@ import { Badge, Button, Drawer, Empty, Field, Input, PageHead, Panel, Select, Ta
 import { Icon } from "@sheetal/shared/core/icons";
 import { Link } from "@sheetal/shared/core/router";
 import { bizApi } from "../api";
+import { ApplicationAnswers, JobFormFields } from "@sheetal/shared/components/JobApplicationBits";
+import { defaultJobForm } from "@sheetal/shared/data/jobForm";
 
 export const JOB_TYPES = [["full_time", "Full time"], ["part_time", "Part time"], ["contract", "Contract"], ["internship", "Internship"]];
 const APP_STATUS = [["new", "New"], ["shortlisted", "Shortlisted"], ["rejected", "Not a fit"], ["hired", "Hired"]];
@@ -28,7 +30,7 @@ export function jobState(j) {
   return ["done", "On the website"];
 }
 
-const blank = () => ({ title: "", department: "", jobType: "full_time", location: "", remote: false, experience: "", salaryMin: "", salaryMax: "", showSalary: false, vacancies: "1", deadline: "", description: "", responsibilities: "", requirements: "", benefits: "", status: "open" });
+const blank = () => ({ title: "", department: "", jobType: "full_time", location: "", remote: false, experience: "", salaryMin: "", salaryMax: "", showSalary: false, vacancies: "1", deadline: "", description: "", responsibilities: "", requirements: "", benefits: "", status: "open", form: defaultJobForm() });
 
 export function Jobs({ tenant }) {
   const toast = useToast();
@@ -53,7 +55,7 @@ export function Jobs({ tenant }) {
       title: e.title, department: e.department, jobType: e.jobType, location: e.location, remote: e.remote, experience: e.experience,
       salaryMin: e.salaryMin === "" ? null : Number(e.salaryMin), salaryMax: e.salaryMax === "" ? null : Number(e.salaryMax), showSalary: e.showSalary,
       vacancies: Number(e.vacancies) || 1, deadline: e.deadline || null, description: toHtml(e.description) || "",
-      responsibilities: toHtml(e.responsibilities), requirements: toHtml(e.requirements), benefits: toHtml(e.benefits), status,
+      responsibilities: toHtml(e.responsibilities), requirements: toHtml(e.requirements), benefits: toHtml(e.benefits), status, form: e.form || defaultJobForm(),
     };
     bizApi(e.id ? "PUT" : "POST", e.id ? `/jobs/${e.id}` : "/jobs", body).then((r) => { toast(r.message); setEdit(null); load(); }).catch((x) => toast(x.message)).finally(() => setBusy(false));
   };
@@ -124,13 +126,14 @@ export function Jobs({ tenant }) {
           <Field label="What the person will do" hint="Optional"><Textarea rows={4} value={edit.responsibilities} onChange={set("responsibilities")} /></Field>
           <Field label="Who you are looking for" hint="Optional"><Textarea rows={4} value={edit.requirements} onChange={set("requirements")} /></Field>
           <Field label="Benefits" hint="Optional"><Textarea rows={3} value={edit.benefits} onChange={set("benefits")} /></Field>
+          <Field label="Application questions"><JobFormFields form={edit.form} onChange={set("form")} /></Field>
           {edit.status === "open" && edit.review === "approved" && edit.slug && <a className="link small" href={`/careers/${edit.slug}`} target="_blank" rel="noreferrer"><Icon name="external-link" size={14} /> See it on the website</a>}
         </div>}
       </Drawer>
 
       <Drawer open={!!appsOf} onClose={() => setAppsOf(null)} title={appsOf ? `Applications: ${appsOf.title}` : ""}>
         {!apps ? <p className="muted">Loading…</p> : !apps.length ? <Empty icon="inbox" title="No applications yet">They show here as soon as someone applies.</Empty> : <ul className="pf-list">{apps.map((a) => (
-          <li key={a.id}><div className="pf-two" style={{ flex: 1 }}><b>{a.name}</b><small><a href={`mailto:${a.email}`}>{a.email}</a>{a.phone ? <> · <a href={`tel:${a.phone}`}>{a.phone}</a></> : ""} · {fdatetime(a.createdAt)}</small>{a.coverLetter && <span className="small">{a.coverLetter.slice(0, 400)}</span>}</div>
+          <li key={a.id}><div className="pf-two" style={{ flex: 1 }}><b>{a.name}</b><small><a href={`mailto:${a.email}`}>{a.email}</a>{a.phone ? <> · <a href={`tel:${a.phone}`}>{a.phone}</a></> : ""} · {fdatetime(a.createdAt)}</small>{a.coverLetter && <span className="small">{a.coverLetter.slice(0, 400)}</span>}<ApplicationAnswers app={a} form={appsOf?.form} /></div>
             {a.cv && <Button size="sm" variant="outline" icon="file-text" onClick={() => openCv(a)}>CV</Button>}
             <Select value={a.status} onChange={(v) => setStatus(a, v)} options={APP_STATUS.map(([id, label]) => ({ id, label }))} style={{ width: 150 }} aria-label="Status" /></li>))}</ul>}
       </Drawer>

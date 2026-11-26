@@ -7,6 +7,8 @@ import { fdate, fdatetime, rs } from "@sheetal/shared/core/format";
 import { Badge, Button, Drawer, Empty, Field, Input, Panel, Select, Table, Tabs, Textarea, ToggleRow, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
 import { adminApi } from "../api";
+import { ApplicationAnswers, JobFormFields } from "@sheetal/shared/components/JobApplicationBits";
+import { defaultJobForm } from "@sheetal/shared/data/jobForm";
 
 const API_FILES = (import.meta.env.VITE_ADMIN_API_URL || "").replace(/\/v1\/?$/, "");
 /** Plain paragraphs become <p>…</p>; HTML is kept (the API cleans it). */
@@ -124,13 +126,13 @@ export function LiveCareers() {
   const save = () => {
     const body = { ...edit, description: toHtml(edit.description || ""), responsibilities: edit.responsibilities ? toHtml(edit.responsibilities) : null, requirements: edit.requirements ? toHtml(edit.requirements) : null,
       benefits: edit.benefits ? toHtml(edit.benefits) : null, salaryMin: edit.salaryMin ? Number(edit.salaryMin) : null, salaryMax: edit.salaryMax ? Number(edit.salaryMax) : null, vacancies: Number(edit.vacancies) || 1, deadline: edit.deadline || null };
-    delete body.id; delete body.slug; delete body.views; delete body.createdAt; delete body.updatedAt; delete body.applications; delete body.newApplications;
+    delete body.id; delete body.slug; delete body.views; delete body.createdAt; delete body.updatedAt; delete body.applications; delete body.newApplications; delete body.tenantId; delete body.review; delete body.reviewNote;
     adminApi(edit.id ? "PUT" : "POST", edit.id ? `/admin/jobs/${edit.id}` : "/admin/jobs", body).then((r) => { toast(r.message); setEdit(null); jobs.reload(); }).catch((e) => toast(e.message));
   };
   const setStatus = (a, status) => adminApi("PATCH", `/admin/applications/${a.id}`, { status }).then(() => { setApps((l) => l.map((x) => (x.id === a.id ? { ...x, status } : x))); jobs.reload(); }).catch((e) => toast(e.message));
   return (
     <>
-      <Panel title="Jobs" sub="Open jobs show on the website's careers page until their deadline." actions={<Button icon="plus" onClick={() => setEdit({ title: "", jobType: "full_time", location: "Kathmandu", remote: false, description: "", vacancies: 1, showSalary: false, status: "draft" })}>New job</Button>}>
+      <Panel title="Jobs" sub="Open jobs show on the website's careers page until their deadline." actions={<Button icon="plus" onClick={() => setEdit({ title: "", jobType: "full_time", location: "Kathmandu", remote: false, description: "", vacancies: 1, showSalary: false, status: "draft", form: defaultJobForm() })}>New job</Button>}>
         {!jobs.data ? <p className="muted pf-pad">Loading…</p> : <Table rows={jobs.data} onRowClick={(r) => setEdit({ ...r, deadline: r.deadline ? String(r.deadline).slice(0, 10) : "" })} minWidth={720} empty={<Empty icon="briefcase" title="No jobs yet" />} columns={[
           { key: "t", label: "Job", render: (r) => <span className="pf-two"><b>{r.title}</b><small>{[r.department, JOB_TYPES.find((x) => x[0] === r.jobType)?.[1], r.location].filter(Boolean).join(" · ")}</small></span> },
           { key: "s", label: "Status", render: (r) => <Badge tone={r.status === "open" ? "done" : "neutral"}>{r.status === "open" ? "Open" : r.status === "closed" ? "Closed" : "Draft"}</Badge> },
@@ -156,12 +158,13 @@ export function LiveCareers() {
           <Field label="What you'll do"><Textarea rows={4} value={edit.responsibilities || ""} onChange={(e) => setEdit({ ...edit, responsibilities: e.target.value })} /></Field>
           <Field label="What we look for"><Textarea rows={4} value={edit.requirements || ""} onChange={(e) => setEdit({ ...edit, requirements: e.target.value })} /></Field>
           <Field label="Benefits"><Textarea rows={3} value={edit.benefits || ""} onChange={(e) => setEdit({ ...edit, benefits: e.target.value })} /></Field>
+          <Field label="Application questions"><JobFormFields form={edit.form} onChange={(form) => setEdit({ ...edit, form })} /></Field>
           <Field label="Status"><Select value={edit.status} onChange={(v) => setEdit({ ...edit, status: v })} options={[{ id: "draft", label: "Draft (hidden)" }, { id: "open", label: "Open (on the website)" }, { id: "closed", label: "Closed" }]} /></Field>
         </div>}
       </Drawer>
       <Drawer open={!!appsOf} onClose={() => setAppsOf(null)} title={appsOf ? `Applications: ${appsOf.title}` : ""}>
         {!apps ? <p className="muted">Loading…</p> : !apps.length ? <Empty icon="inbox" title="No applications yet" /> : <ul className="pf-list">{apps.map((a) => (
-          <li key={a.id}><div className="pf-two" style={{ flex: 1 }}><b>{a.name}</b><small>{a.email}{a.phone ? ` · ${a.phone}` : ""} · {fdatetime(a.createdAt)}</small>{a.coverLetter && <span className="small">{a.coverLetter.slice(0, 300)}</span>}</div>
+          <li key={a.id}><div className="pf-two" style={{ flex: 1 }}><b>{a.name}</b><small>{a.email}{a.phone ? ` · ${a.phone}` : ""} · {fdatetime(a.createdAt)}</small>{a.coverLetter && <span className="small">{a.coverLetter.slice(0, 300)}</span>}<ApplicationAnswers app={a} form={appsOf?.form} /></div>
             {a.cv && <Button size="sm" variant="outline" icon="file-text" onClick={() => openPrivate(a.cv, toast)}>CV</Button>}
             <Select value={a.status} onChange={(v) => setStatus(a, v)} options={APP_STATUS.map(([id, label]) => ({ id, label }))} style={{ width: 150 }} aria-label="Status" /></li>))}</ul>}
       </Drawer>

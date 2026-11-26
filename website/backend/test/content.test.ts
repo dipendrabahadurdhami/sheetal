@@ -18,6 +18,7 @@ const ids: Record<string, string> = {};
 const PNG = Buffer.from("89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d49444154789c6360000002000154a24f5d0000000049454e44ae426082", "hex");
 const PDF = Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n");
 
+const ANSWERS = { phone: "9800000000", city: "Kathmandu", total_experience: "6", relevant_experience: "4.5", achievements: "Sold NPR 4 crore in 2025.", expected_salary: "45000", performance_pay: "yes", notice_period: "1m", consent: "true" };
 const ip = () => `10.8.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`;
 const call = (who: string | null, method: "GET" | "POST", url: string, body?: object) =>
   app.inject({ method, url: `/v1${url}`, payload: body, headers: who ? { authorization: `Bearer ${tok[who]}` } : {}, remoteAddress: ip() });
@@ -87,14 +88,29 @@ describe("careers", () => {
   it("lists open jobs and takes applications with a real CV only", async () => {
     expect((await call(null, "GET", "/jobs")).json().data).toEqual([expect.objectContaining({ slug: "sales-agent", salary: "Rs. 30,000 – 45,000 a month" })]);
     expect((await call(null, "GET", "/jobs/closed-job")).statusCode).toBe(404);
-    const bad = await multipart("/jobs/sales-agent/apply", { name: "Ram", email: "ram@x.test" }, { cv: ["cv.pdf", "application/pdf", Buffer.from("not a pdf at all......")] });
+    const bad = await multipart("/jobs/sales-agent/apply", { name: "Ram", email: "ram@x.test", ...ANSWERS }, { cv: ["cv.pdf", "application/pdf", Buffer.from("not a pdf at all......")] });
     expect(bad.statusCode).toBe(400);
-    const ok = await multipart("/jobs/sales-agent/apply", { name: "Ram", email: "Ram@X.test", phone: "9800000000" }, { cv: ["cv.pdf", "application/pdf", PDF] });
+    const ok = await multipart("/jobs/sales-agent/apply", { name: "Ram", email: "Ram@X.test", ...ANSWERS, unknown_field: "dropped" }, { cv: ["cv.pdf", "application/pdf", PDF] });
     expect(ok.statusCode).toBe(200);
     const a = await app.db!.jobApplication.findFirstOrThrow();
     expect(a).toMatchObject({ email: "ram@x.test", cvFile: expect.stringMatching(/\.pdf$/) });
+    expect(a.answers).toEqual({ city: "Kathmandu", total_experience: 6, relevant_experience: 4.5, achievements: "Sold NPR 4 crore in 2025.", expected_salary: 45000, performance_pay: "yes", notice_period: "1m" });
     // CVs are private: not reachable as /media.
     expect((await app.inject({ method: "GET", url: `/media/private/cv/${a.cvFile}` })).statusCode).toBe(404);
+  });
+
+  it("asks the job's questions: required answers, the job's extra questions and the consent", async () => {
+    await app.db!.jobPost.create({ data: { title: "Content host", slug: "content-host", description: "<p>Host videos.</p>", status: "open", form: { portfolio: "required", references: "off", vehicle: true, camera: true } } });
+    expect((await call(null, "GET", "/jobs/content-host")).json().data.form).toEqual({ portfolio: "required", references: "off", vehicle: true, camera: true });
+    const short = await multipart("/jobs/content-host/apply", { name: "Gita", email: "gita@x.test", phone: "9800000001" }, { cv: ["cv.pdf", "application/pdf", PDF] });
+    expect(short.statusCode).toBe(400);
+    expect(Object.keys(short.json().errors)).toEqual(expect.arrayContaining(["city", "expected_salary", "notice_period", "vehicle", "camera", "portfolio", "consent"]));
+    expect((await multipart("/jobs/content-host/apply", { name: "Gita", email: "gita@x.test", ...ANSWERS, vehicle: "yes", camera: "yes", portfolio: "not a link" }, { cv: ["cv.pdf", "application/pdf", PDF] })).statusCode).toBe(422);
+    const ok = await multipart("/jobs/content-host/apply", { name: "Gita", email: "gita@x.test", ...ANSWERS, vehicle: "yes", camera: "no", portfolio: "https://youtube.com/@gita", references: "kept out" }, { cv: ["cv.pdf", "application/pdf", PDF] });
+    expect(ok.statusCode).toBe(200);
+    const row = await app.db!.jobApplication.findFirstOrThrow({ where: { email: "gita@x.test" } });
+    expect(row.answers).toMatchObject({ vehicle: "yes", camera: "no", portfolio: "https://youtube.com/@gita" });
+    expect(row.answers).not.toHaveProperty("references");   // references are off for this job
   });
 
   it("shows a business's job only once approved, with the company, and sends its applications to that business", async () => {
@@ -109,7 +125,7 @@ describe("careers", () => {
     expect(list.find((x: { slug: string }) => x.slug === "field-agent-everest-realty").company).toMatchObject({ name: "Everest Realty", own: false, verified: false });
     expect(list.find((x: { slug: string }) => x.slug === "sales-agent").company).toMatchObject({ name: "Sheetal Property", own: true });
     const before = await db.notification.count({ where: { userId: ids.agent, type: "job_application" } });
-    expect((await multipart("/jobs/field-agent-everest-realty/apply", { name: "Hari", email: "hari@x.test" }, { cv: ["cv.pdf", "application/pdf", PDF] })).statusCode).toBe(200);
+    expect((await multipart("/jobs/field-agent-everest-realty/apply", { name: "Hari", email: "hari@x.test", ...ANSWERS }, { cv: ["cv.pdf", "application/pdf", PDF] })).statusCode).toBe(200);
     expect(await db.notification.count({ where: { userId: ids.agent, type: "job_application" } })).toBe(before + 1);
     // A suspended business's jobs leave the website.
     await db.tenant.update({ where: { id: ids.tenant }, data: { status: "suspended" } });

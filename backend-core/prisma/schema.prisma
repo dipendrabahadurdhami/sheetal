@@ -1147,6 +1147,9 @@ model JobPost {
   /// Verified businesses are approved at once; Sheetal's own jobs are always approved.
   review           String           @default("approved")
   reviewNote       String?          @map("review_note")
+  /// Extra questions on the application form: { portfolio, references: "off" | "optional" | "required"; vehicle, camera: boolean }.
+  /// The standard questions (experience, pay, notice period, achievements…) are always asked (shared/src/data/jobForm.js).
+  form             Json             @default("{}")
   views            Int              @default(0)
   createdAt        DateTime         @default(now()) @map("created_at")
   updatedAt        DateTime         @updatedAt @map("updated_at")
@@ -1167,6 +1170,8 @@ model JobApplication {
   phone       String?
   coverLetter String?  @map("cover_letter")
   cvFile      String?  @map("cv_file")
+  /// The applicant's answers to the application questions, by key (shared/src/data/jobForm.js).
+  answers     Json     @default("{}")
   /// new, shortlisted, rejected, hired
   status      String   @default("new")
   ip          String?
