@@ -25,6 +25,7 @@ import { promoteRoutes } from "./modules/promote/routes.js";
 import { bannerRoutes } from "./modules/banners/routes.js";
 import { siteRoutes } from "./modules/site/routes.js";
 import { publicApiRoutes } from "./modules/public/routes.js";
+import { registerRobotCheck } from "./modules/robot/hook.js";
 import type { AiClient } from "@sheetal/backend-core/lib/ai";
 import type { Fetch } from "@sheetal/backend-core/lib/payments";
 
@@ -33,6 +34,8 @@ export async function buildApp(config: Config, deps: AppDeps & { ai?: { client: 
   // A "Try the demo" visitor (platform/src/demo/guard.ts) can read the website like anyone, but can change nothing here except signing out:
   // no listing, enquiry, review or payment ever comes from a demo user.
   registerDemoGuard(app, { allow: [/^\/v1(\/auth)?\/logout$/] });
+  // The robot check on every public form (off until staff save the Turnstile keys in Admin → Setup).
+  registerRobotCheck(app, { fetch: deps.fetch });
   await app.register(authRoutes, { prefix: "/v1" });
   await app.register(googleRoutes, { prefix: "/v1", google: deps.google, fetch: deps.fetch });
   await app.register(catalogRoutes, { prefix: "/v1" });

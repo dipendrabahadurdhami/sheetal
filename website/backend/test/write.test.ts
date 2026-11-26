@@ -55,6 +55,8 @@ beforeAll(async () => {
   await db.listing.create({ data: { code: "SP-0001", slug: "flat-1", tenantId: t.id, purpose: "rent", kind: "rentout", category: "Apartment", propertyType: "Flat", title: "Flat on rent in Baneshwor", status: "published", price: 30000n, facilities: ["Parking", "Water Supply"] } });
 });
 afterAll(async () => { await app.close(); });
+// Other test files may leave the requirement fee or the robot-check keys switched on; these enquiries are tested without them.
+beforeAll(async () => { await app.db!.appSetting.deleteMany({ where: { key: { in: ["requirement_fee", "captcha"] } } }); });
 
 describe("favourites", () => {
   it("needs a login, then saves, lists and removes", async () => {

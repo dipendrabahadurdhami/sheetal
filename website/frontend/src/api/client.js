@@ -1,9 +1,10 @@
 // Where each website request goes: the real API, or the local sample data.
 // How it works: VITE_API_URL is the API address (e.g. http://localhost:4000/v1); VITE_API_LIVE lists the paths the API
 // serves (comma separated, or "*" for all). Other paths are answered by demo/api so pages keep working.
-// Rules: sends the sign-in token; turns error replies into errors with the server's message.
+// Rules: sends the sign-in token (and the robot-check token on public forms); turns error replies into errors with the server's message.
 
 import { mockRequest } from "../demo/api/router";
+import { needsRobot, robotToken } from "../utils/robot";
 
 const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
 const LIVE = String(import.meta.env.VITE_API_LIVE || "").split(",").map((s) => s.trim().replace(/^\/+/, "")).filter(Boolean);
@@ -31,6 +32,11 @@ async function liveRequest(method, url, { params, data }) {
   let token = null;
   try { token = localStorage.getItem("sheetal_token"); } catch { /* storage off */ }
   if (token) headers.Authorization = `Bearer ${token}`;
+  // Public forms carry a robot-check token while the check is on (utils/robot.js); off = nothing is added.
+  if (needsRobot(method, url)) {
+    const robot = await robotToken(API_URL).catch((e) => { throw { response: { status: 400, data: { message: e.message } } }; });
+    if (robot) headers["x-captcha"] = robot;
+  }
   let body;
   if (data instanceof FormData) body = data;
   else if (data !== undefined) { headers["Content-Type"] = "application/json"; body = JSON.stringify(data); }

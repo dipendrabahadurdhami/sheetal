@@ -58,7 +58,8 @@ beforeAll(async () => {
   await db.tenant.update({ where: { id: tiny.id }, data: { status: "active" } });
   await db.form.create({ data: { tenantId: tiny.id, slug: "tiny", title: "Tiny", status: "live", fields: [F("p", "phone", "Phone", { required: true })] } });
 });
-afterAll(async () => { await app.close(); rmSync(media, { recursive: true, force: true }); });
+// The robot-check keys this file saves must not switch the check on for the test files after it.
+afterAll(async () => { await app.db!.appSetting.deleteMany({ where: { key: "captcha" } }); await app.close(); rmSync(media, { recursive: true, force: true }); });
 
 describe("showing a form", () => {
   it("shows a live form and hides drafts", async () => {
