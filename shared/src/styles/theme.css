@@ -3317,3 +3317,12 @@ html.pa-lock, html.pa-lock body { overflow: hidden !important; }
 .job-other b { font-weight: 500; color: var(--text-strong); font-size: 14px; }
 .job-other span { font-size: 12.5px; color: var(--muted); }
 .job-other:hover b { color: var(--accent-ink); }
+
+/* Phone: the agencies row is logos only (no name, place or listings), as a sideways strip of even tiles. */
+@media (max-width: 600px) {
+  .agents-grid { display: grid !important; grid-auto-flow: column; grid-template-columns: none !important; grid-auto-columns: 112px !important; overflow-x: auto; gap: 10px !important; scrollbar-width: none; scroll-snap-type: x mandatory; }
+  .agents-grid .agent-card { flex-direction: column !important; justify-content: center; align-items: center; padding: 12px !important; min-height: 0; aspect-ratio: 1; background: var(--surface) !important; }
+  .agents-grid .agent-card > :not(.agent-logo) { display: none !important; }
+  .agents-grid .agent-card .agent-logo { height: 100%; margin: 0; width: 100%; }
+  .agents-grid .agent-card .avatar { width: 100% !important; height: 100% !important; max-width: none; min-width: 0; font-size: 22px; }
+}

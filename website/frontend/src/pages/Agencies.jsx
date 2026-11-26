@@ -14,7 +14,7 @@ const TIERS = ["All", "Pro", "Business", "Starter"];
 
 export function AgencyCard({ a }) {
   return (
-    <Link to={`/agency/${a.id}`} className="card card-hover agent-card fade-in" style={{ color: "var(--text)" }}>
+    <Link to={`/agency/${a.id}`} className="card card-hover agent-card fade-in" style={{ color: "var(--text)" }} aria-label={agencyName(a)} title={agencyName(a)}>
       <span className="agent-logo"><Avatar src={a.photo} name={agencyName(a)} logo /></span>
       <span className="tier">{agencyTier(a.tier) || "Agency"}</span>
       <h3 style={{ fontSize: 20 }} className="row">{agencyName(a)}</h3>
