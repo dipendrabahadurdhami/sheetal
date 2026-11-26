@@ -16,6 +16,7 @@
 //   - shadow and apps need the migration rows (a business the migration skipped stays on plans).
 //   - apps needs: on shadow first, `minShadowDays` days there (7 for everyone; the pilot passes fewer), zero "less" differences, recorded
 //     or now. `force` skips these three only.
+//   - a business the migration skipped may still move when staff gave it apps as a live gift (it keeps every app through the gift).
 //   - apps is refused while a plan payment is in flight (it must settle first). Never forced.
 //   - apps -> plans is refused once the business bought or installed anything on the new system (it would lose it: fix forward). Never forced.
 //   - apps -> shadow is refused: go back to plans first.
@@ -40,6 +41,8 @@ export interface ModeRow {
   id: string; masked: string; mode: BillingMode; status: string;
   /** The migration wrote this business's app rows. */
   migrated: boolean;
+  /** Staff gave this business apps as a live gift (every app it used, e.g. Sheetal's own group businesses): it loses nothing on apps either. */
+  gifted: boolean;
   /** When it last moved to shadow (from the audit row); null when it never did. */
   shadowSince: Date | null;
   /** Differences the servers recorded since `shadowSince`: reports with at least one "less", and all reports. */
@@ -73,13 +76,14 @@ export async function modeStatus(db: Db, o: { only?: string[]; now?: Date } = {}
   const out: ModeRow[] = [];
   for (const t of tenants) {
     const mode = modeOf(t.billingMode);
-    const [migrated, changes, open, paymentsInFlight, paidNew, ownSubs] = await Promise.all([
+    const [migrated, changes, open, paymentsInFlight, paidNew, ownSubs, gifts] = await Promise.all([
       db.subscription.count({ where: { tenantId: t.id, migrationRunId: { not: null } } }),
       db.auditLog.findMany({ where: { tenantId: t.id, action: MODE_CHANGED }, orderBy: { createdAt: "desc" }, take: 20, select: { target: true, createdAt: true } }),
       db.invoice.findMany({ where: { tenantId: t.id, status: "open", kind: { in: ["plan", "addon"] } }, select: { id: true }, orderBy: { seq: "asc" } }),
       db.payment.count({ where: { tenantId: t.id, status: { in: ["initiated", "pending_review"] }, invoice: { kind: { in: ["plan", "addon"] } } } }),
       db.invoice.count({ where: { tenantId: t.id, kind: "subscription", status: "paid" } }),
       db.subscription.count({ where: { tenantId: t.id, migrationRunId: null } }),
+      db.entitlementGrant.count({ where: { tenantId: t.id, kind: "app", source: "staff", revokedAt: null, endsAt: { gt: now } } }),
     ]);
     const shadowSince = mode === "plans" ? null : (changes.find((c) => (c.target ?? "").endsWith("-> shadow"))?.createdAt ?? null);
     let lessReports = 0, reports = 0;
@@ -90,7 +94,7 @@ export async function modeStatus(db: Db, o: { only?: string[]; now?: Date } = {}
     }
     const lessNow = migrated ? (await compareNow(db, t.id, now)).filter((d) => d.kind === "less").map((d) => `${d.what} (${String(d.v1)} -> ${String(d.v3)})`) : [];
     out.push({
-      id: t.id, masked: maskName(t.name, t.id), mode, status: t.status, migrated: migrated > 0, shadowSince, lessReports, reports, lessNow,
+      id: t.id, masked: maskName(t.name, t.id), mode, status: t.status, migrated: migrated > 0, gifted: gifts > 0, shadowSince, lessReports, reports, lessNow,
       openInvoices: open.map((i) => i.id), paymentsInFlight, sold: paidNew + ownSubs > 0,
     });
   }
@@ -106,7 +110,7 @@ export function checkMove(row: ModeRow, to: BillingMode, rules: MoveRules): stri
     if (row.mode === "apps" && row.sold) return "it bought or installed something on the new system, so it stays on apps (switch sales off and fix forward)";
     return null;
   }
-  if (!row.migrated) return "the migration has not written its app rows (run npm run billing:migrate first; a skipped business stays on plans)";
+  if (!row.migrated && !row.gifted) return "the migration has not written its app rows (run npm run billing:migrate first; a skipped business stays on plans)";
   if (to === "shadow") return row.mode === "apps" ? "it is on apps: go back to plans first" : null;
   // to apps
   if (row.paymentsInFlight) return "a plan payment is in flight: wait until it is paid or fails";

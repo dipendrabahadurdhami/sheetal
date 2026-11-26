@@ -13,7 +13,7 @@ import { NOW, PLANS, RENEWS } from "./migrate-plans.fixtures.js";
 
 const DAY = 864e5;
 const row = (over: Partial<ModeRow> = {}): ModeRow => ({
-  id: "b1", masked: "Te… (b1)", mode: "plans", status: "active", migrated: true, shadowSince: null, lessReports: 0, reports: 0, lessNow: [],
+  id: "b1", masked: "Te… (b1)", mode: "plans", status: "active", migrated: true, gifted: false, shadowSince: null, lessReports: 0, reports: 0, lessNow: [],
   openInvoices: [], paymentsInFlight: 0, sold: false, ...over,
 });
 const rules = { now: NOW, minShadowDays: 7 };
@@ -27,6 +27,9 @@ describe("checkMove: the rules", () => {
   it("shadow and apps need the migration rows; shadow is open to a migrated business on plans", () => {
     expect(checkMove(row({ migrated: false }), "shadow", rules)).toMatch(/app rows/);
     expect(checkMove(row({ migrated: false }), "apps", { ...rules, force: true })).toMatch(/app rows/);
+    // A business the migration skipped, that staff gave every app as a live gift, may move (forced past shadow): it keeps every app.
+    expect(checkMove(row({ migrated: false, gifted: true }), "apps", { ...rules, force: true })).toBeNull();
+    expect(checkMove(row({ migrated: false, gifted: true }), "apps", rules)).toMatch(/shadow first/);
     expect(checkMove(row(), "shadow", rules)).toBeNull();
   });
   it("apps needs shadow first, the days, and no 'less' difference recorded or now", () => {
