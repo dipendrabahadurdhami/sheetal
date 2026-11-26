@@ -29,7 +29,8 @@ import { esewaCheckout, fonepayCheckout, khaltiCheckout, rupeesText, type Fetch 
 import { billingSettings, gateways } from "@sheetal/backend-core/domain/billing";
 import { platformSettings } from "@sheetal/backend-core/domain/platform";
 import { workspaceOf, type Workspace } from "../access.js";
-import { AppId, Cancel, Cart, Change, Checkout, CouponCheck, PayInvoice, Trial } from "./bodies.js";
+import { AppId, Cancel, Cart, Change, Checkout, CouponCheck, PackCheckout, PackQuote, PayInvoice, Trial } from "./bodies.js";
+import { packQuote, publicPacks } from "@sheetal/platform/billing/packs";
 
 const n = (v: bigint | number | null | undefined) => (v == null ? 0 : Number(v));
 const QUIET = { warn: () => undefined };
@@ -251,6 +252,58 @@ export async function marketplaceRoutes(app: FastifyInstance, opts: { fetch?: Fe
   };
   app.post("/subscriptions/checkout", { config: { rateLimit: { max: 20, timeWindow: "10 minutes" } } }, checkoutRoute);
   app.post("/addons/checkout", { config: { rateLimit: { max: 20, timeWindow: "10 minutes" } } }, checkoutRoute);
+
+  // ───────────── Software packs (Starter, Business, Pro) ─────────────
+  // One invoice with a subscription line per app of the pack (platform/src/billing/packs.ts), paid and renewed like any app invoice.
+
+  /**
+   * The pack a business is on now: the pack of its latest paid pack invoice, while that pack's apps still have a paid period running
+   * (renewals are ordinary app invoices, so the period comes from the subscriptions, not from the first invoice).
+   */
+  async function currentPack(tenantId: string) {
+    const now = new Date();
+    const inv = await db().invoice.findFirst({
+      where: { tenantId, kind: "subscription", status: "paid", lines: { some: { description: { path: ["packId"], not: "null" } } } },
+      orderBy: { paidAt: "desc" }, include: { lines: { orderBy: { sort: "asc" } } },
+    });
+    const d = (inv?.lines[0]?.description ?? {}) as { packId?: string; periodMonths?: number };
+    if (!inv || !d.packId) return null;
+    const apps = inv.lines.map((l) => l.appId).filter((x): x is string => !!x);
+    const subs = await db().subscription.findMany({ where: { tenantId, appId: { in: apps }, uninstalledAt: null, currentPeriodEnd: { gt: now }, periodMonths: { not: null } } });
+    if (!subs.length) return null;
+    const periodEnd = subs.reduce((m, s) => (s.currentPeriodEnd! > m ? s.currentPeriodEnd! : m), subs[0]!.currentPeriodEnd!);
+    return { packId: d.packId, months: subs[0]!.periodMonths ?? d.periodMonths ?? inv.months, periodEnd };
+  }
+
+  app.get("/packs", async (request) => {
+    const { t } = await payer(request, false);
+    const { catalog, billing } = await settings();
+    return { data: { ...publicPacks(catalog), salesEnabled: billing.salesEnabled, mode: t.billingMode, current: t.billingMode === "apps" ? await currentPack(t.id) : null } };
+  });
+
+  async function packQuoteFor(t: Parameters<typeof stateOf>[0], packId: string, months: number) {
+    const { catalog, billing } = await settings();
+    const { business } = await stateOf(t);
+    return { q: packQuote({ now: new Date(), business, catalog, settings: billing, packId, months }), catalog, billing };
+  }
+
+  app.post("/packs/quote", async (request) => {
+    const { t } = await payer(request);
+    const b = PackQuote.parse(request.body);
+    const { q } = await packQuoteFor(t, b.packId, b.months);
+    return { data: quoteJson(q) };
+  });
+
+  app.post("/packs/checkout", { config: { rateLimit: { max: 20, timeWindow: "10 minutes" } } }, async (request) => {
+    const { ws, t } = await payer(request);
+    const b = PackCheckout.parse(request.body);
+    const { q, catalog, billing } = await packQuoteFor(t, b.packId, b.months);
+    if (!billing.salesEnabled) throw new AppError(409, "sales_off", "Sheetal isn't selling packs yet. Please try again soon.");
+    if (q.errors.length) throw badRequest(q.errors[0]!.en, { pack: q.errors.map((e) => e.en) });
+    const invoice = await db().$transaction((tx) => createInvoiceFromQuote(tx, { tenantId: t.id, quote: q, by: ws.user.id, billedTo: { name: t.name }, couponId: null, catalogVersion: catalog.version }));
+    await db().auditLog.create({ data: { actorId: ws.user.id, tenantId: t.id, action: "billing.pack_checkout", target: `${b.packId} · ${b.months} months · Rs ${(q.totalPaisa / 100).toFixed(2)}`, ip: request.ip } });
+    return { data: { ...(await startPayment(ws, invoice, b.provider)), totalPaisa: q.totalPaisa } };
+  });
 
   /** Pays an open app invoice (a renewal the job made, or one left unpaid). */
   app.post("/subscriptions/invoices/pay", { config: { rateLimit: { max: 20, timeWindow: "10 minutes" } } }, async (request) => {

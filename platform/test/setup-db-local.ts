@@ -1,5 +1,6 @@
 import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+// @ts-expect-error -- pg ships without type definitions in this repo (embedded-postgres brings it); only Client is used.
 import pg from "pg";
 import type { TestProject } from "vitest/node";
 

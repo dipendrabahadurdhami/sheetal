@@ -80,6 +80,8 @@ export interface Catalog {
   apps: Record<string, AppCatalog>;
   addons: AddonDef[];
   ai?: AiCatalog;
+  /** Software packs (packs.ts): Starter, Business, Pro. Optional so a catalog saved before packs still fits; withNewApps() fills them in. */
+  packs?: Record<string, import("./packs.js").Pack>;
 }
 
 /** The platform.billing setting (MB section 16). Every day count and amount is editable in Admin; these are the defaults. */

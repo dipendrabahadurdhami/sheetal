@@ -14,6 +14,7 @@ import type { AppManifest } from "../core/manifest.js";
 import type { SettingDef } from "../settings/types.js";
 import { SEED_ADDONS, SEED_AI, SEED_BUSINESS, SEED_EXTRA_APPS, SEED_PRICES, SOFT_LIMITS } from "./catalog.seed.js";
 import { BILLING_DEFAULTS, type AppCatalog, type BillingSettings, type Catalog, type EditionCatalog } from "./types.js";
+import { SEED_PACKS, packProblems } from "./packs.js";
 
 // ───────────── Schemas (the one place a catalog is validated) ─────────────
 
@@ -38,6 +39,12 @@ const Ai = z.object({
   trialCredits: z.number().int().min(0).max(100_000), trialDays: z.number().int().min(0).max(90),
   creditRates: z.object({ text: z.number().int().min(0), vision: z.number().int().min(0), voicePerMinute: z.number().int().min(0) }),
 });
+const PackPricesSchema = z.object({ m1: Paisa, m6: Paisa, m12: Paisa });
+const PackSchema = z.object({
+  name: Text, tagline: Text, sort: z.number().int().min(0).max(1000), highlight: z.boolean(),
+  software: z.array(z.string().regex(/^[a-z][a-z0-9_]{0,30}$/)).min(1).max(20), prices: PackPricesSchema,
+  offer: z.object({ enabled: z.boolean(), label: Text, prices: PackPricesSchema }),
+});
 export const CatalogSchema = z.object({
   version: z.number().int().min(1),
   periods: z.array(z.union([z.literal(1), z.literal(3), z.literal(6), z.literal(12)])).min(1),
@@ -50,6 +57,7 @@ export const CatalogSchema = z.object({
   apps: z.record(z.string().regex(/^[a-z][a-z0-9_]{0,40}$/), App),
   addons: z.array(Addon).max(200),
   ai: Ai.optional(),
+  packs: z.record(z.string().regex(/^[a-z][a-z0-9_]{0,20}$/), PackSchema).optional(),
 }) as unknown as z.ZodType<Catalog>;
 
 export const BillingSettingsSchema = z.object({
@@ -85,7 +93,7 @@ export function seedCatalog(manifests: readonly AppManifest[] = APPS): Catalog {
   for (const [id, a] of Object.entries(SEED_EXTRA_APPS)) if (!apps[id]) apps[id] = structuredClone(a);
   return {
     version: 1, periods: [1, 12], business: structuredClone(SEED_BUSINESS), apps,
-    addons: SEED_ADDONS.map((a) => ({ ...a, name: { ...a.name } })), ai: structuredClone(SEED_AI),
+    addons: SEED_ADDONS.map((a) => ({ ...a, name: { ...a.name } })), ai: structuredClone(SEED_AI), packs: structuredClone(SEED_PACKS),
   };
 }
 
@@ -102,6 +110,8 @@ export function withNewApps(saved: Catalog, seed: Catalog = seedCatalog()): Cata
     }
   }
   if (!out.ai && seed.ai) out.ai = structuredClone(seed.ai);
+  // Packs arrived after catalogs were saved (27 Nov 2026): a catalog without them gets the first packs; saved packs are never changed.
+  if (!out.packs && seed.packs) out.packs = structuredClone(seed.packs);
   return out;
 }
 
@@ -152,6 +162,7 @@ export function catalogProblems(next: Catalog, prev?: Catalog, manifests: readon
     if (a.priceYearPaisa > a.priceMonthPaisa * 12) out.push(`Add-on ${a.key}: the yearly price can't be more than 12 monthly prices.`);
   }
   if (new Set(next.addons.map((a) => a.key)).size !== next.addons.length) out.push("Two add-ons have the same key.");
+  out.push(...packProblems(next.packs, next));
   return out;
 }
 

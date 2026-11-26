@@ -32,7 +32,7 @@ export default {
   "group.customers": "ग्राहक", "group.marketplace": "बजार", "group.system": "प्रणाली", "group.operate": "सञ्चालन", "group.sell": "बिक्री", "group.money": "पैसा", "group.admin": "व्यवस्थापन",
   "nav.mail": "इमेल", "nav.dashboard": "ड्यासबोर्ड", "nav.tenants": "व्यवसायहरू", "nav.plans": "योजनाहरू", "nav.billing": "बिलिङ", "nav.catalog": "सूची सेटअप", "nav.content": "साइट सामग्री", "nav.moderation": "जाँच", "nav.inbox": "इनबक्स र लिड",
   "nav.staff": "कर्मचारी र भूमिका", "nav.settings": "सेटिङ", "nav.audit": "गतिविधि लग", "nav.overview": "सारांश", "nav.pos": "बिक्री काउन्टर (POS)", "nav.bookings": "बुकिङ", "nav.calendar": "पात्रो",
-  "nav.projects": "परियोजना", "nav.collections": "रकम संकलन", "nav.investors": "लगानीकर्ता", "nav.listings": "सूचीहरू", "nav.agreements": "सम्झौता", "nav.jobs": "रोजगारी", "nav.invoices": "बिल", "nav.payouts": "भुक्तानी प्राप्ति",
+  "nav.projects": "परियोजना", "nav.collections": "रकम संकलन", "nav.investors": "लगानीकर्ता", "nav.listings": "सूचीहरू", "nav.agreements": "सम्झौता", "nav.jobs": "रोजगारी", "nav.plans": "योजना", "nav.invoices": "बिल", "nav.payouts": "भुक्तानी प्राप्ति",
   "nav.team": "टोली", "nav.roles": "भूमिका", "nav.plan": "योजना र बिलिङ", "nav.data": "आयात र निर्यात", "nav.domains": "डोमेन र इमेल", "nav.help": "सहायता",
   "menu.business": "व्यवसाय कार्यक्षेत्र", "menu.home": "प्लेटफर्म गृहपृष्ठ", "menu.admin": "सुपर एडमिन", "menu.signOut": "साइन आउट",
   "preview.signedInAs": "यस रूपमा साइन इन", "preview.role": "भूमिका", "preview.roleHint": "डेमो: भूमिका बदलेर कसले के खोल्न सक्छ हेर्नुहोस्।", "preview.viewAs": "यस रूपमा हेर्नुहोस्", "preview.viewAsHint": "डेमो: जुनसुकै भूमिकाबाट कार्यक्षेत्र हेर्नुहोस्।",

@@ -20,3 +20,7 @@ export const CouponCheck = Cart.extend({ couponCode: z.string().trim().toUpperCa
 export const Change = z.object({ editionId: AppId, periodMonths: z.union([z.literal(1), z.literal(12)]) }).strict();
 export const Trial = z.object({ editionId: AppId.optional() }).strict();
 export const Cancel = z.object({ reason: z.string().trim().max(500).optional() }).strict();
+
+/** A software pack (Starter, Business, Pro) for 1, 6 or 12 months. */
+export const PackQuote = z.object({ packId: z.string().regex(/^[a-z][a-z0-9_]{0,20}$/), months: z.union([z.literal(1), z.literal(6), z.literal(12)]) }).strict();
+export const PackCheckout = PackQuote.extend({ provider: z.enum(["esewa", "khalti", "fonepay", "manual"]) }).strict();

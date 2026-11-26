@@ -50,6 +50,7 @@ import { ReviewsPage } from "@sheetal/app-reviews/frontend";
 import { AppSettingsPage } from "@sheetal/app-workspace/frontend";
 import { Verification } from "./Verification";
 import { Jobs } from "./Jobs";
+import { Plans } from "./Plans";
 import { Inbox } from "./Inbox";
 import { Approvals } from "./Approvals";
 import { SupportBanner } from "./SupportBanner";
@@ -233,6 +234,7 @@ function Workspace() {
       manifestNavItem("/business/expenses", { paid: true }),
     ] },
     { group: "group.admin", items: [
+      { to: "/business/plans", icon: "layers", key: "nav.plans", perm: "workspace.billing.manage" },
       ...(onApps ? [{ to: "/business/marketplace", icon: "shopping-bag", key: "nav.marketplace", perm: "workspace.billing.manage", match: ["/business/marketplace"] }] : []),
       { to: "/business/team", icon: "users", key: "nav.team" },
       { to: "/business/jobs", icon: "briefcase", key: "nav.jobs", perm: "workspace.team.invite" },
@@ -320,6 +322,7 @@ function Workspace() {
       {onApps && hereApp && <ReadOnlyBanner appName={appName(hereApp)} access={ent.accessOf(hereApp)} />}
       {ended ? <BackupOnly tenant={tenant} /> : <Routes fallback={<Pending part={2} />} routes={[
         { path: "/business", render: () => (<LiveOverview key={tenant.id} tenant={tenant} role={role} />) },
+        { path: "/business/plans", render: () => guard(can(role, "workspace.billing.manage"), <Plans key={tenant.id} tenant={tenant} />) },
         { path: "/business/jobs", render: () => guard(can(role, "workspace.team.invite"), <Jobs key={tenant.id} tenant={tenant} />) },
         { path: "/business/approvals", render: () => <Approvals key={tenant.id} tenant={tenant} live tab="pending" /> },
         { path: "/business/approvals/:tab", render: ({ tab }) => <Approvals key={tenant.id + tab} tenant={tenant} live tab={["decided", "rules"].includes(tab) ? tab : "pending"} /> },

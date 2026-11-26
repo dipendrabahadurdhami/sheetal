@@ -12,6 +12,7 @@
 // paying businesses get a notice with the date the new price reaches their renewals (priceChangeNoticeDays later).
 // Rules: prices are paisa, VAT included. A cut never needs approval. Turning off something businesses use is refused (hide it instead).
 
+import { SOFTWARE } from "@sheetal/platform/billing/packs";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { randomUUID } from "node:crypto";
 import type { Prisma } from "@prisma/client";
@@ -119,7 +120,7 @@ export async function adminPricingRoutes(app: FastifyInstance) {
       db().platformApproval.findMany({ where: { action: ACTION, status: "pending", expiresAt: { gt: new Date() } }, orderBy: { createdAt: "desc" }, take: 20 }),
       store().history(CATALOG_SETTING, undefined, 20),
     ]);
-    return { data: { catalog, billing, counts, waiting: waiting.map((r) => approvalJson(r, "Price change with paying customers")), history, canChange: s.can("platform.pricing.manage") } };
+    return { data: { catalog, billing, counts, waiting: waiting.map((r) => approvalJson(r, "Price change with paying customers")), history, canChange: s.can("platform.pricing.manage"), software: SOFTWARE } };
   });
 
   const preview = async (request: FastifyRequest, s: Staff, value: unknown) => {

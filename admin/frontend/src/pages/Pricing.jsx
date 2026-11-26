@@ -120,6 +120,8 @@ export function Pricing() {
         </Panel>}
       </div>
 
+      {draft.packs && <PacksPanel packs={draft.packs} software={data.software || []} can={can} edit={edit} />}
+
       <Panel title="Seats and add-ons" sub="Business-level seats and each app's add-ons.">
         <div className="pf-table-wrap"><table className="table pf-table" style={{ minWidth: 640 }}>
           <thead><tr><th scope="col">Add-on</th><th scope="col">A month</th><th scope="col">A year</th><th scope="col">On sale</th></tr></thead>
@@ -170,6 +172,45 @@ export function Pricing() {
           : <Empty icon="history" title="No changes saved yet" />}
       </Panel>
     </>
+  );
+}
+
+/**
+ * Software packs (Starter, Business, Pro): name, which software each has, the price for 1, 6 and 12 months and the offer (on or off).
+ * Shown on the business panel's Plans page and on the Sheetal Technology page. Free software (CMS) is in every pack and can't be removed.
+ */
+function PacksPanel({ packs, software, can, edit }) {
+  const ids = Object.keys(packs).sort((a, b) => packs[a].sort - packs[b].sort);
+  const setPack = (id, patch) => edit((c) => ({ ...c, packs: { ...c.packs, [id]: { ...c.packs[id], ...patch } } }));
+  const setPrice = (id, offer, k, v) => edit((c) => {
+    const p = c.packs[id];
+    return { ...c, packs: { ...c.packs, [id]: offer ? { ...p, offer: { ...p.offer, prices: { ...p.offer.prices, [k]: v } } } : { ...p, prices: { ...p.prices, [k]: v } } } };
+  });
+  const flip = (id, sw) => { const cur = packs[id].software; setPack(id, { software: cur.includes(sw) ? cur.filter((x) => x !== sw) : [...cur, sw] }); };
+  const LENGTHS = [["m1", "1 month"], ["m6", "6 months"], ["m12", "1 year"]];
+  return (
+    <Panel title="Software packs" sub="What businesses buy on the Plans page. Prices in rupees, VAT included. While the offer is on, businesses pay the offer price and see the normal price crossed out.">
+      <div className="pf-table-wrap"><table className="table pf-table" style={{ minWidth: 200 + ids.length * 240 }}>
+        <thead><tr><th scope="col">Pack</th>{ids.map((id) => <th key={id} scope="col">{textOf(packs[id].name) || id}</th>)}</tr></thead>
+        <tbody>
+          <tr><th scope="row">Name</th>{ids.map((id) => <td key={id}><Input aria-label={`${id} name`} disabled={!can} value={textOf(packs[id].name)} onChange={(e) => setPack(id, { name: { ...packs[id].name, en: e.target.value } })} /></td>)}</tr>
+          <tr><th scope="row">One line</th>{ids.map((id) => <td key={id}><Input aria-label={`${id} tagline`} disabled={!can} value={textOf(packs[id].tagline)} onChange={(e) => setPack(id, { tagline: { ...packs[id].tagline, en: e.target.value } })} /></td>)}</tr>
+          <tr><th scope="row">Most popular</th>{ids.map((id) => <td key={id}><input type="checkbox" aria-label={`${id} most popular`} disabled={!can} checked={packs[id].highlight} onChange={(e) => setPack(id, { highlight: e.target.checked })} /></td>)}</tr>
+          {software.map((sw) => (
+            <tr key={sw.id}><th scope="row">{textOf(sw.name)}{sw.free ? <small className="muted"> · free for all</small> : null}</th>
+              {ids.map((id) => <td key={id}><input type="checkbox" aria-label={`${id} has ${sw.id}`} disabled={!can || sw.free} checked={sw.free || packs[id].software.includes(sw.id)} onChange={() => flip(id, sw.id)} /></td>)}</tr>
+          ))}
+          {LENGTHS.map(([k, l]) => (
+            <tr key={k}><th scope="row">Price · {l}</th>{ids.map((id) => <td key={id}><RupeeInput label={`${id} price ${l}`} disabled={!can} paisa={packs[id].prices[k]} onPaisa={(v) => setPrice(id, false, k, v)} /></td>)}</tr>
+          ))}
+          <tr><th scope="row">Offer on</th>{ids.map((id) => <td key={id}><input type="checkbox" aria-label={`${id} offer on`} disabled={!can} checked={packs[id].offer.enabled} onChange={(e) => setPack(id, { offer: { ...packs[id].offer, enabled: e.target.checked } })} /></td>)}</tr>
+          <tr><th scope="row">Offer name</th>{ids.map((id) => <td key={id}><Input aria-label={`${id} offer name`} disabled={!can || !packs[id].offer.enabled} value={textOf(packs[id].offer.label)} onChange={(e) => setPack(id, { offer: { ...packs[id].offer, label: { ...packs[id].offer.label, en: e.target.value } } })} /></td>)}</tr>
+          {LENGTHS.map(([k, l]) => (
+            <tr key={`o${k}`}><th scope="row">Offer · {l}</th>{ids.map((id) => <td key={id}><RupeeInput label={`${id} offer ${l}`} disabled={!can || !packs[id].offer.enabled} paisa={packs[id].offer.prices[k]} onPaisa={(v) => setPrice(id, true, k, v)} /></td>)}</tr>
+          ))}
+        </tbody>
+      </table></div>
+    </Panel>
   );
 }
 
