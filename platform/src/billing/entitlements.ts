@@ -15,6 +15,10 @@ import type { Entitlements } from "../core/context.js";
 import { effectiveStatus, type EffectiveStatus } from "./effective-status.js";
 import { checkLimit, largerLimit } from "./limits.js";
 import type { AccessMode, BillingSettings, Catalog, SubscriptionState } from "./types.js";
+import { SOFTWARE } from "./packs.js";
+
+/** Apps of the free software (packs.ts SOFTWARE): always on. */
+const FREE_APPS = SOFTWARE.filter((x) => x.free).flatMap((x) => x.apps);
 
 export interface GrantState { kind: string; appId: string | null; key: string | null; value: number | null; startsAt: Date; endsAt: Date | null; revokedAt: Date | null }
 export interface AddonState { appId: string; addonKey: string; qty: number; currentPeriodEnd: Date }
@@ -55,6 +59,13 @@ export function buildEntitlementsV3(o: EntitlementsV3Input): EntitlementsV3 {
     const cur = status.get(g.appId);
     const ed = g.key ?? "full";
     if (!cur || cur.access !== "full" || (cur.edition === "free" && ed !== "free")) status.set(g.appId, { status: "active", access: "full", edition: ed, until: g.endsAt });
+  }
+
+  // Free software (Sheetal CMS: listings and reviews) is on for every business, installed or not (the owner's rule, 27 Nov 2026): a business
+  // without its own subscription, or that removed it, gets the free edition. A paid or gifted edition is never lowered.
+  for (const appId of FREE_APPS) {
+    const cur = status.get(appId);
+    if ((!cur || cur.access === "none" || cur.access === "locked") && o.catalog.apps[appId]?.editions.free) status.set(appId, { status: "active", access: "full", edition: "free", until: null });
   }
 
   const access = (appId: string): AccessMode => (core.has(appId) ? "full" : status.get(appId)?.access ?? "none");

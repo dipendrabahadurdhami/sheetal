@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { CatalogSchema, catalogProblems, seedCatalog, withNewApps } from "../src/billing/catalog.js";
 import { SEED_PACKS, SOFTWARE, packApps, packPrice, packProblems, packQuote, publicPacks } from "../src/billing/packs.js";
 import { BILLING_DEFAULTS, type BillingState, type Catalog } from "../src/billing/types.js";
+import { buildEntitlementsV3 } from "../src/billing/entitlements.js";
 
 const S = { ...BILLING_DEFAULTS, salesEnabled: true };
 const now = new Date("2026-11-27T06:00:00Z");
@@ -109,5 +110,23 @@ describe("the guard and the public view", () => {
     expect(v.packs[0]!.periods.map((x) => x.months)).toEqual([1, 6, 12]);
     expect(v.packs[0]!.periods[0]).toMatchObject({ pricePaisa: 399_900, normalPaisa: 499_900, onOffer: true });
     expect(v.software.find((s) => s.id === "cms")!.free).toBe(true);
+  });
+});
+
+describe("free software is on for every business", () => {
+  const cat = withNewApps(seedCatalog());
+  const base = { now, catalog: cat, settings: S, grants: [], addons: [], seatsUsed: 1 };
+  it("a business without Listings or Reviews still has their free edition, unlimited listings in the owner's catalog", () => {
+    const c = structuredClone(cat);
+    c.apps.listings!.editions.free!.limits.listings!.value = null;
+    const e = buildEntitlementsV3({ ...base, catalog: c, subscriptions: [] });
+    expect(e.hasApp("listings")).toBe(true);
+    expect(e.hasApp("reviews")).toBe(true);
+    expect(e.limit("listings", "listings")).toBeNull();
+    expect(e.hasApp("crm")).toBe(false); // paid software stays off
+  });
+  it("never lowers a paid edition, and comes back after a remove", () => {
+    const paid = buildEntitlementsV3({ ...base, subscriptions: [{ appId: "listings", editionId: "full", status: "active", periodMonths: 1, priceGrossPaisa: 50_000, currentPeriodStart: now, currentPeriodEnd: new Date("2026-12-27T00:00:00Z"), trialEndsAt: null, trialUsedAt: null, cancelAtPeriodEnd: false, uninstalledAt: null }] });
+    expect(paid.statuses().listings!.edition).toBe("full");
   });
 });
