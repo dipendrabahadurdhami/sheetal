@@ -3309,3 +3309,11 @@ html.pa-lock, html.pa-lock body { overflow: hidden !important; }
 .sticky-card .job-review div { grid-template-columns: 1fr; gap: 2px; }
 .job-apply-top { display: none; }
 @media (max-width: 1080px) { .job-apply-top { display: inline-flex; } }
+/* The job page's right column: the apply box with other open roles under it (one sticky group, no shadow of its own). */
+.job-side-wrap { display: flex; flex-direction: column; gap: var(--s4); box-shadow: none !important; }
+.job-side-wrap > .card:first-child { box-shadow: var(--shadow); }
+.job-other { display: flex; flex-direction: column; gap: 2px; padding: 10px 0; border-top: 1px solid var(--line); color: var(--text); }
+.job-other:first-of-type { border-top: 0; }
+.job-other b { font-weight: 500; color: var(--text-strong); font-size: 14px; }
+.job-other span { font-size: 12.5px; color: var(--muted); }
+.job-other:hover b { color: var(--accent-ink); }

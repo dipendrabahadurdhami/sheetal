@@ -160,7 +160,9 @@ export function JobDetail() {
         </section>
       </div>
       <aside ref={side} style={{ alignSelf: "stretch", scrollMarginTop: 90 }}>
-        <div className="card card-pad sticky-card stack" style={{ gap: 14 }}>
+        {/* The apply box and, under it, other open roles stick together while the job text scrolls. */}
+        <div className="sticky-card job-side-wrap">
+        <div className="card card-pad stack" style={{ gap: 14 }}>
           {applying ? <>
             <div className="job-side-head">
               <div className="stack" style={{ gap: 2 }}><span className="tier">Apply</span><h3 style={{ fontSize: 18 }}>{j.title}</h3></div>
@@ -179,8 +181,31 @@ export function JobDetail() {
           <button type="button" className="btn btn-primary btn-block" onClick={startApply}>{hasDraft ? "Continue your application" : "Apply now"}</button>
           </>}
         </div>
+        {!applying && <OtherRoles job={j} />}
+        </div>
       </aside>
     </div>
+    </div>
+  );
+}
+
+/** Up to four other open roles: same department first, then the same company, then the newest. */
+function OtherRoles({ job }) {
+  const { data } = useAsync(() => api.jobs().then(toList), []);
+  const others = (data?.items || []).filter((x) => x.slug !== job.slug);
+  if (!others.length) return null;
+  const score = (x) => (x.department && x.department === job.department ? 2 : 0) + (!!x.company?.own === !!job.company?.own && x.company?.name === job.company?.name ? 1 : 0);
+  const pick = others.map((x, i) => [x, score(x), i]).sort((a, b) => b[1] - a[1] || a[2] - b[2]).slice(0, 4).map(([x]) => x);
+  return (
+    <div className="card card-pad stack job-others" style={{ gap: 4 }}>
+      <h3 style={{ fontSize: 16, marginBottom: 6 }}>Other open roles</h3>
+      {pick.map((x) => (
+        <Link key={x.slug} to={`/careers/${x.slug}`} className="job-other">
+          <b>{x.title}</b>
+          <span>{[x.company && !x.company.own ? x.company.name : null, x.location, payOf(x)].filter(Boolean).join(" · ")}</span>
+        </Link>
+      ))}
+      {others.length > pick.length && <Link to="/careers" className="link small" style={{ marginTop: 6 }}>See all {others.length + 1} open roles <ChevronRight size={14} /></Link>}
     </div>
   );
 }
