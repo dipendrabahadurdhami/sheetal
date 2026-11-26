@@ -1,6 +1,6 @@
 // Open jobs (at Sheetal Property and at property businesses on Sheetal) and a job's page with a step-by-step application.
-// How it works: the job page shows the key facts, the role in sections and the application in five short steps (about
-// you, experience, pay and joining, CV and documents, check and send). The questions come from shared/src/data/jobForm.js;
+// How it works: the job page shows the key facts and the role in sections; "Apply now" opens the application in the right-hand
+// box, in five short steps (about you, experience, pay and joining, CV and documents, check and send). The questions come from shared/src/data/jobForm.js;
 // the job turns portfolio, references, two-wheeler and on-camera questions on or off. A draft of the answers (not the CV)
 // stays in this browser until it is sent. The CV is kept private.
 
@@ -8,7 +8,7 @@ import { clean } from "../utils/sanitize";
 import { useSEO } from "../utils/seo";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { MapPin, Briefcase, Clock, Upload, ArrowLeft, Building2, BadgeCheck, Users, Wallet, CalendarDays, GraduationCap, Check, ChevronLeft, ChevronRight, FileText, Send } from "lucide-react";
+import { MapPin, Briefcase, Clock, Upload, ArrowLeft, Building2, BadgeCheck, Users, Wallet, CalendarDays, GraduationCap, Check, ChevronLeft, ChevronRight, FileText, Send, X } from "lucide-react";
 import { api } from "../api/endpoints";
 import { toItem, toList } from "../api/client";
 import { useAsync } from "../hooks/useAsync";
@@ -114,16 +114,22 @@ export function Careers() {
 export function JobDetail() {
   const { slug } = useParams();
   const { data: j, loading, error } = useAsync(() => api.job(slug).then(toItem), [slug]);
+  const [applying, setApplying] = useState(false);
+  const side = useRef(null);
   useSEO(j?.title || "Job", j?.title ? `Apply for ${j.title} at ${j.company?.name || "Sheetal Property"}.` : undefined);
   if (loading) return <div className="container section"><div className="sk" style={{ height: 300 }} /></div>;
   if (error || !j) return <div className="container"><Empty title="This role isn't open any more"><Link to="/careers">See open roles</Link></Empty></div>;
   const left = daysLeft(j.deadline);
-  const toApply = () => document.getElementById("apply")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const hasDraft = (() => { try { return !!localStorage.getItem(`sheetal_apply_${slug}`); } catch { return false; } })();
+  // On a phone the box sits under the job text: bring it into view once the form is open.
+  const startApply = () => { setApplying(true); setTimeout(() => side.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 0); };
   const sections = [["About the role", j.description], ["What you'll do", j.responsibilities], ["What we look for", j.requirements], ["What we offer", j.benefits]].filter(([, h]) => h);
   return (
-    <div className="container detail-layout" style={{ paddingTop: 24, paddingBottom: 72 }}>
+    <div className="container" style={{ paddingTop: 24, paddingBottom: 72 }}>
+    <Link to="/careers" className="link small"><ArrowLeft size={14} /> All roles</Link>
+    {/* Both columns start on the same line: the company and title on the left, the apply box on the right. */}
+    <div className="detail-layout" style={{ marginTop: 20 }}>
       <div className="stack" style={{ gap: 24 }}>
-        <Link to="/careers" className="link small"><ArrowLeft size={14} /> All roles</Link>
         <div className="stack" style={{ gap: 14 }}>
           <Company c={j.company} big />
           {j.department && <span className="tier">{j.department}</span>}
@@ -137,26 +143,31 @@ export function JobDetail() {
           {payOf(j) && <div><small>Fixed salary</small><b>{payOf(j)}</b></div>}
           {j.deadline && <div><small>Apply by</small><b>{fmtDate(j.deadline)}</b></div>}
         </div>
+        {/* Phones only: the apply box is at the end of the page, so this opens it and jumps there. */}
+        <button type="button" className="btn btn-primary btn-block job-apply-top" onClick={startApply}>{hasDraft ? "Continue your application" : "Apply now"}</button>
         {sections.map(([t, h]) => (
           <section key={t} className="job-section"><h2>{t}</h2><div className="prose" dangerouslySetInnerHTML={{ __html: clean(h) }} /></section>
         ))}
         <section className="job-section">
           <h2>How hiring works</h2>
           <ol className="prose" style={{ paddingLeft: "1.2em", margin: 0 }}>
-            <li>Apply below. It takes about 10 minutes; your answers are saved in this browser until you send them.</li>
+            <li>Press Apply now. It takes about 10 minutes; your answers are saved in this browser until you send them.</li>
             <li>We read every application. If your profile fits, we call you to talk about the role.</li>
             <li>Interviews with the team, and for senior roles a reference check with your consent.</li>
             <li>An offer with a clear role, targets and 30, 60 and 90-day reviews.</li>
           </ol>
           {j.company && !j.company.own && <p className="small muted">This job is posted by {j.company.name}. Your application and CV go straight to them.</p>}
         </section>
-        <section id="apply" className="job-section" style={{ scrollMarginTop: 90 }}>
-          <h2>Apply for this role</h2>
-          <ApplyForm job={j} slug={slug} />
-        </section>
       </div>
-      <aside style={{ alignSelf: "stretch" }}>
+      <aside ref={side} style={{ alignSelf: "stretch", scrollMarginTop: 90 }}>
         <div className="card card-pad sticky-card stack" style={{ gap: 14 }}>
+          {applying ? <>
+            <div className="job-side-head">
+              <div className="stack" style={{ gap: 2 }}><span className="tier">Apply</span><h3 style={{ fontSize: 18 }}>{j.title}</h3></div>
+              <button type="button" className="btn btn-ghost btn-icon" aria-label="Close the application" title="Close (your answers are kept)" onClick={() => setApplying(false)}><X size={18} /></button>
+            </div>
+            <ApplyForm job={j} slug={slug} bare />
+          </> : <>
           <h3 style={{ fontSize: 18 }}>{j.title}</h3>
           <div className="job-meta" style={{ flexDirection: "column", gap: 8 }}>
             <span><MapPin size={14} />{j.location}</span>
@@ -165,15 +176,17 @@ export function JobDetail() {
             {payOf(j) && <span><Wallet size={14} />{payOf(j)}</span>}
             {j.deadline && <span><CalendarDays size={14} />Apply by {fmtDate(j.deadline)}{left != null && left >= 0 && left <= 14 ? ` · ${left} day${left === 1 ? "" : "s"} left` : ""}</span>}
           </div>
-          <button type="button" className="btn btn-primary btn-block" onClick={toApply}>Apply now</button>
+          <button type="button" className="btn btn-primary btn-block" onClick={startApply}>{hasDraft ? "Continue your application" : "Apply now"}</button>
+          </>}
         </div>
       </aside>
+    </div>
     </div>
   );
 }
 
 /** The application in five steps; checks each step before moving on and sends everything with the CV at the end. */
-function ApplyForm({ job, slug }) {
+function ApplyForm({ job, slug, bare }) {
   const steps = useMemo(() => applicationSteps(job.form), [job.form]);
   const key = `sheetal_apply_${slug}`;
   const [v, setV] = useState(() => { try { return JSON.parse(localStorage.getItem(key) || "{}"); } catch { return {}; } });
@@ -233,7 +246,7 @@ function ApplyForm({ job, slug }) {
   };
 
   if (sent) return (
-    <div ref={top} className="card card-pad job-done">
+    <div ref={top} className={`${bare ? "" : "card card-pad "}job-done`}>
       <span style={{ width: 48, height: 48, borderRadius: 24, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "var(--accent-soft)" }}><Check size={24} /></span>
       <h3>Application sent</h3>
       <p className="small muted" style={{ maxWidth: 440 }}>Thank you{v.name ? `, ${String(v.name).split(" ")[0]}` : ""}. {job.company?.own ? "We" : job.company?.name} will read it and contact you at {v.email} if your profile fits the role of {job.title}.</p>
@@ -284,7 +297,7 @@ function ApplyForm({ job, slug }) {
 
   const title = step < last ? steps[step].title : "Check and send";
   return (
-    <div ref={top} className="card card-pad job-apply" style={{ scrollMarginTop: 90 }}>
+    <div ref={top} className={`${bare ? "" : "card card-pad "}job-apply`} style={{ scrollMarginTop: 90 }}>
       <div className="job-steps" aria-hidden>{[...steps, null].map((_, i) => <span key={i} className={i <= step ? "on" : ""} />)}</div>
       <div className="row between" style={{ gap: 8 }}><h3 style={{ fontSize: 18 }}>{title}</h3><span className="small muted">Step {step + 1} of {last + 1}</span></div>
       {problem && <p className="small" role="alert" style={{ color: "var(--c-crimson)", margin: 0 }}>{problem}</p>}

@@ -3273,8 +3273,12 @@ html.pa-lock, html.pa-lock body { overflow: hidden !important; }
 }
 
 /* ───── Careers: job page and the step-by-step application form (website/frontend/src/pages/Careers.jsx) ───── */
-.job-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; }
-.job-facts > div { background: var(--card); padding: var(--s3) var(--s4); display: flex; flex-direction: column; gap: 4px; }
+/* Even rows of three (two on phones); lines drawn per cell, so a short last row never shows a grey gap. */
+.job-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; }
+.job-facts > div { padding: var(--s3) var(--s4); display: flex; flex-direction: column; gap: 4px; box-shadow: 1px 0 0 var(--line), 0 1px 0 var(--line); }
+@media (max-width: 760px) { .job-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.job-side-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.job-side-head button { flex-shrink: 0; }
 .job-facts small { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .job-facts b { font-weight: 600; color: var(--text-strong); font-size: 14.5px; }
 .job-section { display: flex; flex-direction: column; gap: var(--s3); padding-top: var(--s5); border-top: 1px solid var(--line); }
@@ -3302,3 +3306,6 @@ html.pa-lock, html.pa-lock body { overflow: hidden !important; }
 .job-review dd { margin: 0; color: var(--text-strong); white-space: pre-wrap; overflow-wrap: anywhere; }
 .job-done { text-align: center; display: flex; flex-direction: column; gap: var(--s3); align-items: center; padding: var(--s5) 0; }
 @media (max-width: 760px) { .job-review div { grid-template-columns: 1fr; gap: 2px; } }
+.sticky-card .job-review div { grid-template-columns: 1fr; gap: 2px; }
+.job-apply-top { display: none; }
+@media (max-width: 1080px) { .job-apply-top { display: inline-flex; } }
