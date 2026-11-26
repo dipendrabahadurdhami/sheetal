@@ -138,6 +138,7 @@ export function LiveCareers() {
           { key: "a", label: "Applications", num: true, align: "right", render: (r) => <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); loadApps(r); }}>{r.applications}{r.newApplications ? ` (${r.newApplications} new)` : ""}</Button> },
         ]} />}
       </Panel>
+      <BusinessJobs />
       <Drawer open={!!edit} onClose={() => setEdit(null)} title={edit?.id ? "Edit job" : "New job"} footer={edit && <><Button variant="outline" onClick={() => setEdit(null)}>Cancel</Button><Button disabled={!edit.title?.trim() || !edit.description?.trim()} onClick={save}>Save</Button></>}>
         {edit && <div className="pf-stack">
           <Field label="Title"><Input value={edit.title} onChange={(e) => setEdit({ ...edit, title: e.target.value })} /></Field>
@@ -163,6 +164,45 @@ export function LiveCareers() {
           <li key={a.id}><div className="pf-two" style={{ flex: 1 }}><b>{a.name}</b><small>{a.email}{a.phone ? ` · ${a.phone}` : ""} · {fdatetime(a.createdAt)}</small>{a.coverLetter && <span className="small">{a.coverLetter.slice(0, 300)}</span>}</div>
             {a.cv && <Button size="sm" variant="outline" icon="file-text" onClick={() => openPrivate(a.cv, toast)}>CV</Button>}
             <Select value={a.status} onChange={(v) => setStatus(a, v)} options={APP_STATUS.map(([id, label]) => ({ id, label }))} style={{ width: 150 }} aria-label="Status" /></li>))}</ul>}
+      </Drawer>
+    </>
+  );
+}
+
+/** Jobs businesses posted from their panel. Open jobs of businesses that aren't verified wait here; verified businesses' jobs go live at once. */
+const REVIEW = { approved: ["done", "On the website"], pending: ["progress", "To check"], rejected: ["action", "Sent back"] };
+function BusinessJobs() {
+  const toast = useToast();
+  const [show, setShow] = useState("pending");
+  const list = useApi(`/admin/business-jobs?show=${show}`, [show]);
+  const [look, setLook] = useState(null);
+  const decide = (j, review) => {
+    const note = review === "rejected" ? window.prompt("What should the business change? They see this note.") : "";
+    if (review === "rejected" && !note?.trim()) return;
+    adminApi("PATCH", `/admin/business-jobs/${j.id}`, { review, note: note?.trim() || undefined }).then((r) => { toast(r.message); setLook(null); list.reload(); }).catch((e) => toast(e.message));
+  };
+  if (list.error && !list.data?.length) return null;   // nothing to show when the list cannot load
+  return (
+    <>
+      <Panel title="Jobs from businesses" sub="Businesses post jobs from their panel. Verified businesses go live at once; others wait here for your check."
+        actions={<Select value={show} onChange={setShow} options={[{ id: "pending", label: `To check${list.meta?.waiting ? ` (${list.meta.waiting})` : ""}` }, { id: "all", label: "All business jobs" }]} style={{ width: 200 }} aria-label="Show" />}>
+        {!list.data ? <p className="muted pf-pad">Loading…</p> : <Table rows={list.data} onRowClick={setLook} minWidth={720} empty={<Empty icon="circle-check" title={show === "pending" ? "Nothing to check" : "No business jobs yet"} />} columns={[
+          { key: "t", label: "Job", render: (r) => <span className="pf-two"><b>{r.title}</b><small>{r.tenant?.name}{r.tenant?.verification === "verified" ? " · Verified" : ""} · {[JOB_TYPES.find((x) => x[0] === r.jobType)?.[1], r.location].filter(Boolean).join(" · ")}</small></span> },
+          { key: "s", label: "Status", render: (r) => r.status !== "open" ? <Badge tone="neutral">{r.status === "closed" ? "Closed" : "Draft"}</Badge> : <Badge tone={REVIEW[r.review]?.[0]}>{REVIEW[r.review]?.[1]}</Badge> },
+          { key: "u", label: "Updated", num: true, render: (r) => fdate(r.updatedAt) },
+          { key: "act", label: "", align: "right", render: (r) => r.status === "open" && r.review === "pending" ? <div className="pf-row-actions" style={{ justifyContent: "flex-end" }}><Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); decide(r, "rejected"); }}>Send back</Button><Button size="sm" icon="check" onClick={(e) => { e.stopPropagation(); decide(r, "approved"); }}>Approve</Button></div> : null },
+        ]} />}
+      </Panel>
+      <Drawer open={!!look} onClose={() => setLook(null)} title={look?.title || ""} sub={look ? `${look.tenant?.name} · ${JOB_TYPES.find((x) => x[0] === look.jobType)?.[1] || ""}` : ""}
+        footer={look?.status === "open" && look.review !== "approved" ? <><Button variant="outline" onClick={() => decide(look, "rejected")}>Send back</Button><Button icon="check" onClick={() => decide(look, "approved")}>Approve</Button></>
+          : look?.review === "approved" ? <Button variant="outline" onClick={() => decide(look, "rejected")}>Take off the website</Button> : null}>
+        {look && <div className="pf-stack">
+          {look.reviewNote && <div className="pf-alert action"><Icon name="circle-alert" size={18} /><div><b>Your last note</b><span>{look.reviewNote}</span></div></div>}
+          <p className="small muted">{[look.location, look.experience, look.vacancies > 1 ? `${look.vacancies} vacancies` : null, look.deadline ? `Apply by ${fdate(look.deadline)}` : null, look.salaryMin || look.salaryMax ? `Rs. ${[look.salaryMin, look.salaryMax].filter(Boolean).map((n) => n.toLocaleString("en-IN")).join(" – ")}${look.showSalary ? "" : " (hidden)"}` : null].filter(Boolean).join(" · ")}</p>
+          {[["About the job", look.description], ["What you'll do", look.responsibilities], ["What we look for", look.requirements], ["Benefits", look.benefits]].filter(([, h]) => h).map(([t, h]) => (
+            <div key={t}><b>{t}</b><div className="small" style={{ whiteSpace: "pre-wrap" }}>{h.replace(/<br\s*\/?>/g, "\n").replace(/<\/p>\s*<p>/g, "\n\n").replace(/<[^>]*>/g, "")}</div></div>
+          ))}
+        </div>}
       </Drawer>
     </>
   );

@@ -49,6 +49,7 @@ import { LiveAnalytics, LiveChannels } from "./LiveGrowth";
 import { ReviewsPage } from "@sheetal/app-reviews/frontend";
 import { AppSettingsPage } from "@sheetal/app-workspace/frontend";
 import { Verification } from "./Verification";
+import { Jobs } from "./Jobs";
 import { Inbox } from "./Inbox";
 import { Approvals } from "./Approvals";
 import { SupportBanner } from "./SupportBanner";
@@ -234,6 +235,7 @@ function Workspace() {
     { group: "group.admin", items: [
       ...(onApps ? [{ to: "/business/marketplace", icon: "shopping-bag", key: "nav.marketplace", perm: "workspace.billing.manage", match: ["/business/marketplace"] }] : []),
       { to: "/business/team", icon: "users", key: "nav.team" },
+      { to: "/business/jobs", icon: "briefcase", key: "nav.jobs", perm: "workspace.team.invite" },
       { to: can(role, "workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete") ? "/business/settings" : "/business/billing", icon: "settings", key: "nav.settings", permAny: ["workspace.settings.update+workspace.profile.update+workspace.branding.update+workspace.branch.create+workspace.branch.update+workspace.branch.delete", "workspace.billing.manage"], match: ["/business/settings", "/business/billing", "/business/domains", "/business/developers", "/business/data", "/business/branches", "/business/channels", "/business/ai-accounts"] },
       { to: "/business/help", icon: "life-buoy", key: "nav.help" },
     ] },
@@ -273,6 +275,7 @@ function Workspace() {
         types.includes("agency") && !free && { icon: "key-round", label: "Rentals: rent bills", to: "/business/rentals/rent" },
         !free && can(role, "invoicing.invoice.read+invoicing.invoice.create") && { icon: "receipt", label: t("binv.new"), to: "/business/invoices" },
         can(role, "workspace.team.read+workspace.team.invite+workspace.team.update+workspace.team.remove") && { icon: "user-plus", label: t("team.invite"), to: "/business/team" },
+        can(role, "workspace.team.invite") && { icon: "briefcase", label: "Post a job", to: "/business/jobs" },
         { icon: "calendar-days", label: t("hr.apply"), to: "/business/people" },
       ].filter(Boolean)}
       records={[
@@ -317,6 +320,7 @@ function Workspace() {
       {onApps && hereApp && <ReadOnlyBanner appName={appName(hereApp)} access={ent.accessOf(hereApp)} />}
       {ended ? <BackupOnly tenant={tenant} /> : <Routes fallback={<Pending part={2} />} routes={[
         { path: "/business", render: () => (<LiveOverview key={tenant.id} tenant={tenant} role={role} />) },
+        { path: "/business/jobs", render: () => guard(can(role, "workspace.team.invite"), <Jobs key={tenant.id} tenant={tenant} />) },
         { path: "/business/approvals", render: () => <Approvals key={tenant.id} tenant={tenant} live tab="pending" /> },
         { path: "/business/approvals/:tab", render: ({ tab }) => <Approvals key={tenant.id + tab} tenant={tenant} live tab={["decided", "rules"].includes(tab) ? tab : "pending"} /> },
         { path: "/business/team", render: () => <TeamHub key={tenant.id + "m"} tenant={tenant} role={role} start={can(role, "workspace.team.read") ? "members" : "attendance"} /> },

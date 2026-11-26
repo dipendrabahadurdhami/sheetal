@@ -1,10 +1,10 @@
-// Open jobs and a job's page with the application form (CV kept private).
+// Open jobs (at Sheetal Property and at property businesses on Sheetal) and a job's page with the application form (CV kept private).
 
 import { clean } from "../utils/sanitize";
 import { useSEO } from "../utils/seo";
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { MapPin, Briefcase, Clock, Upload, ArrowLeft } from "lucide-react";
+import { MapPin, Briefcase, Clock, Upload, ArrowLeft, Building2, BadgeCheck } from "lucide-react";
 import { api } from "../api/endpoints";
 import { toItem, toList } from "../api/client";
 import { useAsync } from "../hooks/useAsync";
@@ -18,21 +18,45 @@ const tabStyle = (on) => ({
   borderBottom: `2px solid ${on ? "var(--accent-ink)" : "transparent"}`,
 });
 
+/** The company a job is at: its logo (or an icon), name and the Verified tick. */
+function Company({ c, big }) {
+  if (!c) return null;
+  const size = big ? 40 : 28;
+  return (
+    <span className="row" style={{ gap: 8, alignItems: "center" }}>
+      {c.logo ? <img src={c.logo} alt="" width={size} height={size} style={{ borderRadius: 8, objectFit: "contain", background: "var(--card)", border: "1px solid var(--line)" }} />
+        : <span style={{ width: size, height: size, borderRadius: 8, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "var(--accent-soft)" }}><Building2 size={big ? 20 : 15} /></span>}
+      <span style={{ fontWeight: 500, color: "var(--text-strong)" }}>{c.name}</span>
+      {c.verified && <BadgeCheck size={15} aria-label="Verified" />}
+    </span>
+  );
+}
+
 export function Careers() {
-  useSEO("Careers", "Jobs at Sheetal Property in sales, marketing and property management.");
+  useSEO("Careers", "Jobs in real estate in Nepal: sales, marketing and property management at Sheetal Property and property businesses.");
   const { data, loading } = useAsync(() => api.jobs().then(toList), []);
   const all = data?.items || [];
   const [dept, setDept] = useState("All");
-  const depts = useMemo(() => ["All", ...Array.from(new Set(all.map((j) => j.department).filter(Boolean)))], [all]);
-  const items = dept === "All" ? all : all.filter((j) => j.department === dept);
+  const [who, setWho] = useState("all");
+  const others = all.some((j) => j.company && !j.company.own);
+  const mine = who === "all" ? all : all.filter((j) => !!j.company?.own === (who === "sheetal"));
+  const depts = useMemo(() => ["All", ...Array.from(new Set(mine.map((j) => j.department).filter(Boolean)))], [mine]);
+  const items = dept === "All" || !depts.includes(dept) ? mine : mine.filter((j) => j.department === dept);
   const pg = usePaged(items, 10);
   return (
     <>
       <div className="tools-hero careers-hero">
-        <PageHead title="Careers">Open positions at Sheetal Property.</PageHead>
+        <PageHead title="Careers">Open jobs at Sheetal Property and at property businesses across Nepal.</PageHead>
       </div>
 
       <div className="container" style={{ paddingTop: 24 }}>
+        {others && (
+          <div className="row" style={{ gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+            {[["all", "All jobs"], ["sheetal", "At Sheetal Property"], ["others", "At other companies"]].map(([id, label]) => (
+              <button key={id} type="button" className={`btn btn-sm ${who === id ? "btn-primary" : "btn-outline"}`} onClick={() => { setWho(id); setDept("All"); }}>{label}</button>
+            ))}
+          </div>
+        )}
         {depts.length > 2 && (
           <div className="row" style={{ gap: 28, flexWrap: "wrap", borderBottom: "1px solid var(--line)", marginBottom: 24 }}>
             {depts.map((d) => (
@@ -46,8 +70,9 @@ export function Careers() {
             {pg.items.map((j, i) => (
               <Link key={j.id} to={`/careers/${j.slug}`} className="row between" style={{ padding: "28px 0", borderBottom: i === pg.items.length - 1 ? 0 : "1px solid var(--line)", color: "var(--text)", flexWrap: "wrap", gap: 16 }}>
                 <div className="stack" style={{ gap: 8 }}>
-                  <span className="tier">{j.department}</span>
+                  <Company c={j.company} />
                   <h3 style={{ fontSize: 20 }}>{j.title}</h3>
+                  {j.department && <span className="tier">{j.department}</span>}
                   <div className="row-wrap small muted" style={{ gap: 18 }}><span className="row" style={{ gap: 6 }}><MapPin size={14} />{j.location}</span><span className="row" style={{ gap: 6 }}><Clock size={14} />{j.type || j.job_type}</span>{j.salary && <span>{j.salary}</span>}</div>
                 </div>
                 <span className="btn btn-outline">View role</span>
@@ -74,7 +99,7 @@ export function JobDetail() {
   const { slug } = useParams();
   const { toast } = useApp();
   const { data: j, loading, error } = useAsync(() => api.job(slug).then(toItem), [slug]);
-  useSEO(j?.title || "Job", j?.title ? `Apply for ${j.title} at Sheetal Property.` : undefined);
+  useSEO(j?.title || "Job", j?.title ? `Apply for ${j.title} at ${j.company?.name || "Sheetal Property"}.` : undefined);
   const [f, setF] = useState({ name: "", email: "", phone: "", cover_letter: "" });
   const [cv, setCv] = useState(null);
   if (loading) return <div className="container section"><div className="sk" style={{ height: 300 }} /></div>;
@@ -88,11 +113,16 @@ export function JobDetail() {
     <div className="container detail-layout" style={{ paddingTop: 24 }}>
       <div className="stack" style={{ gap: 20 }}>
         <Link to="/careers" className="link small"><ArrowLeft size={14} /> All roles</Link>
-        <span className="tier">{j.department}</span>
+        <Company c={j.company} big />
+        {j.department && <span className="tier">{j.department}</span>}
         <h1 style={{ fontSize: "clamp(30px, 4vw, 44px)" }}>{j.title}</h1>
         <div className="row-wrap muted" style={{ gap: 20 }}><span className="row" style={{ gap: 6 }}><MapPin size={15} />{j.location}</span><span>{j.type || j.job_type}</span>{j.experience && <span>{j.experience}</span>}{j.deadline && <span>Apply by {fmtDate(j.deadline)}</span>}</div>
         <div className="hr" />
-        <div className="prose" dangerouslySetInnerHTML={{ __html: clean((j.description || "") + (j.requirements || "")) }} />
+        <div className="prose" dangerouslySetInnerHTML={{ __html: clean(j.description || "") }} />
+        {[["What you'll do", j.responsibilities], ["What they look for", j.requirements], ["Benefits", j.benefits]].filter(([, h]) => h).map(([t, h]) => (
+          <div key={t} className="stack" style={{ gap: 8 }}><h3 style={{ fontSize: 18 }}>{t}</h3><div className="prose" dangerouslySetInnerHTML={{ __html: clean(h) }} /></div>
+        ))}
+        {j.company && !j.company.own && <p className="small muted">This job is posted by {j.company.name}. Your application and CV go straight to them.</p>}
       </div>
       <aside style={{ alignSelf: "stretch" }}>
         <form className="card card-pad sticky-card stack" onSubmit={apply}>

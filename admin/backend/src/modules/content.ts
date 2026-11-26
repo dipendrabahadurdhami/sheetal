@@ -13,7 +13,7 @@ import { badRequest, notFound } from "@sheetal/platform/core/errors";
 import { mediaBase, photoUrl, savePhoto } from "@sheetal/backend-core/lib/photos";
 import { readPrivateFile } from "@sheetal/backend-core/lib/files";
 import { htmlText, sanitizeHtml } from "@sheetal/backend-core/lib/html";
-import { notify } from "@sheetal/platform/notify/index";
+import { notify, teamWith } from "@sheetal/platform/notify/index";
 import { staffOf } from "./routes.js";
 
 const slugify = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || "post";
@@ -147,7 +147,7 @@ export async function adminContentRoutes(app: FastifyInstance) {
 
   app.get("/admin/jobs", async (request) => {
     staffOf(request, "platform.content.update");
-    const rows = await db().jobPost.findMany({ orderBy: { createdAt: "desc" }, include: { _count: { select: { applications: true } } } });
+    const rows = await db().jobPost.findMany({ where: { tenantId: null }, orderBy: { createdAt: "desc" }, include: { _count: { select: { applications: true } } } });
     const fresh = await db().jobApplication.groupBy({ by: ["jobId"], where: { status: "new" }, _count: true });
     const n = new Map(fresh.map((f) => [f.jobId, f._count]));
     return { data: rows.map(({ _count, ...j }) => ({ ...j, applications: _count.applications, newApplications: n.get(j.id) ?? 0 })) };
@@ -162,10 +162,36 @@ export async function adminContentRoutes(app: FastifyInstance) {
   app.put<{ Params: { id: string } }>("/admin/jobs/:id", async (request) => {
     const s = staffOf(request, "platform.content.update");
     const b = Job.parse(request.body);
-    const j = await db().jobPost.update({ where: { id: Number(request.params.id) || -1 }, data: jobData(b) }).catch(() => null);
-    if (!j) throw notFound("Job not found.");
+    const own = await db().jobPost.findFirst({ where: { id: Number(request.params.id) || -1, tenantId: null }, select: { id: true } });
+    if (!own) throw notFound("Job not found.");   // a business's job is changed by that business, only checked here
+    const j = await db().jobPost.update({ where: { id: own.id }, data: jobData(b) });
     await audit(s.user.id, request.ip, "content.job_updated", j.title, { status: j.status });
     return { message: "Saved." };
+  });
+  // Jobs businesses posted from their panel: unverified businesses' open jobs wait here for a check.
+  app.get("/admin/business-jobs", async (request) => {
+    staffOf(request, "platform.content.update");
+    const q = z.object({ show: z.enum(["pending", "all"]).default("pending") }).parse(request.query);
+    const where: Prisma.JobPostWhereInput = { tenantId: { not: null }, ...(q.show === "pending" ? { review: "pending", status: "open" } : {}) };
+    const [rows, waiting] = await Promise.all([
+      db().jobPost.findMany({ where, orderBy: { updatedAt: q.show === "pending" ? "asc" : "desc" }, take: 300, include: { tenant: { select: { id: true, name: true, verification: true } }, _count: { select: { applications: true } } } }),
+      db().jobPost.count({ where: { tenantId: { not: null }, review: "pending", status: "open" } }),
+    ]);
+    return { data: rows.map(({ _count, ...j }) => ({ ...j, applications: _count.applications })), meta: { waiting } };
+  });
+  app.patch<{ Params: { id: string } }>("/admin/business-jobs/:id", async (request) => {
+    const s = staffOf(request, "platform.content.update");
+    const b = z.object({ review: z.enum(["approved", "rejected"]), note: z.string().trim().max(500).optional() }).parse(request.body);
+    if (b.review === "rejected" && !b.note) throw badRequest("Write why, so the business can fix it.", { note: ["Write why, so the business can fix it."] });
+    const j = await db().jobPost.findFirst({ where: { id: Number(request.params.id) || -1, tenantId: { not: null } } });
+    if (!j?.tenantId) throw notFound("Job not found.");
+    await db().jobPost.update({ where: { id: j.id }, data: { review: b.review, reviewNote: b.review === "rejected" ? b.note : null } });
+    await audit(s.user.id, request.ip, b.review === "approved" ? "content.business_job_approved" : "content.business_job_rejected", j.title, { tenantId: j.tenantId, note: b.note });
+    const people = await teamWith(db(), j.tenantId, ["workspace.team.invite"]);
+    await notify(db(), people, b.review === "approved"
+      ? { tenantId: j.tenantId, type: "job_review", title: "Your job is on the website", message: j.title, link: "/business/jobs" }
+      : { tenantId: j.tenantId, type: "job_review", title: "Your job needs changes", message: `${j.title}: ${b.note}`, link: "/business/jobs" });
+    return { message: b.review === "approved" ? "Approved. The job is on the website." : "Sent back to the business with your note." };
   });
   app.get<{ Params: { id: string } }>("/admin/jobs/:id/applications", async (request) => {
     staffOf(request, "platform.content.update");

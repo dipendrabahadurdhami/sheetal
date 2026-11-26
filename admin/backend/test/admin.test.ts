@@ -178,6 +178,22 @@ describe("content", () => {
     expect((await call("owner", "GET", "/admin/jobs")).statusCode).toBe(403);
   });
 
+  it("checks businesses' jobs apart from Sheetal's own, and tells the business", async () => {
+    const db = app.db!;
+    const j = await db.jobPost.create({ data: { tenantId: ids.tenant, review: "pending", title: "Office helper", slug: "office-helper-everest", description: "<p>Help.</p>", status: "open" } });
+    // Not mixed into Sheetal's own job list, and not editable from there.
+    expect((await call("editor", "GET", "/admin/jobs")).json().data.map((x: { id: number }) => x.id)).not.toContain(j.id);
+    expect((await call("editor", "PUT", `/admin/jobs/${j.id}`, { title: "Taken over", description: "<p>x</p>" })).statusCode).toBe(404);
+    expect((await call("editor", "GET", "/admin/business-jobs")).json()).toMatchObject({ meta: { waiting: 1 }, data: [expect.objectContaining({ id: j.id, tenant: expect.objectContaining({ name: "Everest Realty" }) })] });
+    expect((await call("owner", "GET", "/admin/business-jobs")).statusCode).toBe(403);
+    expect((await call("editor", "PATCH", `/admin/business-jobs/${j.id}`, { review: "rejected" })).statusCode).toBe(400);
+    expect((await call("editor", "PATCH", `/admin/business-jobs/${j.id}`, { review: "rejected", note: "Add the salary range." })).statusCode).toBe(200);
+    expect(await db.jobPost.findUniqueOrThrow({ where: { id: j.id } })).toMatchObject({ review: "rejected", reviewNote: "Add the salary range." });
+    expect((await call("editor", "PATCH", `/admin/business-jobs/${j.id}`, { review: "approved" })).statusCode).toBe(200);
+    expect(await db.jobPost.findUniqueOrThrow({ where: { id: j.id } })).toMatchObject({ review: "approved", reviewNote: null });
+    expect(await db.notification.count({ where: { userId: ids.owner, type: "job_review" } })).toBe(2);
+  });
+
   it("confirms a requirement fee, putting it on the board and telling the buyer", async () => {
     const l = await app.db!.lead.create({ data: { kind: "requirement", name: "Hari", email: "hari@buyer.test", userId: ids.owner, feeStatus: "pending", feeAmount: 500, public: false } });
     expect((await call("ops", "GET", "/admin/requirements")).json()).toMatchObject({ meta: { waiting: 1 }, data: [expect.objectContaining({ id: l.id, code: expect.stringMatching(/^REQ-/) })] });

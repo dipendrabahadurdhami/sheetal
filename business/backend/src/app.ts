@@ -16,6 +16,7 @@ import { addonRoutes } from "./modules/billing/addons.js";
 import { supportRoutes } from "./modules/support/routes.js";
 import { reviewRoutes } from "@sheetal/app-reviews/backend";
 import { verificationRoutes } from "./modules/verification/routes.js";
+import { hiringRoutes } from "./modules/hiring/routes.js";
 import { expenseRoutes } from "@sheetal/app-expenses/backend";
 import { rentalRoutes } from "@sheetal/app-rentals/backend";
 import { peopleRoutes } from "@sheetal/app-people/backend";
@@ -70,6 +71,7 @@ export async function buildApp(config: Config, deps: AppDeps & { resolver?: Reso
   await app.register(workspaceRoutes, { prefix: "/v1", contextOf: businessContextOf, resolver: deps.resolver, ai: deps.ai, cloudflare: deps.cloudflare, cloudflareFetch: deps.cloudflareFetch as never });   // branches, settings, check-ups, team, overview, import/export, forms, email, growth
   await app.register(reviewRoutes, { prefix: "/v1", contextOf: businessContextOf });
   await app.register(verificationRoutes, { prefix: "/v1" });
+  await app.register(hiringRoutes, { prefix: "/v1" });   // jobs on the website's Careers page
   await app.register(invoicingRoutes, { prefix: "/v1", contextOf: businessContextOf });   // customer invoices and payouts
   // Expenses is the first app on the kernel (P1-BE-5): its code lives in apps/expenses/backend; it gets the request-context builder from here.
   await app.register(expenseRoutes, { prefix: "/v1", contextOf: businessContextOf });

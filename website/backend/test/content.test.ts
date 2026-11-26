@@ -96,6 +96,26 @@ describe("careers", () => {
     // CVs are private: not reachable as /media.
     expect((await app.inject({ method: "GET", url: `/media/private/cv/${a.cvFile}` })).statusCode).toBe(404);
   });
+
+  it("shows a business's job only once approved, with the company, and sends its applications to that business", async () => {
+    const db = app.db!;
+    await db.tenant.update({ where: { id: ids.tenant }, data: { email: "jobs@everest.test" } });
+    const j = await db.jobPost.create({ data: { tenantId: ids.tenant, review: "pending", title: "Field agent", slug: "field-agent-everest-realty", description: "<p>Show homes.</p>", status: "open" } });
+    const slugs = async () => (await call(null, "GET", "/jobs")).json().data.map((x: { slug: string }) => x.slug);
+    expect(await slugs()).not.toContain("field-agent-everest-realty");
+    expect((await call(null, "GET", "/jobs/field-agent-everest-realty")).statusCode).toBe(404);
+    await db.jobPost.update({ where: { id: j.id }, data: { review: "approved" } });
+    const list = (await call(null, "GET", "/jobs")).json().data;
+    expect(list.find((x: { slug: string }) => x.slug === "field-agent-everest-realty").company).toMatchObject({ name: "Everest Realty", own: false, verified: false });
+    expect(list.find((x: { slug: string }) => x.slug === "sales-agent").company).toMatchObject({ name: "Sheetal Property", own: true });
+    const before = await db.notification.count({ where: { userId: ids.agent, type: "job_application" } });
+    expect((await multipart("/jobs/field-agent-everest-realty/apply", { name: "Hari", email: "hari@x.test" }, { cv: ["cv.pdf", "application/pdf", PDF] })).statusCode).toBe(200);
+    expect(await db.notification.count({ where: { userId: ids.agent, type: "job_application" } })).toBe(before + 1);
+    // A suspended business's jobs leave the website.
+    await db.tenant.update({ where: { id: ids.tenant }, data: { status: "suspended" } });
+    expect(await slugs()).not.toContain("field-agent-everest-realty");
+    await db.tenant.update({ where: { id: ids.tenant }, data: { status: "active" } });
+  });
 });
 
 describe("requirement board", () => {

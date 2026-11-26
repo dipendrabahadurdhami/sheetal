@@ -187,6 +187,7 @@ model Tenant {
   approvalRequests ApprovalRequest[]
   impersonations   ImpersonationSession[]
   verificationDocs VerificationDoc[]
+  jobPosts         JobPost[]
   forms            Form[]
   agreements       Agreement[]
   supportTickets   SupportTicket[]
@@ -1139,12 +1140,20 @@ model JobPost {
   deadline         DateTime?
   /// open, closed, draft
   status           String           @default("draft")
+  /// Empty: a job at Sheetal Property itself (admin → Careers). Set: a job a business posted from its panel (Jobs).
+  tenantId         String?          @map("tenant_id")
+  tenant           Tenant?          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  /// Sheetal's check of a business's job: approved (on the website when open), pending or rejected (with a note).
+  /// Verified businesses are approved at once; Sheetal's own jobs are always approved.
+  review           String           @default("approved")
+  reviewNote       String?          @map("review_note")
   views            Int              @default(0)
   createdAt        DateTime         @default(now()) @map("created_at")
   updatedAt        DateTime         @updatedAt @map("updated_at")
   applications     JobApplication[]
 
   @@index([status, createdAt])
+  @@index([tenantId])
   @@map("job_posts")
 }
 
