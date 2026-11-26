@@ -54,7 +54,7 @@ export function LiveSetup() {
   );
 }
 
-// The "I'm not a robot" box on businesses' online forms (Cloudflare Turnstile). Without keys forms still work, with
+// The robot check on every public website form (Cloudflare Turnstile; website/backend/src/modules/robot/hook.ts). Without keys forms still work, with
 // the rate limit and the hidden spam field.
 function CaptchaPanel() {
   const toast = useToast();
@@ -63,7 +63,7 @@ function CaptchaPanel() {
   useEffect(() => { if (c) setV({ siteKey: c.siteKey, secret: "" }); }, [c]);
   const save = (body) => adminApi("PUT", "/admin/settings/captcha", body).then((r) => { toast(r.message); reload(); }).catch((e) => toast(e.message));
   return (
-    <Panel title="Robot check on online forms" sub="Cloudflare Turnstile (free): dash.cloudflare.com → Turnstile → Add site, with your website's domain. Only the super admin can change the keys." pad>
+    <Panel title="Robot check on every public form" sub="Cloudflare Turnstile (free) on sign-in, sign-up, enquiries, reviews, comments, job applications, post property, rent payment and online forms. Most people see nothing. dash.cloudflare.com → Turnstile → Add widget, domain sheetalproperty.com. Only the super admin can change the keys." pad>
       {!c ? <p className="muted">Loading…</p> : <div className="pf-stack">
         <span>{c.on ? <Badge tone="done">On</Badge> : <Badge tone="neutral">Off</Badge>}</span>
         <div className="pf-grid-2 tight">
