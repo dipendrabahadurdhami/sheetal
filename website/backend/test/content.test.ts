@@ -95,6 +95,9 @@ describe("careers", () => {
     const a = await app.db!.jobApplication.findFirstOrThrow();
     expect(a).toMatchObject({ email: "ram@x.test", cvFile: expect.stringMatching(/\.pdf$/) });
     expect(a.answers).toEqual({ city: "Kathmandu", total_experience: 6, relevant_experience: 4.5, achievements: "Sold NPR 4 crore in 2025.", expected_salary: 45000, performance_pay: "yes", notice_period: "1m" });
+    // Sheetal's own job: the copy goes to the hiring mailbox, with the answers.
+    const mail = await app.db!.outboundEmail.findFirstOrThrow({ where: { to: "hiring@sheetalproperty.com" } });
+    expect(mail.subject).toContain("Job application: Sales agent");
     // CVs are private: not reachable as /media.
     expect((await app.inject({ method: "GET", url: `/media/private/cv/${a.cvFile}` })).statusCode).toBe(404);
   });

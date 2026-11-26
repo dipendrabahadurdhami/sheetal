@@ -141,7 +141,7 @@ export async function contentRoutes(app: FastifyInstance) {
 ${answerLines(answers)}
 `;
     if (!j.tenantId) {
-      await app.mailer.send({ to: app.config.SUPPORT_EMAIL, subject: `Job application: ${j.title} — ${b.name}`, text: `${who}\nOpen it in the admin panel: Content → Careers.` });
+      await app.mailer.send({ to: app.config.HIRING_EMAIL, subject: `Job application: ${j.title} — ${b.name}`, text: `${who}\nOpen it in the admin panel: Content → Careers.` });
     } else {
       // A business's job: its hiring people get a notification and the business's own email a copy (never Sheetal's).
       const t = await db().tenant.findUnique({ where: { id: j.tenantId }, select: { email: true } });

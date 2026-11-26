@@ -46,6 +46,8 @@ const schema = z.object({
   MAIL_INBOUND_SECRET: z.string().min(24).optional(),
   // Where requests for Sheetal's team go (plan upgrades, reports).
   SUPPORT_EMAIL: z.email().default("support@sheetalproperty.com"),
+  // Where copies of applications to Sheetal's own jobs go (the Careers page shows the same address).
+  HIRING_EMAIL: z.email().default("hiring@sheetalproperty.com"),
   // Requests per minute per IP for the whole API; sensitive routes set lower limits.
   RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(300),
 });
