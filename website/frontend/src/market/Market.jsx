@@ -51,6 +51,12 @@ function useFromApi() {
   useEffect(() => { apiListeners.add(setV); loadFromApi(); if (fromApi !== v) setV(fromApi); return () => apiListeners.delete(setV); }, []);
   return v || { stays: [], projects: [], invests: [] };
 }
+/** The live stays, projects and investments for the header search: loaded only once someone starts typing (`active`). */
+export function useLiveCatalog(active) {
+  const [v, setV] = useState(fromApi);
+  useEffect(() => { if (!active) return; apiListeners.add(setV); loadFromApi(); if (fromApi !== v) setV(fromApi); return () => apiListeners.delete(setV); }, [active]);
+  return v || { stays: [], projects: [], invests: [] };
+}
 const dealPrice = (x) => <span className="pb-price tnum">{rsShort(x.price)}<small>{{ night: " / night", rent: " / month" }[x.deal] ?? " · for sale"}</small></span>;
 
 export function useCatalog() {

@@ -6,7 +6,7 @@ import { Search, X, Home, BedDouble, Building2, TrendingUp, Users, FileText, Cor
 import { api } from "../api/endpoints";
 import { toList } from "../api/client";
 import { linkOf, titleOf, agencyName } from "../utils/format";
-import { STAYS, PROJECTS, INVESTS } from "../market/Market";
+import { useLiveCatalog } from "../market/Market";
 import { SERVICE_LINKS } from "../pages/ServicePages";
 import { NEW_SERVICES } from "../pages/Services";
 import { seed, VERSION } from "@sheetal/shared/demo/demo";
@@ -46,6 +46,8 @@ export function HeaderSearch() {
   const ref = useRef(null);
   const input = useRef(null);
   const s = q.trim().toLowerCase();
+  // Published stays, projects and investments from businesses (loaded the first time someone types).
+  const live = useLiveCatalog(s.length >= 2);
 
   useEffect(() => {
     const h = (e) => !ref.current?.contains(e.target) && setOpen(false);
@@ -59,7 +61,7 @@ export function HeaderSearch() {
     const t = setTimeout(() => {
       api.search({ keyword: q.trim(), per_page: 5 }).then(toList).then((r) => live && setProps((r.items || []).slice(0, 5))).catch(() => live && setProps([]));
       (agencyCache ? Promise.resolve(agencyCache) : api.agents().then(toList).then((r) => (agencyCache = r.items || []))).then((all) => live && setAgencies(all.filter((a) => has(s, agencyName(a), a.address, a.company_name)).slice(0, 3))).catch(() => {});
-      (blogCache ? Promise.resolve(blogCache) : api.blogs(1, 60).then(toList).then((r) => (blogCache = r.items || []))).then((all) => live && setBlogs(all.filter((b) => BLOG_WORDS.test(s) || has(s, b.title, b.category?.name || b.category, b.excerpt || b.short_description, ...(b.tags || []))).slice(0, 3))).catch(() => {});
+      (blogCache ? Promise.resolve(blogCache) : api.blogs(1, 50).then(toList).then((r) => (blogCache = r.items || []))).then((all) => live && setBlogs(all.filter((b) => BLOG_WORDS.test(s) || has(s, b.title, b.category?.name || b.category, b.excerpt || b.short_description, ...(b.tags || []))).slice(0, 3))).catch(() => {});
       // "job", "career", "hiring"… show every open job; anything else matches the title, department, place or company.
       jobsNow().then((all) => live && setJobs(all.filter((j) => JOB_WORDS.test(s) || has(s, j.title, j.department, j.location, j.company?.name)).slice(0, 5))).catch(() => live && setJobs([]));
     }, 220);
@@ -68,9 +70,9 @@ export function HeaderSearch() {
 
   const groups = s.length < 2 ? [] : [
     ["Properties", Home, props.map((p) => [titleOf(p), p.property_location, linkOf(p)])],
-    ["Stays", BedDouble, STAYS.filter((x) => has(s, x.name, x.city, x.area, x.kind)).slice(0, 3).map((x) => [x.name, `${x.area}, ${x.city}`, `/stays/${x.id}`])],
-    ["Projects", Building2, PROJECTS.filter((x) => has(s, x.name, x.city, x.area, x.type)).slice(0, 3).map((x) => [x.name, `${x.area}, ${x.city}`, `/project/${x.id}`])],
-    ["Invest", TrendingUp, INVESTS.filter((x) => has(s, x.name, x.city, x.type)).slice(0, 3).map((x) => [x.name, `${x.type} · ${x.city}`, `/investment/${x.id}`])],
+    ["Stays", BedDouble, live.stays.filter((x) => /\b(stays?|hotels?|rooms?|homestays?|resorts?)\b/.test(s) || has(s, x.name, x.city, x.area, x.kind)).slice(0, 3).map((x) => [x.name, [x.area, x.city].filter(Boolean).join(", "), x.href || `/stays/${x.id}`])],
+    ["Projects", Building2, live.projects.filter((x) => /\bprojects?\b/.test(s) || has(s, x.name, x.city, x.area, x.type)).slice(0, 3).map((x) => [x.name, [x.area, x.city].filter(Boolean).join(", "), x.href || `/project/${x.id}`])],
+    ["Invest", TrendingUp, live.invests.filter((x) => /\binvest\w*\b/.test(s) || has(s, x.name, x.city, x.type)).slice(0, 3).map((x) => [x.name, [x.type, x.city].filter(Boolean).join(" · "), x.href || `/investment/${x.id}`])],
     ["Agencies", Users, agencies.map((a) => [agencyName(a), a.address, `/agency/${a.id}`])],
     ["Hotels and businesses", Store, partners().filter((x) => has(s, x.name, x.city, TYPE_LABEL[x.type])).slice(0, 4).map((x) => [x.name, `${TYPE_LABEL[x.type] || "Business"} · ${x.city}`, `/site/${x.id}`])],
     ["Services", LifeBuoy, SERVICES.filter(([l, d]) => has(s, l, d)).slice(0, 3)],
