@@ -62,4 +62,15 @@ describe("the public catalog", () => {
     expect(d.apps.some((a: { id: string }) => a.id === "crm")).toBe(false);
     expect(d.apps.find((a: { id: string }) => a.id === "reviews").editions[1].priceMonthPaisa).toBe(15_000);
   });
+
+  it("GET /public/packs: the three packs with the offer and the software, no sign-in, nothing internal", async () => {
+    const r = await app.inject({ method: "GET", url: "/v1/public/packs" });
+    expect(r.statusCode).toBe(200);
+    expect(r.headers["cache-control"]).toBe("public, max-age=300");
+    const d = r.json().data;
+    expect(d.packs.map((p: { id: string }) => p.id)).toEqual(["starter", "business", "pro"]);
+    expect(d.packs[2].periods[0]).toMatchObject({ months: 1, pricePaisa: 1_399_900, normalPaisa: 1_499_900, onOffer: true });
+    expect(d.software.map((s: { id: string }) => s.id)).toContain("hrm");
+    expect(JSON.stringify(d)).not.toMatch(/verified|pan|partner/i);
+  });
 });

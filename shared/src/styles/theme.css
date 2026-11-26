@@ -3337,3 +3337,38 @@ html.pa-lock, html.pa-lock body { overflow: hidden !important; }
 .pa-list-search input, .pa-list-search input:focus { flex: 1; min-width: 0; height: 100%; padding: 0 !important; border: 0 !important; outline: none !important; box-shadow: none !important; background: transparent !important; color: var(--text-strong); font: inherit; font-size: 15px; }
 .pa-list-search input::placeholder { color: var(--muted); }
 .pa-list-search:focus-within { box-shadow: 0 0 0 2px var(--accent-soft); }
+
+/* ───── Sheetal Technologies landing page (website/frontend/src/pages/Technology.jsx). Colours: the logo's own (theme tokens). ───── */
+.tech-hero { background: var(--accent-soft); border-bottom: 1px solid var(--line); }
+.tech-hero-in { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: var(--s7); align-items: center; padding-top: var(--s8); padding-bottom: var(--s8); }
+.tech-hero h1 { font-size: clamp(30px, 4.2vw, 50px); line-height: 1.12; }
+.tech-lead { font-size: 17px; color: var(--text); max-width: 600px; }
+.tech-logo { display: flex; justify-content: center; }
+.tech-logo img { width: 100%; max-width: 380px; height: auto; background: var(--c-white); border-radius: var(--r-xl); padding: var(--s5); }
+.tech-ico { width: 40px; height: 40px; border-radius: var(--r); display: inline-flex; align-items: center; justify-content: center; background: var(--accent-soft); color: var(--accent-ink); }
+.tech-soft { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s4); }
+.tech-soft-card { padding: var(--s5); display: flex; flex-direction: column; gap: 10px; }
+.tech-soft-card h3 { font-size: 17px; }
+.tech-plans-wrap { background: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.tech-plans { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s5); align-items: stretch; }
+.tech-plan { position: relative; padding: var(--s6) var(--s5); display: flex; flex-direction: column; gap: 12px; }
+.tech-plan.hi { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), var(--shadow); }
+.tech-plan h3 { font-size: 22px; }
+.tech-badge { position: absolute; top: -13px; left: var(--s5); display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 12px; border-radius: var(--r-pill); background: var(--accent); color: var(--c-white); font-size: 12px; font-weight: 600; }
+.tech-price { display: flex; flex-direction: column; gap: 4px; padding: 8px 0 4px; }
+.tech-price .tag { align-self: flex-start; }
+.tech-price b { font-size: 34px; color: var(--text-strong); font-variant-numeric: tabular-nums; }
+.tech-feats { list-style: none; margin: 0; padding: 12px 0 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 9px; flex: 1; }
+.tech-feats li { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text); }
+.tech-feats li svg { color: var(--accent-ink); flex-shrink: 0; }
+.tech-feats li.off { color: var(--muted); } .tech-feats li.off svg { color: var(--muted); }
+.tech-why { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s6) var(--s5); }
+.tech-why h3 { font-size: 17px; }
+.tech-faq { padding: 0 var(--s5); }
+.tech-faq-row { border-bottom: 1px solid var(--line); }
+.tech-faq-row:last-child { border-bottom: 0; }
+.tech-faq-row button { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 0; background: none; border: 0; cursor: pointer; font: inherit; font-weight: 500; color: var(--text-strong); text-align: left; }
+.tech-faq-row p { margin: 0 0 18px; color: var(--text); }
+.tech-cta { display: flex; justify-content: space-between; align-items: center; gap: var(--s5); flex-wrap: wrap; background: var(--accent-soft); }
+@media (max-width: 1080px) { .tech-soft { grid-template-columns: repeat(2, minmax(0, 1fr)); } .tech-why { grid-template-columns: repeat(2, minmax(0, 1fr)); } .tech-plans { grid-template-columns: 1fr; max-width: 520px; margin: 0 auto; } }
+@media (max-width: 760px) { .tech-hero-in { grid-template-columns: 1fr; padding-top: var(--s6); padding-bottom: var(--s6); } .tech-logo { order: -1; } .tech-logo img { max-width: 240px; } .tech-soft, .tech-why { grid-template-columns: 1fr; } }
