@@ -3331,3 +3331,9 @@ html.pa-lock, html.pa-lock body { overflow: hidden !important; }
   .agents-grid .agent-card .avatar:not(img) { border-radius: 50% !important; background: var(--card) !important; }
   .agents-grid .agent-card .logo-mono { display: flex; align-items: center; justify-content: center; width: 72px; height: 72px; overflow: hidden; }
 }
+
+/* Phone results pages (Buy, Rent, All): the search box above the tabs. */
+.pa-list-search { width: 100% !important; margin: 0 0 12px !important; cursor: text; }
+.pa-list-search input, .pa-list-search input:focus { flex: 1; min-width: 0; height: 100%; padding: 0 !important; border: 0 !important; outline: none !important; box-shadow: none !important; background: transparent !important; color: var(--text-strong); font: inherit; font-size: 15px; }
+.pa-list-search input::placeholder { color: var(--muted); }
+.pa-list-search:focus-within { box-shadow: 0 0 0 2px var(--accent-soft); }
