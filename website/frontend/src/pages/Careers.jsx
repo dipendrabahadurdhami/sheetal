@@ -74,7 +74,7 @@ export function Careers() {
           </div>
         )}
 
-        {loading ? <div className="sk" style={{ height: 300 }} /> : !items.length ? <Empty icon={Briefcase} title="No open roles right now">Send your CV to careers@sheetalproperty.com.</Empty> : (
+        {loading ? <div className="sk" style={{ height: 300 }} /> : !items.length ? <Empty icon={Briefcase} title="No open roles right now">Send your CV to hiring@sheetalproperty.com.</Empty> : (
           <div className="card" style={{ padding: "0 32px" }} ref={pg.top}>
             {pg.items.map((j) => {
               const left = daysLeft(j.deadline);
@@ -102,9 +102,9 @@ export function Careers() {
         <div className="card card-pad row between" style={{ marginTop: 32, flexWrap: "wrap", gap: 16, background: "var(--accent-soft)" }}>
           <div className="stack" style={{ gap: 6 }}>
             <h3 style={{ fontSize: 18 }}>Do not see your role?</h3>
-            <p className="small">Send your CV to careers@sheetalproperty.com and we will keep it on file.</p>
+            <p className="small">Send your CV to hiring@sheetalproperty.com and we will keep it on file.</p>
           </div>
-          <a className="btn btn-primary" href="mailto:careers@sheetalproperty.com">Send your CV</a>
+          <a className="btn btn-primary" href="mailto:hiring@sheetalproperty.com">Send your CV</a>
         </div>
       </div>
     </>
