@@ -3323,6 +3323,11 @@ html.pa-lock, html.pa-lock body { overflow: hidden !important; }
   .agents-grid { display: grid !important; grid-auto-flow: column; grid-template-columns: none !important; grid-auto-columns: 112px !important; overflow-x: auto; gap: 10px !important; scrollbar-width: none; scroll-snap-type: x mandatory; }
   .agents-grid .agent-card { flex-direction: column !important; justify-content: center; align-items: center; padding: 12px !important; min-height: 0; aspect-ratio: 1; background: var(--surface) !important; }
   .agents-grid .agent-card > :not(.agent-logo) { display: none !important; }
-  .agents-grid .agent-card .agent-logo { height: 100%; margin: 0; width: 100%; }
-  .agents-grid .agent-card .avatar { width: 100% !important; height: 100% !important; max-width: none; min-width: 0; font-size: 22px; }
+  .agents-grid .agent-card { overflow: hidden; }
+  .agents-grid .agent-card .agent-logo { display: flex; align-items: center; justify-content: center; width: 72px; height: 72px; margin: 0; overflow: hidden; }
+  /* A fixed, contained logo: never larger than its spot, never cropped. */
+  .agents-grid .agent-card .avatar { width: 72px !important; height: 72px !important; min-width: 0 !important; max-width: 72px !important; font-size: 20px; }
+  .agents-grid .agent-card img.avatar, .agents-grid .agent-card .avatar img { object-fit: contain !important; border-radius: 0 !important; background: transparent !important; padding: 0 !important; }
+  .agents-grid .agent-card .avatar:not(img) { border-radius: 50% !important; background: var(--card) !important; }
+  .agents-grid .agent-card .logo-mono { display: flex; align-items: center; justify-content: center; width: 72px; height: 72px; overflow: hidden; }
 }
