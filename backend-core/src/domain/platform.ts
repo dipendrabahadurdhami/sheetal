@@ -28,7 +28,10 @@ export interface PlatformSettings {
   /** When off, a business past its grace period stays "past due" until staff act. */
   autoSuspend: boolean;
   maxLoginAttempts: number;
+  /** Days a sign-in lasts without being used (each use renews it): 7 = a week without opening the site or app signs you out. */
   sessionDays: number;
+  /** After the password, a 6-digit code by email (SMS later) before the sign-in is made. */
+  loginCode: boolean;
   maintenance: { on: boolean; message: string };
 }
 
@@ -44,12 +47,13 @@ export const PLATFORM_DEFAULTS: PlatformSettings = {
   graceDays: 7,
   autoSuspend: true,
   maxLoginAttempts: 5,
-  sessionDays: 30,
+  sessionDays: 7,
+  loginCode: true,
   maintenance: { on: false, message: "We're making some improvements. Please check back soon." },
 };
 
 /** Fields only a super admin may change. */
-export const SUPER_ONLY = ["maxLoginAttempts", "sessionDays", "maintenance"] as const;
+export const SUPER_ONLY = ["maxLoginAttempts", "sessionDays", "loginCode", "maintenance"] as const;
 
 type Stored = Partial<Omit<PlatformSettings, "domains" | "maintenance">> & { domains?: Partial<PlatformSettings["domains"]>; maintenance?: Partial<PlatformSettings["maintenance"]> };
 

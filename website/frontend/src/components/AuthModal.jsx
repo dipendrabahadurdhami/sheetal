@@ -11,9 +11,10 @@ import { apiBase, isLivePath } from "../api/client";
 const LIVE_LOGIN = isLivePath("login");
 const NOT_YET = "This sign-in method isn't set up yet. Please use your email and password.";
 import { Modal } from "./ui";
+import { CodeInput } from "@sheetal/shared/components/CodeInput";
 
 export function AuthModal() {
-  const { auth, setAuth, login, toast } = useApp();
+  const { auth, setAuth, login, verifyCode, toast } = useApp();
   const [f, setF] = useState({ email: "", password: "", user_name: "", confirm: "", user_type: "User" });
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -22,6 +23,21 @@ export function AuthModal() {
   const [via, setVia] = useState("email"); // email | phone
   const [phone, setPhone] = useState({ no: "", sent: false, code: "" });
   const [sentTo, setSentTo] = useState("");
+  // After the right password: the emailed code step ({ ticket, sent_to }).
+  const [pending, setPending] = useState(null);
+  const [code, setCode] = useState("");
+  useEffect(() => { if (!auth) { setPending(null); setCode(""); } }, [auth]);
+  const checkCode = async (c = code) => {
+    if (!/^\d{6}$/.test(c) || busy) return;
+    setErr(""); setBusy(true);
+    try { await verifyCode(pending.ticket, c); setPending(null); setCode(""); }
+    catch (x) { setErr(x.errors ? Object.values(x.errors).flat()[0] : x.message); setCode(""); if (/sign in again|expired/i.test(x.message || "")) setPending(null); }
+    finally { setBusy(false); }
+  };
+  const resendCode = async () => {
+    try { const r = await api.loginCodeResend(pending.ticket); toast(r?.message || "A new code is on its way."); setErr(""); }
+    catch (x) { setErr(x.message); if (/sign in again|expired/i.test(x.message || "")) setPending(null); }
+  };
   // With the real API the Google button shows only when the Super Admin has switched Google sign-in on (GET /site says so).
   const [googleOn, setGoogleOn] = useState(false);
   useEffect(() => { if (LIVE_LOGIN && auth) api.site().then((r) => setGoogleOn(!!r?.data?.googleSignIn)).catch(() => {}); }, [auth]);
@@ -45,7 +61,7 @@ export function AuthModal() {
     e.preventDefault();
     setErr(""); setBusy(true);
     try {
-      if (auth === "login") await login(f.email, f.password);
+      if (auth === "login") { const otp = await login(f.email, f.password); if (otp?.otp_required) { setPending(otp); setCode(""); } }
       if (auth === "register") {
         if (f.password !== f.confirm) throw new Error("Passwords do not match.");
         const r = await api.register({ user_name: f.user_name, email: f.email, password: f.password, password_confirmation: f.confirm, user_type: f.user_type });
@@ -64,17 +80,28 @@ export function AuthModal() {
     } finally { setBusy(false); }
   };
 
-  const title = { login: "Welcome back", register: "Create your account", forgot: "Reset password", verify: "Check your email" }[auth];
+  const title = pending ? "Check your email" : { login: "Welcome back", register: "Create your account", forgot: "Reset password", verify: "Check your email" }[auth];
   return (
     <Modal open={!!auth} onClose={close}>
       <div className="stack" style={{ gap: 20 }}>
         <div className="stack" style={{ gap: 6 }}>
           <img src="/brand/logo-mark.png" alt="" style={{ height: 34, width: "auto", alignSelf: "flex-start" }} />
           <h2 style={{ fontSize: 26, marginTop: 10 }}>{title}</h2>
-          <p className="muted small">{auth === "login" ? "Log in to save homes, post listings and contact agencies." : auth === "register" ? "Join thousands of buyers, owners and agencies." : "Enter your email and we will send a reset link."}</p>
+          <p className="muted small">{pending ? <>We sent a 6-digit code to <b>{pending.sent_to}</b>. It works for {pending.minutes || 10} minutes.</> : auth === "login" ? "Log in to save homes, post listings and contact agencies." : auth === "register" ? "Join thousands of buyers, owners and agencies." : "Enter your email and we will send a reset link."}</p>
         </div>
         {auth === "login" && !LIVE_LOGIN && <p className="tag tag-soft" style={{ height: "auto", padding: "8px 12px", textTransform: "none", letterSpacing: 0, fontWeight: 500 }}>Demo data login: demo@sheetal.test / password</p>}
-        {auth === "verify" ? (
+        {pending ? (
+          <form className="stack" style={{ gap: 14 }} onSubmit={(e) => { e.preventDefault(); checkCode(); }}>
+            <CodeInput value={code} onChange={setCode} onComplete={checkCode} disabled={busy} />
+            {err && <p className="error">{err}</p>}
+            <button className="btn btn-primary btn-lg btn-block" disabled={busy || code.length < 6}>{busy ? "Checking…" : "Verify and log in"}</button>
+            <div className="row between small" style={{ gap: 12, flexWrap: "wrap" }}>
+              <button type="button" className="link" style={{ background: "none", border: 0, padding: 0 }} onClick={resendCode}>Send a new code</button>
+              <button type="button" className="link" style={{ background: "none", border: 0, padding: 0 }} onClick={() => { setPending(null); setCode(""); setErr(""); }}>Use another account</button>
+            </div>
+            <p className="tiny muted" style={{ margin: 0 }}>Not in your inbox? Look in Spam or Promotions. On a phone, the keyboard may offer the code by itself.</p>
+          </form>
+        ) : auth === "verify" ? (
           <div className="stack" style={{ gap: 14 }}>
             <MailCheck size={40} strokeWidth={1.5} color="var(--accent)" />
             <p>We sent a link to <b>{sentTo}</b>. Open it to verify your email, then log in.</p>
@@ -134,7 +161,7 @@ export function AuthModal() {
         )}
         </>}
         <p className="small muted" style={{ textAlign: "center" }}>
-          {auth === "verify" ? null : auth === "login" ? <>New here? <button className="link" style={{ background: "none", border: 0, padding: 0 }} onClick={() => setAuth("register")}>Create an account</button></>
+          {auth === "verify" || pending ? null : auth === "login" ? <>New here? <button className="link" style={{ background: "none", border: 0, padding: 0 }} onClick={() => setAuth("register")}>Create an account</button></>
             : <>Already have an account? <button className="link" style={{ background: "none", border: 0, padding: 0 }} onClick={() => setAuth("login")}>Log in</button></>}
         </p>
         <a href="/business" className="small" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, color: "var(--accent-ink)" }}><Store size={15} /> Hotel, host, agency or developer? List your business</a>

@@ -1760,3 +1760,8 @@ button.pf-card-row { cursor: pointer; }
 }
 /* Coloured-bars theme: the tab bar follows the top bar. */
 [data-theme~="bars"] .pf-tabbar { --card: var(--c-crimson); --muted: color-mix(in srgb, #fff 75%, var(--c-crimson)); --accent-soft: color-mix(in srgb, #fff 16%, var(--c-crimson)); --accent-ink: #fff; --btn-bg: #fff; --btn-ink: var(--c-crimson); }
+/* A plan's price in the pay window (QuotePanel summary): one clear total; the line per app folds away. */
+.pf-quote-sum { display: flex; flex-direction: column; gap: 4px; padding: 16px; border-radius: var(--r); background: var(--accent-soft); }
+.pf-quote-sum b { font-size: 30px; color: var(--text-strong); }
+.pf-quote-more summary { cursor: pointer; font-size: 13.5px; color: var(--accent-ink); font-weight: 600; padding: 4px 0; }
+.pf-quote-more[open] summary { margin-bottom: 6px; }

@@ -20,7 +20,13 @@ const linkToken = (text: string) => (text.match(/(?:token=|reset-password\/)([A-
 
 const register = (email = "ram@example.com", password = "secret-pass-1") =>
   call("POST", "/register", { user_name: "Ram Shrestha", email, password, password_confirmation: password, user_type: "Owner" });
-const login = async (email = "ram@example.com", password = "secret-pass-1") => (await call("POST", "/login", { email, password })).json().data?.token as string;
+// Password, then the 6-digit code from the email (the code is also in the subject).
+const codeIn = async (to: string) => ((await lastEmail(to)).subject.match(/^(\d{6}) /) ?? [])[1]!;
+const login = async (email = "ram@example.com", password = "secret-pass-1") => {
+  const first = (await call("POST", "/login", { email, password })).json();
+  if (!first.otp_required) return first.data?.token as string;
+  return (await call("POST", "/login/code", { ticket: first.ticket, code: await codeIn(email) })).json().data?.token as string;
+};
 
 beforeAll(async () => {
   app = await buildApp(loadConfig({ NODE_ENV: "test", LOG_LEVEL: "silent", DATABASE_URL: inject("databaseUrl"), SITE_URL: "https://sheetalproperty.com" }));
@@ -62,7 +68,7 @@ describe("log in", () => {
     const token = await login();
     const me = await call("GET", "/user-info", undefined, token);
     expect(me.statusCode).toBe(200);
-    expect(me.json().data).toMatchObject({ email: "ram@example.com", plan: "Starter", email_verified: false });
+    expect(me.json().data).toMatchObject({ email: "ram@example.com", plan: "Starter", email_verified: true }); // typing the emailed code confirms the address
   });
 
   it("gives the same answer for a wrong password and an unknown email", async () => {
@@ -144,6 +150,45 @@ describe("account", () => {
     const token = await login();
     expect((await call("POST", "/logout", undefined, token)).statusCode).toBe(200);
     expect((await call("GET", "/user-info", undefined, token)).statusCode).toBe(401);
+  });
+
+  it("asks for a 6-digit code by email after the right password, and only the code makes the sign-in", async () => {
+    await register();
+    const first = await call("POST", "/login", { email: "ram@example.com", password: "secret-pass-1" });
+    expect(first.statusCode).toBe(200);
+    expect(first.json()).toMatchObject({ otp_required: true, sent_to: "r**@example.com" });
+    expect(first.json().data?.token).toBeUndefined();
+    const code = await codeIn("ram@example.com");
+    expect(code).toMatch(/^\d{6}$/);
+    const wrong = await call("POST", "/login/code", { ticket: first.json().ticket, code: code === "000000" ? "111111" : "000000" });
+    expect(wrong.statusCode).toBe(400);
+    expect(wrong.json().message).toMatch(/4 tries left/);
+    const ok = await call("POST", "/login/code", { ticket: first.json().ticket, code });
+    expect(ok.statusCode).toBe(200);
+    expect((await call("GET", "/user-info", undefined, ok.json().data.token)).json().data.email_verified).toBe(true);
+    // A code works once.
+    expect((await call("POST", "/login/code", { ticket: first.json().ticket, code })).statusCode).toBe(400);
+  });
+
+  it("drops the sign-in after 5 wrong codes and can send a new code", async () => {
+    await register();
+    const { ticket } = (await call("POST", "/login", { email: "ram@example.com", password: "secret-pass-1" })).json();
+    expect((await call("POST", "/login/code/resend", { ticket })).statusCode).toBe(200);
+    const code = await codeIn("ram@example.com");
+    const bad = code === "000000" ? "111111" : "000000";
+    for (let i = 0; i < 4; i++) await call("POST", "/login/code", { ticket, code: bad });
+    expect((await call("POST", "/login/code", { ticket, code: bad })).json().message).toMatch(/sign in again/);
+    expect((await call("POST", "/login/code", { ticket, code })).statusCode).toBe(400);
+  });
+
+  it("signs in with the password only when the super admin switches the code off", async () => {
+    await register();
+    await app.db!.appSetting.upsert({ where: { key: "platform" }, create: { key: "platform", value: { loginCode: false } }, update: { value: { loginCode: false } } });
+    try {
+      const r = (await call("POST", "/login", { email: "ram@example.com", password: "secret-pass-1" })).json();
+      expect(r.otp_required).toBeUndefined();
+      expect(r.data.token).toBeTruthy();
+    } finally { await app.db!.appSetting.delete({ where: { key: "platform" } }); }
   });
 
   it("suspended accounts can't log in", async () => {

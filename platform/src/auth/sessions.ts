@@ -27,7 +27,7 @@ export interface SessionCache {
 export type SessionApp = FastifyInstance & { db?: Db; cache: SessionCache };
 
 /** The default; Admin → Settings → Security can change it (sessionDays). */
-export const SESSION_DAYS = 30;
+export const SESSION_DAYS = 7;
 const CACHE_SECONDS = 60;
 
 /** Reads the sessionDays setting. backend-core's sessions.ts registers it (platformSettings); without one the default is used. */

@@ -35,12 +35,12 @@ export function useCart(tenantId) {
 }
 
 /** The quote as the API answered it. Only shows numbers from `quote`; it never computes a total itself. */
-export function QuotePanel({ quote, compact }) {
+export function QuotePanel({ quote, compact, summary }) {
   const t = useT();
   const lang = useLang();
   if (!quote) return null;
-  return (
-    <div className="pf-stack">
+  // A plan (`summary` = { title, normalPaisa, onOffer }): one clear price first; the line per app stays under "See the breakdown".
+  const lines = (
       <ul className="pf-list">
         {quote.lines.map((l, i) => (
           <li key={i}>
@@ -51,14 +51,25 @@ export function QuotePanel({ quote, compact }) {
             <span className="tnum" data-paisa={l.grossPaisa}>{rsPaisa(l.grossPaisa)}</span>
           </li>
         ))}
-      </ul>
-      <dl className="pf-kv">
+      </ul>);
+  return (
+    <div className="pf-stack">
+      {summary ? <>
+        <div className="pf-quote-sum">
+          <span className="muted small">{summary.title}</span>
+          <b className="tnum" data-paisa={quote.totalPaisa}>{rsPaisa(quote.totalPaisa)}</b>
+          {summary.onOffer && summary.normalPaisa ? <span className="small muted"><s className="tnum">{rsPaisa(summary.normalPaisa)}</s> normal price</span> : null}
+          <span className="small muted">VAT included ({rsPaisa(quote.vatPaisa)})</span>
+        </div>
+        <details className="pf-quote-more"><summary>See the breakdown</summary>{lines}</details>
+      </> : lines}
+      {!summary && <dl className="pf-kv">
         {quote.discountPaisa > 0 && <><dt>{t("mkt.discount")}</dt><dd className="tnum" data-paisa={-quote.discountPaisa}>{rsPaisa(-quote.discountPaisa)}</dd></>}
         <dt>{t("mkt.subtotal")}</dt><dd className="tnum" data-paisa={quote.subtotalPaisa}>{rsPaisa(quote.subtotalPaisa)}</dd>
         <dt>{t("mkt.vat")}</dt><dd className="tnum" data-paisa={quote.vatPaisa}>{rsPaisa(quote.vatPaisa)}</dd>
         <dt><b>{t("mkt.total")}</b></dt><dd className="tnum" data-paisa={quote.totalPaisa}><b>{rsPaisa(quote.totalPaisa)}</b></dd>
         {quote.carryPaisa > 0 && <><dt>{t("mkt.carry")}</dt><dd className="tnum" data-paisa={quote.carryPaisa}>{rsPaisa(quote.carryPaisa)}</dd></>}
-      </dl>
+      </dl>}
       {[...quote.notes.map((x) => ["progress", "info", x]), ...quote.warnings.map((x) => ["action", "circle-alert", x]), ...quote.errors.map((x) => ["problem", "circle-alert", x])].map(([tone, icon, x], i) => (
         <p key={i} className={`pf-hint pf-tone-${tone}`} role={tone === "problem" ? "alert" : undefined}><Icon name={icon} size={13} />{textOf(x, lang)}</p>
       ))}

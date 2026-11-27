@@ -5,6 +5,7 @@ import { existsSync, readFileSync } from "node:fs";
 
 const app = readFileSync(new URL("./BusinessApp.jsx", import.meta.url), "utf8");
 const live = readFileSync(new URL("../live.js", import.meta.url), "utf8");
+const start = readFileSync(new URL("./BusinessStart.jsx", import.meta.url), "utf8");
 const here = (f) => existsSync(new URL(f, import.meta.url));
 
 describe("the panel works on real data only", () => {
@@ -16,7 +17,10 @@ describe("the panel works on real data only", () => {
   it("shows sign-in (with the demo request), add-a-business, error and loading pages until the businesses are loaded", () => {
     expect(app).toMatch(/!bizApiReady\(\) \|\| !signedIn\(\) \|\| state === "signed-out"\) return <SignedOut \/>/);
     expect(app).toMatch(/state === "empty"\) return <FirstBusiness \/>/);
-    expect(app).toContain('href="/technology#demo"');
+    // Signed out: the plans, then sign in or sign up inside the panel (BusinessStart.jsx), with the demo request link.
+    expect(app).toContain("return <BusinessStart />");
+    expect(start).toContain('href="/technology#demo"');
+    expect(start).toContain('siteCall("POST", "/login/code"');
     expect(app).not.toMatch(/<TryDemo /);
     expect(app).toMatch(/state !== "ready" \|\| !open \|\| !isLive\(open\.id\)\) return/);
   });

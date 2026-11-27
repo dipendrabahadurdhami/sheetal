@@ -34,7 +34,7 @@ export function LivePlatformSettings() {
       siteName: s.siteName, supportEmail: s.supportEmail, supportPhone: s.supportPhone, domains: s.domains,
       vatRate: num(s.vatRate), languages: s.languages, trialDays: num(s.trialDays), graceDays: num(s.graceDays), autoSuspend: s.autoSuspend,
     };
-    if (!locked) Object.assign(out, { maxLoginAttempts: num(s.maxLoginAttempts), sessionDays: num(s.sessionDays), maintenance: s.maintenance });
+    if (!locked) Object.assign(out, { maxLoginAttempts: num(s.maxLoginAttempts), sessionDays: num(s.sessionDays), loginCode: s.loginCode !== false, maintenance: s.maintenance });
     for (const k of ["vatRate", "trialDays", "graceDays", "maxLoginAttempts", "sessionDays"]) if (k in out && Number.isNaN(out[k])) out[k] = null; // the server answers with a plain message
     return out;
   };
@@ -87,8 +87,9 @@ export function LivePlatformSettings() {
         <Panel title="Security" sub={locked ? "Only the super admin can change these." : undefined} pad>
           <div className="pf-grid-2 tight">
             <N k="maxLoginAttempts" label="Wrong passwords allowed" disabled={locked} />
-            <N k="sessionDays" label="Stay signed in for (days)" disabled={locked} />
+            <N k="sessionDays" label="Stay signed in for (days)" hint="Days without opening the site or app before someone is signed out." disabled={locked} />
           </div>
+          <ToggleRow title="Sign-in code by email" sub="After the password, a 6-digit code is emailed and must be typed (Google sign-in skips it)." checked={s.loginCode !== false} disabled={locked} onChange={(v) => set("loginCode", v)} />
         </Panel>
 
         <Panel title="Maintenance mode" sub={locked ? "Only the super admin can change this." : "Visitors see the message; signed-in staff still see the site."} pad>

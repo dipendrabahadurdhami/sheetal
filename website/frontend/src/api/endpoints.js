@@ -72,6 +72,8 @@ export const api = {
 
   // auth
   login: (email, password) => post("login", { email: email.toLowerCase().trim(), password }),
+  loginCode: (ticket, code) => post("login/code", { ticket, code }), // the 6-digit code emailed after the password
+  loginCodeResend: (ticket) => post("login/code/resend", { ticket }),
   register: (data) => post("register", data),
   forgot: (email) => post("forgot-password", { email }),
   resetPassword: (data) => post("reset-password", data),

@@ -34,6 +34,7 @@ const platformBody = z.strictObject({
   autoSuspend: z.boolean(),
   maxLoginAttempts: z.number().int().min(3, "At least 3 attempts.").max(20),
   sessionDays: z.number().int().min(1).max(90),
+  loginCode: z.boolean(),
   maintenance: z.strictObject({ on: z.boolean(), message: z.string().trim().max(300) }).partial(),
 }).partial();
 

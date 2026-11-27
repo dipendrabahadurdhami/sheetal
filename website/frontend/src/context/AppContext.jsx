@@ -50,8 +50,8 @@ export function AppProvider({ children }) {
     return () => window.removeEventListener("sheetal:logout", h);
   }, []);
 
-  const login = useCallback(async (email, password) => {
-    const res = await api.login(email, password);
+  // Signs in from an answer that carries the token (password only, or after the code).
+  const finishLogin = useCallback(async (res) => {
     const data = res?.data || res;
     const token = data?.token || res?.token || res?.access_token;
     if (!token) throw new Error(res?.message || "Login failed");
@@ -60,6 +60,15 @@ export function AppProvider({ children }) {
     setAuth(null);
     toast(`Welcome back${data?.user_name ? ", " + data.user_name : ""}.`);
   }, [loadUser, toast]);
+  // Password first. When the server asks for the emailed code it answers { otp_required, ticket, sent_to }: that answer is returned and the
+  // login window shows the code step (verifyCode finishes it).
+  const login = useCallback(async (email, password) => {
+    const res = await api.login(email, password);
+    if (res?.otp_required) return res;
+    await finishLogin(res);
+    return null;
+  }, [finishLogin]);
+  const verifyCode = useCallback(async (ticket, code) => finishLogin(await api.loginCode(ticket, code)), [finishLogin]);
 
   const logout = useCallback(() => {
     api.logout().catch(() => {}); // end the session on the server too
@@ -85,8 +94,8 @@ export function AppProvider({ children }) {
 
   const value = useMemo(() => ({
     theme, toggleTheme: () => setTheme((t) => (t === "light" ? "dark" : t === "dark" ? "red" : "light")), setTheme: (v) => setTheme(normaliseTheme(v)),
-    user, setUser, loadUser, login, logout, favs, toggleFav, auth, setAuth, toast,
-  }), [theme, user, loadUser, login, logout, favs, toggleFav, auth, toast]);
+    user, setUser, loadUser, login, verifyCode, logout, favs, toggleFav, auth, setAuth, toast,
+  }), [theme, user, loadUser, login, verifyCode, logout, favs, toggleFav, auth, toast]);
 
   return (
     <Ctx.Provider value={value}>

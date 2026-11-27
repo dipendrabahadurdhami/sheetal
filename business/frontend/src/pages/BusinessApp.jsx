@@ -55,6 +55,7 @@ import { Inbox } from "./Inbox";
 import { Approvals } from "./Approvals";
 import { SupportBanner } from "./SupportBanner";
 import { DemoBar } from "./TryDemo";
+import { BusinessStart } from "./BusinessStart";
 import { LiveForms } from "./LiveForms";
 import { LiveAgreements } from "./LiveAgreements";
 import { LiveInvoices, LivePayouts } from "./LiveMoney";
@@ -104,19 +105,11 @@ function Gatepage({ icon, title, children, action }) {
   );
 }
 
-/** Nobody is signed in: sign in on the website, or request a demo from Sheetal's team. */
+/** Nobody is signed in (or the sign-in ended after a week unused): the plans, then sign in or create an account right here (BusinessStart.jsx). */
 function SignedOut() {
-  return (
-    <main className="pf-gate" style={{ maxWidth: 640, margin: "8vh auto", padding: 16 }}>
-      <section className="card pf-panel" style={{ marginBottom: 16 }}>
-        <Empty icon="log-in" title="Sign in to your business" action={<a className="btn btn-primary" href="/">Sign in on the website</a>}>Your business panel uses your Sheetal Property account.</Empty>
-      </section>
-      {/* Demos are given by Sheetal's team: a request form on the Sheetal Technologies page (the owner calls back and sets it up). */}
-      <section className="card pf-panel">
-        <Empty icon="play" title="Want to see Sheetal Business first?" action={<a className="btn btn-outline" href="/technology#demo">Request a demo</a>}>Tell us about your business and our team will call you and set up a demo with you.</Empty>
-      </section>
-    </main>
-  );
+  // An ended sign-in leaves an old token behind: drop it so the next sign-in starts clean.
+  React.useEffect(() => { if (signedIn()) { try { localStorage.removeItem("sheetal_token"); } catch { /* storage off */ } } }, []);
+  return <BusinessStart />;
 }
 
 /** Signed in, but not in any business yet: add one (or accept an invitation from the email). */

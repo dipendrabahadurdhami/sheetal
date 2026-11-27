@@ -6,6 +6,7 @@
 // same way as the cart. Listing on the website (Sheetal CMS) is free with or without a pack.
 
 import React, { useEffect, useState } from "react";
+import { takePick } from "../siteAuth";
 import { fdate } from "@sheetal/shared/core/format";
 import { Badge, Button, Drawer, Empty, PageHead, Panel, Seg, useToast } from "@sheetal/shared/core/ui";
 import { Icon } from "@sheetal/shared/core/icons";
@@ -31,7 +32,13 @@ export function Plans({ tenant }) {
   const [manual, setManual] = useState(null);
 
   useEffect(() => {
-    bizApi("GET", "/packs").then((r) => { setD(r.data); if (r.data.current?.months) setMonths(r.data.current.months); }).catch((e) => toast(e.message));
+    // A plan chosen before signing in (BusinessStart.jsx) opens straight away, ready to pay.
+    const chosen = takePick();
+    bizApi("GET", "/packs").then((r) => {
+      setD(r.data);
+      if (chosen?.packId && r.data.packs?.some((p) => p.id === chosen.packId)) { setMonths(chosen.months || 12); setPick(chosen.packId); }
+      else if (r.data.current?.months) setMonths(r.data.current.months);
+    }).catch((e) => toast(e.message));
     bizApi("GET", "/billing").then((r) => setBilling(r.data)).catch(() => setBilling({ methods: [], bank: null }));
   }, [tenant.id]);
 
@@ -120,7 +127,7 @@ export function Plans({ tenant }) {
       <Drawer open={!!pick} onClose={() => { if (!busy) setPick(null); }} title={chosen ? `${textOf(chosen.name)} · ${LENGTHS.find((l) => l.id === months).label}` : ""}>
         {!quote ? <p className="muted">Working out the price…</p> : (
           <div className="pf-stack">
-            <QuotePanel quote={quote} compact />
+            <QuotePanel quote={quote} compact summary={{ title: `${textOf(chosen?.name)} plan, ${LENGTHS.find((l) => l.id === months).label.toLowerCase()}`, normalPaisa: quote.normalPaisa, onOffer: quote.onOffer }} />
             <b>Pay with</b>
             {methods.map((m) => (
               <button key={m.id} type="button" className="pf-choice" disabled={busy || quote.errors.length > 0} onClick={() => pay(m.id)}>
