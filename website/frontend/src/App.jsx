@@ -45,7 +45,12 @@ import SignAgreement from "./pages/SignAgreement";
 
 function ScrollTop() {
   const { pathname } = useLocation();
-  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    // A soft fade-in of the new page (no remount: the class is re-applied to <main>); off for people who ask for less motion.
+    const m = document.querySelector("body main");
+    if (m) { m.classList.remove("page-in"); void m.offsetWidth; m.classList.add("page-in"); }
+  }, [pathname]);
   return null;
 }
 // Phones: the top bar and the tab bar slide away while you scroll down and come back the moment you scroll up (CSS does the sliding).

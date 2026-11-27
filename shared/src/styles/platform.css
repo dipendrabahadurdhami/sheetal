@@ -1765,3 +1765,7 @@ button.pf-card-row { cursor: pointer; }
 .pf-quote-sum b { font-size: 30px; color: var(--text-strong); }
 .pf-quote-more summary { cursor: pointer; font-size: 13.5px; color: var(--accent-ink); font-weight: 600; padding: 4px 0; }
 .pf-quote-more[open] summary { margin-bottom: 6px; }
+/* Promote → banner booking: how a listing banner's photos look (a small copy of the home page grid). */
+.pf-banner-prev { display: grid; grid-template-columns: 2fr 1fr 1fr; grid-template-rows: 60px 60px; gap: 3px; border-radius: var(--r); overflow: hidden; background: #111; }
+.pf-banner-prev img { width: 100%; height: 100%; object-fit: cover; }
+.pf-banner-prev img:first-child { grid-row: span 2; }

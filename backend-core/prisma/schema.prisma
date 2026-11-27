@@ -2913,9 +2913,11 @@ model Banner {
   tenantId   String?   @map("tenant_id")
   /// paid or staff
   source     String    @default("paid")
-  /// Pictures as sent (MEDIA_DIR/banner/main): 1920 × 600 for computers, 1080 × 1080 for phones.
+  /// Pictures as sent (MEDIA_DIR/banner/main): 1920 × 600 for computers, 1080 × 1080 for phones. Empty for a listing banner.
   desktop    String
   mobile     String
+  /// A listing banner: the business's own listing, shown with its photos as a grid and opening the listing (no pictures to upload).
+  listingId  Int?      @map("listing_id")
   link       String
   title      String    @default("")
   button     String    @default("")
@@ -2941,6 +2943,7 @@ model Banner {
   @@index([status, startOn, endOn])
   @@index([tenantId, createdAt])
   @@index([invoiceId])
+  @@index([listingId])
   @@map("banners")
 }
 

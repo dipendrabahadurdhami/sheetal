@@ -182,9 +182,14 @@ function Banner() {
   return (
     <>
       <div className="pa-banner" onTouchStart={() => setHold(true)} onTouchEnd={() => setHold(false)}>
-        <img src={cur.mobile || cur.desktop} alt={cur.title || "Advertisement"} />
+        {cur.listing
+          // A listing banner: the listing's photos as a grid; it opens the listing here.
+          ? <div className={`hb-grid pa-hb n${Math.min(cur.listing.photos.length, 4)}`}>{cur.listing.photos.slice(0, 4).map((u, k) => <img key={u} src={u} alt={k ? "" : cur.listing.title} />)}</div>
+          : <img src={cur.mobile || cur.desktop} alt={cur.title || "Advertisement"} />}
         <span className="pa-spn">Sponsored</span>
-        <div className="pa-shade"><b>{cur.title}</b><a className="pa-wb" href={cur.link} target="_blank" rel="noopener noreferrer sponsored" onClick={() => api.bannerClick({ id: cur.id }).catch(() => {})}>{cur.button || "Learn more"}</a></div>
+        {cur.listing
+          ? <Link to={cur.link} className="pa-shade" onClick={() => api.bannerClick({ id: cur.id }).catch(() => {})}><b>{cur.title || cur.listing.title}<small>{[cur.listing.price ? `${fmtPrice(cur.listing.price)}${cur.listing.purpose === "rent" ? " / month" : ""}` : "", cur.listing.place].filter(Boolean).join(" · ")}</small></b><span className="pa-wb">{cur.button || "View"}</span></Link>
+          : <div className="pa-shade"><b>{cur.title}</b><a className="pa-wb" href={cur.link} target="_blank" rel="noopener noreferrer sponsored" onClick={() => api.bannerClick({ id: cur.id }).catch(() => {})}>{cur.button || "Learn more"}</a></div>}
         {list.length > 1 && <span className="pa-dots">{list.map((b, k) => <button key={b.id} aria-label={`Banner ${k + 1}`} className={k === i % list.length ? "on" : ""} onClick={() => setI(k)} />)}</span>}
       </div>
       <div className="pa-adv"><a href="/business/promote/banner" style={adLink}>Advertise here</a></div>

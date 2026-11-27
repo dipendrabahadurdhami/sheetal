@@ -8,7 +8,7 @@ import { z } from "zod";
 import { cached } from "@sheetal/backend-core/lib/cache";
 import { dbOf } from "@sheetal/platform/db/client";
 import { isBotRequest } from "@sheetal/backend-core/lib/bots";
-import { mediaBase } from "@sheetal/backend-core/lib/photos";
+import { mediaBase, photoUrl } from "@sheetal/backend-core/lib/photos";
 import { liveBanners } from "@sheetal/backend-core/domain/banners";
 import { today } from "@sheetal/backend-core/domain/promote";
 
@@ -20,7 +20,24 @@ export async function bannerRoutes(app: FastifyInstance) {
   app.get("/banners", async () =>
     cached(app.cache, `banners:${today()}`, 60, async () => {
       const rows = await liveBanners(db());
-      return { status: 200, data: rows.map((b) => ({ id: b.id, desktop: pic(b.desktop), mobile: pic(b.mobile), link: b.link, title: b.title, button: b.button, sponsored: b.source === "paid" })) };
+      // Listing banners: the listing's photos (up to 5, shown as a grid), price and place, opening the listing on this site.
+      const ids = rows.map((r) => r.listingId).filter((x): x is number => !!x);
+      const listings = ids.length ? await db().listing.findMany({
+        where: { id: { in: ids }, status: { in: ["published", "sold", "rented"] }, reviewHold: false },
+        select: { id: true, slug: true, title: true, purpose: true, kind: true, price: true, pricePer: true, area: true, city: true, district: true, photos: { orderBy: { sort: "asc" }, take: 5, select: { file: true } } },
+      }) : [];
+      const L = new Map(listings.map((l) => [l.id, l]));
+      type Out = { id: string; title: string; button: string; sponsored: boolean; desktop: string | null; mobile: string | null; link: string; internal?: boolean; listing?: unknown };
+      const data = rows.flatMap((b): Out[] => {
+        const l = b.listingId ? L.get(b.listingId) : undefined;
+        if (b.listingId && !l) return []; // the listing went offline: its banner waits
+        const base = { id: b.id, title: b.title, button: b.button, sponsored: b.source === "paid" };
+        if (!l) return [{ ...base, desktop: pic(b.desktop), mobile: pic(b.mobile), link: b.link }];
+        return [{ ...base, desktop: null, mobile: null, link: `/property/${l.slug}`, internal: true,
+          listing: { id: l.id, title: l.title, purpose: l.purpose, kind: l.kind, price: l.price == null ? null : Number(l.price), price_per: l.pricePer,
+            place: [...new Set([l.area, l.city].filter(Boolean))].join(", ") || l.district, photos: l.photos.map((p) => photoUrl(media, "main", p.file)) } }];
+      });
+      return { status: 200, data };
     }));
 
   const count = async (ids: string[], field: "views" | "clicks", headers: Record<string, unknown>) => {

@@ -121,7 +121,7 @@ export async function engageRoutes(app: FastifyInstance) {
       // Let the business know by email (their Inbox shows it too).
       const to = tenantId ? (await db.tenant.findUnique({ where: { id: tenantId }, select: { email: true } }))?.email : null;
       if (to) {
-        const what = { contact_agent: "An enquiry", contact_owner: "A message for the owner", site_visit: "A site visit request", requirement: "A buyer requirement", service: "A service request" }[kind];
+        const what = { contact_agent: "An enquiry", contact_owner: "A message for the owner", site_visit: "A site visit request", requirement: "A buyer requirement", service: "A service request", demo: "A demo request" }[kind];
         await app.mailer.send({
           to, subject: `${what}${listing ? ` for ${listing.code}` : ""} from ${b.name}`,
           text: [`${what} came in on Sheetal Property.`, "", `Name: ${b.name}`, contact ? `Phone: ${contact}` : "", b.email ? `Email: ${b.email}` : "", listing ? `Property: ${listing.title} (${listing.code})` : "", b.date ? `Visit: ${b.date} ${b.time}` : "", message ? `\n${message}` : "", "", "Reply from your Inbox in Sheetal Business."].filter((x) => x !== "").join("\n"),

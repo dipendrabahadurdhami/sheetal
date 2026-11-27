@@ -3501,3 +3501,34 @@ html.pa-lock, html.pa-lock body { overflow: hidden !important; }
   .bs-types { grid-template-columns: minmax(0, 1fr); }
   .bs-hero p { font-size: 15px; }
 }
+
+/* Home page listing banner (Home.jsx BannerBg): the listing's photos as a grid filling the banner, and its title, price and place. */
+.hb-grid { display: grid; gap: 3px; background: #111; grid-template-columns: 2fr 1fr 1fr; grid-template-rows: 1fr 1fr; }
+.hb-grid img { width: 100%; height: 100%; object-fit: cover; min-height: 0; display: block; }
+.hb-grid img:first-child { grid-row: span 2; }
+.hb-grid.n1 { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+.hb-grid.n2 { grid-template-columns: 2fr 1fr; } .hb-grid.n2 img:nth-child(2) { grid-row: span 2; }
+.hb-grid.n3 { grid-template-columns: 2fr 1fr; }
+.hb-grid.n4 { grid-template-columns: 2fr 1fr 1fr; } .hb-grid.n4 img:nth-child(4) { grid-column: span 2; }
+.hb-listing { display: inline-flex; align-items: center; gap: 12px; min-width: 0; max-width: 100%; padding: 6px 6px 6px 12px; border-radius: var(--r); background: rgba(0,0,0,.45); backdrop-filter: blur(6px); color: #fff !important; text-decoration: none; }
+.hb-l-t { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+.hb-l-t b { font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hb-l-t small { font-size: 12.5px; opacity: .9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hb-listing .btn { flex-shrink: 0; }
+@media (max-width: 700px) {
+  .hb-grid, .hb-grid.n4, .hb-grid.n5 { grid-template-columns: repeat(3, 1fr); grid-template-rows: 3fr 1fr; }
+  .hb-grid img:first-child { grid-row: auto; grid-column: 1 / -1; }
+  .hb-grid img:nth-child(5) { display: none; }
+  .hb-grid.n2, .hb-grid.n3 { grid-template-columns: 1fr 1fr; } .hb-grid.n2 img:nth-child(2) { grid-row: auto; }
+  .hb-grid.n4 img:nth-child(4) { grid-column: auto; }
+  .hb-listing { flex: 1 1 100%; }
+}
+/* Phone home banner made from a listing: the grid fills the card; the shade is the link to the listing. */
+.pa-banner .pa-hb { position: absolute; inset: 0; }
+.pa-banner a.pa-shade { color: #fff !important; text-decoration: none; }
+.pa-banner .pa-shade b small { display: block; font-size: 12px; font-weight: 500; opacity: .9; }
+
+/* Smooth page changes on the website (App.jsx ScrollTop): the new page fades and rises a little. */
+@keyframes page-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+main.page-in { animation: page-in .28s ease-out both; }
+@media (prefers-reduced-motion: reduce) { main.page-in, .bs-fade, .bs-pack { animation: none; } }

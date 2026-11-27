@@ -15,7 +15,7 @@ import { PhoneHomeTop, LoopStrip } from "../components/PhoneApp";
 import { useMedia } from "../hooks/useAsync";
 import { PropertyCard, CardSkeleton, PropertyGrid } from "../components/PropertyCard";
 import { SectionHead } from "../components/ui";
-import { fmtDate, imgUrl } from "../utils/format";
+import { fmtDate, fmtPrice, imgUrl } from "../utils/format";
 import { AgencyCard, JoinPanel } from "./Agencies";
 import HomePlatformRows from "../market/SiteRows";
 
@@ -24,6 +24,26 @@ const PLACES = [["Kathmandu", "/demo/12.jpg"], ["Lalitpur", "/demo/15.jpg"], ["B
 const FALLBACK_HERO = ["/demo/12.jpg", "/demo/15.jpg", "/demo/17.jpg"];
 
 const adLink = { fontSize: 12, textDecoration: "underline", textUnderlineOffset: 3 };
+
+// One banner's background: its own pictures (computer and phone), or for a listing banner the listing's photos as a grid
+// (a big one and up to four small; on a phone a big one and a row of three) that fills the same space.
+function BannerBg({ b, on, eager }) {
+  const style = { position: "absolute", inset: 0, zIndex: -2, opacity: on ? 1 : 0, transition: "opacity .8s ease" };
+  if (b.listing) {
+    const ph = b.listing.photos.slice(0, 5);
+    return (
+      <div aria-hidden={!on} className={`hb-grid n${ph.length}`} style={style}>
+        {ph.map((u, k) => <img key={u} src={u} alt={k ? "" : b.listing.title} loading={eager && k < 3 ? "eager" : "lazy"} decoding="async" />)}
+      </div>
+    );
+  }
+  return (
+    <picture aria-hidden={!on} style={style}>
+      <source media="(max-width: 700px)" srcSet={b.mobile} />
+      <img src={b.desktop} alt={b.title || "Advertisement"} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading={eager ? "eager" : "lazy"} />
+    </picture>
+  );
+}
 
 function Hero() {
   const banners = useAsync(() => api.banners().then((r) => r?.data || []).catch(() => []), []);
@@ -50,12 +70,7 @@ function Hero() {
   const open = (b) => api.bannerClick({ id: b.id }).catch(() => {});
   return (
     <section className="home-hero-plain" style={{ position: "relative", overflow: "hidden", isolation: "isolate", minHeight: "min(70vh, 560px)", display: "flex", alignItems: "center" }}>
-      {list.map((b, k) => (
-        <picture key={b.id} aria-hidden={k !== i % list.length} style={{ position: "absolute", inset: 0, zIndex: -2, opacity: k === i % list.length ? 1 : 0, transition: "opacity .8s ease" }}>
-          <source media="(max-width: 700px)" srcSet={b.mobile} />
-          <img src={b.desktop} alt={b.title || "Advertisement"} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading={k ? "lazy" : "eager"} />
-        </picture>
-      ))}
+      {list.map((b, k) => <BannerBg key={b.id} b={b} on={k === i % list.length} eager={!k} />)}
       <div aria-hidden="true" style={{ position: "absolute", inset: 0, zIndex: -1, background: "linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.35) 55%, rgba(0,0,0,.6))" }} />
       <div className="container" style={{ width: "100%" }}>
         <h1 className="hh-title" style={{ color: "#fff" }}>Find your place in Nepal</h1><p className="hh-sub" style={{ color: "rgba(255,255,255,.88)" }}>Stays, homes, land, projects and investments across Nepal.</p>
@@ -63,8 +78,16 @@ function Hero() {
       </div>
       <div style={{ position: "absolute", left: 16, right: 16, bottom: 14, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", color: "#fff" }}>
         {cur.sponsored && <span className="tag tag-white" style={{ fontSize: 11 }}>Sponsored</span>}
-        {cur.title && <b style={{ fontSize: 15, textShadow: "0 1px 3px rgba(0,0,0,.5)" }}>{cur.title}</b>}
-        <a href={cur.link} target="_blank" rel="noopener noreferrer sponsored" onClick={() => open(cur)} className="btn btn-sm" style={{ background: "#fff", color: "#111" }}>{cur.button || "Learn more"}</a>
+        {cur.listing ? (
+          // A listing banner opens the listing here on the site.
+          <Link to={cur.link} onClick={() => open(cur)} className="hb-listing">
+            <span className="hb-l-t"><b>{cur.title || cur.listing.title}</b><small>{[cur.listing.price ? `${fmtPrice(cur.listing.price)}${cur.listing.purpose === "rent" ? " / month" : ""}` : "", cur.listing.place].filter(Boolean).join(" · ")}</small></span>
+            <span className="btn btn-sm" style={{ background: "#fff", color: "#111" }}>{cur.button || "View"}</span>
+          </Link>
+        ) : <>
+          {cur.title && <b style={{ fontSize: 15, textShadow: "0 1px 3px rgba(0,0,0,.5)" }}>{cur.title}</b>}
+          <a href={cur.link} target="_blank" rel="noopener noreferrer sponsored" onClick={() => open(cur)} className="btn btn-sm" style={{ background: "#fff", color: "#111" }}>{cur.button || "Learn more"}</a>
+        </>}
         <span style={{ flex: 1 }} />
         {list.length > 1 && <span style={{ display: "flex", gap: 6 }}>{list.map((b, k) => <button key={b.id} type="button" aria-label={`Banner ${k + 1}`} onClick={() => setI(k)} style={{ width: 8, height: 8, borderRadius: 4, border: 0, padding: 0, background: k === i % list.length ? "#fff" : "rgba(255,255,255,.45)", cursor: "pointer" }} />)}</span>}
         <a href="/business/promote/banner" style={{ ...adLink, color: "rgba(255,255,255,.85)" }}>Advertise here</a>

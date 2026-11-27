@@ -94,3 +94,34 @@ describe("home page banners", () => {
     expect((await app.db!.banner.findUniqueOrThrow({ where: { id: ids.banner } })).status).toBe("review");
   });
 });
+
+describe("listing banners and the plan rule", () => {
+  it("books a banner from a published listing: no pictures, the listing's link and title, its photos in the list", async () => {
+    const db = app.db!;
+    await db.banner.updateMany({ data: { status: "void" } }); // free the one spot
+    const l = await db.listing.create({ data: { code: "ER-0101", slug: "lake-view-hotel", tenantId: ids.agency!, kind: "stay_hotel", purpose: "rent", category: "Hotel", title: "Lake View Hotel", status: "published", photos: { create: [{ file: "a.jpg", sort: 0 }, { file: "b.jpg", sort: 1 }] } } });
+    const bare = await db.listing.create({ data: { code: "ER-0102", slug: "no-photos", tenantId: ids.agency!, purpose: "sale", category: "Land", title: "Land", status: "published" } });
+    const d = (await call("owner", "GET", "/promote/banners")).json().data;
+    expect(d.onPlan).toBe(true);
+    expect(d.choices.map((c: { id: number }) => c.id)).toEqual([l.id]); // only listings with photos
+    expect((await call("owner", "POST", "/promote/banners", { days: 7, listingId: bare.id })).statusCode).toBe(400);
+    const r = await call("owner", "POST", "/promote/banners", { days: 7, listingId: l.id, title: "", button: "" });
+    expect(r.statusCode).toBe(200);
+    const b = await db.banner.findUniqueOrThrow({ where: { id: r.json().data.id } });
+    expect(b).toMatchObject({ listingId: l.id, desktop: "", mobile: "", link: "https://sheetal.test/property/lake-view-hotel", title: "Lake View Hotel" });
+    const row = (await call("owner", "GET", "/promote/banners")).json().data.rows.find((x: { id: string }) => x.id === b.id);
+    expect(row.listing).toMatchObject({ code: "ER-0101" });
+    expect(row.listing.photos).toHaveLength(2);
+    expect(row.desktop).toBeNull();
+  });
+
+  it("refuses a business that is not on a plan", async () => {
+    const db = app.db!;
+    const free = (await db.$transaction((tx) => createWorkspace(tx, { ownerId: ids.owner!, name: "Free Homes", type: "agency" }))).id;
+    const r = await app.inject({ method: "POST", url: "/v1/promote/banners", payload: booking(), headers: { authorization: `Bearer ${tok.owner}`, "x-tenant-id": free } });
+    expect(r.statusCode).toBe(403);
+    expect(r.json().message).toMatch(/on a plan/);
+    const d = (await app.inject({ method: "GET", url: "/v1/promote/banners", headers: { authorization: `Bearer ${tok.owner}`, "x-tenant-id": free } })).json().data;
+    expect(d.onPlan).toBe(false);
+  });
+});

@@ -275,11 +275,12 @@ function BannerTab({ onPay }) {
   if (d === null) return <p className="muted pf-pad">Loading…</p>;
   if (d === false) return <Empty icon="circle-alert" title="Banners couldn't load">Try again in a moment.</Empty>;
   const set = (p) => setF((x) => ({ ...x, ...p }));
-  const okText = f && /^https?:\/\/\S+\.\S+$/i.test(f.link || "");
+  const fromListing = !!f && (f.id ? !!f.listing : f.mode === "listing");
+  const okText = f && (fromListing ? (f.id || !!f.listingId) : /^https?:\/\/\S+\.\S+$/i.test(f.link || "") && !!f.desktop && !!f.mobile);
   const send = async () => {
     setBusy(true);
     try {
-      const body = { link: f.link.trim(), title: (f.title || "").trim(), button: (f.button || "").trim() };
+      const body = fromListing ? { title: (f.title || "").trim(), button: (f.button || "").trim(), ...(f.id ? {} : { listingId: f.listingId }) } : { link: f.link.trim(), title: (f.title || "").trim(), button: (f.button || "").trim() };
       if (f.desktop?.file) body.desktop = { data: await fileToBase64(f.desktop.file) };
       if (f.mobile?.file) body.mobile = { data: await fileToBase64(f.mobile.file) };
       if (f.id) { const r = await bizApi("PUT", `/promote/banners/${f.id}`, body); toast(r.message); setF(null); load(); return; }
@@ -288,22 +289,26 @@ function BannerTab({ onPay }) {
       onPay(r.data.invoiceId, `${r.data.number} · ${r.data.no}`, r.data.total);
     } catch (e) { toast(e.message); } finally { setBusy(false); }
   };
-  const book = () => setF({ days: d.lengths.find((n) => n === 7) || d.lengths[0], startOn: "", link: "", title: "", button: "", desktop: null, mobile: null });
+  // A listing banner is the easy way (no pictures to make): it starts there when the business has a listing with photos.
+  const book = () => setF({ mode: d.choices?.length ? "listing" : "pictures", listingId: d.choices?.[0]?.id ?? null, days: d.lengths.find((n) => n === 7) || d.lengths[0], startOn: "", link: "", title: "", button: "", desktop: null, mobile: null });
+  const canBook = d.canBuy && d.active && d.onPlan;
+  const chosen = f && d.choices?.find((c) => c.id === f.listingId);
   return (
     <>
       <Panel title="Home page banner" sub={`The big picture behind the title and search on the Sheetal home page. Up to ${d.spots} banners take turns. ${rs(d.price)} a day, VAT included. Sheetal checks the picture before it shows.`}
-        actions={d.canBuy && d.active && <Button icon="image-plus" onClick={book}>Book the home banner</Button>}>
+        actions={canBook && <Button icon="image-plus" onClick={book}>Book the home banner</Button>}>
+        {d.canBuy && d.active && !d.onPlan && <div className="pf-pad"><div className="pf-alert"><Icon name="layers" size={18} /><div><b>Home page banners are for businesses on a plan</b><span>Choose Starter, Business or Pro, then book a banner for your listing, hotel or agency.</span></div><Button size="sm" onClick={() => window.location.assign("/business/plans")}>See plans</Button></div></div>}
         <Table rows={d.rows} minWidth={860}
-          empty={<div className="pf-pad"><Empty icon="image" title="No banners yet" action={d.canBuy && d.active && <Button icon="image-plus" onClick={book}>Book the home banner</Button>}>Pick the days, upload a picture for computers ({d.sizes.desktop.width} × {d.sizes.desktop.height}) and one for phones ({d.sizes.mobile.width} × {d.sizes.mobile.height}), then pay.</Empty></div>}
+          empty={<div className="pf-pad"><Empty icon="image" title="No banners yet" action={canBook && <Button icon="image-plus" onClick={book}>Book the home banner</Button>}>Pick one of your listings (its photos show as a grid and the banner opens it) or upload your own pictures, choose the days, then pay.</Empty></div>}
           columns={[
-            { key: "p", label: "Banner", render: (b) => <span className="pf-person"><img src={b.desktop} alt="" style={{ width: 96, height: 30, objectFit: "cover", borderRadius: 4 }} /><span className="pf-two"><b>{b.title || b.no}</b><small>{b.no} · {b.link.replace(/^https?:\/\//, "").slice(0, 40)}</small></span></span> },
+            { key: "p", label: "Banner", render: (b) => <span className="pf-person"><img src={b.desktop || b.listing?.photos?.[0]} alt="" style={{ width: 96, height: 30, objectFit: "cover", borderRadius: 4 }} /><span className="pf-two"><b>{b.title || b.no}</b><small>{b.no} · {b.listing ? `Listing ${b.listing.code}` : b.link.replace(/^https?:\/\//, "").slice(0, 40)}</small></span></span> },
             { key: "d", label: "Dates", num: true, render: (b) => <span className="pf-two"><b>{fdate(b.startOn)} – {fdate(b.endOn)}</b><small>{b.days} days · {rs(b.total)}</small></span> },
             { key: "s", label: "Status", render: (b) => <span className="pf-two"><Badge tone={BANNER_TONE[b.phase]}>{b.phaseLabel}</Badge>{b.reviewNote && <small>{b.reviewNote}</small>}</span> },
             { key: "r", label: "Views · clicks", num: true, render: (b) => <span className="small tnum">{b.views.toLocaleString("en-IN")} · {b.clicks}</span> },
             { key: "x", label: "", align: "right", render: (b) => d.canBuy && <div className="pf-row-actions" style={{ justifyContent: "flex-end" }}>
               {b.phase === "awaiting" && b.invoice?.status === "open" && <><Button size="sm" icon="credit-card" onClick={() => onPay(b.invoice.id, `${b.invoice.number} · ${b.no}`, b.invoice.total)}>Pay</Button>
                 <Button size="sm" variant="ghost" disabled={busy} onClick={() => window.confirm(`Cancel ${b.no}? Nothing was paid.`) && bizApi("POST", `/promote/banners/${b.id}/cancel`).then((r) => { toast(r.message); load(); }).catch((e) => toast(e.message))}>Cancel</Button></>}
-              {["awaiting", "review", "rejected"].includes(b.phase) && <Button size="sm" variant={b.phase === "rejected" ? undefined : "outline"} icon="image-up" onClick={() => setF({ id: b.id, no: b.no, link: b.link, title: b.title, button: b.button, desktop: { url: b.desktop }, mobile: { url: b.mobile } })}>{b.phase === "rejected" ? "Change picture" : "Edit"}</Button>}
+              {["awaiting", "review", "rejected"].includes(b.phase) && <Button size="sm" variant={b.phase === "rejected" ? undefined : "outline"} icon="image-up" onClick={() => setF({ id: b.id, no: b.no, listing: b.listing, link: b.link, title: b.title, button: b.button, desktop: b.desktop ? { url: b.desktop } : null, mobile: b.mobile ? { url: b.mobile } : null })}>{b.phase === "rejected" ? (b.listing ? "Change words" : "Change picture") : "Edit"}</Button>}
             </div> },
           ]} />
       </Panel>
@@ -311,20 +316,33 @@ function BannerTab({ onPay }) {
       {f && <Drawer open onClose={() => !busy && setF(null)} title={f.id ? `Change ${f.no}` : "Book the home banner"} sub={f.id ? "Changes go to Sheetal to check." : "Shown behind the title and search on the home page."}
         footer={<><span className="small muted tnum" style={{ marginRight: "auto" }}>{!f.id && q ? <>Total <b className="pf-strong">{rs(q.total)}</b> (VAT {rs(q.vat)} included)</> : ""}</span>
           <Button variant="outline" onClick={() => setF(null)}>Cancel</Button>
-          <Button icon={f.id ? "check" : "credit-card"} disabled={busy || !okText || !f.desktop || !f.mobile || (!f.id && !q)} onClick={send}>{busy ? "Sending…" : f.id ? "Save" : "Make invoice and pay"}</Button></>}>
+          <Button icon={f.id ? "check" : "credit-card"} disabled={busy || !okText || (!f.id && !q)} onClick={send}>{busy ? "Sending…" : f.id ? "Save" : "Make invoice and pay"}</Button></>}>
         <div className="pf-stack">
           {!f.id && <>
             <Field label="How long"><Seg value={f.days} onChange={(v) => set({ days: Number(v) })} options={d.lengths.map((n) => ({ id: n, label: `${n} days` }))} /></Field>
             <Field label="Start" hint="Leave empty for the first free day." optional><Input type="date" min={d.today} value={f.startOn} onChange={(e) => set({ startOn: e.target.value })} /></Field>
             {q && <div className="pf-note"><Icon name="calendar-days" size={16} /><span>{fdate(q.startOn)} to {fdate(q.endOn)}: {q.days} days × {rs(q.price)} = <b>{rs(q.total)}</b>.{q.moved ? " All spots are booked until then, so it starts on the first free day." : ""}</span></div>}
           </>}
-          <PicturePick label="Picture for computers" size={d.sizes.desktop} max={d.maxBytes} value={f.desktop} onChange={(v) => set({ desktop: v })} />
-          <PicturePick label="Picture for phones" size={d.sizes.mobile} max={d.maxBytes} value={f.mobile} onChange={(v) => set({ mobile: v })} />
-          <p className="small muted" style={{ margin: 0 }}>Keep words and logos away from the middle: the title and search box sit there, over a dark shade.</p>
-          <Field label="Link" hint="Where people go when they press the button."><Input type="url" placeholder="https://" value={f.link} onChange={(e) => set({ link: e.target.value })} /></Field>
+          {!f.id && <Field label="What to show"><Seg value={f.mode} onChange={(v) => set({ mode: v })} options={[{ id: "listing", label: "One of my listings" }, { id: "pictures", label: "My own pictures" }]} /></Field>}
+          {fromListing ? <>
+            {f.id ? <div className="pf-note"><Icon name="house" size={16} /><span>Listing {f.listing.code}: {f.listing.title}</span></div> : !d.choices?.length
+              ? <div className="pf-note"><Icon name="circle-alert" size={16} /><span>You have no published listing with photos yet. Publish one first, or use your own pictures.</span></div>
+              : <Field label="Listing" hint="Your property, hotel, apartment or project. The banner opens it.">
+                  <select className="input" value={f.listingId ?? ""} onChange={(e) => set({ listingId: Number(e.target.value) })}>
+                    {d.choices.map((c) => <option key={c.id} value={c.id}>{c.code} · {c.title}</option>)}
+                  </select>
+                </Field>}
+            {(chosen || f.listing) && <div className="pf-banner-prev" aria-label="How it looks">{(chosen || f.listing).photos.slice(0, 5).map((u) => <img key={u} src={u} alt="" />)}</div>}
+            <p className="small muted" style={{ margin: 0 }}>The home page shows these photos as a grid, with your title, the price and the place. Nothing to upload.</p>
+          </> : <>
+            <PicturePick label="Picture for computers" size={d.sizes.desktop} max={d.maxBytes} value={f.desktop} onChange={(v) => set({ desktop: v })} />
+            <PicturePick label="Picture for phones" size={d.sizes.mobile} max={d.maxBytes} value={f.mobile} onChange={(v) => set({ mobile: v })} />
+            <p className="small muted" style={{ margin: 0 }}>Keep words and logos away from the middle: the title and search box sit there, over a dark shade.</p>
+            <Field label="Link" hint="Where people go when they press the button."><Input type="url" placeholder="https://" value={f.link} onChange={(e) => set({ link: e.target.value })} /></Field>
+          </>}
           <div className="pf-grid-2 tight">
-            <Field label="Title" optional><Input maxLength={80} value={f.title} onChange={(e) => set({ title: e.target.value })} /></Field>
-            <Field label="Button text" hint="Empty: Learn more" optional><Input maxLength={24} value={f.button} onChange={(e) => set({ button: e.target.value })} /></Field>
+            <Field label="Title" hint={fromListing ? "Empty: the listing's title" : undefined} optional><Input maxLength={80} value={f.title} onChange={(e) => set({ title: e.target.value })} /></Field>
+            <Field label="Button text" hint={fromListing ? "Empty: View" : "Empty: Learn more"} optional><Input maxLength={24} value={f.button} onChange={(e) => set({ button: e.target.value })} /></Field>
           </div>
         </div>
       </Drawer>}

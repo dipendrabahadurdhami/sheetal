@@ -107,7 +107,7 @@ function BannersPanel() {
       {toCheck.length > 0 && <div className="pf-alert action"><Icon name="image" size={18} /><div><b>{toCheck.length} banner picture{toCheck.length > 1 ? "s" : ""} to check</b><span>Paid. Approve to show them on their dates, or ask for a change.</span></div><Button size="sm" onClick={() => setView(toCheck[0])}>Check now</Button></div>}
       <Panel title="Home page banners" sub="Paid ones show first; Sheetal's own fill the spots left." actions={<Button size="sm" icon="image-plus" onClick={() => setAdd({ link: "", title: "", button: "", startOn: "", endOn: "", desktop: null, mobile: null })}>Add Sheetal banner</Button>}>
         <Table rows={shown} minWidth={900} onRowClick={setView} empty={<p className="pf-pad small muted">No banners running or booked.</p>} columns={[
-          { key: "p", label: "Banner", render: (b) => <span className="pf-person"><img src={b.desktop} alt="" style={{ width: 96, height: 30, objectFit: "cover", borderRadius: 4 }} /><span className="pf-two"><b>{b.title || b.no}</b><small>{b.no} · {b.tenant}</small></span></span> },
+          { key: "p", label: "Banner", render: (b) => <span className="pf-person"><img src={b.desktop || b.listing?.photos?.[0]} alt="" style={{ width: 96, height: 30, objectFit: "cover", borderRadius: 4 }} /><span className="pf-two"><b>{b.title || b.no}</b><small>{b.no} · {b.tenant}</small></span></span> },
           { key: "d", label: "Dates", num: true, render: (b) => <span className="small tnum">{fdate(b.startOn)} – {fdate(b.endOn)}</span> },
           { key: "t", label: "Paid", num: true, align: "right", render: (b) => (b.source === "staff" ? "Own" : rs(b.total)) },
           { key: "s", label: "Status", render: (b) => <Badge tone={BTONE[b.phase]}>{b.phaseLabel}</Badge> },
@@ -118,8 +118,13 @@ function BannersPanel() {
         footer={view && <>{view.phase === "review" && <><Button variant="outline" disabled={busy} onClick={() => review(view, "reject")}>Ask for a change</Button><Button icon="check" disabled={busy} onClick={() => review(view, "approve")}>Approve</Button></>}
           {["live", "scheduled", "rejected"].includes(view.phase) && <Button variant="outline" onClick={() => stop(view)}>Stop</Button>}</>}>
         {view && <div className="pf-stack">
-          <span className="small muted">Computer (1920 × 600)</span><img src={view.desktop} alt="" style={{ width: "100%", borderRadius: 6 }} />
-          <span className="small muted">Phone (1080 × 1080)</span><img src={view.mobile} alt="" style={{ width: "60%", borderRadius: 6 }} />
+          {view.listing ? <>
+            <span className="small muted">Listing banner: {view.listing.code} · {view.listing.title}. The home page shows these photos as a grid.</span>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>{view.listing.photos.map((u) => <img key={u} src={u} alt="" style={{ width: "100%", aspectRatio: "4 / 3", objectFit: "cover", borderRadius: 6 }} />)}</div>
+          </> : <>
+            <span className="small muted">Computer (1920 × 600)</span><img src={view.desktop} alt="" style={{ width: "100%", borderRadius: 6 }} />
+            <span className="small muted">Phone (1080 × 1080)</span><img src={view.mobile} alt="" style={{ width: "60%", borderRadius: 6 }} />
+          </>}
           <dl className="pf-kv"><dt>Link</dt><dd><a href={view.link} target="_blank" rel="noreferrer">{view.link}</a></dd><dt>Title</dt><dd>{view.title || "—"}</dd><dt>Button</dt><dd>{view.button || "Learn more"}</dd>{view.invoice && <><dt>Invoice</dt><dd className="tnum">{view.invoice}</dd></>}{view.reviewNote && <><dt>Change asked</dt><dd>{view.reviewNote}</dd></>}</dl>
           <p className="small muted" style={{ margin: 0 }}>Check: nothing misleading or against the law, readable, and the link works.</p>
         </div>}

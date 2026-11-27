@@ -14,7 +14,7 @@ import { invoiceNumber } from "@sheetal/backend-core/domain/billing";
 import { PHASE_LABEL, PLACES, PLACE_LABEL, boostNo, phaseOf, promoteSettings, takenToday, today, type Place } from "@sheetal/backend-core/domain/promote";
 import { staffOf } from "./routes.js";
 import { notify } from "@sheetal/platform/notify/index";
-import { mediaBase } from "@sheetal/backend-core/lib/photos";
+import { mediaBase, photoUrl } from "@sheetal/backend-core/lib/photos";
 import { BANNER_PHASE, BannerText, Picture, approvedDates, bannerNo, bannerPhase, saveBannerPicture } from "@sheetal/backend-core/domain/banners";
 import { dayOf } from "@sheetal/backend-core/domain/money";
 
@@ -88,11 +88,14 @@ export async function adminPromoteRoutes(app: FastifyInstance) {
       db().payment.findMany({ where: { invoiceId: { in: inv }, status: "pending_review" }, select: { invoiceId: true } }),
     ]);
     const I = new Map(invoices.map((i) => [i.id, i])), pending = new Set(checking.map((c) => c.invoiceId));
+    // Listing banners: the listing's photos (the home page shows them as a grid).
+    const used = await db().listing.findMany({ where: { id: { in: rows.map((r) => r.listingId).filter((x): x is number => !!x) } }, select: { id: true, title: true, code: true, photos: { orderBy: { sort: "asc" }, take: 5, select: { file: true } } } });
+    const L = new Map(used.map((l) => [l.id, { id: l.id, title: l.title, code: l.code, photos: l.photos.map((p) => photoUrl(media, "main", p.file)) }]));
     return {
       data: rows.map((b) => {
         const i = b.invoiceId ? I.get(b.invoiceId) : undefined;
         const phase = bannerPhase(b, { checking: !!b.invoiceId && pending.has(b.invoiceId), invoiceOpen: i ? i.status === "open" : undefined });
-        return { id: b.id, no: bannerNo(b.seq), source: b.source, tenant: b.tenantId ? tenants.get(b.tenantId) ?? "" : "Sheetal", desktop: pic(b.desktop), mobile: pic(b.mobile), link: b.link, title: b.title, button: b.button,
+        return { id: b.id, no: bannerNo(b.seq), source: b.source, tenant: b.tenantId ? tenants.get(b.tenantId) ?? "" : "Sheetal", desktop: b.desktop ? pic(b.desktop) : null, mobile: b.mobile ? pic(b.mobile) : null, listing: b.listingId ? L.get(b.listingId) ?? null : null, link: b.link, title: b.title, button: b.button,
           days: b.days, startOn: ymd(b.startOn), endOn: ymd(b.endOn), total: b.total, phase, phaseLabel: BANNER_PHASE[phase], reviewNote: b.reviewNote, views: b.views, clicks: b.clicks, invoice: i ? invoiceNumber(i) : null };
       }),
     };
