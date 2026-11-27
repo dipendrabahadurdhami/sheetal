@@ -114,7 +114,7 @@ describe("Who is affected: only the server's answer", () => {
 describe("admin menu and routes", () => {
   const app = src("./AdminApp.jsx");
   it("Pricing, Coupons and Approvals in the menu (live only) and guarded routes; the business page links its subscriptions", () => {
-    expect(app).toContain('{ to: "/admin/pricing", icon: "tag", key: "nav.pricing", perm: "platform.billing.read" }');
+    expect(app).toContain('{ to: "/admin/pricing", icon: "tag", key: "nav.pricingPacks", perm: "platform.billing.read" }');
     expect(app).toMatch(/path: "\/admin\/pricing", render: \(\) => guard\("platform\.billing\.read"/);
     expect(app).toMatch(/path: "\/admin\/coupons", render: \(\) => guard\("platform\.billing\.read"/);
     expect(app).toMatch(/path: "\/admin\/approvals", render: \(\) => guard\(\["platform\.pricing\.manage", "platform\.billing\.refund"\]/);
