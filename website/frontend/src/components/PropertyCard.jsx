@@ -77,7 +77,7 @@ export function PropertyCard({ p, layout = "grid" }) {
           {!s.beds && p.property_type && <span>{p.property_type}</span>}
         </div>
         <div className="row between" style={{ alignItems: "baseline", marginTop: 4 }}>
-          <span className="pcard-price tnum">{fmtPrice(price)}{isRent && <small> / month</small>}</span>
+          <span className="pcard-price tnum">{fmtPrice(price)}{isRent && <small>{p.price_per === "night" ? " / night" : " / month"}</small>}</span>
           {p.created_at && <span className="tiny muted">{timeAgo(p.created_at)}</span>}
         </div>
       </div>

@@ -177,7 +177,7 @@ export default function PropertyDetail() {
         <aside style={{ paddingTop: 32 }}>
           <div id="enquire" className="card card-pad stack" style={{ gap: 20, boxShadow: "var(--shadow)" }}>
             <div>
-              <span className="price-big tnum">{fmtPrice(price)}</span>{isRent && <span className="muted"> / month</span>}
+              <span className="price-big tnum">{fmtPrice(price)}</span>{isRent && <span className="muted">{p.price_per === "night" ? " / night" : " / month"}</span>}
               {Number(price) > 0 && <div className="small muted tnum" style={{ marginTop: 4 }}>{fmtFull(price)}{p.price_negotiable ? " · negotiable" : ""}</div>}
             </div>
             {p.raise_funds && side !== "invest-done" && <InvestForm p={p} />}
