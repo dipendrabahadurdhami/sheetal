@@ -4,7 +4,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { Newspaper, Calculator, TrendingUp, ClipboardList, Images, Info, Building2, HandCoins, Landmark, Scale, KeyRound, Wallet, FilePlus2, Briefcase, BadgeCheck, Sun, Moon, Droplet, Heart, Plus, User, Home, Search, LogOut, LayoutGrid, Bell, Menu, X, Facebook, Instagram, Phone, Mail, MapPin, MessageCircle, MessagesSquare, Layers } from "lucide-react";
+import { Newspaper, Calculator, TrendingUp, ClipboardList, Images, Info, Building2, HandCoins, Landmark, Scale, KeyRound, Wallet, FilePlus2, Briefcase, BadgeCheck, Sun, Moon, Droplet, Heart, Plus, User, Home, Search, LogOut, LayoutGrid, Bell, Menu, X, Facebook, Instagram, Phone, Mail, MapPin, MessageCircle, MessagesSquare, Layers, Smartphone } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { Logo, Avatar } from "./ui";
 import { HeaderSearch } from "./HeaderSearch";
@@ -20,7 +20,7 @@ const MORE = [
   ["Explore", [["/investment/explore", HandCoins, "Invest", "Hotels and projects"], ["/property-demand", ClipboardList, "Buyer requests", "What buyers want"], ["/partners?type=agency", Building2, "Agencies", "Local agencies"], ["/requirement", FilePlus2, "Post a requirement", "Tell us what you need"]]],
   ["Services", [["/services/home-loan", Landmark, "Home loan", "Compare bank offers"], ["/services/legal-help", Scale, "Legal help", "Papers and transfer"], ["/services/management", KeyRound, "Management", "Tenants and repairs"], ["/services/pay-rent", Wallet, "Pay rent", "Fonepay and eSewa"]]],
   ["Learn", [["/blog", Newspaper, "Journal", "Guides and news"], ["/rates-and-trends", TrendingUp, "Rates and trends", "Prices by area"], ["/tools/emi", Calculator, "Calculators", "EMI, tax and area"], ["/gallery", Images, "Gallery", "Photos and videos"]]],
-  ["Company", [["/about", Info, "About us", "Who we are"], ["/careers", Briefcase, "Careers", "Work with us"], ["/technology", Layers, "Sheetal Technologies", "Software for your business"], ["/contact", Phone, "Contact", "Call or visit"], ["/pricing", BadgeCheck, "Apps and pricing", "Free to start, for every business"]]],
+  ["Company", [["/about", Info, "About us", "Who we are"], ["/careers", Briefcase, "Careers", "Work with us"], ["/technology", Layers, "Sheetal Technologies", "Software for your business"], ["/app", Smartphone, "Get the apps", "Android, Windows and iPhone"], ["/contact", Phone, "Contact", "Call or visit"], ["/pricing", BadgeCheck, "Apps and pricing", "Free to start, for every business"]]],
 ];
 const MORE_RE = /^\/(investment|property-demand|offers|services\/|requirement|blog|rates-and-trends|tools|gallery|about|careers|contact|plans)/;
 
@@ -148,7 +148,7 @@ export function Footer() {
           </div>
           <div><h4>Explore</h4><Link to="/investment/explore">Investment</Link><Link to="/map">Map search</Link><Link to="/project">Projects</Link><Link to="/stays">Stays</Link><Link to="/partners">Partners</Link><Link to="/property-demand">Buyer requests</Link></div>
           <div><h4>Services</h4><Link to="/services/home-loan">Home loan</Link><Link to="/services/legal-help">Legal help</Link><Link to="/services/management">Property management</Link><Link to="/services/pay-rent">Pay rent online</Link><Link to="/rates-and-trends">Rates & trends</Link><Link to="/requirement">Post a requirement</Link></div>
-          <div><h4>Company</h4><Link to="/about">About us</Link><Link to="/partners?type=agency">Our agencies</Link><Link to="/careers">Careers</Link><Link to="/technology">Sheetal Technologies</Link><Link to="/blog">Journal</Link><a href="https://dhamiplus.com" target="_blank" rel="noopener noreferrer">IT team</a><Link to="/tools/emi">Calculators</Link></div>
+          <div><h4>Company</h4><Link to="/about">About us</Link><Link to="/partners?type=agency">Our agencies</Link><Link to="/careers">Careers</Link><Link to="/technology">Sheetal Technologies</Link><Link to="/app" className="app-get">Get the apps</Link><Link to="/blog">Journal</Link><a href="https://dhamiplus.com" target="_blank" rel="noopener noreferrer">IT team</a><Link to="/tools/emi">Calculators</Link></div>
           <div className="footer-contact"><h4>Contact</h4>
             <a href="tel:+9779801136817"><Phone size={14} />+977 980-1136817</a>
             <a href={`https://wa.me/${WA}`} target="_blank" rel="noreferrer"><MessageCircle size={14} />WhatsApp</a>

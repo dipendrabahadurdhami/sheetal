@@ -27,6 +27,7 @@ import PostProperty from "./pages/PostProperty";
 import { Blog, BlogPost } from "./pages/Blog";
 import { Careers, JobDetail } from "./pages/Careers";
 import { Technology } from "./pages/Technology";
+import { GetApp } from "./pages/GetApp";
 import Services from "./pages/Services";
 import { HomeLoan, LegalHelp, LegalService, PropertyManagement, ManagementService, PayRent, Valuation } from "./pages/ServicePages";
 import RatesTrends from "./pages/RatesTrends";
@@ -128,6 +129,7 @@ export default function App() {
           <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/careers" element={<Careers />} />
           <Route path="/technology" element={<Technology />} />
+          <Route path="/app" element={<GetApp />} />
           <Route path="/careers/:slug" element={<JobDetail />} />
           <Route path="/services" element={<Services />} />
           <Route path="/services/home-loan" element={<HomeLoan />} />

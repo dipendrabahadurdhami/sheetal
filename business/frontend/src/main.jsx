@@ -6,6 +6,10 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import { config } from "@sheetal/shared/core/config";
 import "@sheetal/shared/styles/theme.css";
+import { startAppMode } from "@sheetal/shared/core/appMode";
+
+// Installed-app mode and the offline service worker (shared/src/core/appMode.js).
+startAppMode({ production: import.meta.env.PROD });
 
 // Public pages (a shared listing, a form) render inside this panel's own layout.
 config.embedPublic = true;

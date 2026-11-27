@@ -1,0 +1,30 @@
+{
+  "appId": "com.sheetalproperty.app",
+  "appName": "Sheetal Property",
+  "webDir": "www",
+  "server": {
+    "url": "https://sheetalproperty.com/?source=app",
+    "androidScheme": "https",
+    "errorPath": "offline.html",
+    "allowNavigation": [
+      "sheetalproperty.com",
+      "*.sheetalproperty.com",
+      "*.esewa.com.np",
+      "esewa.com.np",
+      "*.khalti.com",
+      "khalti.com",
+      "*.fonepay.com",
+      "fonepay.com"
+    ]
+  },
+  "appendUserAgent": "SheetalApp/android",
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#FFFFFF",
+    "buildOptions": {
+      "keystorePath": "../../../sheetal-release.keystore",
+      "keystoreAlias": "sheetal",
+      "releaseType": "APK"
+    }
+  }
+}

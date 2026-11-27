@@ -1,0 +1,19 @@
+{
+  "name": "sheetal-native",
+  "private": true,
+  "version": "1.0.0",
+  "description": "The Sheetal apps for Android (Capacitor) and Windows (Electron): Sheetal Property and Sheetal Business. Not part of the website build.",
+  "scripts": {
+    "android:sync": "node scripts/android.mjs sync",
+    "android:build": "node scripts/android.mjs build",
+    "desktop:start": "electron desktop/main.js",
+    "desktop:build": "node scripts/desktop.mjs"
+  },
+  "devDependencies": {
+    "@capacitor/android": "6.2.0",
+    "@capacitor/cli": "6.2.0",
+    "@capacitor/core": "6.2.0",
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8"
+  }
+}

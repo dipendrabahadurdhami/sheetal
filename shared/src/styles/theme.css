@@ -3372,3 +3372,22 @@ html.pa-lock, html.pa-lock body { overflow: hidden !important; }
 .tech-cta { display: flex; justify-content: space-between; align-items: center; gap: var(--s5); flex-wrap: wrap; background: var(--accent-soft); }
 @media (max-width: 1080px) { .tech-soft { grid-template-columns: repeat(2, minmax(0, 1fr)); } .tech-why { grid-template-columns: repeat(2, minmax(0, 1fr)); } .tech-plans { grid-template-columns: 1fr; max-width: 520px; margin: 0 auto; } }
 @media (max-width: 760px) { .tech-hero-in { grid-template-columns: 1fr; padding-top: var(--s6); padding-bottom: var(--s6); } .tech-logo { order: -1; } .tech-logo img { max-width: 240px; } .tech-soft, .tech-why { grid-template-columns: 1fr; } }
+
+/* Installed app (home-screen app, the Android app or the Windows app: shared/src/core/appMode.js sets <html data-app>):
+   website-only parts hide, so it feels like an app, not a web page. */
+[data-app] .footer { display: none !important; }
+[data-app] .app-get { display: none !important; }
+[data-app] body { overscroll-behavior-y: none; }
+
+/* Get the apps (/app: website/frontend/src/pages/GetApp.jsx). */
+.getapp-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s5); }
+.getapp-card { padding: var(--s6) var(--s5); display: flex; flex-direction: column; gap: 14px; }
+.getapp-rows { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+.getapp-row { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.getapp-row > svg { color: var(--accent-ink); flex-shrink: 0; }
+.getapp-t { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.getapp-t b { color: var(--text-strong); }
+.getapp-t small { color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+.getapp-help { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s4); margin-top: var(--s6); }
+.getapp-help h3 { display: flex; align-items: center; gap: 8px; }
+@media (max-width: 900px) { .getapp-grid, .getapp-help { grid-template-columns: 1fr; } }

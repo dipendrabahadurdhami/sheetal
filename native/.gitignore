@@ -1,0 +1,8 @@
+node_modules
+android/*/android/app/build
+android/*/android/.gradle
+android/*/android/build
+desktop-dist
+out
+*.keystore
+keystore.env
