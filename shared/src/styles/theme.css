@@ -3708,3 +3708,9 @@ html:has(.job-apply) .wa-btn { display: none !important; }
   .detail-side .hr { margin: 0 !important; }
   .detail-side .avatar { width: 40px !important; height: 40px !important; }
 }
+/* Home banner line: the title and price centred, the View button centred under them. */
+.hb-bar .hb-listing { flex-direction: column; align-items: center; text-align: center !important; gap: 8px; padding: 10px 16px; }
+.hb-bar .hb-l-t { align-items: center; }
+.hb-bar-main { flex-direction: column; }
+.home-hero-plain.hh-photo { padding-bottom: 170px !important; }
+@media (max-width: 760px) { .home-hero-plain.hh-photo { padding-bottom: 190px !important; } }
