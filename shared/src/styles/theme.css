@@ -3643,3 +3643,17 @@ html:has(.job-apply) .wa-btn { display: none !important; }
   .detail-actions .btn { height: 40px; padding: 0 6px; font-size: 13px; justify-content: center; }
   .detail-head h1 { font-size: 24px !important; }
 }
+
+/* Home type chips over a banner photo: frosted glass with white words, so they read on any picture. */
+.hh-photo .hh-types a, .hh-photo .hh-types button {
+  background: color-mix(in srgb, #000 36%, transparent) !important; border-color: color-mix(in srgb, #fff 30%, transparent) !important; color: #fff !important;
+  backdrop-filter: blur(10px) saturate(1.2); -webkit-backdrop-filter: blur(10px) saturate(1.2); }
+.hh-photo .hh-types a svg, .hh-photo .hh-types button svg { color: #fff !important; }
+.hh-photo .hh-types a:hover, .hh-photo .hh-types button:hover { background: color-mix(in srgb, #fff 92%, transparent) !important; color: var(--c-crimson) !important; }
+.hh-photo .hh-types a:hover svg, .hh-photo .hh-types button:hover svg { color: var(--c-crimson) !important; }
+
+/* Card titles (stays, hotels, projects, investments, properties): at most 2 lines with "…", so every card keeps the same shape. */
+.pb-cbody b, .pcard-title { display: -webkit-box !important; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
+  white-space: normal !important; text-overflow: ellipsis; overflow-wrap: anywhere; min-height: calc(2 * 1.35em); line-height: 1.35; }
+.pb-cbody .small, .pb-cbody .muted { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-home-row.n1 .pb-cbody b { -webkit-line-clamp: 3; line-clamp: 3; min-height: 0; }
