@@ -157,8 +157,10 @@ export function SettingsPage({ tenant, tab: tabProp, Branding, CodePrefix, onCha
                   ))}</div>
                 ))}
               </div>
-              <ToggleRow title={t("notif.daily")} sub={t("notif.dailySub")} checked={get("notifications.dailySummary")} onChange={(v) => set("notifications.dailySummary", v)} />
-              <ToggleRow title={t("notif.quiet")} sub={t("notif.quietSub")} checked={get("notifications.quietHours")} onChange={(v) => set("notifications.quietHours", v)} />
+              <Advanced open={adv} onToggle={() => setAdv(!adv)}>
+                <ToggleRow title={t("notif.daily")} sub={t("notif.dailySub")} checked={get("notifications.dailySummary")} onChange={(v) => set("notifications.dailySummary", v)} />
+                <ToggleRow title={t("notif.quiet")} sub={t("notif.quietSub")} checked={get("notifications.quietHours")} onChange={(v) => set("notifications.quietHours", v)} />
+              </Advanced>
             </>}
 
             {tab === "listings" && <>
@@ -167,8 +169,10 @@ export function SettingsPage({ tenant, tab: tabProp, Branding, CodePrefix, onCha
                 <Seg value={get("listings.defaultVisibility")} onChange={(v) => set("listings.defaultVisibility", v)} options={["public", "unlisted", "private"].map((x) => ({ id: x, label: t(`vis.${x}`) }))} />
               </Field>
               <Field label={t("bsettings.showPhone")}><Seg value={get("listings.showPhone")} onChange={(v) => set("listings.showPhone", v)} options={["always", "after_login", "never"].map((x) => ({ id: x, label: t(`bsettings.phone_${x}`) }))} /></Field>
-              <ToggleRow title={t("bsettings.watermark")} sub={t("bsettings.watermarkSub")} checked={get("listings.watermark")} onChange={(v) => set("listings.watermark", v)} />
-              <ToggleRow title={t("bsettings.autoRenew")} sub={t("bsettings.autoRenewSub")} checked={get("listings.autoRenew")} onChange={(v) => set("listings.autoRenew", v)} />
+              <Advanced open={adv} onToggle={() => setAdv(!adv)}>
+                <ToggleRow title={t("bsettings.watermark")} sub={t("bsettings.watermarkSub")} checked={get("listings.watermark")} onChange={(v) => set("listings.watermark", v)} />
+                <ToggleRow title={t("bsettings.autoRenew")} sub={t("bsettings.autoRenewSub")} checked={get("listings.autoRenew")} onChange={(v) => set("listings.autoRenew", v)} />
+              </Advanced>
             </>}
 
             {tab === "documents" && <>

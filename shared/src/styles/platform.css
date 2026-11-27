@@ -1683,3 +1683,8 @@ button.pf-card-row { cursor: pointer; }
 .pf-theme-card p { margin: 0; }
 .pf-theme-btn { background: var(--pv-button); color: #fff; padding: 8px 14px; border-radius: var(--pv-radius); font-weight: 600; }
 .pf-theme-link { color: var(--pv-brand); text-decoration: underline; }
+
+/* Settings menu: the "More settings" fold (business/frontend/src/pages/SettingsHub.jsx). */
+.pf-settings-more { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 10px; border: 0; border-radius: var(--r); background: none; color: var(--text); font: inherit; font-size: 13.5px; cursor: pointer; text-align: left; }
+.pf-settings-more:hover { background: var(--surface); color: var(--text-strong); }
+.pf-settings-more span { flex: 1; font-weight: 500; }
