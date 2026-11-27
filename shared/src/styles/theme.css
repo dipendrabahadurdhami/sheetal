@@ -3714,3 +3714,12 @@ html:has(.job-apply) .wa-btn { display: none !important; }
 .hb-bar-main { flex-direction: column; }
 .home-hero-plain.hh-photo { padding-bottom: 170px !important; }
 @media (max-width: 760px) { .home-hero-plain.hh-photo { padding-bottom: 190px !important; } }
+/* Home banner: "Sponsored", the title (one line, "…" when long), the price and View, all centred. */
+.hb-bar-main { align-items: center; text-align: center; max-width: min(640px, 92vw); margin: 0 auto; }
+.hb-bar-main > * { max-width: 100%; }
+.hb-bar .hb-listing { max-width: 100%; min-width: 0; }
+.hb-bar .hb-l-t { max-width: 100%; min-width: 0; }
+.hb-bar .hb-l-t b, .hb-bar .hb-l-t small, .hb-bar-main > b { display: block; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pa-banner .pa-shade b { display: block; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pa-banner .pa-shade { min-width: 0; } .pa-banner .pa-shade > * { max-width: 100%; }
+.pa-banner .pa-spn { left: 50%; transform: translateX(-50%); }
