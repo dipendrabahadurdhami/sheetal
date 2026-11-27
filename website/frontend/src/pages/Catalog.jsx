@@ -14,7 +14,8 @@ import { Dropdown } from "../components/Dropdown";
 import { PlatformWrap } from "../market/SiteRows";
 import { useCatalog, photoFor } from "../market/Market";
 
-const fmt = (n) => (n >= 1e7 ? `Rs. ${+(n / 1e7).toFixed(2)} Cr` : n >= 1e5 ? `Rs. ${+(n / 1e5).toFixed(2)} Lakh` : `Rs. ${Math.round(n).toLocaleString("en-IN")}`);
+// No price (the business chose "on request"): say so instead of "Rs. 0".
+const fmt = (n) => (!Number(n) ? "Price on request" : n >= 1e7 ? `Rs. ${+(n / 1e7).toFixed(2)} Cr` : n >= 1e5 ? `Rs. ${+(n / 1e5).toFixed(2)} Lakh` : `Rs. ${Math.round(n).toLocaleString("en-IN")}`);
 const META = {
   stay: { kicker: "Stay", title: "Places to stay", text: "Hotels, resorts, villas and homestays across Nepal, booked and paid on Sheetal.", base: "/stays",
     types: ["Hotel", "Resort", "Villa", "Apartment"], sorts: [["", "Top rated"], ["low", "Price: low to high"], ["high", "Price: high to low"]] },
@@ -47,9 +48,9 @@ const norm = (kind, x) => ({ raw: x, ...(x.live ? normListing(kind, x) : normInn
 // A listing from the website API filed under this kind (for example a hotel for sale): its own photo,
 // its real sale or rent price, and the full property page.
 const normListing = (kind, x) => {
-  const deal = { night: "Stay", rent: "For rent" }[x.deal] ?? "For sale";
+  const deal = { night: "Stay", rent: "For rent" }[x.deal] ?? (kind === "invest" ? "Invest" : kind === "project" ? "Project" : "For sale");
   return { id: x.id, to: x.href, img: x.img, name: x.name, type: x.type || (kind === "stay" ? "Hotel" : kind === "project" ? "Colony" : "Land"), city: x.city, area: x.area,
-    price: x.price || 0, tag: deal, status: deal, facts: [], sub: { night: "/ night", rent: "/ month" }[x.deal] ?? "" };
+    price: x.price || 0, tag: deal, status: deal, facts: [], sub: x.price ? { night: "/ night", rent: "/ month" }[x.deal] ?? "" : "" };
 };
 const normInner = (kind, x) => kind === "stay"
   ? { id: x.id, to: `/stays/${x.id}`, name: x.name, type: x.kind[0].toUpperCase() + x.kind.slice(1), city: x.city, area: x.area, price: x.price, tag: "Stay", rating: x.rating, reviews: x.reviews, facts: x.perks.slice(0, 2), sub: "/ night" }

@@ -334,7 +334,8 @@ function ApplyForm({ job, slug, bare }) {
           })}
         </dl>
       )}
-      <div className="row between" style={{ gap: 12, marginTop: 4 }}>
+      {/* Back and Continue stay in view at the bottom of the form (above the phone's tab bar), never under the footer or floating buttons. */}
+      <div className="row between job-nav" style={{ gap: 12, marginTop: 4 }}>
         {step > 0 ? <button type="button" className="btn btn-outline" onClick={() => go(step - 1)}><ChevronLeft size={15} /> Back</button> : <span />}
         {step < last ? <button type="button" className="btn btn-primary" onClick={next}>Continue <ChevronRight size={15} /></button>
           : <button type="button" className="btn btn-primary" disabled={busy} onClick={send}>{busy ? "Sending…" : <>Send application <Send size={15} /></>}</button>}

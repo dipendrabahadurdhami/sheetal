@@ -4,7 +4,19 @@
 import { clean } from "../utils/sanitize";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { MapPin, Heart, Share2, BedDouble, Bath, Ruler, Compass, Car, Calendar, Layers, Phone, MessageCircle, Mail, Check, Eye, Hash, Route as RoadIcon, Sofa } from "lucide-react";
+import { MapPin, Heart, Share2, BedDouble, Bath, Ruler, Compass, Car, Calendar, Layers, Phone, MessageCircle, Mail, Check, Eye, Hash, Route as RoadIcon, Sofa,
+  Wallet, Navigation, Home as HomeIcon, Waves, Globe, Star, HandCoins, ShieldCheck, UtensilsCrossed, Sparkles, LayoutGrid, Info, Users, Images, Building2, User, CalendarCheck, Clock, Mountain, Wifi } from "lucide-react";
+
+// An icon for any detail row by its words, so details added by hand in the business panel get one too.
+const ICON_RULES = [
+  [/nearby|airport|temple|park|hospital|school|thamel|km\b/i, Navigation], [/night|price|rate|cost|rs\.|lakh|crore|\bcr\b|payment|fee/i, Wallet],
+  [/invest|return|fund/i, HandCoins], [/location|address|area\b|place/i, MapPin], [/bed|bedroom|sleep/i, BedDouble], [/bath|toilet|shower/i, Bath],
+  [/plot|aana|ropani|sq ft|sq\. ft|built|size|land/i, Ruler], [/floor|basement|roof|storey|layout/i, Layers], [/pool|jacuzzi|sauna/i, Waves],
+  [/parking|car/i, Car], [/phone|call/i, Phone], [/email/i, Mail], [/website/i, Globe], [/star/i, Star], [/restaurant|dining|kitchen|food/i, UtensilsCrossed],
+  [/spa|massage|wellness/i, Sparkles], [/cancel|rule|policy/i, ShieldCheck], [/guest|people|investor/i, Users], [/check-in|check-out|time|hour/i, Clock],
+  [/view|mountain/i, Mountain], [/wi-?fi|internet/i, Wifi], [/project|units|houses|plots/i, LayoutGrid], [/room|suite|villa|cottage|apartment|house|home/i, HomeIcon],
+];
+const iconFor = (label) => (ICON_RULES.find(([re]) => re.test(label)) || [null, Info])[1];
 import { AskAi } from "../components/AskAi";
 import { AreaMap } from "../components/LocationMap";
 import { useSEO, trackView, SITE_URL } from "../utils/seo";
@@ -101,9 +113,11 @@ export default function PropertyDetail() {
           // every photo fits in the same box: 1–5 use fixed layouts, 6+ become a phone-style grid (first photo big)
           const list = imgs.length ? imgs : ["/demo/1.jpg"];
           const n = list.length;
+          const all = n > 1 && <button type="button" className="g-all" onClick={() => setBox(0)}><Images size={15} /> All {n} photos</button>;
           if (n <= 5) return (
             <div className={`gallery g-${n}`}>
               {list.map((src, i) => <button key={i} className="g-item" onClick={() => setBox(i)}><img src={src} alt="" /></button>)}
+              {all}
             </div>
           );
           const cells = n + 3; // first photo takes 2×2
@@ -118,13 +132,14 @@ export default function PropertyDetail() {
                   <img src={src} alt="" loading="lazy" />
                 </button>
               ))}
+              {all}
             </div>
           );
         })()}
       </div>
 
       <nav className="subnav" style={{ marginTop: 24 }}>
-        <div className="container">{[["overview", "Overview"], ["details", "Details"], ["amenities", "Amenities"], vid && ["video", "Video"], ["location", "Location"], ["reviews", "Reviews"]].filter(Boolean).map(([k, l]) => <a key={k} href={`#${k}`}>{l}</a>)}</div>
+        <div className="container">{[["overview", "Overview"], ["details", "Details"], Array.isArray(p.rooms) && p.rooms.length > 0 && ["rooms", "Rooms"], Array.isArray(p.units) && p.units.length > 0 && ["units", "Units"], amen.length > 0 && ["amenities", "Amenities"], vid && ["video", "Video"], ["location", "Location"], ["reviews", "Reviews"]].filter(Boolean).map(([k, l]) => <a key={k} href={`#${k}`}>{l}</a>)}</div>
       </nav>
 
       <div className="container detail-layout" style={{ marginTop: 0 }}>
@@ -143,7 +158,7 @@ export default function PropertyDetail() {
 
           <section id="details" className="detail-section">
             <h3>Property details</h3>
-            <div className="facts">{facts.map(([I, l, v]) => <div key={l}><span>{l}</span><b className="tnum">{v}</b></div>)}</div>
+            <div className="facts">{facts.map(([I, l, v]) => <div key={l}><I size={18} strokeWidth={1.6} aria-hidden="true" /><span>{l}</span><b className="tnum">{v}</b></div>)}</div>
           </section>
 
           {amen.length > 0 && (
@@ -182,9 +197,9 @@ export default function PropertyDetail() {
             </div>
             {p.raise_funds && side !== "invest-done" && <InvestForm p={p} />}
             <div className="seg" style={{ width: "100%" }}>
-              <button style={{ flex: 1 }} className={side === "contact" ? "on" : ""} onClick={() => setSide("contact")}>Agency</button>
-              <button style={{ flex: 1 }} className={side === "owner" ? "on" : ""} onClick={() => setSide("owner")}>Owner</button>
-              <button style={{ flex: 1 }} className={side === "tour" ? "on" : ""} onClick={() => setSide("tour")}>Visit</button>
+              <button style={{ flex: 1 }} className={side === "contact" ? "on" : ""} onClick={() => setSide("contact")}><Building2 size={15} /> Agency</button>
+              <button style={{ flex: 1 }} className={side === "owner" ? "on" : ""} onClick={() => setSide("owner")}><User size={15} /> Owner</button>
+              <button style={{ flex: 1 }} className={side === "tour" ? "on" : ""} onClick={() => setSide("tour")}><CalendarCheck size={15} /> Visit</button>
             </div>
             {side === "tour" ? <TourForm propertyId={p.id} /> : <ContactForm key={side} to={side === "owner" ? "owner" : "agent"} compact agentId={agent?.id || p.agent_id} agentName={agentName(agent)} agentPhoto={agent?.photo} propertyId={p.id} propertyName={titleOf(p)} />}
             <div className="hr" style={{ margin: 0 }} />
@@ -242,7 +257,7 @@ function StayRooms({ p }) {
     <section id="rooms" className="detail-section">
       <h3>{rooms.length ? "Rooms" : "Where you'll sleep"}</h3>
       {rooms.length > 0 && <div className="facts">{rooms.map((r, i) => (
-        <div key={i}><span>{[r.type, r.count > 1 && `${r.count} rooms`].filter(Boolean).join(" · ")}</span>
+        <div key={i}><BedDouble size={18} strokeWidth={1.6} aria-hidden="true" /><span>{[r.type, r.count > 1 && `${r.count} rooms`].filter(Boolean).join(" · ")}</span>
           <b>{[bedText(r), r.guests && `up to ${r.guests} guests`, r.view, r.size && `${r.size} sq ft`, Number(r.price) > 0 && `${fmtPrice(r.price)} / night`].filter(Boolean).join(" · ")}</b>
           {arr(r.amenities).length > 0 && <small className="muted">{arr(r.amenities).join(", ")}</small>}</div>
       ))}</div>}
@@ -261,7 +276,7 @@ function ProjectUnits({ p }) {
     <section id="units" className="detail-section">
       <h3>Units</h3>
       <div className="facts">{units.map((u, i) => (
-        <div key={i}><span>{[u.type, Number(u.count) > 0 && `${u.count} units`].filter(Boolean).join(" · ")}</span>
+        <div key={i}><HomeIcon size={18} strokeWidth={1.6} aria-hidden="true" /><span>{[u.type, Number(u.count) > 1 && `${u.count} units`].filter(Boolean).join(" · ")}</span>
           <b>{[Number(u.size) > 0 && `${Number(u.size).toLocaleString("en-IN")} sq ft`, fmtPrice(u.price)].filter(Boolean).join(" · ")}</b></div>
       ))}</div>
     </section>
@@ -305,7 +320,7 @@ function MoreDetails({ p }) {
   return (
     <section id="more" className="detail-section">
       <h3>More details</h3>
-      <div className="facts">{rows.map(([l, v]) => <div key={l}><span>{l}</span><b>{v}</b></div>)}</div>
+      <div className="facts">{rows.map(([l, v]) => { const I = iconFor(`${l} ${v}`); return <div key={l}><I size={18} strokeWidth={1.6} aria-hidden="true" /><span>{l}</span><b>{v}</b></div>; })}</div>
     </section>
   );
 }

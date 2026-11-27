@@ -2,7 +2,7 @@
 // How it works: they send enquiries and reviews to the website API, which passes them to the right business.
 
 import { useState } from "react";
-import { MessageSquareText, CalendarDays } from "lucide-react";
+import { MessageSquareText, CalendarDays, User, Mail, Phone, Clock } from "lucide-react";
 import { api } from "../api/endpoints";
 import { toList } from "../api/client";
 import { useAsync } from "../hooks/useAsync";
@@ -12,6 +12,8 @@ import { timeAgo } from "../utils/format";
 import { addMessage } from "../utils/threads";
 
 const REASONS = ["More details", "Price", "Site visit", "Documents"];
+// One input with its icon inside, the same height everywhere (contact and visit forms).
+const IconInput = ({ icon: I, ...props }) => <label className="ifield"><I size={16} aria-hidden="true" /><input className="input" {...props} /></label>;
 
 export function ContactForm({ agentId, agentName, agentPhoto, propertyId, propertyName, compact, to = "agent" }) {
   const { user, toast } = useApp();
@@ -36,15 +38,16 @@ export function ContactForm({ agentId, agentName, agentPhoto, propertyId, proper
     } catch (x) { toast(x.message || "Could not send. Try again."); } finally { setBusy(false); }
   };
   return (
-    <form className="stack" style={{ gap: 12 }} onSubmit={submit}>
-      <div className="row-wrap" style={{ gap: 6 }}>{REASONS.map((r) => { const on = f.reasons.includes(r); return <button type="button" key={r} className={`chip ${on ? "active" : ""}`} style={{ height: 30, padding: "0 10px", fontSize: 12 }} onClick={() => setF({ ...f, reasons: on ? f.reasons.filter((x) => x !== r) : [...f.reasons, r] })}>{r}</button>; })}</div>
-      <input className="input" placeholder="Full name" required value={f.name} onChange={set("name")} />
-      <div className={compact ? "stack" : "form-grid"} style={{ gap: 12 }}>
-        <input className="input" type="email" placeholder="Email" required value={f.email} onChange={set("email")} />
-        <input className="input" type="tel" placeholder="Phone (98XXXXXXXX)" required value={f.phone} onChange={set("phone")} />
+    <form className="cform" onSubmit={submit}>
+      <span className="cform-label">I'd like to know about</span>
+      <div className="cform-reasons">{REASONS.map((r) => { const on = f.reasons.includes(r); return <button type="button" key={r} aria-pressed={on} className={`chip ${on ? "active" : ""}`} onClick={() => setF({ ...f, reasons: on ? f.reasons.filter((x) => x !== r) : [...f.reasons, r] })}>{r}</button>; })}</div>
+      <IconInput icon={User} placeholder="Full name" autoComplete="name" required value={f.name} onChange={set("name")} />
+      <div className={`cform-two ${compact ? "compact" : ""}`}>
+        <IconInput icon={Phone} type="tel" placeholder="Phone (98XXXXXXXX)" autoComplete="tel" required value={f.phone} onChange={set("phone")} />
+        <IconInput icon={Mail} type="email" placeholder="Email" autoComplete="email" required value={f.email} onChange={set("email")} />
       </div>
-      <textarea className="textarea" placeholder="Your message" required value={f.message} onChange={set("message")} style={{ minHeight: 96 }} />
-      <label className="check"><input type="checkbox" checked={f.terms} onChange={(e) => setF({ ...f, terms: e.target.checked })} />I agree to be contacted about this enquiry.</label>
+      <textarea className="textarea" placeholder="Your message" required value={f.message} onChange={set("message")} rows={3} />
+      <label className="check small"><input type="checkbox" checked={f.terms} onChange={(e) => setF({ ...f, terms: e.target.checked })} />I agree to be contacted about this enquiry.</label>
       <button className="btn btn-primary btn-block" disabled={busy}><MessageSquareText size={16} />{busy ? "Sending…" : to === "owner" ? "Contact owner" : "Contact agency"}</button>
     </form>
   );
@@ -66,22 +69,26 @@ export function TourForm({ propertyId }) {
     } catch (x) { toast(x.message || "Could not book. Try again."); } finally { setBusy(false); }
   };
   return (
-    <form className="stack" style={{ gap: 14 }} onSubmit={submit}>
-      <div className="row" style={{ gap: 8, overflowX: "auto", scrollbarWidth: "none" }}>
+    <form className="cform" onSubmit={submit}>
+      <span className="cform-label">Pick a day</span>
+      <div className="cform-days">
         {days.map((d) => {
           const v = d.toISOString().slice(0, 10);
           return (
-            <button type="button" key={v} onClick={() => setDate(v)} className={`chip ${date === v ? "active" : ""}`} style={{ flexDirection: "column", height: 66, minWidth: 60, gap: 0, borderRadius: "var(--r-md)" }}>
+            <button type="button" key={v} onClick={() => setDate(v)} aria-pressed={date === v} className={`chip cform-day ${date === v ? "active" : ""}`}>
               <span className="tiny">{d.toLocaleDateString("en", { weekday: "short" })}</span>
               <b style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 600, lineHeight: 1.1 }}>{d.getDate()}</b>
             </button>
           );
         })}
       </div>
-      <div className="row-wrap" style={{ gap: 8 }}>{TIMES.map((t) => <button type="button" key={t} className={`chip ${time === t ? "active" : ""}`} style={{ height: 34 }} onClick={() => setTime(t)}>{t}</button>)}</div>
-      <input className="input" placeholder="Full name" required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
-      <input className="input" type="tel" placeholder="Phone" required value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
-      <input className="input" type="email" placeholder="Email" required value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />
+      <span className="cform-label"><Clock size={13} /> Pick a time</span>
+      <div className="cform-times">{TIMES.map((t) => <button type="button" key={t} aria-pressed={time === t} className={`chip ${time === t ? "active" : ""}`} onClick={() => setTime(t)}>{t}</button>)}</div>
+      <IconInput icon={User} placeholder="Full name" autoComplete="name" required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+      <div className="cform-two compact">
+        <IconInput icon={Phone} type="tel" placeholder="Phone" autoComplete="tel" required value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
+        <IconInput icon={Mail} type="email" placeholder="Email" autoComplete="email" required value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />
+      </div>
       <button className="btn btn-primary btn-block" disabled={busy}><CalendarDays size={16} />{busy ? "Booking…" : "Book a visit"}</button>
     </form>
   );

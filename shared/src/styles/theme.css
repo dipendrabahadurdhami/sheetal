@@ -3536,3 +3536,110 @@ main.page-in { animation: page-in .28s ease-out both; }
 .invest-form { padding-bottom: 14px; border-bottom: 1px solid var(--line); }
 .invest-done { display: flex; gap: 10px; align-items: flex-start; padding: 12px; border-radius: var(--r); background: var(--accent-soft); color: var(--accent-ink); }
 .invest-done p { margin: 0; color: var(--text); }
+
+/* Home banner (27 Nov, owner's review): its line is centred on every screen (what it is and its button, then the dots and "Advertise here"),
+   and the property-type chips over a banner photo are frosted glass so they read on any picture. */
+.hb-bar { position: absolute; left: 16px; right: 16px; bottom: 12px; display: flex; flex-direction: column; align-items: center; gap: 8px; color: #fff; text-align: center; }
+.hb-bar-main { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; max-width: 100%; }
+.hb-bar-sub { display: flex; align-items: center; justify-content: center; gap: 14px; }
+.hb-bar .hb-listing { text-align: left; }
+.hh-photo .home-search .hero-cats .hero-cat, [data-theme~="dark"] .hh-photo .home-search .hero-cats .hero-cat {
+  background: color-mix(in srgb, #000 38%, transparent) !important; color: #fff !important; border-color: color-mix(in srgb, #fff 35%, transparent) !important;
+  backdrop-filter: blur(10px) saturate(1.2); -webkit-backdrop-filter: blur(10px) saturate(1.2); }
+.hh-photo .home-search .hero-cats .hero-cat:hover { background: #fff !important; color: var(--c-crimson) !important; }
+.hh-photo .hh-title, .hh-photo .hh-sub { text-shadow: 0 2px 10px rgba(0,0,0,.45); }
+
+/* Phone home banner: title, details and button centred, "Advertise here" centred under it. */
+@media (max-width: 600px) {
+  .pa-banner .pa-shade { flex-direction: column; align-items: center; justify-content: flex-end; text-align: center; gap: 8px; padding-bottom: 26px; }
+  .pa-adv { text-align: center !important; }
+  .pa-banner .pa-dots { left: 0; right: 0; justify-content: center; }
+}
+
+/* Listing photo grid in a banner, by how many photos there are, so it always fills the banner (computer, then phone). */
+.hb-grid.n2 { grid-template-columns: 1.4fr 1fr; grid-template-rows: 1fr; }
+.hb-grid.n2 img:first-child, .hb-grid.n2 img:nth-child(2) { grid-row: auto; }
+@media (max-width: 700px) {
+  .hb-grid, .hb-grid.n4, .hb-grid.n5 { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: 3fr 1fr; }
+  .hb-grid img:first-child { grid-row: auto; grid-column: 1 / -1; }
+  .hb-grid img:nth-child(n+5) { display: none; }
+  .hb-grid.n1 { grid-template-columns: minmax(0, 1fr); grid-template-rows: 1fr; }
+  .hb-grid.n2 { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: 1fr; }
+  .hb-grid.n2 img:first-child { grid-column: auto; }
+  .hb-grid.n3 { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: 3fr 1fr; }
+  .hb-grid.n4 img:nth-child(4) { grid-column: auto; }
+}
+
+/* Phone home rows: one post takes the whole width (as on a computer); two share it. */
+@media (max-width: 600px) {
+  .pb-home-row.n1 { --cw: calc(100vw - 32px); overflow-x: hidden; }
+  .pb-home-row.n1 .pb-cimg .pb-ph { aspect-ratio: 16 / 10; }
+  .pb-home-row.n1 .pb-cbody b { font-size: 17px; }
+}
+
+/* Property page (27 Nov, owner's review): an icon on every detail, the photo grid on phones too, one-line section tabs, a balanced
+   contact form. */
+.facts div:has(> svg) { display: grid; grid-template-columns: 22px minmax(0, 1fr); column-gap: 10px; align-items: start; }
+.facts div > svg { grid-row: 1 / span 3; color: var(--accent-ink); margin-top: 2px; }
+.facts div > small { grid-column: 2; }
+.gallery .g-all { position: absolute; right: 14px; bottom: 14px; z-index: 2; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px;
+  border-radius: 999px; border: 0; background: color-mix(in srgb, #fff 92%, transparent); color: var(--c-slate); font: inherit; font-size: 13px; font-weight: 600;
+  box-shadow: 0 4px 14px rgba(0,0,0,.18); backdrop-filter: blur(6px); cursor: pointer; }
+.detail-section h3 { display: flex; align-items: center; gap: 8px; }
+.subnav a { flex-shrink: 0; }
+.seg button svg { flex-shrink: 0; }
+
+/* Contact and visit forms (Forms.jsx): same heights, icons inside the inputs, chips in an even grid. */
+.cform { display: flex; flex-direction: column; gap: 12px; }
+.cform-label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.cform-reasons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.cform-reasons .chip, .cform-times .chip { justify-content: center; height: 36px; padding: 0 8px; font-size: 13px; width: 100%; }
+.cform-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.cform-two.compact { grid-template-columns: minmax(0, 1fr); }
+.ifield { position: relative; display: block; }
+.ifield > svg { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.ifield .input { width: 100%; padding-left: 38px; }
+.cform .textarea { min-height: 92px; resize: vertical; }
+.cform-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.cform-day { flex-direction: column; height: 62px; min-width: 0; padding: 0; gap: 0; border-radius: var(--r-md); }
+.cform-times { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+
+@media (max-width: 760px) {
+  /* Phone photo grid: the first photo big, the next ones as a row of tiles under it; "All photos" opens them all. */
+  .gallery, .gallery.g-many, .gallery[class*="g-"] { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; grid-template-rows: 240px 76px !important;
+    grid-auto-rows: 0; gap: 4px !important; border-radius: 0; margin: 0 calc(-1 * var(--s4)); }
+  .gallery button.g-item:not(:first-child) { display: block !important; grid-row: auto !important; grid-column: auto !important; }
+  .gallery button.g-item:first-child { grid-column: 1 / -1 !important; grid-row: auto !important; }
+  .gallery button.g-item:nth-child(n+6) { display: none !important; }
+  .gallery.g-1 { grid-template-rows: 260px !important; }
+  .gallery.g-2 button.g-item:nth-child(2) { grid-column: 1 / -1 !important; }
+  .gallery.g-3 button.g-item:nth-child(n+2) { grid-column: span 2 !important; }
+  .gallery.g-4 button.g-item:nth-child(n+2) { grid-column: auto !important; }
+  .gallery.g-4 button.g-item:nth-child(4) { grid-column: span 2 !important; }
+  .gallery .g-all { top: 196px; bottom: auto; right: 10px; height: 32px; font-size: 12px; }
+  /* Section tabs: every word on one line, no sideways scrolling. */
+  .subnav .container { justify-content: space-between; gap: 4px !important; overflow-x: hidden; padding-inline: 12px; }
+  .subnav a { padding: 11px 0; font-size: 12px; letter-spacing: -.01em; }
+  .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .facts div { padding: 12px; }
+  .cform-two { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 360px) { .subnav a { font-size: 11px; } }
+
+/* Job application form: the Back / Continue / Send row stays visible at the bottom of the form, and the floating call and WhatsApp
+   buttons step aside while someone is applying. */
+.job-apply .job-nav { position: sticky; bottom: 0; z-index: 3; margin-inline: -4px; padding: 12px 4px 4px; background: var(--card);
+  box-shadow: 0 -10px 14px -10px color-mix(in srgb, var(--c-slate) 18%, transparent); }
+html:has(.job-apply) .wa-btn { display: none !important; }
+@media (max-width: 760px) {
+  .job-apply .job-nav { bottom: calc(64px + env(safe-area-inset-bottom)); padding-bottom: 10px; transition: bottom .2s; }
+  html[data-scroll="down"] .job-apply .job-nav { bottom: 0; }
+  .job-apply .job-nav .btn { min-height: 46px; flex: 1 1 0; justify-content: center; }
+  .job-apply { padding-bottom: 8px; }
+}
+/* Property page on phones, app style: Ask AI, Share and Save as one even row. */
+@media (max-width: 760px) {
+  .detail-actions { width: 100%; display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px !important; }
+  .detail-actions .btn { height: 40px; padding: 0 6px; font-size: 13px; justify-content: center; }
+  .detail-head h1 { font-size: 24px !important; }
+}

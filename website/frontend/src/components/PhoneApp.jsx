@@ -188,7 +188,7 @@ function Banner() {
           : <img src={cur.mobile || cur.desktop} alt={cur.title || "Advertisement"} />}
         <span className="pa-spn">Sponsored</span>
         {cur.listing
-          ? <Link to={cur.link} className="pa-shade" onClick={() => api.bannerClick({ id: cur.id }).catch(() => {})}><b>{cur.title || cur.listing.title}<small>{[cur.listing.price ? `${fmtPrice(cur.listing.price)}${cur.listing.purpose === "rent" ? " / month" : ""}` : "", cur.listing.place].filter(Boolean).join(" · ")}</small></b><span className="pa-wb">{cur.button || "View"}</span></Link>
+          ? <Link to={cur.link} className="pa-shade" onClick={() => api.bannerClick({ id: cur.id }).catch(() => {})}><b>{cur.title || cur.listing.title}<small>{[cur.listing.price ? `${fmtPrice(cur.listing.price)}${cur.listing.kind?.startsWith("stay") ? " / night" : cur.listing.purpose === "rent" ? " / month" : ""}` : "", cur.listing.place].filter(Boolean).join(" · ")}</small></b><span className="pa-wb">{cur.button || "View"}</span></Link>
           : <div className="pa-shade"><b>{cur.title}</b><a className="pa-wb" href={cur.link} target="_blank" rel="noopener noreferrer sponsored" onClick={() => api.bannerClick({ id: cur.id }).catch(() => {})}>{cur.button || "Learn more"}</a></div>}
         {list.length > 1 && <span className="pa-dots">{list.map((b, k) => <button key={b.id} aria-label={`Banner ${k + 1}`} className={k === i % list.length ? "on" : ""} onClick={() => setI(k)} />)}</span>}
       </div>

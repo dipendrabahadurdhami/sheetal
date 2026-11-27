@@ -69,28 +69,32 @@ function Hero() {
   }
   const open = (b) => api.bannerClick({ id: b.id }).catch(() => {});
   return (
-    <section className="home-hero-plain" style={{ position: "relative", overflow: "hidden", isolation: "isolate", minHeight: "min(70vh, 560px)", display: "flex", alignItems: "center" }}>
+    <section className="home-hero-plain hh-photo" style={{ position: "relative", overflow: "hidden", isolation: "isolate", minHeight: "min(70vh, 560px)", display: "flex", alignItems: "center" }}>
       {list.map((b, k) => <BannerBg key={b.id} b={b} on={k === i % list.length} eager={!k} />)}
       <div aria-hidden="true" style={{ position: "absolute", inset: 0, zIndex: -1, background: "linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.35) 55%, rgba(0,0,0,.6))" }} />
       <div className="container" style={{ width: "100%" }}>
         <h1 className="hh-title" style={{ color: "#fff" }}>Find your place in Nepal</h1><p className="hh-sub" style={{ color: "rgba(255,255,255,.88)" }}>Stays, homes, land, projects and investments across Nepal.</p>
         <HeroSearch />
       </div>
-      <div style={{ position: "absolute", left: 16, right: 16, bottom: 14, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", color: "#fff" }}>
+      {/* The banner's own line, centred: what it is and its button, then the dots and "Advertise here". */}
+      <div className="hb-bar">
+        <div className="hb-bar-main">
         {cur.sponsored && <span className="tag tag-white" style={{ fontSize: 11 }}>Sponsored</span>}
         {cur.listing ? (
           // A listing banner opens the listing here on the site.
           <Link to={cur.link} onClick={() => open(cur)} className="hb-listing">
-            <span className="hb-l-t"><b>{cur.title || cur.listing.title}</b><small>{[cur.listing.price ? `${fmtPrice(cur.listing.price)}${cur.listing.purpose === "rent" ? " / month" : ""}` : "", cur.listing.place].filter(Boolean).join(" · ")}</small></span>
+            <span className="hb-l-t"><b>{cur.title || cur.listing.title}</b><small>{[cur.listing.price ? `${fmtPrice(cur.listing.price)}${cur.listing.kind?.startsWith("stay") ? " / night" : cur.listing.purpose === "rent" ? " / month" : ""}` : "", cur.listing.place].filter(Boolean).join(" · ")}</small></span>
             <span className="btn btn-sm" style={{ background: "#fff", color: "#111" }}>{cur.button || "View"}</span>
           </Link>
         ) : <>
           {cur.title && <b style={{ fontSize: 15, textShadow: "0 1px 3px rgba(0,0,0,.5)" }}>{cur.title}</b>}
           <a href={cur.link} target="_blank" rel="noopener noreferrer sponsored" onClick={() => open(cur)} className="btn btn-sm" style={{ background: "#fff", color: "#111" }}>{cur.button || "Learn more"}</a>
         </>}
-        <span style={{ flex: 1 }} />
+        </div>
+        <div className="hb-bar-sub">
         {list.length > 1 && <span style={{ display: "flex", gap: 6 }}>{list.map((b, k) => <button key={b.id} type="button" aria-label={`Banner ${k + 1}`} onClick={() => setI(k)} style={{ width: 8, height: 8, borderRadius: 4, border: 0, padding: 0, background: k === i % list.length ? "#fff" : "rgba(255,255,255,.45)", cursor: "pointer" }} />)}</span>}
         <a href="/business/promote/banner" style={{ ...adLink, color: "rgba(255,255,255,.85)" }}>Advertise here</a>
+        </div>
       </div>
     </section>
   );
