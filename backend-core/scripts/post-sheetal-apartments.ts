@@ -1,5 +1,6 @@
-// Posts a Sheetal Apartments location as a stay on the website (the owner's photos and rate card of 27 Nov 2026).
+// Posts a Shetal Living (Sheetal's serviced apartments) location as a stay on the website (the owner's photos and rate card of 27 Nov 2026).
 // Run:   npx tsx scripts/post-sheetal-apartments.ts --place=hattigauda --dir=<photos folder> [--tenant=<id>] [--apply]
+//        add --update to rewrite an existing post of that place (title, words, rooms, prices; the photos stay).
 // Without --apply it only says what it would do. Safe to run twice: a listing with the same title for the business is left alone.
 // Each place is one stay listing with its apartment types as rooms (price per night), the long-stay rates, facilities, house rules and
 // what is nearby. Boudha is added here when its photos come. Distances are approximate ("about"); the business can edit them later.
@@ -26,13 +27,14 @@ const FACILITIES = ["Free Wi-Fi", "Air conditioning", "Lift", "Refrigerator", "K
 const RULES = ["No smoking inside", "No parties or loud music after 10 PM", "Valid ID for every guest at check-in", "Pets on request"];
 
 type Unit = { type: string; beds: string; bedrooms: number; guests: number; night: number; n3: number; n7: number; n15: number; n30: number; about: string };
-const PLACES: Record<string, { title: string; area: string; city: string; district: string; intro: string; units: Unit[]; nearby: [string, string][] }> = {
+// Each place may list its own facilities and kitchen (what its photos and the owner say); otherwise the lists above are used.
+const PLACES: Record<string, { title: string; area: string; city: string; district: string; intro: string; units: Unit[]; nearby: [string, string][]; facilities?: string[]; kitchen?: string[] }> = {
   hattigauda: {
-    title: "Sheetal Apartments Hattigauda: furnished 1BHK and 3BHK stays, Budhanilkantha",
+    title: "Shetal Living Hattigauda: furnished 1BHK and 3BHK serviced apartments, Budhanilkantha",
     area: "Hattigauda", city: "Budhanilkantha", district: "Kathmandu",
-    intro: `Fully furnished apartments in <b>Hattigauda, Budhanilkantha</b>, on the quiet north side of Kathmandu, for a night, a week or a month.
+    intro: `<b>Shetal Living</b>: fully furnished serviced apartments in <b>Hattigauda, Budhanilkantha</b>, on the quiet north side of Kathmandu, for a night, a week or a month.
 Warm wooden floors and lighting, air-conditioned bedrooms, a bright living and dining room, a kitchen with gas, and a long balcony with a view
-over the city to the hills. Run by Sheetal Property.`,
+over the city to the hills. Ready to move in, for short and extended stays.`,
     units: [
       { type: "1BHK apartment", beds: "1 bedroom", bedrooms: 1, guests: 2, night: 5500, n3: 5300, n7: 5000, n15: 55000, n30: 90000, about: "Bedroom, living and dining, kitchen and bathroom" },
       { type: "3BHK apartment", beds: "3 bedrooms", bedrooms: 3, guests: 6, night: 10000, n3: 9800, n7: 9500, n15: 80000, n30: 130000, about: "Three bedrooms, living and dining, kitchen and bathrooms" },
@@ -46,6 +48,28 @@ over the city to the hills. Run by Sheetal Property.`,
       ["Thamel", "about 9 km"],
       ["Tribhuvan International Airport", "about 12 km"],
     ],
+  },
+  boudha: {
+    title: "Shetal Living Boudha: furnished 1BK and 2BHK serviced apartments near Boudhanath",
+    area: "Boudha", city: "Kathmandu", district: "Kathmandu",
+    intro: `<b>Shetal Living</b>: bright, fully furnished serviced apartments in <b>Boudha, Kathmandu</b>, close to Boudhanath Stupa and a short drive from the airport, for a
+night, a week or a month. Wooden floors, air conditioning, a modern kitchen with microwave and fridge, a cosy living room, and a rooftop
+terrace with a view of the mountains. Ready to move in, for short and extended stays.`,
+    units: [
+      { type: "1BK apartment", beds: "1 bedroom", bedrooms: 1, guests: 2, night: 4000, n3: 3800, n7: 3500, n15: 45000, n30: 75000, about: "Bedroom with a double bed, kitchen with dining table, and bathroom" },
+      { type: "2BHK apartment", beds: "2 bedrooms", bedrooms: 2, guests: 4, night: 8000, n3: 7800, n7: 7500, n15: 65000, n30: 100000, about: "Two bedrooms, living room with sofa, kitchen with dining table, and bathroom" },
+    ],
+    nearby: [
+      ["Boudhanath Stupa", "about 1 km"],
+      ["Om Hospital, Chabahil", "about 2 km"],
+      ["Kopan Monastery", "about 3 km"],
+      ["Pashupatinath Temple", "about 3 km"],
+      ["Tribhuvan International Airport", "about 4 km"],
+      ["Thamel", "about 7 km"],
+    ],
+    facilities: ["Free Wi-Fi", "Air conditioning", "Refrigerator", "Microwave", "Electric kettle", "Kitchen with stove and chimney", "Dining table",
+      "Living room with sofa", "Attached bathroom", "Hot shower", "Towels and toiletries", "Rooftop terrace", "Mountain view", "24-hour electricity", "Fully furnished"],
+    kitchen: ["Stove", "Chimney hood", "Refrigerator", "Microwave", "Electric kettle", "Dining table", "Cooking basics"],
   },
 };
 
@@ -63,16 +87,20 @@ async function main() {
   const head = await db.branch.findFirstOrThrow({ where: { tenantId: tenant.id }, orderBy: { createdAt: "asc" } });
   const owner = await db.membership.findFirst({ where: { tenantId: tenant.id, status: "active", role: { key: "owner" } }, select: { userId: true } });
   console.log(`Business: ${tenant.name}. ${apply ? "APPLYING" : "dry run"}. ${P.title} (${photos.length} photos: ${photos.join(", ")})`);
-  const had = await db.listing.findFirst({ where: { tenantId: tenant.id, title: P.title, deletedAt: null }, select: { code: true } });
-  if (had) { console.log(`= ${had.code} already there`); return; }
+  const had = await db.listing.findFirst({ where: { tenantId: tenant.id, deletedAt: null, OR: [{ title: P.title }, { title: { startsWith: `Sheetal Apartments ${P.area}` } }] }, select: { id: true, code: true, title: true } });
+  const update = args.includes("--update");
+  if (had && !update) { console.log(`= ${had.code} already there (${had.title}); add --update to rewrite it`); return; }
+  if (had) console.log(`~ ${had.code}: "${had.title}" becomes "${P.title}"`);
   if (!apply) return;
 
   const lowest = Math.min(...P.units.map((u) => u.night));
   const description = `<p>${P.intro}</p>
 <p><b>Apartments and prices</b> (per night, the more nights the lower the price):</p>
 <ul>${P.units.map((u) => `<li><b>${u.type}</b>: ${u.about}; up to ${u.guests} guests. ${rs(u.night)} a night; ${rs(u.n3)} a night for 3+ nights; ${rs(u.n7)} a night for 7+ nights; ${rs(u.n15)} for 15 nights; ${rs(u.n30)} for 30 nights.</li>`).join("")}</ul>
-<p><b>In every apartment:</b> ${FACILITIES.join(", ")}.</p>
-<p>Call, WhatsApp or send an enquiry with your dates to book. Long stays (15 and 30 nights) are welcome.</p>`;
+<p><b>In every apartment:</b> ${(P.facilities ?? FACILITIES).join(", ")}.</p>
+<p><b>To book:</b> call, WhatsApp or send an enquiry with your preferred location (Boudha or Hattigauda), check-in date, number of
+nights and number of guests. We check availability and send you the best option with photos and videos. Long stays (15 and 30 nights) are welcome.</p>
+<p>Shetal Living also has apartments in ${P.area === "Boudha" ? "Hattigauda, Budhanilkantha" : "Boudha, near Boudhanath"}.</p>`;
   const more: [string, string][] = [
     ["Location", `${P.area}, ${P.city}, ${P.district}`],
     ...P.units.flatMap((u): [string, string][] => [
@@ -81,21 +109,30 @@ async function main() {
     ]),
     ...P.nearby.map(([k, v]): [string, string] => [`Nearby: ${k}`, v]),
   ];
+  const fields = {
+    title: P.title, description, price: BigInt(lowest), pricePer: "night", district: P.district, city: P.city, area: P.area,
+    furnishing: "Fully furnished", facilities: P.facilities ?? FACILITIES,
+    details: {
+      rooms: P.units.map((u) => ({ type: `${u.type} (${u.beds})`, bed: "Double", beds: u.bedrooms, guests: u.guests, price: u.night, amenities: ["Air conditioning", "Free Wi-Fi", "Attached bathroom"] })),
+      check_in: "14:00", check_out: "12:00", min_nights: 1, max_guests: Math.max(...P.units.map((u) => u.guests)),
+      house_rules: RULES, nearby: P.nearby.map(([k]) => k), kitchen: P.kitchen ?? ["Gas stove", "Refrigerator", "Dining table", "Cooking basics"],
+      bathroom_items: ["Hot shower", "Towels", "Toiletries"], more,
+    },
+  };
+  if (had) {
+    // The address (slug) stays the same, so links already shared keep working.
+    await db.listing.update({ where: { id: had.id }, data: { ...fields, version: { increment: 1 } } });
+    console.log(`updated ${had.code}`);
+    return;
+  }
   const files: string[] = [];
   for (const f of photos) files.push(await savePhoto(config.MEDIA_DIR, readFileSync(join(dir, f))));
   const now = new Date();
   const l = await db.listing.create({
     data: {
       code: `TMP-${Date.now()}`, slug: `tmp-${Date.now()}`, tenantId: tenant.id, branchId: head.id, userId: owner?.userId ?? null, createdBy: owner?.userId ?? null,
-      kind: "stay_unit", purpose: "rent", category: "Stay", propertyType: "Serviced apartment", title: P.title, description,
-      status: "published", publishedAt: now, submittedAt: now, reviewedAt: now, price: BigInt(lowest), pricePer: "night",
-      province: "Bagmati", district: P.district, city: P.city, area: P.area, furnishing: "Fully furnished", facilities: FACILITIES,
-      details: {
-        rooms: P.units.map((u) => ({ type: `${u.type} (${u.beds})`, bed: "Double", beds: u.bedrooms, guests: u.guests, price: u.night, amenities: ["Air conditioning", "Free Wi-Fi", "Attached bathroom"] })),
-        check_in: "14:00", check_out: "12:00", min_nights: 1, max_guests: Math.max(...P.units.map((u) => u.guests)),
-        house_rules: RULES, nearby: P.nearby.map(([k]) => k), kitchen: ["Gas stove", "Refrigerator", "Dining table", "Cooking basics"],
-        bathroom_items: ["Hot shower", "Towels", "Toiletries"], more,
-      },
+      kind: "stay_unit", purpose: "rent", category: "Stay", propertyType: "Serviced apartment", ...fields,
+      status: "published", publishedAt: now, submittedAt: now, reviewedAt: now, province: "Bagmati",
       photos: { create: files.map((file, sort) => ({ file, sort })) },
     },
   });
