@@ -33,8 +33,9 @@ function useSiteTheme() {
 function Frame() {
   const { db } = useStore();
   useSiteTheme();
+  // The open business's type picks its own words (rooms and guests for a hotel, properties and clients for an agency…).
   return (
-    <I18nProvider lang={db.session.lang}>
+    <I18nProvider lang={db.session.lang} type={db.tenants?.find((x) => x.id === db.session.tenantId)?.type || null}>
       <div className="pf-root" data-theme={config.embedPublic ? undefined : themeAttr(db.session.theme)}>
         <ToastProvider>
           <RouterProvider mode="history"><Gate /></RouterProvider>
