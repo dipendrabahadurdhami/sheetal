@@ -75,7 +75,8 @@ export function GetApp() {
                 </div>
                 <p className="small muted">{a.text}</p>
                 <div className="getapp-rows">{order.map((k) => rows.find((r) => r.k === k).el)}</div>
-                {prompt && <button type="button" className="btn btn-outline btn-block" onClick={() => { prompt.prompt(); setPrompt(null); }}><Download size={15} /> Install on this computer from the browser</button>}
+                {/* The browser's own install offer is for the app of this page (Sheetal Property) only. */}
+                {prompt && a.id === "customer" && <button type="button" className="btn btn-outline btn-block" onClick={() => { prompt.prompt(); setPrompt(null); }}><Download size={15} /> {os === "android" || os === "ios" ? "Or add it to your home screen (no download)" : "Install on this computer from the browser"}</button>}
               </div>
             );
           })}

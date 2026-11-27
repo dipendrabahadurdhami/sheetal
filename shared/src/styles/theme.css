@@ -3390,7 +3390,16 @@ html.pa-lock, html.pa-lock body { overflow: hidden !important; }
 .getapp-t small { color: var(--muted); font-size: 12.5px; line-height: 1.5; }
 .getapp-help { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s4); margin-top: var(--s6); }
 .getapp-help h3 { display: flex; align-items: center; gap: 8px; }
-@media (max-width: 900px) { .getapp-grid, .getapp-help { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .getapp-grid, .getapp-help { grid-template-columns: minmax(0, 1fr); } }
+/* Phones: nothing wider than the screen; buttons keep their size, long button text wraps. */
+.getapp-card, .getapp-help > * { min-width: 0; }
+.getapp-row .btn { flex-shrink: 0; }
+.getapp-card > .btn-block { white-space: normal; height: auto; min-height: 44px; line-height: 1.3; padding-top: 10px; padding-bottom: 10px; }
+@media (max-width: 600px) {
+  .getapp-card { padding: var(--s5) var(--s4); }
+  .getapp-row { gap: 10px; }
+  .getapp-row .btn { padding: 0 12px; }
+}
 
 /* Sheetal Technologies: software cards that open their page, the software detail page and the demo request form. */
 .tech-soft-link { color: inherit !important; text-decoration: none; transition: border-color .15s, transform .15s, box-shadow .15s; }
