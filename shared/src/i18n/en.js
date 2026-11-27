@@ -6,7 +6,7 @@ export default {
   "landing.title": "One platform, two panels", "landing.sub": "Sheetal staff run the marketplace from /admin. Hotels, hosts, developers, agencies and sponsors run their business from /business.",
   "landing.admin": "Super admin", "landing.adminSub": "Businesses, plans, listing setup, staff, platform settings", "landing.business": "Business workspace", "landing.businessSub": "Team, roles, listings, agreements, payments, branding",
   // a11y
-  "a11y.mainNav": "Main navigation", "a11y.openMenu": "Open menu", "a11y.language": "Language", "a11y.notifications": "Notifications", "a11y.account": "Account",
+  "a11y.mainNav": "Main navigation", "a11y.openMenu": "Open menu", "tab.home": "Home", "tab.leads": "Leads", "tab.listings": "Listings", "tab.bookings": "Bookings", "tab.menu": "Menu", "tab.new": "Create new", "tab.settings": "Display", "a11y.language": "Language", "a11y.notifications": "Notifications", "a11y.account": "Account",
   "theme.light": "Light theme", "theme.dark": "Dark theme", "theme.red": "Red theme", "theme.bars": "Colour bars, dark page",
   // groups + nav
   "group.customers": "Customers", "group.marketplace": "Marketplace", "group.system": "System", "group.operate": "Operations", "group.sell": "Sell", "group.money": "Money", "group.website": "Website", "group.more": "More", "nav.oldPlans": "Old plans", "nav.pricingPacks": "Pricing and packs", "group.admin": "Team and settings",

@@ -267,7 +267,14 @@ function Workspace() {
   const wsSwitcher = <WorkspaceSwitcher footer={addWs} current={wsList.find((w) => w.id === tenant.id) || { id: tenant.id, name: tenant.name, logoUrl: logoOf(tenant) }} list={wsList} onPick={pickWs} big sub={`${t(`type.${tenant.type}`)} · ${tenant.city || "Nepal"}`} label={t("ws.switch")} />;
 
   return (
-    <Shell sub={t("brand.business")} nav={nav} themes={hasColours ? PANEL_THEMES : THEMES} brandSlot={wsSwitcher} switcher={null} preview={PREVIEW} notifications={notifications} notifTo="/business/notifications" onReadAll={notifs.readAll}
+    <Shell sub={t("brand.business")} nav={nav}
+      // Phone bottom tabs: home, leads, then bookings for stays businesses or listings for the rest (only the ones this person's menu has).
+      tabs={[
+        { to: "/business", exact: true, icon: "layout-grid", label: "tab.home" },
+        { to: "/business/inbox", icon: "messages-square", label: "tab.leads", count: newLeads },
+        stays ? { to: "/business/bookings", icon: "clipboard-list", label: "tab.bookings" } : { to: "/business/listings", icon: "house", label: "tab.listings" },
+      ]}
+      themes={hasColours ? PANEL_THEMES : THEMES} brandSlot={wsSwitcher} switcher={null} preview={PREVIEW} notifications={notifications} notifTo="/business/notifications" onReadAll={notifs.readAll}
       quickCreate={[
         any("listings.listing.read+listings.listing.create+listings.listing.update+listings.listing.delete+listings.listing.publish", "projects.project.read+projects.project.create+projects.project.update+projects.project.delete", "investments.offering.read+investments.offering.create+investments.offering.update+investments.offering.delete", "hotel.calendar.update") && { icon: "house-plus", label: t("listings.new"), to: "/business/listings/new" },
         stays && can(role, "hotel.booking.create") && { icon: "calendar-plus", label: t("bk.manual"), to: "/business/bookings" },

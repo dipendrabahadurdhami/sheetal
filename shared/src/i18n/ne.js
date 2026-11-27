@@ -27,7 +27,7 @@ export default {
   "brand.admin": "सुपर एडमिन", "brand.business": "व्यवसाय", "brand.adminTitle": "Sheetal नियन्त्रण कक्ष",
   "landing.title": "एउटै प्लेटफर्म, दुई प्यानल", "landing.sub": "Sheetal टोलीले /admin बाट बजार चलाउँछ। होटल, होस्ट, डेभलपर, एजेन्सी र लगानी प्रायोजकले /business बाट आफ्नो व्यवसाय चलाउँछन्।",
   "landing.admin": "सुपर एडमिन", "landing.adminSub": "व्यवसाय, योजना, सूची सेटअप, कर्मचारी, सेटिङ", "landing.business": "व्यवसाय कार्यक्षेत्र", "landing.businessSub": "टोली, भूमिका, सूची, सम्झौता, भुक्तानी, ब्रान्डिङ",
-  "a11y.mainNav": "मुख्य मेनु", "a11y.openMenu": "मेनु खोल्नुहोस्", "a11y.language": "भाषा", "a11y.notifications": "सूचनाहरू", "a11y.account": "खाता",
+  "a11y.mainNav": "मुख्य मेनु", "a11y.openMenu": "मेनु खोल्नुहोस्", "tab.home": "गृह", "tab.leads": "लिड", "tab.listings": "सूची", "tab.bookings": "बुकिङ", "tab.menu": "मेनु", "tab.new": "नयाँ बनाउनुहोस्", "tab.settings": "देखावट", "a11y.language": "भाषा", "a11y.notifications": "सूचनाहरू", "a11y.account": "खाता",
   "theme.light": "उज्यालो थिम", "theme.dark": "अँध्यारो थिम", "theme.red": "रातो थिम", "theme.bars": "रंगीन बार, अँध्यारो पेज",
   "group.customers": "ग्राहक", "group.marketplace": "बजार", "group.system": "प्रणाली", "group.operate": "सञ्चालन", "group.sell": "बिक्री", "group.money": "पैसा", "group.website": "वेबसाइट", "group.more": "थप", "nav.oldPlans": "पुराना योजना", "nav.pricingPacks": "मूल्य र प्याक", "group.admin": "व्यवस्थापन",
   "nav.mail": "इमेल", "nav.dashboard": "ड्यासबोर्ड", "nav.tenants": "व्यवसायहरू", "nav.plans": "योजनाहरू", "nav.billing": "बिलिङ", "nav.catalog": "सूची सेटअप", "nav.content": "साइट सामग्री", "nav.moderation": "जाँच", "nav.inbox": "इनबक्स र लिड",
