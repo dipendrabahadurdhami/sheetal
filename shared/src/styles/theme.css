@@ -3668,3 +3668,7 @@ html:has(.job-apply) .wa-btn { display: none !important; }
   .detail-head { gap: 10px !important; margin-bottom: 12px !important; }
   .detail-head .stack { gap: 6px !important; }
 }
+/* Home banner: room at the bottom for its own line (title, price, View, dots, Advertise here), so the type chips never touch it. */
+.home-hero-plain.hh-photo { padding-bottom: 120px !important; padding-top: 40px !important; }
+.hh-photo .hb-bar { bottom: 14px; }
+@media (max-width: 760px) { .home-hero-plain.hh-photo { padding-bottom: 150px !important; } }
