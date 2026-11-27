@@ -25,6 +25,13 @@ export function Shell({ sub, nav, switcher, sideFooter, topLeft, topExtra, topTo
   const previewHere = preview.some(under);
   const isOn = (it) => (it.exact ? path === it.to : under(it.to) || (it.match || []).some(under));
   const theme = db.session.theme;
+  const foldKey = `sheetal_nav_fold_${sub || "panel"}`;
+  const [foldOpen, setFoldOpen] = useState(() => { try { return JSON.parse(localStorage.getItem(foldKey) || "{}"); } catch { return {}; } });
+  const toggleFold = (group, folded) => setFoldOpen((o) => {
+    const n = { ...o, [group]: folded };
+    try { localStorage.setItem(foldKey, JSON.stringify(n)); } catch { /* storage off */ }
+    return n;
+  });
 
   return (
     <div className="pf-shell" style={style}>
@@ -35,10 +42,21 @@ export function Shell({ sub, nav, switcher, sideFooter, topLeft, topExtra, topTo
           {switcher}
         </div>
         <nav className="pf-nav">
-          {nav.map((g, i) => (
+          {nav.map((g, i) => {
+            // A group marked `fold` (rarely used pages) is one button that opens it; it opens by itself on one of its pages and
+            // remembers being opened. Waiting counts inside show on the button.
+            const folded = g.fold && !foldOpen[g.group] && !g.items.some(isOn);
+            const waiting = g.fold ? g.items.reduce((a, it) => a + (Number(it.count) || 0), 0) : 0;
+            return (
             <React.Fragment key={i}>
-              {g.group && <span className="pf-nav-group">{t(g.group)}</span>}
-              {g.items.map((it) => (
+              {g.fold ? (
+                <button type="button" className="pf-nav-fold" aria-expanded={!folded} onClick={() => toggleFold(g.group, folded)}>
+                  <Icon name="ellipsis" size={17} /><span>{t(g.group)}</span>
+                  {folded && waiting ? <span className="pf-count action">{waiting}</span> : null}
+                  <Icon name={folded ? "chevron-down" : "chevron-up"} size={15} />
+                </button>
+              ) : g.group && <span className="pf-nav-group">{t(g.group)}</span>}
+              {!folded && g.items.map((it) => (
                 <Link key={it.to} to={it.to} className={isOn(it) ? "on" : undefined} aria-current={isOn(it) ? "page" : undefined}>
                   <Icon name={it.icon} size={17} /><span>{t(it.key)}</span>
                   {it.count ? <span className={`pf-count ${it.countTone || ""}`}>{it.count}</span> : null}
@@ -46,7 +64,8 @@ export function Shell({ sub, nav, switcher, sideFooter, topLeft, topExtra, topTo
                 </Link>
               ))}
             </React.Fragment>
-          ))}
+            );
+          })}
         </nav>
         {sideFooter}
       </aside>

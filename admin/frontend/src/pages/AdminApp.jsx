@@ -62,43 +62,44 @@ export default function AdminApp() {
 
   const nav = filterNav([
     { items: [{ to: "/admin", exact: true, icon: "layout-grid", key: "nav.dashboard", perm: "platform.dashboard.read" }, { to: "/admin/analytics", icon: "chart-column", key: "nav.traffic", perm: "platform.dashboard.read" }] },
+    // The menu in five short groups; pages set once or used rarely fold under "More" (they open by themselves when visited).
     { group: "group.businesses", items: [
       { to: "/admin/tenants", icon: "building-2", key: "nav.tenants", perm: "platform.business.read" },
-      { to: "/admin/plans", icon: "layers", key: "nav.plans", perm: "platform.plan.read+platform.plan.create+platform.plan.update+platform.plan.delete" },
-      { to: "/admin/addons", icon: "puzzle", key: "nav.addons", perm: "platform.plan.read+platform.plan.create+platform.plan.update+platform.plan.delete" },
-      { to: "/admin/promote", icon: "trending-up", key: "nav.promote", perm: "platform.billing.read" },
-      { to: "/admin/billing", icon: "receipt", key: "nav.billing", perm: "platform.billing.read" },
-      // Phase 3 (P3-FE-3): per-app prices, coupons and the second-person approvals; live API only.
-      ...(isStaffLive() ? [
-        { to: "/admin/pricing", icon: "tag", key: "nav.pricing", perm: "platform.billing.read" },
-        { to: "/admin/coupons", icon: "ticket", key: "nav.coupons", perm: "platform.billing.read" },
-        { to: "/admin/approvals", icon: "shield-check", key: "nav.approvals", permAny: ["platform.pricing.manage", "platform.billing.refund"] },
-        // P3-FE-4: app sales, revenue, app billing lists, and the seller's legal details.
-        { to: "/admin/sales", icon: "receipt", key: "nav.appSales", perm: "platform.revenue.read" },
-        { to: "/admin/revenue", icon: "chart-column", key: "nav.appRevenue", perm: "platform.revenue.read" },
-        { to: "/admin/billing-apps", icon: "landmark", key: "nav.appBilling", perm: "platform.billing.read" },
-        { to: "/admin/legal", icon: "file-text", key: "nav.legal", perm: "platform.settings.read" },
-      ] : []),
-    ] },
-    { group: "group.marketplace", items: [
       { to: "/admin/moderation", icon: "shield-check", key: "nav.moderation", permAny: ["platform.listing.moderate", "platform.verification.review"], count: pending, countTone: "action" },
-      { to: "/admin/catalog", icon: "list-checks", key: "nav.catalog", perm: "platform.content.update" },
-      { to: "/admin/content", icon: "newspaper", key: "nav.content", perm: "platform.content.update" },
-    ] },
-    { group: "group.leads", items: [
       { to: "/admin/inbox", icon: "messages-square", key: "nav.inbox", perm: "platform.business.read" },
     ] },
-    { group: "group.connections", items: [
+    { group: "group.money", items: [
+      ...(isStaffLive() ? [{ to: "/admin/pricing", icon: "tag", key: "nav.pricingPacks", perm: "platform.billing.read" }] : []),
+      { to: "/admin/billing", icon: "receipt", key: "nav.billing", perm: "platform.billing.read" },
+      ...(isStaffLive() ? [
+        { to: "/admin/billing-apps", icon: "landmark", key: "nav.appBilling", perm: "platform.billing.read" },
+        { to: "/admin/coupons", icon: "ticket", key: "nav.coupons", perm: "platform.billing.read" },
+        { to: "/admin/approvals", icon: "shield-check", key: "nav.approvals", permAny: ["platform.pricing.manage", "platform.billing.refund"] },
+      ] : []),
+      { to: "/admin/promote", icon: "trending-up", key: "nav.promote", perm: "platform.billing.read" },
+    ] },
+    { group: "group.website", items: [
+      { to: "/admin/content", icon: "newspaper", key: "nav.content", perm: "platform.content.update" },
+      { to: "/admin/catalog", icon: "list-checks", key: "nav.catalog", perm: "platform.content.update" },
+    ] },
+    { group: "group.system", items: [
       { to: "/admin/integrations", icon: "plug", key: "nav.setup", perm: "platform.settings.read+platform.settings.update" },
       { to: "/admin/email", icon: "mail", key: "nav.email", perm: "platform.settings.read+platform.settings.update" },
+      { to: "/admin/staff", icon: "user-round-cog", key: "nav.staff", perm: "platform.staff.read" },
+      { to: "/admin/settings", icon: "settings", key: "nav.settings", perm: "platform.settings.read+platform.settings.update" },
+    ] },
+    { group: "group.more", fold: true, items: [
+      { to: "/admin/plans", icon: "layers", key: "nav.oldPlans", perm: "platform.plan.read+platform.plan.create+platform.plan.update+platform.plan.delete" },
+      { to: "/admin/addons", icon: "puzzle", key: "nav.addons", perm: "platform.plan.read+platform.plan.create+platform.plan.update+platform.plan.delete" },
+      ...(isStaffLive() ? [
+        { to: "/admin/sales", icon: "receipt", key: "nav.appSales", perm: "platform.revenue.read" },
+        { to: "/admin/revenue", icon: "chart-column", key: "nav.appRevenue", perm: "platform.revenue.read" },
+        { to: "/admin/legal", icon: "file-text", key: "nav.legal", perm: "platform.settings.read" },
+      ] : []),
       { to: "/business/mail", icon: "inbox", key: "nav.mailbox", perm: "platform.settings.read+platform.settings.update" },
       { to: "/admin/channels", icon: "network", key: "nav.channels", perm: "platform.business.read", count: (isStaffLive() ? otaWaiting : otaOf(db).requests.filter((r) => r.status === "requested").length) || undefined, countTone: "action" },
       { to: "/admin/ai", icon: "sparkles", key: "nav.aiAdmin", perm: "platform.settings.read+platform.settings.update" },
-    ] },
-    { group: "group.system", items: [
       { to: "/admin/status", icon: "radar", key: "nav.status", perm: "platform.settings.read+platform.settings.update" },
-      { to: "/admin/staff", icon: "user-round-cog", key: "nav.staff", perm: "platform.staff.read" },
-      { to: "/admin/settings", icon: "settings", key: "nav.settings", perm: "platform.settings.read+platform.settings.update" },
       { to: "/admin/audit", icon: "scroll-text", key: "nav.audit", perm: "platform.audit.read" },
     ] },
   ], role);
