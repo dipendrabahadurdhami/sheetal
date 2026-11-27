@@ -64,7 +64,7 @@ export function AuthModal() {
       if (auth === "login") { const otp = await login(f.email, f.password); if (otp?.otp_required) { setPending(otp); setCode(""); } }
       if (auth === "register") {
         if (f.password !== f.confirm) throw new Error("Passwords do not match.");
-        const r = await api.register({ user_name: f.user_name, email: f.email, password: f.password, password_confirmation: f.confirm, user_type: f.user_type });
+        const r = await api.register({ user_name: f.user_name, email: f.email, password: f.password, password_confirmation: f.confirm }); // everyone is a user; anyone can post free
         if (r?.errors) throw new Error(Object.values(r.errors).flat()[0]);
         setSentTo(f.email);
         setAuth("verify");
@@ -87,7 +87,7 @@ export function AuthModal() {
         <div className="stack" style={{ gap: 6 }}>
           <img src="/brand/logo-mark.png" alt="" style={{ height: 34, width: "auto", alignSelf: "flex-start" }} />
           <h2 style={{ fontSize: 26, marginTop: 10 }}>{title}</h2>
-          <p className="muted small">{pending ? <>We sent a 6-digit code to <b>{pending.sent_to}</b>. It works for {pending.minutes || 10} minutes.</> : auth === "login" ? "Log in to save homes, post listings and contact agencies." : auth === "register" ? "Join thousands of buyers, owners and agencies." : "Enter your email and we will send a reset link."}</p>
+          <p className="muted small">{pending ? <>We sent a 6-digit code to <b>{pending.sent_to}</b>. It works for {pending.minutes || 10} minutes.</> : auth === "login" ? "Log in to save homes, post listings and contact agencies." : auth === "register" ? "One free account: save homes, post property free and contact owners." : "Enter your email and we will send a reset link."}</p>
         </div>
         {auth === "login" && !LIVE_LOGIN && <p className="tag tag-soft" style={{ height: "auto", padding: "8px 12px", textTransform: "none", letterSpacing: 0, fontWeight: 500 }}>Demo data login: demo@sheetal.test / password</p>}
         {pending ? (
@@ -138,9 +138,6 @@ export function AuthModal() {
           {auth === "register" && (
             <>
               <div className="field"><label>Full name</label><input className="input" required value={f.user_name} onChange={set("user_name")} /></div>
-              <div className="field"><label>I am a</label>
-                <div className="seg" style={{ alignSelf: "flex-start" }}>{[["User", "User"], ["Agent", "Agency"], ["Owner", "Owner"]].map(([t, l]) => <button type="button" key={t} className={f.user_type === t ? "on" : ""} onClick={() => setF({ ...f, user_type: t })}>{l}</button>)}</div>
-              </div>
             </>
           )}
           <div className="field"><label>Email</label><input className="input" type="email" required value={f.email} onChange={set("email")} autoComplete="email" /></div>

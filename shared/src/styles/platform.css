@@ -1769,3 +1769,16 @@ button.pf-card-row { cursor: pointer; }
 .pf-banner-prev { display: grid; grid-template-columns: 2fr 1fr 1fr; grid-template-rows: 60px 60px; gap: 3px; border-radius: var(--r); overflow: hidden; background: #111; }
 .pf-banner-prev img { width: 100%; height: 100%; object-fit: cover; }
 .pf-banner-prev img:first-child { grid-row: span 2; }
+/* Home page rows (SiteRows.jsx) with fewer than 4 posts use the full width: one is a wide card (photo beside the words), two or three fill the row. */
+@media (min-width: 601px) {
+  .pb-home-row.n1 { grid-template-columns: minmax(0, 1fr); }
+  .pb-home-row.n1 > .pb-card { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); align-items: stretch; }
+  .pb-home-row.n1 .pb-cimg, .pb-home-row.n1 .pb-cimg .pb-ph { height: 100%; aspect-ratio: auto; min-height: 300px; }
+  .pb-home-row.n1 .pb-cimg img { width: 100%; height: 100%; object-fit: cover; }
+  .pb-home-row.n1 .pb-cbody { justify-content: center; padding: 28px; gap: 10px; }
+  .pb-home-row.n1 .pb-cbody b { font-size: 22px; }
+  .pb-home-row.n2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pb-home-row.n2 .pb-cimg .pb-ph { aspect-ratio: 16 / 9; }
+  .pb-home-row.n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (min-width: 601px) and (max-width: 900px) { .pb-home-row.n3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .pb-home-row.n1 > .pb-card { grid-template-columns: minmax(0, 1fr); } }

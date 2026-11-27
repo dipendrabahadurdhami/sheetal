@@ -3532,3 +3532,7 @@ html.pa-lock, html.pa-lock body { overflow: hidden !important; }
 @keyframes page-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 main.page-in { animation: page-in .28s ease-out both; }
 @media (prefers-reduced-motion: reduce) { main.page-in, .bs-fade, .bs-pack { animation: none; } }
+/* Property page: the invest form (businesses raising funds online) and its thank-you. */
+.invest-form { padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.invest-done { display: flex; gap: 10px; align-items: flex-start; padding: 12px; border-radius: var(--r); background: var(--accent-soft); color: var(--accent-ink); }
+.invest-done p { margin: 0; color: var(--text); }

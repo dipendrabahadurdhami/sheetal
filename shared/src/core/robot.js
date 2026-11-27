@@ -10,7 +10,7 @@ const TURNSTILE = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=
 const GUARDED = [
   /^\/(auth\/)?(login|register|forgot-password)$/,
   /^\/(contact-agent|contact-owner|schedule-tour|requirement-form|agent-requirement-form|contact|demo-request)$/,
-  /^\/reviews$/, /^\/blog\/[^/]+\/comment$/, /^\/jobs\/[^/]+\/apply$/, /^\/post-property$/, /^\/start-free$/, /^\/rent\/pay$/,
+  /^\/reviews$/, /^\/invest\/[^/]+$/, /^\/blog\/[^/]+\/comment$/, /^\/jobs\/[^/]+\/apply$/, /^\/post-property$/, /^\/start-free$/, /^\/rent\/pay$/,
 ];
 export const needsRobot = (method, url) => String(method).toUpperCase() === "POST" && GUARDED.some((r) => r.test(url.split("?")[0]));
 

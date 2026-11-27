@@ -132,6 +132,33 @@ export async function engageRoutes(app: FastifyInstance) {
     });
   }
 
+  // ───── Investing online (businesses that switched on "Raise funds online") ─────
+  // A pledge: who, how much, how to reach them. Saved as a commitment ("pledged") on the investment and as a lead; the business is told
+  // and sends the agreement and payment details. Money is not taken here: online collection for investments stays off until approved.
+  app.post<{ Params: { id: string } }>("/invest/:id", strict(6), async (request) => {
+    const id = z.coerce.number().int().positive().parse(request.params.id);
+    const b = z.object({
+      name: z.string().trim().min(2, "Enter your name.").max(80),
+      phone: z.string().trim().min(7, "Enter your phone number.").max(30).transform((v) => v.replace(/[^\d+]/g, "")),
+      email: z.union([z.email("Enter a valid email address."), z.literal("")]).optional(),
+      amount: z.coerce.number().int().min(1000, "The smallest amount is Rs. 1,000.").max(10_000_000_000, "That amount is too large."),
+      note: text(1000),
+      website: z.string().max(0, "Something went wrong.").optional(),
+    }).parse(request.body);
+    const db = dbOf(app);
+    const l = await db.listing.findFirst({ where: { id, kind: "invest", status: "published", reviewHold: false }, select: { id: true, tenantId: true, branchId: true, title: true, code: true } });
+    if (!l || !l.tenantId) throw notFound("This investment isn't open any more.");
+    const tenant = await db.tenant.findUnique({ where: { id: l.tenantId }, select: { name: true, email: true, settings: true } });
+    if (((tenant?.settings ?? {}) as { payments?: { raiseFunds?: boolean } }).payments?.raiseFunds !== true) throw badRequest("This business takes investment enquiries only. Please send an enquiry instead.");
+    const amount = `Rs. ${b.amount.toLocaleString("en-IN")}`;
+    const c = await db.commitment.create({ data: { tenantId: l.tenantId, listingId: l.id, name: b.name, email: b.email || null, phone: b.phone, amount: BigInt(b.amount), status: "pledged", createdBy: request.user?.id ?? null } });
+    const branchId = l.branchId ?? await headOffice(db, l.tenantId);
+    await leadIntake(app).receive(infoOf(request), { tenantId: l.tenantId, branchId, listingId: l.id, userId: request.user?.id, kind: "invest", name: b.name, email: b.email || null, phone: b.phone, message: [`Wants to invest ${amount}.`, b.note].filter(Boolean).join("\n"), details: { amount: b.amount, commitment: c.id }, ip: request.ip }, "website");
+    await notify(db, await leadPeople(db, l.tenantId, branchId), { tenantId: l.tenantId, type: "lead", title: `Investment pledge: ${amount} from ${b.name}`, message: `${l.title} (${l.code})`, link: "/business/inbox" });
+    if (tenant?.email) await app.mailer.send({ to: tenant.email, subject: `Investment pledge ${amount} for ${l.code} from ${b.name}`, text: [`${b.name} wants to invest ${amount} in ${l.title} (${l.code}).`, "", `Phone: ${b.phone}`, b.email ? `Email: ${b.email}` : "", b.note ? `\n${b.note}` : "", "", "Call them with the agreement and payment details. The pledge is in your Inbox."].filter((x) => x !== "").join("\n") });
+    return { status: 200, message: `Thank you. Your pledge of ${amount} is recorded. ${tenant?.name ?? "The business"} will call you with the agreement and payment details.` };
+  });
+
   // ───── Reviews ─────
   // (P1-BE-6: the business panel reads these through apps/reviews; a review written here carries createdBy, and a changed one bumps `version` and `updatedBy`.)
   app.get("/reviews-public", async (request) => {

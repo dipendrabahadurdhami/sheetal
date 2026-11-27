@@ -124,7 +124,7 @@ function Account({ mode, setMode, step, setStep, pick, months }) {
     e.preventDefault(); setErr(""); setNote(""); setBusy(true);
     try {
       if (mode === "signup") {
-        await siteCall("POST", "/register", { user_name: f.name, email: f.email.trim().toLowerCase(), password: f.password, password_confirmation: f.password, user_type: "Agent", business_name: f.business || undefined, business_type: f.type, phone: f.phone || undefined });
+        await siteCall("POST", "/register", { user_name: f.name, email: f.email.trim().toLowerCase(), password: f.password, password_confirmation: f.password, business_name: f.business || undefined, business_type: f.type, phone: f.phone || undefined });
       }
       await startLogin();
     } catch (x) {

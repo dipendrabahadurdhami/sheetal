@@ -57,7 +57,10 @@ export function useLiveCatalog(active) {
   useEffect(() => { if (!active) return; apiListeners.add(setV); loadFromApi(); if (fromApi !== v) setV(fromApi); return () => apiListeners.delete(setV); }, [active]);
   return v || { stays: [], projects: [], invests: [] };
 }
-const dealPrice = (x) => <span className="pb-price tnum">{rsShort(x.price)}<small>{{ night: " / night", rent: " / month" }[x.deal] ?? " · for sale"}</small></span>;
+// No price (the business chose "on request"): say so instead of "Rs. 0".
+const dealPrice = (x) => (Number(x.price) > 0
+  ? <span className="pb-price tnum">{rsShort(x.price)}<small>{{ night: " / night", rent: " / month" }[x.deal] ?? " · for sale"}</small></span>
+  : <span className="pb-price">Price on request</span>);
 
 export function useCatalog() {
   const { db } = useStore();

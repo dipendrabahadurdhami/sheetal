@@ -112,6 +112,8 @@ export function SettingsPage({ tenant, tab: tabProp, Branding, CodePrefix, onCha
             </>}
 
             {tab === "payments" && <>
+              {/* Investments on the website: off = visitors send an enquiry; on = an "Invest" form that records a pledge with the amount. */}
+              <ToggleRow title="Raise funds online for my investments" sub={get("payments.raiseFunds") ? "On: your investment pages show an Invest form. People pledge an amount; you get it in your Inbox and send them the agreement and payment details." : "Off: your investment pages show only the enquiry form, and you get leads."} checked={!!get("payments.raiseFunds")} onChange={(v) => set("payments.raiseFunds", v)} />
               <div className="pf-mode-pick" role="radiogroup">
                 {["shetal", "own"].map((m) => (
                   <button key={m} type="button" role="radio" aria-checked={get("payments.mode") === m} className={get("payments.mode") === m ? "on" : ""} disabled={m === "own" && !allowOwn} onClick={() => set("payments.mode", m)}>

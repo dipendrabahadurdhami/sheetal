@@ -38,7 +38,8 @@ export const api = {
   // contact
   contactAgent: (data) => post("contact-agent", data),
   contactOwner: (data) => post("contact-owner", data),
-  demoRequest: (data) => post("demo-request", data), // Sheetal Technologies demo request (super admin is told)
+  demoRequest: (data) => post("demo-request", data),
+  invest: (id, data) => post(`invest/${id}`, data), // a pledge, where the business raises funds online // Sheetal Technologies demo request (super admin is told)
 
   // rent (Pay rent and Profile → My rentals)
   rentFind: (data) => post("rent/find", data),

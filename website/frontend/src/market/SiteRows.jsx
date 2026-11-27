@@ -1,5 +1,6 @@
 // Home page rows: popular stays, featured projects and open investments, plus the post-a-property type picker.
-// How it works: until something is posted, a row invites owners to post the first one instead of standing empty.
+// How it works: a row shows only when something is posted (no empty rows, no "post the first one" cards on the home page). With fewer
+// than 4 posts the cards share the full width: one is a wide card, two or three fill the row.
 
 import React from "react";
 import { StoreProvider, useStore as useSt0 } from "@sheetal/shared/core/store";
@@ -18,14 +19,13 @@ function Rows({ SectionHead, Link }) {
   const rows = [
     ["stay", "Stay in Nepal", "Popular stays", "/stays", "See all stays", stays.slice(0, 4).map((s) => <StayCard key={s.id} s={s} />)],
     ["project", "Under construction and ready", "Featured projects", "/project", "See all projects", projects.slice(0, 4).map((p) => <ProjectCard key={p.id} p={p} />)],
-    ["invest", "Fund from Rs. 10,000", "Open investments", "/investment/explore", "See all", invests.slice(0, 4).map((v) => <InvestCard key={v.id} v={v} />)],
+    ["invest", "Invest with trusted businesses", "Open investments", "/investment/explore", "See all", invests.slice(0, 4).map((v) => <InvestCard key={v.id} v={v} />)],
   ];
-  // Until something is posted, a row invites owners to post the first one instead of standing empty.
-  // On a phone an empty row is left out (no repeated "post the first one" cards); owners find it in the menu and Post.
-  return rows.filter(([, , , , , cards]) => !phone || cards.length).map(([kind, kicker, title, to, label, cards]) => (
+  void phone;
+  return rows.filter(([, , , , , cards]) => cards.length).map(([kind, kicker, title, to, label, cards]) => (
     <section key={title} className="section container">
-      <SectionHead kicker={kicker} title={title} action={cards.length ? <Link to={to} className="link">{label}</Link> : null} />
-      {cards.length ? <div className="pb-grid pb-home-row">{cards}</div> : <InviteCards kind={kind} compact />}
+      <SectionHead kicker={kicker} title={title} action={<Link to={to} className="link">{label}</Link>} />
+      <div className={`pb-grid pb-home-row n${Math.min(cards.length, 4)}`} data-kind={kind}>{cards}</div>
     </section>
   ));
 }

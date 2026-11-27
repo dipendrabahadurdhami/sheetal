@@ -154,6 +154,7 @@ export default function PropertyDetail() {
           )}
 
           <MoreDetails p={p} />
+          <ProjectUnits p={p} />
           <StayRooms p={p} />
 
           {vid && (
@@ -179,6 +180,7 @@ export default function PropertyDetail() {
               <span className="price-big tnum">{fmtPrice(price)}</span>{isRent && <span className="muted"> / month</span>}
               {Number(price) > 0 && <div className="small muted tnum" style={{ marginTop: 4 }}>{fmtFull(price)}{p.price_negotiable ? " · negotiable" : ""}</div>}
             </div>
+            {p.raise_funds && side !== "invest-done" && <InvestForm p={p} />}
             <div className="seg" style={{ width: "100%" }}>
               <button style={{ flex: 1 }} className={side === "contact" ? "on" : ""} onClick={() => setSide("contact")}>Agency</button>
               <button style={{ flex: 1 }} className={side === "owner" ? "on" : ""} onClick={() => setSide("owner")}>Owner</button>
@@ -248,6 +250,51 @@ function StayRooms({ p }) {
       {lists.map(([l, x]) => <div key={l} style={{ marginTop: 16 }}><b className="small">{l}</b><div className="amenities">{x.map((a) => <div key={a}><Check size={18} />{a}</div>)}</div></div>)}
       {times && <p className="muted small" style={{ marginTop: 12 }}>{times}</p>}
     </section>
+  );
+}
+
+// A project's unit types: type, how many, size and price ("Price on request" when the business left it empty).
+function ProjectUnits({ p }) {
+  const units = (Array.isArray(p.units) ? p.units : []).filter((u) => u && u.type);
+  if (!units.length) return null;
+  return (
+    <section id="units" className="detail-section">
+      <h3>Units</h3>
+      <div className="facts">{units.map((u, i) => (
+        <div key={i}><span>{[u.type, Number(u.count) > 0 && `${u.count} units`].filter(Boolean).join(" · ")}</span>
+          <b>{[Number(u.size) > 0 && `${Number(u.size).toLocaleString("en-IN")} sq ft`, fmtPrice(u.price)].filter(Boolean).join(" · ")}</b></div>
+      ))}</div>
+    </section>
+  );
+}
+
+// Invest online: shown when the business switched on "Raise funds online". The pledge (amount and contact) goes to the business, which
+// sends the agreement and payment details; nothing is charged here.
+function InvestForm({ p }) {
+  const [f, setF] = useState({ amount: "", name: "", phone: "", email: "", note: "", website: "" });
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  const send = async (e) => {
+    e.preventDefault(); setErr(""); setBusy(true);
+    try { const r = await api.invest(p.id, { ...f, amount: Number(String(f.amount).replace(/\D/g, "")) }); setMsg(r?.message || "Thank you. Your pledge is recorded."); }
+    catch (x) { setErr(x.errors ? Object.values(x.errors).flat()[0] : x.message); }
+    finally { setBusy(false); }
+  };
+  if (msg) return <div className="invest-done"><Check size={22} /><p className="small">{msg}</p></div>;
+  return (
+    <form className="stack invest-form" style={{ gap: 10 }} onSubmit={send}>
+      <b>Invest in this project</b>
+      <label className="field"><span className="small">Amount (Rs.)</span><input className="input tnum" inputMode="numeric" required placeholder="e.g. 5,00,000" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value.replace(/[^\d,]/g, "") })} /></label>
+      <input className="input" required minLength={2} maxLength={80} placeholder="Your name" autoComplete="name" value={f.name} onChange={set("name")} />
+      <input className="input" type="tel" required placeholder="Phone" autoComplete="tel" value={f.phone} onChange={set("phone")} />
+      <input className="input" type="email" placeholder="Email (optional)" autoComplete="email" value={f.email} onChange={set("email")} />
+      <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className="sr-only" value={f.website} onChange={set("website")} />
+      {err && <p className="error small" style={{ margin: 0 }}>{err}</p>}
+      <button className="btn btn-primary btn-block" disabled={busy}>{busy ? "Sending…" : "Pledge to invest"}</button>
+      <p className="tiny muted" style={{ margin: 0 }}>No payment now. The business calls you with the agreement and how to pay.</p>
+    </form>
   );
 }
 

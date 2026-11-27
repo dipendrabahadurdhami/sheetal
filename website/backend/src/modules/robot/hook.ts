@@ -16,7 +16,7 @@ import type { Fetch } from "@sheetal/backend-core/lib/payments";
 /** The routes that need a passed robot check (POST, under /v1). */
 export const ROBOT_ROUTES = [
   "/login", "/register", "/forgot-password",
-  "/contact-agent", "/contact-owner", "/schedule-tour", "/requirement-form", "/agent-requirement-form", "/contact", "/demo-request",
+  "/contact-agent", "/contact-owner", "/schedule-tour", "/requirement-form", "/agent-requirement-form", "/contact", "/demo-request", "/invest/:id",
   "/reviews", "/blog/:id/comment", "/jobs/:slug/apply", "/post-property", "/start-free", "/rent/pay",
 ] as const;
 

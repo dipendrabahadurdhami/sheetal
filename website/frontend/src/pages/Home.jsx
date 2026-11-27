@@ -123,11 +123,11 @@ export default function Home() {
       {phone ? <PhoneHomeTop /> : <Hero />}
 
 
-      <section className="section container">
+      {(featured.loading || (featured.data?.items || []).length > 0) && <section className="section container">
         <SectionHead kicker="Hand-picked" title="Featured properties"
           action={<span style={{ display: "flex", gap: 16, alignItems: "baseline" }}>{!phone && <a href="/business/promote" className="muted" style={adLink}>Boost your listing here</a>}<Link to="/featured" className="link">View all</Link></span>} />
         <Row loading={featured.loading} items={featured.data?.items || []} />
-      </section>
+      </section>}
 
       <HomePlatformRows SectionHead={SectionHead} Link={Link} />
 
@@ -143,25 +143,25 @@ export default function Home() {
         </Strip>
       </section>
 
-      <section className="section container">
+      {(sale.loading || (sale.data?.items || []).length > 0) && <section className="section container">
         <SectionHead kicker="For sale" title="Latest for sale" action={<Link to="/sale" className="link">View all</Link>} />
         {phone ? <Row loading={sale.loading} items={sale.data?.items || []} /> : <PropertyGrid loading={sale.loading} items={sale.data?.items || []} count={8} />}
-      </section>
+      </section>}
 
 
-      <section className="section container">
+      {(rent.loading || (rent.data?.items || []).length > 0) && <section className="section container">
         <SectionHead kicker="For rent" title="Latest for rent" action={<Link to="/rent" className="link">View all</Link>} />
         <Row loading={rent.loading} items={rent.data?.items || []} />
-      </section>
+      </section>}
 
-      <section className="container">
-        <SectionHead kicker="Our partners" title="Agencies" action={<Link to="/partners?type=agency" className="link">View all</Link>} />
+      {(agencies.loading || (agencies.data?.items || []).length > 0) && <section className="container">
+        <SectionHead kicker="Our partners" title="Partners" action={<Link to="/partners?type=agency" className="link">View all</Link>} />
         <Strip className="agents-grid">
           {(agencies.data?.items || []).slice(0, 4).map((a) => <AgencyCard key={a.id} a={a} />)}
           {agencies.loading && Array.from({ length: 4 }, (_, i) => <div key={i} className="sk" style={{ height: 200, borderRadius: "var(--r-xl)" }} />)}
           {!agencies.loading && (agencies.data?.items || []).length < 4 && <JoinPanel span={4 - (agencies.data?.items || []).length} />}
         </Strip>
-      </section>
+      </section>}
 
       <section className="section container">
         <SectionHead kicker="Plan with numbers" title="Calculators" action={<Link to="/tools/emi" className="link">View all</Link>} />
@@ -175,7 +175,7 @@ export default function Home() {
         </Strip>
       </section>
 
-      <section className="container">
+      {(blogs.loading || (blogs.data?.items || []).length > 0) && <section className="container">
         <SectionHead kicker="Journal" title="Blog" action={<Link to="/blog" className="link">View all</Link>} />
         <style>{`@media (min-width: 1100px) { .home-blog-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 20px !important; } .home-blog-grid .post-card h3 { font-size: 16px; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; } }`}</style>
         <Strip className="grid-3 home-blog-grid">
@@ -187,7 +187,7 @@ export default function Home() {
             </Link>
           ))}
         </Strip>
-      </section>
+      </section>}
 
     </>
   );

@@ -1,5 +1,6 @@
 // One directory for every partner: hotels, hosts, developers, agencies and sponsors.
-// How it works: agencies come from the agency list and open the agency page; other businesses open their business page.
+// How it works: the partner list (GET /agent-list) holds every business on a paid plan, of every type; agencies open the agency page,
+// other businesses their business page. Free businesses are not listed here (their listings still show everywhere).
 
 import { useState } from "react";
 import { useSEO } from "../utils/seo";
@@ -10,12 +11,9 @@ import { toList } from "../api/client";
 import { useAsync } from "../hooks/useAsync";
 import { PageHead, Avatar, Stars, Empty, usePaged, Paged } from "../components/ui";
 import { agencyName, agencyTier } from "../utils/format";
-import { seed, VERSION } from "@sheetal/shared/demo/demo";
-import { config } from "@sheetal/shared/core/config";
 
 const TABS = [["all", "All"], ["hotel", "Hotels"], ["host", "Hosts"], ["developer", "Developers"], ["agency", "Agencies"], ["sponsor", "Sponsors"]];
 const KIND = { hotel: "Hotel", host: "Host", developer: "Developer", agency: "Agency", sponsor: "Sponsor" };
-const tenants = () => { let s = null; try { s = JSON.parse(localStorage.getItem(config.storageKey)); } catch (e) { /* ignore */ } if (!s || s.version !== VERSION) s = seed(); return (s.tenants || []).filter((x) => x.status === "active" && x.type !== "agency"); };
 
 function PartnerCard({ p }) {
   return (
@@ -38,9 +36,10 @@ export default function Partners() {
   const type = TABS.some(([k]) => k === params.get("type")) ? params.get("type") : "all";
   const [q, setQ] = useState("");
   const { data, loading } = useAsync(() => api.agents().then(toList), []);
-  const agencies = (data?.items || []).map((a) => ({ id: `a${a.id}`, type: "agency", name: agencyName(a), kicker: agencyTier(a.tier) ? `${agencyTier(a.tier)} agency` : "Agency", place: a.address || "Nepal", rating: a.avg_rating, count: a.listings_count ? `${a.listings_count} listings` : "", photo: a.photo, to: `/agency/${a.id}` }));
-  const others = tenants().map((x) => ({ id: x.id, type: x.type, name: x.name, kicker: KIND[x.type] || "Business", place: `${x.city}, Nepal`, rating: x.rating, count: "", to: `/site/${x.id}` }));
-  const all = [...others.filter((x) => x.type !== "sponsor"), ...agencies, ...others.filter((x) => x.type === "sponsor")];
+  const all = (data?.items || []).map((a) => {
+    const t = a.business_type || "agency";
+    return { id: `a${a.id}`, type: t, name: agencyName(a), kicker: t === "agency" && agencyTier(a.tier) ? `${agencyTier(a.tier)} agency` : KIND[t] || "Business", place: a.address || "Nepal", rating: a.avg_rating, count: a.listings_count ? `${a.listings_count} listings` : "", photo: a.photo, to: t === "agency" ? `/agency/${a.id}` : `/site/${a.id}` };
+  });
   const list = all.filter((p) => (type === "all" || p.type === type) && (!q || `${p.name} ${p.place} ${p.kicker}`.toLowerCase().includes(q.toLowerCase())));
   const pg = usePaged(list, 18, type + "|" + q);
   const count = (k) => (k === "all" ? all.length : all.filter((p) => p.type === k).length);

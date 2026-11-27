@@ -13,6 +13,7 @@ import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
+import { SOFTWARE } from "@sheetal/platform/billing/packs";
 import { cached } from "@sheetal/backend-core/lib/cache";
 import { dbOf } from "@sheetal/platform/db/client";
 import { notFound } from "@sheetal/platform/core/errors";
@@ -116,7 +117,14 @@ export async function catalogRoutes(app: FastifyInstance) {
     if (!isBotRequest(request.headers as { "user-agent"?: string })) {
       await db.listing.update({ where: { id: l.id }, data: { views: { increment: 1 } } });
     }
-    return { status: 200, data: listingDetail(l, base, await agencyOf(l.tenantId)) };
+    const data: Record<string, unknown> = listingDetail(l, base, await agencyOf(l.tenantId));
+    // Investments: does the business take investments online here (Business -> Settings -> Payments -> Raise funds online)?
+    // Off: only the enquiry form. On: the "Invest" form records a pledge (POST /invest/:id).
+    if (l.kind === "invest" && l.tenantId) {
+      const t = await db.tenant.findUnique({ where: { id: l.tenantId }, select: { settings: true } });
+      data.raise_funds = ((t?.settings ?? {}) as { payments?: { raiseFunds?: boolean } }).payments?.raiseFunds === true;
+    }
+    return { status: 200, data };
   }
 
   app.get("/all-properties", async (request) => {
@@ -259,16 +267,26 @@ export async function catalogRoutes(app: FastifyInstance) {
     });
   });
 
-  // Agencies: active agency businesses with their live listing counts.
+  // Partners (the owner's rule, 27 Nov 2026): every business on a paid plan (Starter, Business or Pro, or a gift of paid software), of any
+  // type (agencies, hotels, hosts, developers, sponsors), with its type and live listing count. Free businesses still post and show on
+  // their listings, but are not listed as partners.
   app.get("/agent-list", async () =>
-    cached(app.cache, "catalog:agencies", LIST_TTL, async () => {
+    cached(app.cache, "catalog:partners", LIST_TTL, async () => {
       const db = dbOf(app);
-      const [agencies, counts] = await Promise.all([
-        db.tenant.findMany({ where: { type: "agency", status: { in: ["active", "trial"] } }, select: { id: true, name: true, city: true, email: true, phone: true, logoUrl: true, address: true, website: true, verifiedAt: true }, orderBy: { name: "asc" } }),
+      const now = new Date();
+      const free = SOFTWARE.filter((x) => x.free).flatMap((x) => x.apps);
+      const [subs, gifts, oldPlans] = await Promise.all([
+        db.subscription.findMany({ where: { appId: { notIn: free }, uninstalledAt: null, currentPeriodEnd: { gt: now } }, select: { tenantId: true, priceGrossPaisa: true } }),
+        db.entitlementGrant.findMany({ where: { revokedAt: null, appId: { notIn: free }, startsAt: { lte: now }, OR: [{ endsAt: null }, { endsAt: { gt: now } }] }, select: { tenantId: true } }),
+        db.tenant.findMany({ where: { billingMode: { not: "apps" }, plan: { price: { gt: 0 } } }, select: { id: true } }),
+      ]);
+      const paid = new Set([...subs.filter((x) => Number(x.priceGrossPaisa ?? 0) > 0).map((x) => x.tenantId), ...gifts.map((x) => x.tenantId), ...oldPlans.map((x) => x.id)]);
+      const [partners, counts] = await Promise.all([
+        db.tenant.findMany({ where: { id: { in: [...paid] }, status: { in: ["active", "trial"] } }, select: { id: true, type: true, name: true, city: true, email: true, phone: true, logoUrl: true, address: true, website: true, verifiedAt: true }, orderBy: { name: "asc" } }),
         db.listing.groupBy({ by: ["tenantId"], where: LIVE, _count: true }),
       ]);
       const n = new Map(counts.map((c) => [c.tenantId, c._count]));
-      return { status: 200, data: agencies.map((a) => agencyJson({ ...a, listings: n.get(a.id) ?? 0 })) };
+      return { status: 200, data: partners.map((a) => ({ ...agencyJson({ ...a, listings: n.get(a.id) ?? 0 }), business_type: a.type })) };
     }));
 
   app.get<{ Params: { id: string } }>("/agent-detail/:id", async (request) => {
