@@ -8,15 +8,16 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  ArrowRight, Check, X, Globe, MessagesSquare, Receipt, UsersRound, KeyRound, Hotel, Building2, Rocket, Layers, GitBranch, Smartphone,
+  ArrowRight, Check, X, Globe, Layers, GitBranch, Smartphone,
   Wallet, FileText, ShieldCheck, ChevronDown, Sparkles,
 } from "lucide-react";
 import { api } from "../api/endpoints";
 import { toItem } from "../api/client";
 import { useAsync } from "../hooks/useAsync";
 import { useSEO } from "../utils/seo";
+import { SoftCards } from "./SoftwarePage";
+import { DemoRequest } from "../components/DemoRequest";
 
-const ICON = { globe: Globe, "messages-square": MessagesSquare, receipt: Receipt, "users-round": UsersRound, "key-round": KeyRound, hotel: Hotel, "building-2": Building2, rocket: Rocket };
 const LENGTHS = [[1, "Monthly"], [6, "6 months"], [12, "1 year"]];
 const PER = { 1: "a month", 6: "for 6 months", 12: "for 1 year" };
 const rs = (paisa) => `Rs. ${Math.round(paisa / 100).toLocaleString("en-IN")}`;
@@ -59,7 +60,7 @@ export function Technology() {
             <p className="tech-lead">CRM, accounting, HRM, property management, hotel and project software that work together, for one branch or many. In three simple plans.</p>
             <div className="row" style={{ gap: 12, flexWrap: "wrap" }}>
               <a href="#plans" className="btn btn-primary">See plans <ArrowRight size={16} /></a>
-              <Link to="/post-property" className="btn btn-outline">Post on the website free</Link>
+              <a href="#demo" className="btn btn-outline">Request a demo</a>
             </div>
             {from && Number.isFinite(from) && <p className="small muted">{offer ? `${offer}: ` : ""}plans from {rs(from)} a month, VAT included.</p>}
           </div>
@@ -68,21 +69,9 @@ export function Technology() {
       </section>
 
       <section className="container section">
-        <div className="section-head"><div className="stack"><span className="tier">The software</span><h2>Everything a property business runs on</h2><p>Each software does one job well, and all of them share your customers, branches and team.</p></div></div>
+        <div className="section-head"><div className="stack"><span className="tier">The software</span><h2>Everything a property business runs on</h2><p>Each software does one job well, and all of them share your customers, branches and team. Tap one to see what it is, the problems it solves and every feature.</p></div></div>
         {loading ? <div className="sk" style={{ height: 240 }} /> : (
-          <div className="tech-soft">
-            {software.map((s) => {
-              const I = ICON[s.icon] || Layers;
-              const soon = s.apps.length > 0 && s.apps.every((a) => a.comingSoon);
-              return (
-                <div key={s.id} className="card tech-soft-card">
-                  <span className="tech-ico"><I size={20} /></span>
-                  <div className="row" style={{ gap: 8, flexWrap: "wrap" }}><h3>{s.name.en}</h3>{s.free && <span className="tag tag-soft">Free</span>}{soon && <span className="tag tag-line">Coming soon</span>}</div>
-                  <p className="small muted">{s.tagline.en}</p>
-                </div>
-              );
-            })}
-          </div>
+          <SoftCards list={software} />
         )}
       </section>
 
@@ -144,10 +133,15 @@ export function Technology() {
         </div>
       </section>
 
+      <section id="demo" className="container section" style={{ paddingTop: 0, scrollMarginTop: 80 }}>
+        <div className="section-head"><div className="stack"><span className="tier">Demo</span><h2>Request a demo</h2><p>Tell us about your business. Our team calls you, shows you the software for your kind of work, and sets up a demo account for you.</p></div></div>
+        <DemoRequest />
+      </section>
+
       <section className="container" style={{ paddingBottom: 72 }}>
         <div className="card card-pad tech-cta">
           <div className="stack" style={{ gap: 6 }}><h2>Run your business on Sheetal</h2><p className="small muted">Start with a plan today, or post your listings on the website for free.</p></div>
-          <div className="row" style={{ gap: 12, flexWrap: "wrap" }}><a href="#plans" className="btn btn-primary">See plans</a><Link to="/contact" className="btn btn-outline"><FileText size={16} /> Talk to us</Link></div>
+          <div className="row" style={{ gap: 12, flexWrap: "wrap" }}><a href="#plans" className="btn btn-primary">See plans</a><a href="#demo" className="btn btn-outline"><FileText size={16} /> Request a demo</a></div>
         </div>
         <p className="tiny muted" style={{ marginTop: 16, textAlign: "center" }}>Sheetal Technologies is the software brand of Shetal Sanshee Technologies P. Ltd., part of Sheetal Group.</p>
       </section>

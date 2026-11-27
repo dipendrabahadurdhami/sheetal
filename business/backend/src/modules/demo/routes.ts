@@ -30,6 +30,8 @@ const Body = z.object({ type: z.enum(DEMO_TYPES).default("agency"), captcha: z.s
 
 export async function demoRoutes(app: FastifyInstance, opts: { fetch?: Fetch } = {}) {
   app.post("/demo/session", { config: { rateLimit: { max: 5, timeWindow: "1 hour" } } }, async (request) => {
+    // Demos are given by Sheetal's team after a demo request (website /technology#demo); the self-serve button is off unless switched on.
+    if (!app.config.DEMO_SELF_SERVE) return { status: 403, message: "Demos are given by our team. Request one at sheetalproperty.com/technology and we will call you." };
     const b = Body.parse(request.body ?? {});
     const db = dbOf(app);
     await checkCaptcha({ db, vault: new Vault(app.config.SECRETS_KEY, app.config.NODE_ENV === "production"), token: b.captcha, ip: request.ip, fetch: opts.fetch });

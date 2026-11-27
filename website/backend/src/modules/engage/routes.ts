@@ -33,7 +33,7 @@ const flat = (b: unknown) => {
   return Object.fromEntries(Object.keys(o).map((k) => [k.replace(/\[\]$/, ""), field(o, k.replace(/\[\]$/, ""))]));
 };
 
-const KIND = { "contact-agent": "contact_agent", "contact-owner": "contact_owner", "schedule-tour": "site_visit", "requirement-form": "requirement", "agent-requirement-form": "requirement", contact: "service" } as const;
+const KIND = { "contact-agent": "contact_agent", "contact-owner": "contact_owner", "schedule-tour": "site_visit", "requirement-form": "requirement", "agent-requirement-form": "requirement", contact: "service", "demo-request": "demo" } as const;
 
 export async function engageRoutes(app: FastifyInstance) {
   const base = mediaBase(app.config);
@@ -75,10 +75,13 @@ export async function engageRoutes(app: FastifyInstance) {
         reasons: list, date: text(20), time: text(20), preferred_contact_time: text(40), preferred_date: text(20),
         // Buyer requirement fields
         tenant_option: text(20), property_type: text(60), prefered_location: text(200), minimum_budget: text(20), maximum_budget: text(20), bedrooms: text(5), vehicles: text(5), facilities: list,
+        // Demo request (Sheetal Technologies): the business, its type and city, team size, the software wanted and a good time to call.
+        business_name: text(120), business_type: text(40), city: text(80), team_size: text(20), software: list,
         website: z.string().max(0, "Something went wrong.").optional(), // spam trap: hidden field people never fill
       }).parse(raw);
       const contact = b.phone || b.mobile_number;
       if (!b.email && !contact) throw badRequest("Add a phone number or an email so they can reach you.", { phone: ["Add a phone number or an email."] });
+      if (kind === "demo" && !contact) throw badRequest("Add your phone number so we can call you for the demo.", { phone: ["Add your phone number."] });
 
       const db = dbOf(app);
       const listing = b.property_id ? await db.listing.findFirst({ where: { id: b.property_id, ...LIVE }, select: { id: true, tenantId: true, branchId: true, title: true, code: true } }) : null;
@@ -89,6 +92,7 @@ export async function engageRoutes(app: FastifyInstance) {
         reasons: b.reasons, date: b.date, time: b.time, preferred_contact_time: b.preferred_contact_time, preferred_date: b.preferred_date,
         tenant_option: b.tenant_option, property_type: b.property_type, location: b.prefered_location, min_budget: b.minimum_budget, max_budget: b.maximum_budget,
         bedrooms: b.bedrooms, vehicles: b.vehicles, facilities: b.facilities,
+        business_name: b.business_name, business_type: b.business_type, city: b.city, team_size: b.team_size, software: b.software,
       }).filter(([, v]) => (Array.isArray(v) ? v.length : v)));
 
       // Buyer requirements sent to Sheetal (not to one agency) go on the requirement board; with a fee switched on,
@@ -109,6 +113,8 @@ export async function engageRoutes(app: FastifyInstance) {
       // A requirement fee proof waits for Sheetal's team.
       if (feeData.feeStatus === "pending") await notifyStaff(db, STAFF_FOR.listingReview, { type: "requirement", title: "Requirement fee to check", message: `${b.name} · Rs. ${feeData.feeAmount}`, link: "/admin/demand" });
       if (tenantId) await notify(db, await leadPeople(db, tenantId, branchId), { tenantId, type: "lead", title: `New enquiry from ${b.name}`, message: listing ? `${listing.title} (${listing.code})` : message.slice(0, 140), link: "/business/inbox" });
+      // A demo request: the super admin's bell, with who, the business and the phone, opening Admin → Leads.
+      else if (kind === "demo") await notifyStaff(db, STAFF_FOR.leads, { type: "lead", title: `Demo request: ${b.name}${b.business_name ? ` (${b.business_name})` : ""}`, message: [contact, b.business_type, b.city, b.software?.length ? b.software.join(", ") : ""].filter(Boolean).join(" · ").slice(0, 300), link: "/admin/leads" });
       // No business behind it: a lead for Sheetal's own team (Admin → Inbox → Leads).
       else await notifyStaff(db, STAFF_FOR.leads, { type: "lead", title: `New lead for Sheetal: ${b.name}`, message: message.slice(0, 140), link: "/admin/leads" });
 
@@ -122,7 +128,7 @@ export async function engageRoutes(app: FastifyInstance) {
         });
       }
       if (fee?.enabled) return { status: 200, message: `Thanks. Your requirement shows to agents once Sheetal confirms your payment (REQ-${String(lead.ref).padStart(4, "0")}).` };
-      return { status: 200, message: kind === "site_visit" ? "Visit requested. They will confirm the time with you." : board ? `Thanks. Agents can now offer you properties (REQ-${String(lead.ref).padStart(4, "0")}).` : "Sent. We will get back to you soon." };
+      return { status: 200, message: kind === "site_visit" ? "Visit requested. They will confirm the time with you." : board ? `Thanks. Agents can now offer you properties (REQ-${String(lead.ref).padStart(4, "0")}).` : kind === "demo" ? "Thank you. Our team will call you within one working day to set up your demo." : "Sent. We will get back to you soon." };
     });
   }
 

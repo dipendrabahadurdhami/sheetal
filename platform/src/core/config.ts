@@ -24,6 +24,8 @@ const schema = z.object({
   // Browser origins allowed to call the API (website, business and admin apps).
   CORS_ORIGINS: list.default(["http://localhost:5173", "https://sheetalproperty.com", "https://business.sheetalproperty.com"]),
   TRUST_PROXY: z.stringbool().default(false),
+  // "Try the demo" without asking: off since 27 Nov 2026 (the owner gives demos personally after a demo request); tests switch it on.
+  DEMO_SELF_SERVE: z.stringbool().default(false),
   DATABASE_URL: z.string().optional(),
   REDIS_URL: z.string().optional(),
   // Folder holding property photos as property/<main|thumbnail|original>/<file>. Set locally (the old site's

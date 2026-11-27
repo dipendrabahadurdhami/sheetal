@@ -3391,3 +3391,38 @@ html.pa-lock, html.pa-lock body { overflow: hidden !important; }
 .getapp-help { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s4); margin-top: var(--s6); }
 .getapp-help h3 { display: flex; align-items: center; gap: 8px; }
 @media (max-width: 900px) { .getapp-grid, .getapp-help { grid-template-columns: 1fr; } }
+
+/* Sheetal Technologies: software cards that open their page, the software detail page and the demo request form. */
+.tech-soft-link { color: inherit !important; text-decoration: none; transition: border-color .15s, transform .15s, box-shadow .15s; }
+.tech-soft-link:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow); }
+.tech-soft-link .soft-more { margin-top: auto; display: inline-flex; align-items: center; gap: 4px; color: var(--accent-ink); font-weight: 600; }
+.soft-back { display: inline-flex; align-items: center; gap: 6px; color: var(--muted) !important; }
+.soft-hero { display: flex; flex-direction: column; gap: 16px; padding-top: 32px; padding-bottom: 44px; max-width: 860px; }
+.soft-title { gap: 16px; align-items: center; }
+.soft-title h1 { font-size: clamp(28px, 4.4vw, 44px); margin: 0; }
+.soft-ico { width: 60px; height: 60px; flex-shrink: 0; border-radius: 16px; }
+.soft-problems { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s4); }
+.soft-problem { display: flex; flex-direction: column; gap: 12px; }
+.soft-problem p { display: flex; gap: 10px; margin: 0; line-height: 1.5; }
+.soft-problem svg { flex-shrink: 0; margin-top: 3px; }
+.soft-p { color: var(--text-strong); font-weight: 600; } .soft-p svg { color: var(--muted); }
+.soft-fix { color: var(--text); font-size: 14.5px; } .soft-fix svg { color: var(--accent-ink); }
+.soft-feats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s4); }
+.soft-feat h3 { display: flex; align-items: center; gap: 8px; font-size: 17px; margin: 0 0 12px; }
+.soft-feat ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.soft-feat li { display: flex; gap: 10px; font-size: 14.5px; line-height: 1.45; }
+.soft-feat li svg { flex-shrink: 0; margin-top: 3px; color: var(--accent-ink); }
+.soft-soon { background: var(--surface); } .soft-soon li svg { color: var(--muted); }
+.soft-packs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s4); }
+.soft-pack { display: flex; flex-direction: column; gap: 6px; } .soft-pack.off { opacity: .6; }
+.soft-pack .tag { display: inline-flex; align-items: center; gap: 4px; }
+.demo-form { display: flex; flex-direction: column; gap: 18px; }
+.demo-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
+.demo-form .field > span, .demo-soft legend { font-size: 13px; font-weight: 500; color: var(--text-strong); }
+.demo-soft { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.demo-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.demo-chips .chip { cursor: pointer; font: inherit; font-size: 13.5px; min-height: 38px; }
+.demo-done { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 40px 20px; }
+.demo-done svg { color: var(--accent-ink); }
+@media (max-width: 960px) { .soft-problems, .soft-packs { grid-template-columns: 1fr; } }
+@media (max-width: 680px) { .soft-feats, .demo-grid { grid-template-columns: 1fr; } .soft-hero { padding-top: 20px; padding-bottom: 28px; } .soft-ico { width: 48px; height: 48px; } .demo-chips .chip { min-height: 42px; } }

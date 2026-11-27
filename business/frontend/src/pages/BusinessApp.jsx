@@ -54,7 +54,7 @@ import { Plans } from "./Plans";
 import { Inbox } from "./Inbox";
 import { Approvals } from "./Approvals";
 import { SupportBanner } from "./SupportBanner";
-import { DemoBar, TryDemo } from "./TryDemo";
+import { DemoBar } from "./TryDemo";
 import { LiveForms } from "./LiveForms";
 import { LiveAgreements } from "./LiveAgreements";
 import { LiveInvoices, LivePayouts } from "./LiveMoney";
@@ -104,14 +104,17 @@ function Gatepage({ icon, title, children, action }) {
   );
 }
 
-/** Nobody is signed in: sign in on the website, or try a demo business (TryDemo.jsx). */
+/** Nobody is signed in: sign in on the website, or request a demo from Sheetal's team. */
 function SignedOut() {
   return (
     <main className="pf-gate" style={{ maxWidth: 640, margin: "8vh auto", padding: 16 }}>
       <section className="card pf-panel" style={{ marginBottom: 16 }}>
         <Empty icon="log-in" title="Sign in to your business" action={<a className="btn btn-primary" href="/">Sign in on the website</a>}>Your business panel uses your Sheetal Property account.</Empty>
       </section>
-      {bizApiReady() && <TryDemo page="Sheetal Business" />}
+      {/* Demos are given by Sheetal's team: a request form on the Sheetal Technologies page (the owner calls back and sets it up). */}
+      <section className="card pf-panel">
+        <Empty icon="play" title="Want to see Sheetal Business first?" action={<a className="btn btn-outline" href="/technology#demo">Request a demo</a>}>Tell us about your business and our team will call you and set up a demo with you.</Empty>
+      </section>
     </main>
   );
 }

@@ -19,7 +19,7 @@ import { PLATFORM_ROLES, hasPerm } from "@sheetal/backend-core/domain/permission
 import { staffOf } from "./routes.js";
 
 const STAGES = ["new", "contacted", "viewing", "negotiating", "won", "lost"] as const;
-const KIND: Record<string, string> = { contact_agent: "Contact", contact_owner: "Message for the owner", site_visit: "Site visit", requirement: "Requirement", service: "Service request", form: "Online form", sell: "Sell my property", partner: "Partner sign-up" };
+const KIND: Record<string, string> = { contact_agent: "Contact", contact_owner: "Message for the owner", site_visit: "Site visit", requirement: "Requirement", service: "Service request", form: "Online form", sell: "Sell my property", partner: "Partner sign-up", demo: "Demo request" };
 const PERM = "platform.business.read";
 
 export async function adminLeadRoutes(app: FastifyInstance) {
