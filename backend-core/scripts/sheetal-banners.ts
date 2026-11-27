@@ -1,6 +1,6 @@
 // Sheetal's own home page banners for a week (the owner's request of 27 Nov 2026): 5 Sheetal Property listings shown as photo-grid
 // banners for 7 days from today, and the home banner allowed 5 at a time (Admin -> Promote can change it back).
-// Run:   npx tsx scripts/sheetal-banners.ts [--codes=SP-0001,SP-0002,...] [--days=7] [--apply]
+// Run:   npx tsx scripts/sheetal-banners.ts [--tenant=<id>] [--codes=SP-0001,SP-0002,...] [--days=7] [--apply]
 // Without --codes it picks: the Chitwan Tourism Hub investment and project first, then Sheetal's newest published listings with the most
 // photos, one per kind where it can. Without --apply it only shows the choice. Staff banners are free (source "staff") and already approved.
 
@@ -16,7 +16,9 @@ const days = Number(arg("days") || 7);
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
 
 async function main() {
-  const tenant = await db.tenant.findFirstOrThrow({ where: { name: { equals: "Sheetal Property", mode: "insensitive" } }, orderBy: { createdAt: "asc" } });
+  const tenant = arg("tenant")
+    ? await db.tenant.findUniqueOrThrow({ where: { id: arg("tenant")! } })
+    : await db.tenant.findFirstOrThrow({ where: { name: { equals: "Sheetal Property", mode: "insensitive" } }, orderBy: { createdAt: "asc" } });
   const live = { tenantId: tenant.id, status: "published" as const, reviewHold: false, deletedAt: null, limitPausedAt: null };
   let picks: { id: number; code: string; title: string; kind: string; n: number }[] = [];
   const row = (l: { id: number; code: string; title: string; kind: string; _count: { photos: number } }) => ({ id: l.id, code: l.code, title: l.title, kind: l.kind, n: l._count.photos });
