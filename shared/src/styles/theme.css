@@ -3641,7 +3641,6 @@ html:has(.job-apply) .wa-btn { display: none !important; }
 @media (max-width: 760px) {
   .detail-actions { width: 100%; display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px !important; }
   .detail-actions .btn { height: 40px; padding: 0 6px; font-size: 13px; justify-content: center; }
-  .detail-head h1 { font-size: 24px !important; }
 }
 
 /* Home type chips over a banner photo: frosted glass with white words, so they read on any picture. */
@@ -3657,3 +3656,15 @@ html:has(.job-apply) .wa-btn { display: none !important; }
   white-space: normal !important; text-overflow: ellipsis; overflow-wrap: anywhere; min-height: calc(2 * 1.35em); line-height: 1.35; }
 .pb-cbody .small, .pb-cbody .muted { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pb-home-row.n1 .pb-cbody b { -webkit-line-clamp: 3; line-clamp: 3; min-height: 0; }
+
+/* Property page title: one or two lines at most (stays, projects, investments, properties), a calm size on computers and phones;
+   the title, tags and place sit level with Ask AI / Share / Save, and the photos start right under them. */
+.detail-head .detail-title { font-size: clamp(22px, 2.3vw, 30px) !important; line-height: 1.2; margin: 0; letter-spacing: -.01em;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; text-wrap: balance; }
+.detail-head { align-items: flex-start !important; margin-bottom: 16px !important; }
+.detail-head .detail-actions { padding-top: 2px; flex-shrink: 0; }
+@media (max-width: 760px) {
+  .detail-head .detail-title { font-size: 19px !important; line-height: 1.25; }
+  .detail-head { gap: 10px !important; margin-bottom: 12px !important; }
+  .detail-head .stack { gap: 6px !important; }
+}

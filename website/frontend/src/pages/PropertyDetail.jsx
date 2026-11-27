@@ -94,9 +94,9 @@ export default function PropertyDetail() {
         <div className="crumbs"><Link to="/">Home</Link><span>/</span><Link to={`/${purpose.toLowerCase()}`}>{purpose === "Sale" ? "Buy" : purpose}</Link><span>/</span><span>{p.district || p.property_type}</span></div>
         <div className="row between detail-head" style={{ flexWrap: "wrap", alignItems: "center", gap: 16, marginBottom: 20 }}>
           <div className="stack" style={{ gap: 10, flex: "1 1 520px", minWidth: 0 }}>
-                        <h1 style={{ fontSize: "clamp(26px, 3.4vw, 40px)" }}>{titleOf(p)}</h1>
+            <h1 className="detail-title" title={titleOf(p)}>{titleOf(p)}</h1>
             <div className="row-wrap" style={{ gap: 8 }}>
-              <span className="tag tag-red">{p.price_per === "night" ? "Stay" : `For ${purpose}`}</span>
+              <span className="tag tag-red">{p.price_per === "night" ? "Stay" : p.kind === "invest" ? "Invest" : p.kind === "project" ? "Project" : `For ${purpose}`}</span>
               {p.property_type && <span className="tag tag-line">{p.property_type}</span>}
               {isSold(p) && <span className="tag tag-line">{isRent ? "Rented out" : "Sold"}</span>}
             </div>
@@ -110,29 +110,14 @@ export default function PropertyDetail() {
         </div>
 
         {(() => {
-          // every photo fits in the same box: 1–5 use fixed layouts, 6+ become a phone-style grid (first photo big)
+          // The same balanced box for every listing: up to 5 photos in a fixed layout (first one big); more photos open from "All N photos".
           const list = imgs.length ? imgs : ["/demo/1.jpg"];
           const n = list.length;
-          const all = n > 1 && <button type="button" className="g-all" onClick={() => setBox(0)}><Images size={15} /> All {n} photos</button>;
-          if (n <= 5) return (
-            <div className={`gallery g-${n}`}>
-              {list.map((src, i) => <button key={i} className="g-item" onClick={() => setBox(i)}><img src={src} alt="" /></button>)}
-              {all}
-            </div>
-          );
-          const cells = n + 3; // first photo takes 2×2
-          const rows = Math.max(2, Math.round(Math.sqrt(cells / 2.6)));
-          const cols = Math.ceil(cells / rows);
-          const spare = rows * cols - cells; // last photo stretches to fill the row
+          const shown = list.slice(0, 5);
           return (
-            <div className="gallery g-many" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))` }}>
-              {list.map((src, i) => (
-                <button key={i} className="g-item" onClick={() => setBox(i)}
-                  style={i === 0 ? { gridColumn: "span 2", gridRow: "span 2" } : i === n - 1 && spare ? { gridColumn: `span ${spare + 1}` } : undefined}>
-                  <img src={src} alt="" loading="lazy" />
-                </button>
-              ))}
-              {all}
+            <div className={`gallery g-${shown.length}`}>
+              {shown.map((src, i) => <button key={i} className="g-item" onClick={() => setBox(i)}><img src={src} alt="" loading={i ? "lazy" : "eager"} /></button>)}
+              {n > 1 && <button type="button" className="g-all" onClick={() => setBox(0)}><Images size={15} /> All {n} photos</button>}
             </div>
           );
         })()}
