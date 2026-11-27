@@ -3723,3 +3723,5 @@ html:has(.job-apply) .wa-btn { display: none !important; }
 .pa-banner .pa-shade b { display: block; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pa-banner .pa-shade { min-width: 0; } .pa-banner .pa-shade > * { max-width: 100%; }
 .pa-banner .pa-spn { left: 50%; transform: translateX(-50%); }
+/* Phone home banner: the View button centred under the title. */
+.pa-banner .pa-shade .pa-wb { align-self: center !important; }
