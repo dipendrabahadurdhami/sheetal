@@ -3672,3 +3672,39 @@ html:has(.job-apply) .wa-btn { display: none !important; }
 .home-hero-plain.hh-photo { padding-bottom: 120px !important; padding-top: 40px !important; }
 .hh-photo .hb-bar { bottom: 14px; }
 @media (max-width: 760px) { .home-hero-plain.hh-photo { padding-bottom: 150px !important; } }
+
+/* Property / stay / project / investment pages: the price and contact box stays fixed on the right while the details scroll
+   (below the header and the section tabs), always fully on screen; the detail boxes on the left are compact. */
+.detail-aside { align-self: stretch; padding-top: 32px; }
+.detail-side { position: sticky; top: calc(var(--header-h) + 64px); max-height: calc(100vh - var(--header-h) - 84px); overflow-y: auto;
+  overscroll-behavior: contain; scrollbar-width: thin; }
+.detail-side .cform { gap: 10px; }
+.detail-side .cform .textarea { min-height: 72px; }
+.detail-layout .facts { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); border-radius: var(--r); }
+.detail-layout .facts div { padding: 10px 12px; }
+.detail-layout .facts span { font-size: 10.5px; letter-spacing: .06em; }
+.detail-layout .facts b { font-size: 14px; line-height: 1.35; }
+.detail-layout .facts small { font-size: 12px; line-height: 1.35; }
+.detail-layout .detail-section { padding-top: 24px; padding-bottom: 24px; }
+.detail-layout .detail-section h3 { font-size: 19px; margin-bottom: 12px; }
+@media (max-width: 1080px) {
+  .detail-aside { padding-top: 16px; }
+  .detail-side { position: static; max-height: none; overflow: visible; }
+}
+/* The fixed contact box shows the whole form on a normal laptop screen: tighter spacing, smaller chips and inputs, short message box. */
+@media (min-width: 1081px) {
+  .detail-side { padding: 18px !important; gap: 12px !important; }
+  .detail-side .price-big { font-size: 26px; }
+  .detail-side .seg button { height: 34px; font-size: 13px; }
+  .detail-side .cform { gap: 8px; }
+  .detail-side .cform-label { font-size: 11px; }
+  .detail-side .cform-reasons { gap: 6px; }
+  .detail-side .cform-reasons .chip, .detail-side .cform-times .chip { height: 30px; font-size: 12.5px; }
+  .detail-side .ifield .input { height: 40px; min-height: 40px; font-size: 14px; }
+  .detail-side .cform .textarea { min-height: 56px; height: 56px; }
+  .detail-side .cform .check { font-size: 12px; }
+  .detail-side .btn-block { min-height: 42px; height: 42px; }
+  .detail-side .cform-day { height: 52px; }
+  .detail-side .hr { margin: 0 !important; }
+  .detail-side .avatar { width: 40px !important; height: 40px !important; }
+}

@@ -172,10 +172,16 @@ export default function PropertyDetail() {
             <AreaMap lat={p.latitude ?? p.lat} lng={p.longitude ?? p.lng} seed={p.property_code || p.id} area={p.property_location} shifted={!!p.location_approximate} />
           </section>
 
+          <section id="reviews" className="detail-section">
+            <h3>Reviews</h3>
+            <Reviews type="property" id={p.id} />
+          </section>
+
         </div>
 
-        <aside style={{ paddingTop: 32 }}>
-          <div id="enquire" className="card card-pad stack" style={{ gap: 20, boxShadow: "var(--shadow)" }}>
+        {/* The price and contact box stays in view on the right while the details scroll (computers); it scrolls inside if it is ever taller than the screen. */}
+        <aside className="detail-aside">
+          <div id="enquire" className="card card-pad stack detail-side" style={{ gap: 18, boxShadow: "var(--shadow)" }}>
             <div>
               <span className="price-big tnum">{fmtPrice(price)}</span>{isRent && <span className="muted">{p.price_per === "night" ? " / night" : " / month"}</span>}
               {Number(price) > 0 && <div className="small muted tnum" style={{ marginTop: 4 }}>{fmtFull(price)}{p.price_negotiable ? " · negotiable" : ""}</div>}
@@ -202,10 +208,6 @@ export default function PropertyDetail() {
               {agent?.email && <a className="btn btn-outline btn-sm btn-icon" href={`mailto:${agent.email}`} aria-label="Email"><Mail size={14} /></a>}
             </div>
           </div>
-          <section id="reviews" className="card card-pad stack" style={{ gap: 16, marginTop: 20 }}>
-            <h3>Reviews</h3>
-            <Reviews type="property" id={p.id} />
-          </section>
         </aside>
       </div>
 
