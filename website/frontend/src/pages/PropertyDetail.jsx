@@ -84,7 +84,7 @@ export default function PropertyDetail() {
           <div className="stack" style={{ gap: 10, flex: "1 1 520px", minWidth: 0 }}>
                         <h1 style={{ fontSize: "clamp(26px, 3.4vw, 40px)" }}>{titleOf(p)}</h1>
             <div className="row-wrap" style={{ gap: 8 }}>
-              <span className="tag tag-red">For {purpose}</span>
+              <span className="tag tag-red">{p.price_per === "night" ? "Stay" : `For ${purpose}`}</span>
               {p.property_type && <span className="tag tag-line">{p.property_type}</span>}
               {isSold(p) && <span className="tag tag-line">{isRent ? "Rented out" : "Sold"}</span>}
             </div>

@@ -56,7 +56,7 @@ export function PropertyCard({ p, layout = "grid" }) {
           : <div className="sk" style={{ width: "100%", height: "100%", animation: "none" }} />}
         {sold && <div className="pcard-sold"><span>{isRent ? "RENTED" : "SOLD"}</span></div>}
         <div className="pcard-top">
-          <span style={{ display: "flex", gap: 6, flexWrap: "wrap" }}><span className={purpose === "Sale" ? "tag tag-white" : "tag tag-red"}>For {purpose}</span>{p.sponsored && <span className="tag tag-white" title="A business paid to show this listing first">Sponsored</span>}</span>
+          <span style={{ display: "flex", gap: 6, flexWrap: "wrap" }}><span className={purpose === "Sale" ? "tag tag-white" : "tag tag-red"}>{p.price_per === "night" ? "Stay" : `For ${purpose}`}</span>{p.sponsored && <span className="tag tag-white" title="A business paid to show this listing first">Sponsored</span>}</span>
           <button className={`heart ${fav ? "on" : ""}`} aria-label={fav ? "Remove from saved" : "Save"}
             onClick={(e) => { e.stopPropagation(); toggleFav(p.id); }}><Heart size={17} /></button>
         </div>
