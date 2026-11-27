@@ -275,12 +275,14 @@ function BannerTab({ onPay }) {
   if (d === null) return <p className="muted pf-pad">Loading…</p>;
   if (d === false) return <Empty icon="circle-alert" title="Banners couldn't load">Try again in a moment.</Empty>;
   const set = (p) => setF((x) => ({ ...x, ...p }));
-  const fromListing = !!f && (f.id ? !!f.listing : f.mode === "listing");
-  const okText = f && (fromListing ? (f.id || !!f.listingId) : /^https?:\/\/\S+\.\S+$/i.test(f.link || "") && !!f.desktop && !!f.mobile);
+  // Three kinds: one of my listings, my business page (covers of my newest listings), or my own pictures.
+  const isPage = !!f && (f.id ? !!f.page : f.mode === "page");
+  const fromListing = !!f && !isPage && (f.id ? !!f.listing : f.mode === "listing");
+  const okText = f && (isPage ? (f.id || !!d.page?.photos?.length) : fromListing ? (f.id || !!f.listingId) : /^https?:\/\/\S+\.\S+$/i.test(f.link || "") && !!f.desktop && !!f.mobile);
   const send = async () => {
     setBusy(true);
     try {
-      const body = fromListing ? { title: (f.title || "").trim(), button: (f.button || "").trim(), ...(f.id ? {} : { listingId: f.listingId }) } : { link: f.link.trim(), title: (f.title || "").trim(), button: (f.button || "").trim() };
+      const body = isPage ? { title: (f.title || "").trim(), button: (f.button || "").trim(), ...(f.id ? {} : { page: true }) } : fromListing ? { title: (f.title || "").trim(), button: (f.button || "").trim(), ...(f.id ? {} : { listingId: f.listingId }) } : { link: f.link.trim(), title: (f.title || "").trim(), button: (f.button || "").trim() };
       if (f.desktop?.file) body.desktop = { data: await fileToBase64(f.desktop.file) };
       if (f.mobile?.file) body.mobile = { data: await fileToBase64(f.mobile.file) };
       if (f.id) { const r = await bizApi("PUT", `/promote/banners/${f.id}`, body); toast(r.message); setF(null); load(); return; }
@@ -301,14 +303,14 @@ function BannerTab({ onPay }) {
         <Table rows={d.rows} minWidth={860}
           empty={<div className="pf-pad"><Empty icon="image" title="No banners yet" action={canBook && <Button icon="image-plus" onClick={book}>Book the home banner</Button>}>Pick one of your listings (its photos show as a grid and the banner opens it) or upload your own pictures, choose the days, then pay.</Empty></div>}
           columns={[
-            { key: "p", label: "Banner", render: (b) => <span className="pf-person"><img src={b.desktop || b.listing?.photos?.[0]} alt="" style={{ width: 96, height: 30, objectFit: "cover", borderRadius: 4 }} /><span className="pf-two"><b>{b.title || b.no}</b><small>{b.no} · {b.listing ? `Listing ${b.listing.code}` : b.link.replace(/^https?:\/\//, "").slice(0, 40)}</small></span></span> },
+            { key: "p", label: "Banner", render: (b) => <span className="pf-person"><img src={b.desktop || b.listing?.photos?.[0] || b.page?.photos?.[0]} alt="" style={{ width: 96, height: 30, objectFit: "cover", borderRadius: 4 }} /><span className="pf-two"><b>{b.title || b.no}</b><small>{b.no} · {b.page ? "Business page" : b.listing ? `Listing ${b.listing.code}` : b.link.replace(/^https?:\/\//, "").slice(0, 40)}</small></span></span> },
             { key: "d", label: "Dates", num: true, render: (b) => <span className="pf-two"><b>{fdate(b.startOn)} – {fdate(b.endOn)}</b><small>{b.days} days · {rs(b.total)}</small></span> },
             { key: "s", label: "Status", render: (b) => <span className="pf-two"><Badge tone={BANNER_TONE[b.phase]}>{b.phaseLabel}</Badge>{b.reviewNote && <small>{b.reviewNote}</small>}</span> },
             { key: "r", label: "Views · clicks", num: true, render: (b) => <span className="small tnum">{b.views.toLocaleString("en-IN")} · {b.clicks}</span> },
             { key: "x", label: "", align: "right", render: (b) => d.canBuy && <div className="pf-row-actions" style={{ justifyContent: "flex-end" }}>
               {b.phase === "awaiting" && b.invoice?.status === "open" && <><Button size="sm" icon="credit-card" onClick={() => onPay(b.invoice.id, `${b.invoice.number} · ${b.no}`, b.invoice.total)}>Pay</Button>
                 <Button size="sm" variant="ghost" disabled={busy} onClick={() => window.confirm(`Cancel ${b.no}? Nothing was paid.`) && bizApi("POST", `/promote/banners/${b.id}/cancel`).then((r) => { toast(r.message); load(); }).catch((e) => toast(e.message))}>Cancel</Button></>}
-              {["awaiting", "review", "rejected"].includes(b.phase) && <Button size="sm" variant={b.phase === "rejected" ? undefined : "outline"} icon="image-up" onClick={() => setF({ id: b.id, no: b.no, listing: b.listing, link: b.link, title: b.title, button: b.button, desktop: b.desktop ? { url: b.desktop } : null, mobile: b.mobile ? { url: b.mobile } : null })}>{b.phase === "rejected" ? (b.listing ? "Change words" : "Change picture") : "Edit"}</Button>}
+              {["awaiting", "review", "rejected"].includes(b.phase) && <Button size="sm" variant={b.phase === "rejected" ? undefined : "outline"} icon="image-up" onClick={() => setF({ id: b.id, no: b.no, listing: b.listing, page: b.page, link: b.link, title: b.title, button: b.button, desktop: b.desktop ? { url: b.desktop } : null, mobile: b.mobile ? { url: b.mobile } : null })}>{b.phase === "rejected" ? (b.listing || b.page ? "Change words" : "Change picture") : "Edit"}</Button>}
             </div> },
           ]} />
       </Panel>
@@ -323,8 +325,13 @@ function BannerTab({ onPay }) {
             <Field label="Start" hint="Leave empty for the first free day." optional><Input type="date" min={d.today} value={f.startOn} onChange={(e) => set({ startOn: e.target.value })} /></Field>
             {q && <div className="pf-note"><Icon name="calendar-days" size={16} /><span>{fdate(q.startOn)} to {fdate(q.endOn)}: {q.days} days × {rs(q.price)} = <b>{rs(q.total)}</b>.{q.moved ? " All spots are booked until then, so it starts on the first free day." : ""}</span></div>}
           </>}
-          {!f.id && <Field label="What to show"><Seg value={f.mode} onChange={(v) => set({ mode: v })} options={[{ id: "listing", label: "One of my listings" }, { id: "pictures", label: "My own pictures" }]} /></Field>}
-          {fromListing ? <>
+          {!f.id && <Field label="What to show"><Seg value={f.mode} onChange={(v) => set({ mode: v })} options={[{ id: "listing", label: "One listing" }, { id: "page", label: "My business page" }, { id: "pictures", label: "My own pictures" }]} /></Field>}
+          {isPage ? <>
+            {(f.id ? f.page : d.page)?.photos?.length
+              ? <div className="pf-banner-prev" aria-label="How it looks">{(f.id ? f.page : d.page).photos.slice(0, 5).map((u, k) => <img key={u + k} src={u} alt="" />)}</div>
+              : <div className="pf-note"><Icon name="circle-alert" size={16} /><span>Publish at least one listing with photos first: the banner shows their photos.</span></div>}
+            <p className="small muted" style={{ margin: 0 }}>Your business page on Sheetal Property: the home page shows the photos of your newest listings as a grid, with your name, how many listings you have and your city. The button opens your page with all your listings.</p>
+          </> : fromListing ? <>
             {f.id ? <div className="pf-note"><Icon name="house" size={16} /><span>Listing {f.listing.code}: {f.listing.title}</span></div> : !d.choices?.length
               ? <div className="pf-note"><Icon name="circle-alert" size={16} /><span>You have no published listing with photos yet. Publish one first, or use your own pictures.</span></div>
               : <Field label="Listing" hint="Your property, hotel, apartment or project. The banner opens it.">
@@ -341,8 +348,8 @@ function BannerTab({ onPay }) {
             <Field label="Link" hint="Where people go when they press the button."><Input type="url" placeholder="https://" value={f.link} onChange={(e) => set({ link: e.target.value })} /></Field>
           </>}
           <div className="pf-grid-2 tight">
-            <Field label="Title" hint={fromListing ? "Empty: the listing's title" : undefined} optional><Input maxLength={80} value={f.title} onChange={(e) => set({ title: e.target.value })} /></Field>
-            <Field label="Button text" hint={fromListing ? "Empty: View" : "Empty: Learn more"} optional><Input maxLength={24} value={f.button} onChange={(e) => set({ button: e.target.value })} /></Field>
+            <Field label="Title" hint={isPage ? "Empty: your business name" : fromListing ? "Empty: the listing's title" : undefined} optional><Input maxLength={80} value={f.title} onChange={(e) => set({ title: e.target.value })} /></Field>
+            <Field label="Button text" hint={fromListing || isPage ? "Empty: View" : "Empty: Learn more"} optional><Input maxLength={24} value={f.button} onChange={(e) => set({ button: e.target.value })} /></Field>
           </div>
         </div>
       </Drawer>}

@@ -91,11 +91,14 @@ export async function adminPromoteRoutes(app: FastifyInstance) {
     // Listing banners: the listing's photos (the home page shows them as a grid).
     const used = await db().listing.findMany({ where: { id: { in: rows.map((r) => r.listingId).filter((x): x is number => !!x) } }, select: { id: true, title: true, code: true, photos: { orderBy: { sort: "asc" }, take: 5, select: { file: true } } } });
     const L = new Map(used.map((l) => [l.id, { id: l.id, title: l.title, code: l.code, photos: l.photos.map((p) => photoUrl(media, "main", p.file)) }]));
+    // Business page banners: the covers of the business's newest listings.
+    const pageIds = [...new Set(rows.filter((r) => !r.desktop && !r.listingId && r.tenantId).map((r) => r.tenantId!))];
+    const P = new Map(await Promise.all(pageIds.map(async (tid) => [tid, (await db().listing.findMany({ where: { tenantId: tid, status: "published", reviewHold: false, photos: { some: {} } }, orderBy: { updatedAt: "desc" }, take: 5, select: { photos: { orderBy: { sort: "asc" }, take: 1, select: { file: true } } } })).map((c) => photoUrl(media, "main", c.photos[0]!.file))] as const)));
     return {
       data: rows.map((b) => {
         const i = b.invoiceId ? I.get(b.invoiceId) : undefined;
         const phase = bannerPhase(b, { checking: !!b.invoiceId && pending.has(b.invoiceId), invoiceOpen: i ? i.status === "open" : undefined });
-        return { id: b.id, no: bannerNo(b.seq), source: b.source, tenant: b.tenantId ? tenants.get(b.tenantId) ?? "" : "Sheetal", desktop: b.desktop ? pic(b.desktop) : null, mobile: b.mobile ? pic(b.mobile) : null, listing: b.listingId ? L.get(b.listingId) ?? null : null, link: b.link, title: b.title, button: b.button,
+        return { id: b.id, no: bannerNo(b.seq), source: b.source, tenant: b.tenantId ? tenants.get(b.tenantId) ?? "" : "Sheetal", desktop: b.desktop ? pic(b.desktop) : null, mobile: b.mobile ? pic(b.mobile) : null, listing: b.listingId ? L.get(b.listingId) ?? null : !b.desktop && b.tenantId ? { id: 0, title: "Business page", code: "", page: true, photos: P.get(b.tenantId) ?? [] } : null, link: b.link, title: b.title, button: b.button,
           days: b.days, startOn: ymd(b.startOn), endOn: ymd(b.endOn), total: b.total, phase, phaseLabel: BANNER_PHASE[phase], reviewNote: b.reviewNote, views: b.views, clicks: b.clicks, invoice: i ? invoiceNumber(i) : null };
       }),
     };

@@ -27,10 +27,27 @@ export async function bannerRoutes(app: FastifyInstance) {
         select: { id: true, slug: true, title: true, purpose: true, kind: true, price: true, pricePer: true, area: true, city: true, district: true, photos: { orderBy: { sort: "asc" }, take: 5, select: { file: true } } },
       }) : [];
       const L = new Map(listings.map((l) => [l.id, l]));
+      // Business page banners (no pictures, no listing): the business's name, city, listing count and the covers of its newest listings.
+      const pageIds = [...new Set(rows.filter((r) => !r.desktop && !r.listingId && r.tenantId).map((r) => r.tenantId!))];
+      const pages = new Map(await Promise.all(pageIds.map(async (tid) => {
+        const where = { tenantId: tid, status: "published" as const, reviewHold: false };
+        const [t, n, covers] = await Promise.all([
+          db().tenant.findUnique({ where: { id: tid }, select: { name: true, city: true } }),
+          db().listing.count({ where }),
+          db().listing.findMany({ where: { ...where, photos: { some: {} } }, orderBy: { updatedAt: "desc" }, take: 5, select: { photos: { orderBy: { sort: "asc" }, take: 1, select: { file: true } } } }),
+        ]);
+        return [tid, { name: t?.name ?? "", city: t?.city ?? "", count: n, photos: covers.map((c) => photoUrl(media, "main", c.photos[0]!.file)) }] as const;
+      })));
       type Out = { id: string; title: string; button: string; sponsored: boolean; desktop: string | null; mobile: string | null; link: string; internal?: boolean; listing?: unknown };
       const data = rows.flatMap((b): Out[] => {
         const l = b.listingId ? L.get(b.listingId) : undefined;
         if (b.listingId && !l) return []; // the listing went offline: its banner waits
+        const pg = !b.desktop && !b.listingId && b.tenantId ? pages.get(b.tenantId) : undefined;
+        if (!b.desktop && !b.listingId) {
+          if (!pg?.photos.length) return []; // nothing to show yet
+          return [{ id: b.id, title: b.title, button: b.button, sponsored: b.source === "paid", desktop: null, mobile: null, link: `/site/${b.tenantId}`, internal: true,
+            listing: { title: b.title || pg.name, place: [`${pg.count} ${pg.count === 1 ? "listing" : "listings"}`, pg.city].filter(Boolean).join(" · "), price: null, page: true, photos: pg.photos } }];
+        }
         const base = { id: b.id, title: b.title, button: b.button, sponsored: b.source === "paid" };
         if (!l) return [{ ...base, desktop: pic(b.desktop), mobile: pic(b.mobile), link: b.link }];
         return [{ ...base, desktop: null, mobile: null, link: `/property/${l.slug}`, internal: true,

@@ -115,6 +115,21 @@ describe("listing banners and the plan rule", () => {
     expect(row.desktop).toBeNull();
   });
 
+  it("books a business page banner: no pictures, the business's page and name, its newest listing covers in the list", async () => {
+    const db = app.db!;
+    await db.banner.updateMany({ data: { status: "void" } });
+    const r = await call("owner", "POST", "/promote/banners", { days: 7, page: true, title: "", button: "" });
+    expect(r.statusCode).toBe(200);
+    const b = await db.banner.findUniqueOrThrow({ where: { id: r.json().data.id } });
+    expect(b).toMatchObject({ listingId: null, desktop: "", mobile: "", link: `https://sheetal.test/site/${ids.agency}`, title: "Everest Realty" });
+    const d = (await call("owner", "GET", "/promote/banners")).json().data;
+    expect(d.page.photos.length).toBeGreaterThan(0);
+    expect(d.rows.find((x: { id: string }) => x.id === b.id).page.photos.length).toBeGreaterThan(0);
+    // Its link can't be changed; the words can.
+    expect((await call("owner", "PUT", `/promote/banners/${b.id}`, { title: "Everest: homes in Kathmandu", button: "See homes" })).statusCode).toBe(200);
+    expect(await db.banner.findUniqueOrThrow({ where: { id: b.id } })).toMatchObject({ link: `https://sheetal.test/site/${ids.agency}`, title: "Everest: homes in Kathmandu" });
+  });
+
   it("refuses a business that is not on a plan", async () => {
     const db = app.db!;
     const free = (await db.$transaction((tx) => createWorkspace(tx, { ownerId: ids.owner!, name: "Free Homes", type: "agency" }))).id;

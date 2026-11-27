@@ -8,7 +8,9 @@
 // Rules: billing.manage books, cancels unpaid banners and replaces pictures; everyone who can open Promote sees them.
 // Only businesses on a paid plan (Starter, Business or Pro, or a gift of paid software) may book; each day is still paid (the owner's rule,
 // 27 Nov 2026). A banner is either the business's own pictures, or one of its published listings: then no pictures are uploaded, the
-// home page shows the listing's photos as a grid and the banner opens the listing.
+// home page shows the listing's photos as a grid and the banner opens the listing. A third kind is the business's own page (an agency,
+// hotel group or developer): no pictures and no listing; the home page shows the covers of its newest listings with its name and opens
+// its page (/site/<id>). Such a banner is stored with empty pictures and no listing.
 
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
@@ -85,13 +87,16 @@ export async function bannerRoutes(app: FastifyInstance) {
     return {
       data: {
         onPlan, choices: choices.map((l) => ({ id: l.id, title: l.title, code: l.code, kind: l.kind, photos: listingPhotos(l.photos) })),
+        // The business page banner: the cover of each of the newest listings.
+        page: { name: ws.member.tenant.name, photos: choices.slice(0, 5).map((l) => listingPhotos(l.photos)[0]!) },
         canBuy: ws.can("workspace.billing.manage"), price: s.hero.price, spots: s.hero.spots, active: s.hero.active, lengths: s.lengths, sizes: BANNER_SIZES, maxBytes: 1024 * 1024, today: today(),
         rows: rows.map((b) => {
           const i = b.invoiceId ? I.get(b.invoiceId) : undefined;
           const phase = bannerPhase(b, { checking: !!b.invoiceId && pending.has(b.invoiceId), invoiceOpen: i ? i.status === "open" : undefined });
           const l = b.listingId ? L.get(b.listingId) : undefined;
           return { id: b.id, no: bannerNo(b.seq), desktop: b.desktop ? pic(b.desktop) : null, mobile: b.mobile ? pic(b.mobile) : null,
-            listing: l ? { id: l.id, title: l.title, code: l.code, photos: listingPhotos(l.photos) } : null, link: b.link, title: b.title, button: b.button, days: b.days, startOn: ymd(b.startOn), endOn: ymd(b.endOn), total: b.total,
+            listing: l ? { id: l.id, title: l.title, code: l.code, photos: listingPhotos(l.photos) } : null,
+            page: !b.desktop && !b.listingId ? { photos: choices.slice(0, 5).map((x) => listingPhotos(x.photos)[0]!) } : null, link: b.link, title: b.title, button: b.button, days: b.days, startOn: ymd(b.startOn), endOn: ymd(b.endOn), total: b.total,
             phase, phaseLabel: BANNER_PHASE[phase], reviewNote: b.status === "rejected" ? b.reviewNote : null, views: b.views, clicks: b.clicks,
             invoice: i ? { id: i.id, number: invoiceNumber(i), status: i.status, total: i.total } : null };
         }),
@@ -106,17 +111,25 @@ export async function bannerRoutes(app: FastifyInstance) {
 
   app.post("/promote/banners", big, async (request) => {
     const ws = viewer(request); payer(ws);
-    const raw = (request.body ?? {}) as { listingId?: unknown };
+    const raw = (request.body ?? {}) as { listingId?: unknown; page?: unknown };
     const fromListing = raw.listingId != null && raw.listingId !== "";
-    const b = fromListing
-      ? Ask.extend({ listingId: z.coerce.number().int().positive(), title: BannerText.shape.title, button: BannerText.shape.button }).parse(request.body)
-      : Ask.extend({ ...BannerText.shape, desktop: Picture, mobile: Picture }).parse(request.body);
+    const words = { title: BannerText.shape.title, button: BannerText.shape.button };
+    const b = raw.page === true
+      ? Ask.extend({ page: z.literal(true), ...words }).parse(request.body)
+      : fromListing
+        ? Ask.extend({ listingId: z.coerce.number().int().positive(), ...words }).parse(request.body)
+        : Ask.extend({ ...BannerText.shape, desktop: Picture, mobile: Picture }).parse(request.body);
     const tenant = await db().tenant.findUniqueOrThrow({ where: { id: ws.tenantId } });
     if (tenant.status === "suspended" || tenant.status === "cancelled") throw badRequest("This business isn't active. Please contact Sheetal.");
     if (!(await onPaidPlan(ws.tenantId))) throw forbidden(NEED_PLAN);
     const q = await quote(b);
     let desktop = "", mobile = "", link = "", title = b.title, listingId: number | null = null;
-    if ("listingId" in b) {
+    if ("page" in b) {
+      // The business's own page: it needs at least one published listing with photos to show.
+      const has = await db().listing.count({ where: { tenantId: ws.tenantId, ...LIVE_LISTING, photos: { some: {} } } });
+      if (!has) throw badRequest("Publish at least one listing with photos first: the banner shows their photos.");
+      link = `${app.config.SITE_URL.replace(/\/$/, "")}/site/${ws.tenantId}`; title = (b.title || tenant.name).slice(0, 80);
+    } else if ("listingId" in b) {
       const l = await db().listing.findFirst({ where: { id: b.listingId, tenantId: ws.tenantId, ...LIVE_LISTING }, select: { id: true, slug: true, title: true, _count: { select: { photos: true } } } });
       if (!l) throw badRequest("Choose one of your published listings.");
       if (!l._count.photos) throw badRequest("This listing has no photos yet. Add photos first: the banner shows them.");
@@ -145,13 +158,14 @@ export async function bannerRoutes(app: FastifyInstance) {
     const ws = viewer(request); payer(ws);
     const row = await db().banner.findFirst({ where: { id: request.params.id.slice(0, 40), tenantId: ws.tenantId } });
     if (!row) throw notFound("Banner not found.");
-    // A listing banner keeps its link (the listing); only its words can change.
-    const b = (row.listingId ? BannerText.extend({ link: z.string().optional() }) : BannerText).extend({ desktop: Picture.optional(), mobile: Picture.optional() }).parse(request.body);
+    // A listing or business page banner keeps its link; only its words can change.
+    const fixed = !!row.listingId || !row.desktop;
+    const b = (fixed ? BannerText.extend({ link: z.string().optional() }) : BannerText).extend({ desktop: Picture.optional(), mobile: Picture.optional() }).parse(request.body);
     if (!["awaiting", "review", "rejected"].includes(row.status)) throw badRequest("A banner that is approved or closed can't change. Book a new one.");
     const desktop = b.desktop ? await saveBannerPicture(app.config.MEDIA_DIR, b.desktop.data, "desktop") : row.desktop;
     const mobile = b.mobile ? await saveBannerPicture(app.config.MEDIA_DIR, b.mobile.data, "mobile") : row.mobile;
     const back = row.status === "rejected" ? "review" : row.status;
-    await db().banner.update({ where: { id: row.id }, data: { desktop, mobile, link: row.listingId ? row.link : b.link!, title: b.title, button: b.button, status: back, reviewNote: back === "review" ? null : row.reviewNote } });
+    await db().banner.update({ where: { id: row.id }, data: { desktop, mobile, link: fixed ? row.link : b.link!, title: b.title, button: b.button, status: back, reviewNote: back === "review" ? null : row.reviewNote } });
     if (row.status === "rejected") await notifyStaff(db(), STAFF_FOR.plans, { type: "promote", title: `Banner picture to check again: ${bannerNo(row.seq)}`, message: ws.member.tenant.name, link: "/admin/promote" });
     await audit(ws, request.ip, "promote.banner_changed", bannerNo(row.seq));
     return { message: row.status === "rejected" ? "Sent to Sheetal to check again." : "Saved." };

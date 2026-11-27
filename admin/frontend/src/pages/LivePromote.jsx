@@ -119,7 +119,7 @@ function BannersPanel() {
           {["live", "scheduled", "rejected"].includes(view.phase) && <Button variant="outline" onClick={() => stop(view)}>Stop</Button>}</>}>
         {view && <div className="pf-stack">
           {view.listing ? <>
-            <span className="small muted">Listing banner: {view.listing.code} · {view.listing.title}. The home page shows these photos as a grid.</span>
+            <span className="small muted">{view.listing.page ? "Business page banner: the covers of its newest listings; it opens the business page." : `Listing banner: ${view.listing.code} · ${view.listing.title}.`} The home page shows these photos as a grid.</span>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>{view.listing.photos.map((u) => <img key={u} src={u} alt="" style={{ width: "100%", aspectRatio: "4 / 3", objectFit: "cover", borderRadius: 6 }} />)}</div>
           </> : <>
             <span className="small muted">Computer (1920 × 600)</span><img src={view.desktop} alt="" style={{ width: "100%", borderRadius: 6 }} />
